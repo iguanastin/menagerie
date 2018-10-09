@@ -1,4 +1,4 @@
-package gui;
+package menagerie.gui;
 
 public class MainController {
 

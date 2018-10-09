@@ -1,4 +1,4 @@
-package gui;
+package menagerie.gui;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -11,7 +11,7 @@ import java.io.IOException;
 
 public class Main extends Application {
 
-    static void showErrorMessage(String title, String header, String content) {
+    public static void showErrorMessage(String title, String header, String content) {
         Alert a = new Alert(Alert.AlertType.ERROR);
         a.setTitle(title);
         a.setHeaderText(header);
