@@ -1,5 +1,7 @@
 package menagerie.db;
 
+import menagerie.db.update.DatabaseUpdater;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -12,7 +14,9 @@ public class DatabaseManager {
     public DatabaseManager(String jdbcPath, String user, String password) throws SQLException {
         db = DriverManager.getConnection(jdbcPath, user, password);
 
-        //TODO: Update database if necessary
+        //TODO: Initialize database if necessary
+
+        DatabaseUpdater.updateDatabaseIfNecessary(db);
     }
 
     public void close() throws SQLException {

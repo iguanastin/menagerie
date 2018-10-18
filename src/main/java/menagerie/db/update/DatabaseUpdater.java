@@ -8,6 +8,10 @@ import java.util.ArrayList;
 public class DatabaseUpdater {
 
 
+    private static final String CREATE_TAGS_TABLE_V1 = "CREATE TABLE tags(id INT PRIMARY KEY AUTO_INCREMENT, name NVARCHAR(128) NOT NULL UNIQUE);";
+    private static final String CREATE_IMGS_TABLE_V1 = "CREATE TABLE imgs(id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, path NVARCHAR(1024) UNIQUE, added LONG NOT NULL, thumbnail BLOB, histogram OBJECT);";
+    private static final String CREATE_TAGGED_TABLE_V1 = "CREATE TABLE tagged(img_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (img_id) REFERENCES imgs(id), FOREIGN KEY (tag_id) REFERENCES tags(id), PRIMARY KEY (img_id, tag_id));";
+
     private static class Tag {
         int id;
         String name;
@@ -16,45 +20,110 @@ public class DatabaseUpdater {
     public static void updateDatabaseIfNecessary(Connection db) throws SQLException {
         Statement s = db.createStatement();
 
-        int major = 0;
-        int minor = 0;
-        try {
-            ResultSet rs = s.executeQuery("SELECT TOP 1 version.major, version.minor FROM version ORDER BY version.major DESC, version.minor DESC;");
-            if (rs.next()) {
-                major = rs.getInt("major");
-                minor = rs.getInt("minor");
-            } else {
-                throw new DatabaseUpdateException("Unknown database version. Version table is missing expected columns.");
-            }
-        } catch (SQLException e) {
-            //No version table found, assume version 0
-        }
-
-        switch (major) {
+        switch (getVersion(db)) {
+            case -1:
+                cleanDatabase(db);
+                initializeTables(db);
+                break;
             case 0:
-                System.out.println("!!! Database needs to update from 0.0 to 1.0 !!!");
-                updateToVersion1_0(db, s);
+                System.out.println("!!! Database needs to update from 0 to 1 !!!");
+                updateVersionFrom0To1(db);
                 break;
             case 1:
                 System.out.println("Database is up to date");
                 break;
         }
+
+        s.close();
+
     }
 
-    private static void updateToVersion1_0(Connection db, Statement s) throws SQLException {
+    /**
+     *
+     *
+     * @param db
+     * @return -1 if database hasn't been initialized. Int >= 0 if version data exists
+     * @throws SQLException
+     */
+    private static int getVersion(Connection db) throws SQLException {
+        Statement s = db.createStatement();
 
-        System.out.println("Database updating from 0.0 to 1.0...");
+        int version;
+        try {
+            ResultSet rs = s.executeQuery("SELECT TOP 1 version.version FROM version ORDER BY version.version DESC;");
+            if (rs.next()) {
+                version = rs.getInt("version");
+            } else {
+                throw new DatabaseUpdateException("Version table has no version information.");
+            }
+        } catch (SQLException e) {
+            //Database is either version 0 schema or not initialized
+            try {
+                s.executeQuery("SELECT TOP 1 * FROM imgs;");
+                // Tables exist for version 0
+                version = 0;
+            } catch (SQLException e2) {
+                // Tables don't exist or are not clean
+                version = -1;
+            }
+        }
+
+        s.close();
+
+        return version;
+    }
+
+    private static void initializeTables(Connection db) throws SQLException {
+        initializeV1Tables(db);
+    }
+
+    private static void initializeV1Tables(Connection db) throws SQLException {
+        System.out.println("Initializing v1 tables");
+
+        Statement s = db.createStatement();
+
+        s.executeUpdate(CREATE_IMGS_TABLE_V1);
+        System.out.println("  Initialized imgs table");
+        s.executeUpdate(CREATE_TAGS_TABLE_V1);
+        System.out.println("  Initialized tags table");
+        s.executeUpdate(CREATE_TAGGED_TABLE_V1);
+        System.out.println("  Initialized tagged table");
+
+        s.executeUpdate("INSERT INTO tags(name) VALUES ('tagme');");
+        System.out.println("  Created 'tagme' tag");
+
+        s.close();
+
+        System.out.println("Finished initializing v1 tables");
+    }
+
+    private static void updateVersionFrom0To1(Connection db) throws SQLException {
+        System.out.println("Database updating from v0 to v1...");
+
         long t = System.currentTimeMillis();
+
+        Statement s = db.createStatement();
 
         //------------------------ Set version in schema ---------------------------------------------------------------
 
-        s.executeUpdate("CREATE TABLE version(major INT NOT NULL, minor INT NOT NULL, PRIMARY KEY (major, minor));");
-        s.executeUpdate("INSERT INTO version(major, minor) VALUES (1, 0);");
+        s.executeUpdate("CREATE TABLE version(version INT NOT NULL PRIMARY KEY);");
+        s.executeUpdate("INSERT INTO version(version) VALUES (1);");
+
+        //---------------------------- Add columns ---------------------------------------------------------------------
+
+        s.executeUpdate("ALTER TABLE imgs ADD thumbnail BLOB;");
+        s.executeUpdate("ALTER TABLE imgs ADD histogram OBJECT;");
+
+        //--------------------------------- Rename columns -------------------------------------------------------------
+
+        s.executeUpdate("ALTER TABLE imgs RENAME COLUMN img_id TO id;");
+        s.executeUpdate("ALTER TABLE imgs RENAME COLUMN img_path TO path;");
+        s.executeUpdate("ALTER TABLE imgs RENAME COLUMN img_added TO added;");
 
         //------------------------- Create tagging tables --------------------------------------------------------------
 
-        s.executeUpdate("CREATE TABLE tags(id INT PRIMARY KEY AUTO_INCREMENT, name NVARCHAR(64) NOT NULL UNIQUE);");
-        s.executeUpdate("CREATE TABLE tagged(img_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (img_id) REFERENCES imgs(img_id), FOREIGN KEY (tag_id) REFERENCES tags(id), PRIMARY KEY (img_id, tag_id));");
+        s.executeUpdate(CREATE_TAGS_TABLE_V1);
+        s.executeUpdate(CREATE_TAGGED_TABLE_V1);
 
         //------------------------------ Convert tags ------------------------------------------------------------------
 
@@ -82,7 +151,7 @@ public class DatabaseUpdater {
                     tags.add(tag);
                 }
 
-                tagImage.setInt(1, rs_img.getInt("img_id"));
+                tagImage.setInt(1, rs_img.getInt("id"));
                 tagImage.setInt(2, tag.id);
                 try {
                     tagImage.executeUpdate();
@@ -103,20 +172,11 @@ public class DatabaseUpdater {
         s.executeUpdate("ALTER TABLE imgs DROP COLUMN IF EXISTS img_hist_blue;");
         s.executeUpdate("ALTER TABLE imgs DROP COLUMN IF EXISTS img_src;");
 
-        //---------------------------- Add columns ---------------------------------------------------------------------
-
-        s.executeUpdate("ALTER TABLE imgs ADD thumbnail BLOB;");
-        s.executeUpdate("ALTER TABLE imgs ADD histogram OBJECT;");
-
-        //--------------------------------- Rename columns -------------------------------------------------------------
-
-        s.executeUpdate("ALTER TABLE imgs RENAME COLUMN img_id TO id;");
-        s.executeUpdate("ALTER TABLE imgs RENAME COLUMN img_path TO path;");
-        s.executeUpdate("ALTER TABLE imgs RENAME COLUMN img_added TO added;");
-
         //------------------------------------ Done Updating -----------------------------------------------------------
 
-        System.out.println("Finished updating database in: " + (System.currentTimeMillis() - t)/1000.0 + "s");
+        s.close();
+
+        System.out.println("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
 
     }
 
@@ -130,8 +190,27 @@ public class DatabaseUpdater {
         return null;
     }
 
+    public static void cleanDatabase(Connection db) throws SQLException {
+        System.out.println("Cleaning database....");
+
+        Statement s = db.createStatement();
+
+        s.executeUpdate("DROP TABLE IF EXISTS imgs;");
+        System.out.println("  Dropped table: imgs");
+        s.executeUpdate("DROP TABLE IF EXISTS tags;");
+        System.out.println("  Dropped table: tags");
+        s.executeUpdate("DROP TABLE IF EXISTS tagged;");
+        System.out.println("  Dropped table: tagged");
+        s.executeUpdate("DROP TABLE IF EXISTS version;");
+        System.out.println("  Dropped table: version");
+
+        s.close();
+
+        System.out.println("Finished cleaning database");
+    }
+
     public static void main(String[] args) throws SQLException {
-        Connection db = DriverManager.getConnection("jdbc:h2:~/test", "sa", "");
+        Connection db = DriverManager.getConnection("jdbc:h2:~/test2", "sa", "");
         DatabaseUpdater.updateDatabaseIfNecessary(db);
     }
 
