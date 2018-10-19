@@ -1,4 +1,4 @@
-package menagerie.db.update;
+package menagerie.model.db;
 
 public class DatabaseUpdateException extends RuntimeException {
 

@@ -1,13 +1,14 @@
 package menagerie.gui;
 
 import javafx.fxml.FXML;
-import menagerie.db.DatabaseManager;
+import menagerie.model.Menagerie;
 
+import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class MainController {
 
-    private DatabaseManager db;
+    private Menagerie menagerie;
 
     private String dbPath = "jdbc:h2:~/test", dbUser = "sa", dbPass = "";
 
@@ -15,10 +16,10 @@ public class MainController {
     @FXML
     public void initialize() {
         try {
-            db = new DatabaseManager(dbPath, dbUser, dbPass);
+            menagerie = new Menagerie(DriverManager.getConnection(dbPath, dbUser, dbPass));
         } catch (SQLException e) {
             e.printStackTrace();
-            Main.showErrorMessage("Database Error", "Driver failed to connect to database: " + dbPath, e.getLocalizedMessage());
+            Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
         }
     }
 

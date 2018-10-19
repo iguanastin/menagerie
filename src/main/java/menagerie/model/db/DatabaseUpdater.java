@@ -1,4 +1,4 @@
-package menagerie.db.update;
+package menagerie.model.db;
 
 
 import java.sql.*;
@@ -20,14 +20,18 @@ public class DatabaseUpdater {
     public static void updateDatabaseIfNecessary(Connection db) throws SQLException {
         Statement s = db.createStatement();
 
-        switch (getVersion(db)) {
+        final int version = getVersion(db);
+
+        System.out.println("Database version: " + version);
+
+        switch (version) {
             case -1:
                 cleanDatabase(db);
                 initializeTables(db);
                 break;
             case 0:
                 System.out.println("!!! Database needs to update from 0 to 1 !!!");
-                updateVersionFrom0To1(db);
+                updateFromV0ToV1(db);
                 break;
             case 1:
                 System.out.println("Database is up to date");
@@ -39,11 +43,11 @@ public class DatabaseUpdater {
     }
 
     /**
+     * Retrieves the version of the database.
      *
-     *
-     * @param db
+     * @param db Database connection
      * @return -1 if database hasn't been initialized. Int >= 0 if version data exists
-     * @throws SQLException
+     * @throws SQLException When database connection is bad or cannot create statement
      */
     private static int getVersion(Connection db) throws SQLException {
         Statement s = db.createStatement();
@@ -97,7 +101,7 @@ public class DatabaseUpdater {
         System.out.println("Finished initializing v1 tables");
     }
 
-    private static void updateVersionFrom0To1(Connection db) throws SQLException {
+    private static void updateFromV0ToV1(Connection db) throws SQLException {
         System.out.println("Database updating from v0 to v1...");
 
         long t = System.currentTimeMillis();
@@ -210,7 +214,7 @@ public class DatabaseUpdater {
     }
 
     public static void main(String[] args) throws SQLException {
-        Connection db = DriverManager.getConnection("jdbc:h2:~/test2", "sa", "");
+        Connection db = DriverManager.getConnection("jdbc:h2:~/test", "sa", "");
         DatabaseUpdater.updateDatabaseIfNecessary(db);
     }
 
