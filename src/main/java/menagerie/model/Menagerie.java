@@ -4,9 +4,7 @@ import menagerie.model.db.DatabaseUpdater;
 
 import java.io.File;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class Menagerie {
 
@@ -87,10 +85,22 @@ public class Menagerie {
 
         for (String name : names) {
             Tag t = getTagByName(name);
-            if (t != null) results.add(t);
+            if (t != null) {
+                results.add(t);
+            } else {
+                results.add(new Tag(-1, name));
+            }
         }
 
         return results;
+    }
+
+    public List<ImageInfo> searchImagesStr(List<String> requiredTags, List<String> blacklistedTags, boolean descending) {
+        List<Tag> required = null;
+        List<Tag> blacklisted = null;
+        if (requiredTags != null) required = getTagsByNames(requiredTags);
+        if (blacklistedTags != null) blacklisted = getTagsByNames(blacklistedTags);
+        return searchImages(required, blacklisted, descending);
     }
 
     public List<ImageInfo> searchImages(List<Tag> requiredTags, List<Tag> blacklistedTags, boolean descending) {
