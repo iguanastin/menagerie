@@ -14,7 +14,7 @@
     <BorderPane prefHeight="200.0" prefWidth="200.0" />
     <BorderPane prefHeight="200.0" prefWidth="200.0">
         <center>
-          <ImageGridView fx:id="imageGridView" horizontalCellSpacing="5" verticalCellSpacing="5" BorderPane.alignment="CENTER" />
+          <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3" BorderPane.alignment="CENTER" />
         </center>
       <top>
           <VBox BorderPane.alignment="CENTER">
