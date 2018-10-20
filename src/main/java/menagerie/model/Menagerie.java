@@ -1,6 +1,7 @@
 package menagerie.model;
 
 import menagerie.model.db.DatabaseUpdater;
+import menagerie.model.search.IntSearchRule;
 
 import java.io.File;
 import java.sql.*;
@@ -36,7 +37,7 @@ public class Menagerie {
         ResultSet rs = s.executeQuery(SQL_GET_IMGS);
 
         while (rs.next()) {
-            ImageInfo img = new ImageInfo(rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")));
+            ImageInfo img = new ImageInfo(rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"));
             images.add(img);
 
             PreparedStatement ps = database.prepareStatement(SQL_GET_IMG_TAG_IDS);
@@ -95,19 +96,19 @@ public class Menagerie {
         return results;
     }
 
-    public List<ImageInfo> searchImagesStr(List<String> requiredTags, List<String> blacklistedTags, boolean descending) {
+    public List<ImageInfo> searchImagesStr(List<String> requiredTags, List<String> blacklistedTags, List<IntSearchRule> idRules, boolean descending) {
         List<Tag> required = null;
         List<Tag> blacklisted = null;
         if (requiredTags != null) required = getTagsByNames(requiredTags);
         if (blacklistedTags != null) blacklisted = getTagsByNames(blacklistedTags);
-        return searchImages(required, blacklisted, descending);
+        return searchImages(required, blacklisted, idRules, descending);
     }
 
-    public List<ImageInfo> searchImages(List<Tag> requiredTags, List<Tag> blacklistedTags, boolean descending) {
+    public List<ImageInfo> searchImages(List<Tag> requiredTags, List<Tag> blacklistedTags, List<IntSearchRule> idRules, boolean descending) {
         List<ImageInfo> results = new ArrayList<>();
 
         for (ImageInfo img : images) {
-            if (imageFitsSearch(img, requiredTags, blacklistedTags)) results.add(img);
+            if (imageFitsSearch(img, requiredTags, blacklistedTags, idRules)) results.add(img);
         }
 
         results.sort((o1, o2) -> {
@@ -121,7 +122,12 @@ public class Menagerie {
         return results;
     }
 
-    private boolean imageFitsSearch(ImageInfo img, List<Tag> requiredTags, List<Tag> blacklistedTags) {
+    private boolean imageFitsSearch(ImageInfo img, List<Tag> requiredTags, List<Tag> blacklistedTags, List<IntSearchRule> idRules) {
+        if (idRules != null) {
+            for (IntSearchRule rule : idRules) {
+                if (!rule.accept(img.getId())) return false;
+            }
+        }
         if (blacklistedTags != null) {
             for (Tag t : blacklistedTags) {
                 if (img.hasTag(t)) return false;

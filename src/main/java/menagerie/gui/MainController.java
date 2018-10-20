@@ -6,6 +6,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
+import menagerie.model.search.IntSearchRule;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -38,15 +39,42 @@ public class MainController {
 
         List<String> required = new ArrayList<>();
         List<String> blacklist = new ArrayList<>();
+        List<IntSearchRule> idRules = new ArrayList<>();
         for (String arg : searchTextField.getText().split("\\s+")) {
             if (arg.startsWith("-")) {
                 blacklist.add(arg.substring(1));
+            } else if (arg.startsWith("id:")) {
+                String temp = arg.substring(3);
+                try {
+                    if (temp.startsWith("<")) {
+                        idRules.add(new IntSearchRule(IntSearchRule.Type.LESS_THAN, Integer.parseInt(temp.substring(1))));
+                    } else if (temp.startsWith(">")) {
+                        idRules.add(new IntSearchRule(IntSearchRule.Type.GREATER_THAN, Integer.parseInt(temp.substring(1))));
+                    } else {
+                        idRules.add(new IntSearchRule(IntSearchRule.Type.EQUAL, Integer.parseInt(temp)));
+                    }
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    Main.showErrorMessage("Error", "Error converting int value for ID rule", e.getLocalizedMessage());
+                }
             } else {
                 required.add(arg);
             }
         }
 
-        List<ImageInfo> images = menagerie.searchImagesStr(required, blacklist, descending);
+        List<ImageInfo> images = menagerie.searchImagesStr(required, blacklist, idRules, descending);
+
+//        List<String> md5s = new ArrayList<>();
+//        images.forEach(img -> md5s.add(img.getMd5()));
+//        for (int i = 0; i < images.size() - 1; i++) {
+//            String h1 = md5s.get(i);
+//            for (int j = i + 1; j < images.size(); j++) {
+//                String h2 = md5s.get(j);
+//                if (h1.equals(h2)) {
+//                    System.out.println(h1 + " duplicate pair (" + images.get(i).getId() + "," + images.get(j).getId() + ")");
+//                }
+//            }
+//        }
 
         //TODO: Apply result set to grid
         imageGridView.getItems().addAll(images);

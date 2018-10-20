@@ -31,10 +31,11 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private SoftReference<Image> image;
 
 
-    public ImageInfo(int id, long dateAdded, File file) {
+    public ImageInfo(int id, long dateAdded, File file, String md5) {
         this.id = id;
         this.dateAdded = dateAdded;
         this.file = file;
+        this.md5 = md5;
     }
 
     public File getFile() {
