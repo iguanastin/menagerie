@@ -22,6 +22,7 @@ public class MainController {
     public ToggleButton descendingToggleButton;
     public TextField searchTextField;
     public ImageGridView imageGridView;
+    public DynamicImageView previewImageView;
 
     private Menagerie menagerie;
 
