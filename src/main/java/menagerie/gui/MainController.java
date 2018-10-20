@@ -2,6 +2,7 @@ package menagerie.gui;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import menagerie.model.ImageInfo;
@@ -23,6 +24,7 @@ public class MainController {
     public TextField searchTextField;
     public ImageGridView imageGridView;
     public DynamicImageView previewImageView;
+    public Label resultsLabel;
 
     private Menagerie menagerie;
 
@@ -93,26 +95,27 @@ public class MainController {
 
         List<ImageInfo> images = menagerie.searchImages(rules, descending);
 
-        Thread thread = new Thread(() -> {
-            long t = System.currentTimeMillis();
-            List<String> md5s = new ArrayList<>();
-            images.forEach(img -> md5s.add(img.getMD5()));
-            for (int i = 0; i < images.size() - 1; i++) {
-                String h1 = md5s.get(i);
-                for (int j = i + 1; j < images.size(); j++) {
-                    String h2 = md5s.get(j);
-                    if (h1 != null && h1.equals(h2)) {
-                        System.out.println(h1 + " duplicate pair (" + images.get(i).getId() + "," + images.get(j).getId() + ")");
-                    }
-                }
-            }
-            System.out.println((System.currentTimeMillis() - t) / 1000.0 + "s");
-            menagerie.getUpdateQueue().commit();
-        });
-        thread.setDaemon(true);
-        thread.start();
+//        Thread thread = new Thread(() -> {
+//            long t = System.currentTimeMillis();
+//            List<String> md5s = new ArrayList<>();
+//            images.forEach(img -> md5s.add(img.getMD5()));
+//            for (int i = 0; i < images.size() - 1; i++) {
+//                String h1 = md5s.get(i);
+//                for (int j = i + 1; j < images.size(); j++) {
+//                    String h2 = md5s.get(j);
+//                    if (h1 != null && h1.equals(h2)) {
+//                        System.out.println(h1 + " duplicate pair (" + images.get(i).getId() + "," + images.get(j).getId() + ")");
+//                    }
+//                }
+//            }
+//            System.out.println((System.currentTimeMillis() - t) / 1000.0 + "s");
+//            menagerie.getUpdateQueue().commit();
+//        });
+//        thread.setDaemon(true);
+//        thread.start();
 
         //TODO: Apply result set to grid
+        resultsLabel.setText("Results: " + images.size());
         imageGridView.getItems().clear();
         imageGridView.getItems().addAll(images);
     }
