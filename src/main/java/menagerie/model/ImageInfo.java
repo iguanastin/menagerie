@@ -2,12 +2,14 @@ package menagerie.model;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
+import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
-import menagerie.util.ThumbnailBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.ref.SoftReference;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -58,9 +60,41 @@ public class ImageInfo implements Comparable<ImageInfo> {
         Image img = null;
         if (thumbnail != null) img = thumbnail.get();
         if (img == null) {
-            img = makeThumbnail(getFile());
+            try {
+                menagerie.PS_GET_IMG_THUMBNAIL.setInt(1, id);
+                ResultSet rs = menagerie.PS_GET_IMG_THUMBNAIL.executeQuery();
+                if (rs.next()) {
+                    InputStream binaryStream = rs.getBinaryStream("thumbnail");
+                    if (binaryStream != null) {
+                        img = ImageInputStreamConverter.imageFromInputStream(binaryStream);
+                        thumbnail = new SoftReference<>(img);
+                    }
+                }
+            } catch (SQLException | IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if (img == null) {
+            img = buildThumbnail();
             thumbnail = new SoftReference<>(img);
-            //TODO: Save thumbnail to database?
+
+            if (img != null) {
+                final Image finalBullshit = img;
+                img.progressProperty().addListener((observable, oldValue, newValue) -> {
+                    if (!finalBullshit.isError() && newValue.doubleValue() == 1.0) {
+                        menagerie.getUpdateQueue().enqueueUpdate(() -> {
+                            try {
+                                menagerie.PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(finalBullshit));
+                                menagerie.PS_SET_IMG_THUMBNAIL.setInt(2, id);
+                                menagerie.PS_SET_IMG_THUMBNAIL.executeUpdate();
+                            } catch (SQLException | IOException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                        menagerie.getUpdateQueue().commit();
+                    }
+                });
+            }
         }
         return img;
     }
@@ -143,7 +177,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return getId() - o.getId();
     }
 
-    private static Image makeThumbnail(File file) {
+    private Image buildThumbnail() {
         String extension = file.getName().toLowerCase();
         extension = extension.substring(extension.indexOf('.') + 1);
 
@@ -152,7 +186,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
             case "jpg":
             case "jpeg":
             case "bmp":
-                return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
+                Image img = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
+                return img;
             case "gif":
                 //TODO: Make thumbnail still and have "GIF" text applied
                 return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);

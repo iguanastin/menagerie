@@ -1,12 +1,13 @@
 package menagerie.model;
 
-import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.db.DatabaseUpdateQueue;
+import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.search.SearchRule;
 
 import java.io.File;
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Menagerie {
 
@@ -17,9 +18,11 @@ public class Menagerie {
 
     // -------------------------------- SQL Statements ----------------------------
 
-    private PreparedStatement PS_GET_IMG_TAG_IDS;
-    public PreparedStatement PS_SET_IMG_MD5;
-    public PreparedStatement PS_ADD_TAG_TO_IMG;
+    private final PreparedStatement PS_GET_IMG_TAG_IDS;
+    public final PreparedStatement PS_SET_IMG_MD5;
+    public final PreparedStatement PS_SET_IMG_THUMBNAIL;
+    public final PreparedStatement PS_GET_IMG_THUMBNAIL;
+    public final PreparedStatement PS_ADD_TAG_TO_IMG;
 
     // ------------------------------ Variables -----------------------------------
 
@@ -37,7 +40,11 @@ public class Menagerie {
         DatabaseVersionUpdater.updateDatabaseIfNecessary(database);
 
         //Initialize prepared database statements
-        prepareStatements();
+        PS_GET_IMG_TAG_IDS = database.prepareStatement("SELECT tagged.tag_id FROM tagged JOIN imgs ON tagged.img_id=imgs.id WHERE imgs.id=?;");
+        PS_SET_IMG_MD5 = database.prepareStatement("UPDATE imgs SET imgs.md5=? WHERE imgs.id=?;");
+        PS_SET_IMG_THUMBNAIL = database.prepareStatement("UPDATE imgs SET imgs.thumbnail=? WHERE imgs.id=?;");
+        PS_GET_IMG_THUMBNAIL = database.prepareStatement("SELECT imgs.thumbnail FROM imgs WHERE imgs.id=?;");
+        PS_ADD_TAG_TO_IMG = database.prepareStatement("INSERT INTO tagged(img_id, tag_id) VALUES (?, ?);");
 
         // Load data from database
         loadTagsFromDatabase();
@@ -47,12 +54,6 @@ public class Menagerie {
         Thread thread = new Thread(updateQueue);
         thread.setDaemon(true);
         thread.start();
-    }
-
-    private void prepareStatements() throws SQLException {
-        PS_GET_IMG_TAG_IDS = database.prepareStatement("SELECT tagged.tag_id FROM tagged JOIN imgs ON tagged.img_id=imgs.id WHERE imgs.id=?;");
-        PS_SET_IMG_MD5 = database.prepareStatement("UPDATE imgs SET imgs.md5=? WHERE imgs.id=?;");
-        PS_ADD_TAG_TO_IMG = database.prepareStatement("INSERT INTO tagged(img_id, tag_id) VALUES (?, ?);");
     }
 
     private void loadImagesFromDatabase() throws SQLException {

@@ -6,9 +6,12 @@ import javafx.scene.image.Image;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
-public abstract class ThumbnailBuilder {
+public abstract class ImageInputStreamConverter {
 
 //    private static final String[] VLC_ARGS = {"--intf", "dummy", "--vout", "dummy", "--no-audio", "--no-osd", "--no-spu", "--no-stats", "--no-sub-autodetect-file", "--no-disable-screensaver", "--no-snapshot-preview"};
 //    private static final MediaPlayer thumbnailMediaPlayer = new MediaPlayerFactory(VLC_ARGS).newHeadlessMediaPlayer();
@@ -22,6 +25,7 @@ public abstract class ThumbnailBuilder {
     public static InputStream imageToInputStream(Image image) throws IOException {
         BufferedImage bi = SwingFXUtils.fromFXImage(image, null);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        if (bi == null) return null;
         ImageIO.write(bi, "png", baos);
 
         return new ByteArrayInputStream(baos.toByteArray());
