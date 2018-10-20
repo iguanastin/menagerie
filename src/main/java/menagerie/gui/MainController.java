@@ -44,6 +44,8 @@ public class MainController {
 
         List<SearchRule> rules = new ArrayList<>();
         for (String arg : searchTextField.getText().split("\\s+")) {
+            if (arg == null || arg.isEmpty()) continue;
+
             if (arg.startsWith("id:")) {
                 String temp = arg.substring(3);
                 IDRule.Type type = IDRule.Type.EQUAL_TO;
@@ -91,17 +93,24 @@ public class MainController {
 
         List<ImageInfo> images = menagerie.searchImages(rules, descending);
 
-//        List<String> md5s = new ArrayList<>();
-//        images.forEach(img -> md5s.add(img.getMd5()));
-//        for (int i = 0; i < images.size() - 1; i++) {
-//            String h1 = md5s.get(i);
-//            for (int j = i + 1; j < images.size(); j++) {
-//                String h2 = md5s.get(j);
-//                if (h1.equals(h2)) {
-//                    System.out.println(h1 + " duplicate pair (" + images.get(i).getId() + "," + images.get(j).getId() + ")");
-//                }
-//            }
-//        }
+        Thread thread = new Thread(() -> {
+            long t = System.currentTimeMillis();
+            List<String> md5s = new ArrayList<>();
+            images.forEach(img -> md5s.add(img.getMD5()));
+            for (int i = 0; i < images.size() - 1; i++) {
+                String h1 = md5s.get(i);
+                for (int j = i + 1; j < images.size(); j++) {
+                    String h2 = md5s.get(j);
+                    if (h1 != null && h1.equals(h2)) {
+                        System.out.println(h1 + " duplicate pair (" + images.get(i).getId() + "," + images.get(j).getId() + ")");
+                    }
+                }
+            }
+            System.out.println((System.currentTimeMillis() - t) / 1000.0 + "s");
+            menagerie.getUpdateQueue().commit();
+        });
+        thread.setDaemon(true);
+        thread.start();
 
         //TODO: Apply result set to grid
         imageGridView.getItems().clear();

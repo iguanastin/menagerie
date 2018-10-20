@@ -12,7 +12,7 @@ public abstract class MD5Hasher {
     private static MessageDigest md5;
 
     public static byte[] hash(File file) throws IOException {
-        if (getMD5() != null) return getMD5().digest(Files.readAllBytes(file.toPath()));
+        if (file.exists() && getMD5() != null) return getMD5().digest(Files.readAllBytes(file.toPath()));
         return null;
     }
 

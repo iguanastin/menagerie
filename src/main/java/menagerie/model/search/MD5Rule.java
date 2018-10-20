@@ -19,7 +19,7 @@ public class MD5Rule extends SearchRule {
 
     @Override
     public boolean accept(ImageInfo img) {
-        return img.getMd5().equalsIgnoreCase(md5);
+        return img.getMD5().equalsIgnoreCase(md5);
     }
 
     @Override

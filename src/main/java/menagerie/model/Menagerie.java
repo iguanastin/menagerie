@@ -1,7 +1,7 @@
 package menagerie.model;
 
-import menagerie.model.db.DatabaseUpdater;
-import menagerie.util.RunnableQueue;
+import menagerie.model.db.DatabaseVersionUpdater;
+import menagerie.model.db.DatabaseUpdateQueue;
 import menagerie.model.search.SearchRule;
 
 import java.io.File;
@@ -14,7 +14,12 @@ public class Menagerie {
 
     private static final String SQL_GET_TAGS = "SELECT tags.* FROM tags;";
     private static final String SQL_GET_IMGS = "SELECT imgs.* FROM imgs;";
-    private static final String SQL_GET_IMG_TAG_IDS = "SELECT tagged.tag_id FROM tagged JOIN imgs ON tagged.img_id=imgs.id WHERE imgs.id=?;";
+
+    // -------------------------------- SQL Statements ----------------------------
+
+    private PreparedStatement PS_GET_IMG_TAG_IDS;
+    public PreparedStatement PS_SET_IMG_MD5;
+    public PreparedStatement PS_ADD_TAG_TO_IMG;
 
     // ------------------------------ Variables -----------------------------------
 
@@ -22,36 +27,44 @@ public class Menagerie {
     private List<Tag> tags = new ArrayList<>();
 
     private Connection database;
-    private RunnableQueue databaseUpdateQueue = new RunnableQueue();
+    private DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
 
 
     public Menagerie(Connection database) throws SQLException {
         this.database = database;
 
         // Update/verify database
-        DatabaseUpdater.updateDatabaseIfNecessary(database);
+        DatabaseVersionUpdater.updateDatabaseIfNecessary(database);
+
+        //Initialize prepared database statements
+        prepareStatements();
 
         // Load data from database
-        loadTagsFromDatabase(database);
-        loadImagesFromDatabase(database);
+        loadTagsFromDatabase();
+        loadImagesFromDatabase();
 
         // Start runnable queue for database updates
-        Thread thread = new Thread(databaseUpdateQueue);
+        Thread thread = new Thread(updateQueue);
         thread.setDaemon(true);
         thread.start();
     }
 
-    private void loadImagesFromDatabase(Connection database) throws SQLException {
+    private void prepareStatements() throws SQLException {
+        PS_GET_IMG_TAG_IDS = database.prepareStatement("SELECT tagged.tag_id FROM tagged JOIN imgs ON tagged.img_id=imgs.id WHERE imgs.id=?;");
+        PS_SET_IMG_MD5 = database.prepareStatement("UPDATE imgs SET imgs.md5=? WHERE imgs.id=?;");
+        PS_ADD_TAG_TO_IMG = database.prepareStatement("INSERT INTO tagged(img_id, tag_id) VALUES (?, ?);");
+    }
+
+    private void loadImagesFromDatabase() throws SQLException {
         Statement s = database.createStatement();
         ResultSet rs = s.executeQuery(SQL_GET_IMGS);
 
         while (rs.next()) {
-            ImageInfo img = new ImageInfo(rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"));
+            ImageInfo img = new ImageInfo(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"));
             images.add(img);
 
-            PreparedStatement ps = database.prepareStatement(SQL_GET_IMG_TAG_IDS);
-            ps.setInt(1, img.getId());
-            ResultSet tagRS = ps.executeQuery();
+            PS_GET_IMG_TAG_IDS.setInt(1, img.getId());
+            ResultSet tagRS = PS_GET_IMG_TAG_IDS.executeQuery();
 
             while (tagRS.next()) {
                 img.getTags().add(getTagByID(tagRS.getInt("tag_id")));
@@ -63,7 +76,7 @@ public class Menagerie {
         System.out.println("Finished loading " + images.size() + " images from database");
     }
 
-    private void loadTagsFromDatabase(Connection database) throws SQLException {
+    private void loadTagsFromDatabase() throws SQLException {
         Statement s = database.createStatement();
         ResultSet rs = s.executeQuery(SQL_GET_TAGS);
 
@@ -103,6 +116,10 @@ public class Menagerie {
         }
 
         return results;
+    }
+
+    public DatabaseUpdateQueue getUpdateQueue() {
+        return updateQueue;
     }
 
     public List<ImageInfo> searchImages(List<SearchRule> rules, boolean descending) {

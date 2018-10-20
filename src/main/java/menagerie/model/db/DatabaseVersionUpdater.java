@@ -5,7 +5,7 @@ import java.sql.*;
 import java.util.ArrayList;
 
 
-public class DatabaseUpdater {
+public class DatabaseVersionUpdater {
 
 
     private static final String CREATE_TAGS_TABLE_V1 = "CREATE TABLE tags(id INT PRIMARY KEY AUTO_INCREMENT, name NVARCHAR(128) NOT NULL UNIQUE);";
@@ -216,7 +216,7 @@ public class DatabaseUpdater {
 
     public static void main(String[] args) throws SQLException {
         Connection db = DriverManager.getConnection("jdbc:h2:~/test", "sa", "");
-        DatabaseUpdater.updateDatabaseIfNecessary(db);
+        DatabaseVersionUpdater.updateDatabaseIfNecessary(db);
     }
 
 }

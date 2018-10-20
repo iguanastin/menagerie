@@ -8,6 +8,7 @@ import menagerie.util.ThumbnailBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -20,6 +21,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
     // -------------------------------- Variables ------------------------------------
 
+    private final Menagerie menagerie;
+
     private final int id;
     private final long dateAdded;
     private final File file;
@@ -31,7 +34,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private SoftReference<Image> image;
 
 
-    public ImageInfo(int id, long dateAdded, File file, String md5) {
+    public ImageInfo(Menagerie menagerie, int id, long dateAdded, File file, String md5) {
+        this.menagerie = menagerie;
         this.id = id;
         this.dateAdded = dateAdded;
         this.file = file;
@@ -71,10 +75,22 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return img;
     }
 
-    public String getMd5() {
+    public String getMD5() {
         if (md5 == null) {
             try {
                 md5 = HexBin.encode(MD5Hasher.hash(getFile()));
+
+                if (md5 != null) {
+                    menagerie.getUpdateQueue().enqueueUpdate(() -> {
+                        try {
+                            menagerie.PS_SET_IMG_MD5.setNString(1, md5);
+                            menagerie.PS_SET_IMG_MD5.setInt(2, id);
+                            menagerie.PS_SET_IMG_MD5.executeUpdate();
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -82,19 +98,34 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return md5;
     }
 
-    public boolean hasTag(String name) {
-        for (Tag tag : tags) {
-            if (tag.getName().equalsIgnoreCase(name)) return true;
-        }
-        return false;
+    public List<Tag> getTags() {
+        return tags;
+    }
+
+    public Menagerie getMenagerie() {
+        return menagerie;
     }
 
     public boolean hasTag(Tag t) {
         return getTags().contains(t);
     }
 
-    public List<Tag> getTags() {
-        return tags;
+    public boolean addTag(Tag t) {
+        if (hasTag(t)) return false;
+        tags.add(t);
+
+        //TODO: Queue db update
+
+        return true;
+    }
+
+    public boolean removeTag(Tag t) {
+        if (!hasTag(t)) return false;
+        tags.remove(t);
+
+        //TODO: Queue db update
+
+        return true;
     }
 
     @Override
