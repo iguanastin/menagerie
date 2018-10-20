@@ -1,6 +1,7 @@
 package menagerie.model;
 
 import menagerie.model.db.DatabaseUpdater;
+import menagerie.util.RunnableQueue;
 import menagerie.model.search.SearchRule;
 
 import java.io.File;
@@ -21,15 +22,23 @@ public class Menagerie {
     private List<Tag> tags = new ArrayList<>();
 
     private Connection database;
+    private RunnableQueue databaseUpdateQueue = new RunnableQueue();
 
 
     public Menagerie(Connection database) throws SQLException {
         this.database = database;
 
+        // Update/verify database
         DatabaseUpdater.updateDatabaseIfNecessary(database);
 
+        // Load data from database
         loadTagsFromDatabase(database);
         loadImagesFromDatabase(database);
+
+        // Start runnable queue for database updates
+        Thread thread = new Thread(databaseUpdateQueue);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void loadImagesFromDatabase(Connection database) throws SQLException {
