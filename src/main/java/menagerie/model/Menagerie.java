@@ -5,6 +5,7 @@ import menagerie.model.db.DatabaseUpdater;
 import java.io.File;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Menagerie {
@@ -72,6 +73,57 @@ public class Menagerie {
             if (t.getId() == id) return t;
         }
         return null;
+    }
+
+    private Tag getTagByName(String name) {
+        for (Tag t : tags) {
+            if (t.getName().equalsIgnoreCase(name)) return t;
+        }
+        return null;
+    }
+
+    public List<Tag> getTagsByNames(List<String> names) {
+        List<Tag> results = new ArrayList<>();
+
+        for (String name : names) {
+            Tag t = getTagByName(name);
+            if (t != null) results.add(t);
+        }
+
+        return results;
+    }
+
+    public List<ImageInfo> searchImages(List<Tag> requiredTags, List<Tag> blacklistedTags, boolean descending) {
+        List<ImageInfo> results = new ArrayList<>();
+
+        for (ImageInfo img : images) {
+            if (imageFitsSearch(img, requiredTags, blacklistedTags)) results.add(img);
+        }
+
+        results.sort((o1, o2) -> {
+            if (descending) {
+                return o2.getId() - o1.getId();
+            } else {
+                return o1.getId() - o2.getId();
+            }
+        });
+
+        return results;
+    }
+
+    private boolean imageFitsSearch(ImageInfo img, List<Tag> requiredTags, List<Tag> blacklistedTags) {
+        if (blacklistedTags != null) {
+            for (Tag t : blacklistedTags) {
+                if (img.hasTag(t)) return false;
+            }
+        }
+        if (requiredTags != null) {
+            for (Tag t : requiredTags) {
+                if (!img.hasTag(t)) return false;
+            }
+        }
+
+        return true;
     }
 
 }

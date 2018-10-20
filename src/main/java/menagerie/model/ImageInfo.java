@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class ImageInfo {
+public class ImageInfo implements Comparable<ImageInfo> {
 
     // ---------------------------- Constants ----------------------------------------
 
@@ -65,11 +65,13 @@ public class ImageInfo {
 
     public boolean hasTag(String name) {
         for (Tag tag : tags) {
-            if (tag.getName().equalsIgnoreCase(name)) {
-                return true;
-            }
+            if (tag.getName().equalsIgnoreCase(name)) return true;
         }
         return false;
+    }
+
+    public boolean hasTag(Tag t) {
+        return getTags().contains(t);
     }
 
     public List<Tag> getTags() {
@@ -79,6 +81,16 @@ public class ImageInfo {
     @Override
     public String toString() {
         return "Image (" + getId() + ") \"" + getFile().getAbsolutePath() + "\" - " + new Date(getDateAdded());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof ImageInfo && ((ImageInfo) obj).getId() == getId();
+    }
+
+    @Override
+    public int compareTo(ImageInfo o) {
+        return getId() - o.getId();
     }
 
 }

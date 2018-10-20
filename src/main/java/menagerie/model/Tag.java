@@ -1,6 +1,6 @@
 package menagerie.model;
 
-public class Tag {
+public class Tag implements Comparable<Tag> {
 
     private final int id;
     private final String name;
@@ -27,6 +27,11 @@ public class Tag {
     @Override
     public String toString() {
         return "Tag (" + getId() + ") \"" + getName() + "\"";
+    }
+
+    @Override
+    public int compareTo(Tag o) {
+        return getId() - o.getId();
     }
 
 }
