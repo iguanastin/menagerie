@@ -6,7 +6,11 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
-import menagerie.model.search.IntSearchRule;
+import menagerie.model.Tag;
+import menagerie.model.search.DateAddedRule;
+import menagerie.model.search.IDRule;
+import menagerie.model.search.SearchRule;
+import menagerie.model.search.TagRule;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -37,32 +41,54 @@ public class MainController {
     private void searchOnAction() {
         final boolean descending = descendingToggleButton.isSelected();
 
-        List<String> required = new ArrayList<>();
-        List<String> blacklist = new ArrayList<>();
-        List<IntSearchRule> idRules = new ArrayList<>();
+        List<SearchRule> rules = new ArrayList<>();
         for (String arg : searchTextField.getText().split("\\s+")) {
-            if (arg.startsWith("-")) {
-                blacklist.add(arg.substring(1));
-            } else if (arg.startsWith("id:")) {
+            if (arg.startsWith("id:")) {
                 String temp = arg.substring(3);
+                IDRule.Type type = IDRule.Type.EQUAL_TO;
+                if (temp.startsWith("<")) {
+                    type = IDRule.Type.LESS_THAN;
+                    temp = temp.substring(1);
+                } else if (temp.startsWith(">")) {
+                    type = IDRule.Type.GREATER_THAN;
+                    temp = temp.substring(1);
+                }
                 try {
-                    if (temp.startsWith("<")) {
-                        idRules.add(new IntSearchRule(IntSearchRule.Type.LESS_THAN, Integer.parseInt(temp.substring(1))));
-                    } else if (temp.startsWith(">")) {
-                        idRules.add(new IntSearchRule(IntSearchRule.Type.GREATER_THAN, Integer.parseInt(temp.substring(1))));
-                    } else {
-                        idRules.add(new IntSearchRule(IntSearchRule.Type.EQUAL, Integer.parseInt(temp)));
-                    }
+                    rules.add(new IDRule(type, Integer.parseInt(temp)));
                 } catch (NumberFormatException e) {
                     e.printStackTrace();
                     Main.showErrorMessage("Error", "Error converting int value for ID rule", e.getLocalizedMessage());
                 }
+            } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
+                String temp = arg.substring(5);
+                DateAddedRule.Type type = DateAddedRule.Type.EQUAL_TO;
+                if (temp.startsWith("<")) {
+                    type = DateAddedRule.Type.LESS_THAN;
+                    temp = temp.substring(1);
+                } else if (temp.startsWith(">")) {
+                    type = DateAddedRule.Type.GREATER_THAN;
+                    temp = temp.substring(1);
+                }
+                try {
+                    rules.add(new DateAddedRule(type, Long.parseLong(temp)));
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    Main.showErrorMessage("Error", "Error converting long value for date added rule", e.getLocalizedMessage());
+                }
+            } else if (arg.startsWith("md5:")) {
+
+            } else if (arg.startsWith("-")) {
+                Tag tag = menagerie.getTagByName(arg.substring(1));
+                if (tag == null) tag = new Tag(-1, arg.substring(1));
+                rules.add(new TagRule(tag, true));
             } else {
-                required.add(arg);
+                Tag tag = menagerie.getTagByName(arg);
+                if (tag == null) tag = new Tag(-1, arg);
+                rules.add(new TagRule(tag, false));
             }
         }
 
-        List<ImageInfo> images = menagerie.searchImagesStr(required, blacklist, idRules, descending);
+        List<ImageInfo> images = menagerie.searchImages(rules, descending);
 
 //        List<String> md5s = new ArrayList<>();
 //        images.forEach(img -> md5s.add(img.getMd5()));
@@ -77,6 +103,7 @@ public class MainController {
 //        }
 
         //TODO: Apply result set to grid
+        imageGridView.getItems().clear();
         imageGridView.getItems().addAll(images);
     }
 

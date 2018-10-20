@@ -14,10 +14,10 @@
     <BorderPane prefHeight="200.0" prefWidth="200.0" />
     <BorderPane prefHeight="200.0" prefWidth="200.0">
         <center>
-          <ImageGridView fx:id="imageGridView" BorderPane.alignment="CENTER" horizontalCellSpacing="5" verticalCellSpacing="5" />
+          <ImageGridView fx:id="imageGridView" horizontalCellSpacing="5" verticalCellSpacing="5" BorderPane.alignment="CENTER" />
         </center>
       <top>
-          <VBox prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
+          <VBox BorderPane.alignment="CENTER">
               <HBox spacing="5.0">
                   <padding>
                       <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
