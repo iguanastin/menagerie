@@ -8,6 +8,10 @@ public class DatabaseUpdateQueue implements Runnable {
     private List<Runnable> activeQueue = new ArrayList<>();
     private List<Runnable> waitingQueue = new ArrayList<>();
 
+    private static final long DELTA_SINCE_LAST_PRINT = 30000;
+    private long lastPrintTime = System.currentTimeMillis();
+    private int jobsSinceLastPrint = 0;
+
 
     public synchronized void enqueueUpdate(Runnable runnable) {
         waitingQueue.add(runnable);
@@ -41,18 +45,26 @@ public class DatabaseUpdateQueue implements Runnable {
     @Override
     public void run() {
         while (true) {
-            long t = System.currentTimeMillis();
-            System.out.println(Thread.currentThread() + " - Starting queue: " + getQueueSize() + " queued");
             while (!isActiveQueueEmpty()) {
                 Runnable r = dequeueUpdate();
-                r.run();
+                try {
+                    r.run();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                jobsSinceLastPrint++;
             }
-            System.out.println(Thread.currentThread() + " - Queue emptied after " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+
+            if (System.currentTimeMillis() - lastPrintTime > DELTA_SINCE_LAST_PRINT) {
+                System.out.println(Thread.currentThread() + " - Finished " + jobsSinceLastPrint + " jobs over the last " + (System.currentTimeMillis() - lastPrintTime) / 1000.0 + "s");
+                lastPrintTime = System.currentTimeMillis();
+                jobsSinceLastPrint = 0;
+            }
 
             synchronized (this) {
                 try {
                     wait();
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ignored) {
                 }
             }
         }

@@ -1,10 +1,12 @@
 package menagerie.gui;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.input.KeyEvent;
 import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
 import menagerie.model.Tag;
@@ -38,6 +40,7 @@ public class MainController {
         } catch (SQLException e) {
             e.printStackTrace();
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
+            Platform.exit();
         }
     }
 
@@ -114,8 +117,8 @@ public class MainController {
 //        thread.setDaemon(true);
 //        thread.start();
 
-        //TODO: Apply result set to grid
         resultsLabel.setText("Results: " + images.size());
+        imageGridView.clearSelection();
         imageGridView.getItems().clear();
         imageGridView.getItems().addAll(images);
     }
