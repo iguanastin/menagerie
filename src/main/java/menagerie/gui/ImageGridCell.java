@@ -23,11 +23,6 @@ public class ImageGridCell extends GridCell<ImageInfo> {
         setGraphic(view);
         setAlignment(Pos.CENTER);
         setStyle(UNSELECTED_BG_CSS);
-
-        setOnMousePressed(event -> {
-            grid.cellMousePressed(this, event);
-            event.consume();
-        });
     }
 
     @Override

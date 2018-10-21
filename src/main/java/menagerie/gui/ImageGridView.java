@@ -1,33 +1,65 @@
 package menagerie.gui;
 
 import com.sun.javafx.scene.control.skin.VirtualFlow;
-import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
 import menagerie.model.ImageInfo;
 import org.controlsfx.control.GridView;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ImageGridView extends GridView<ImageInfo> {
 
-    public static final int CELL_BORDER = 2;
+    static final int CELL_BORDER = 2;
+
+
+    private final ClipboardContent clipboard = new ClipboardContent();
 
     private final List<ImageInfo> selected = new ArrayList<>();
     private ImageInfo lastSelected = null;
-
     private SelectionListener selectionListener = null;
+
+    private boolean dragging = false;
 
 
     public ImageGridView() {
-        setCellFactory(param -> new ImageGridCell(this));
-
         setCellWidth(ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2);
         setCellHeight(ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2);
 
+
+        setCellFactory(param -> {
+            ImageGridCell c = new ImageGridCell(this);
+            c.setOnDragDetected(event -> {
+                if (!selected.isEmpty() && event.isPrimaryButtonDown()) {
+                    if (!isSelected(c.getItem())) select(c.getItem(), event.isControlDown(), event.isShiftDown());
+
+                    Dragboard db = c.startDragAndDrop(TransferMode.ANY);
+                    List<File> files = new ArrayList<>();
+                    selected.forEach(img -> files.add(img.getFile()));
+                    clipboard.putFiles(files);
+                    db.setContent(clipboard);
+
+                    dragging = true;
+                    event.consume();
+                }
+            });
+            c.setOnDragDone(event -> {
+                dragging = false;
+                event.consume();
+            });
+            c.setOnMouseReleased(event -> {
+                if (!dragging && event.getButton() == MouseButton.PRIMARY)
+                    select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                event.consume();
+            });
+            return c;
+        });
 
         getItems().addListener((ListChangeListener<? super ImageInfo>) c -> {
             while (c.next()) {
@@ -39,7 +71,7 @@ public class ImageGridView extends GridView<ImageInfo> {
             }
         });
 
-        setOnMousePressed(event -> {
+        setOnMouseReleased(event -> {
             selected.clear();
             updateCellSelectionCSS();
             event.consume();
@@ -131,12 +163,6 @@ public class ImageGridView extends GridView<ImageInfo> {
         return (int) Math.floor(getHeight() / (ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
     }
 
-    void cellMousePressed(ImageGridCell cell, MouseEvent event) {
-        if (event.getButton() == MouseButton.PRIMARY) {
-            select(cell.getItem(), event.isControlDown(), event.isShiftDown());
-        }
-    }
-
     private void select(ImageInfo item, boolean ctrlDown, boolean shiftDown) {
         if (ctrlDown) {
             if (isSelected(item)) {
@@ -216,10 +242,6 @@ public class ImageGridView extends GridView<ImageInfo> {
         return selected.contains(img);
     }
 
-    public List<ImageInfo> getSelected() {
-        return selected;
-    }
-
     public void setSelectionListener(SelectionListener selectionListener) {
         this.selectionListener = selectionListener;
     }
@@ -233,4 +255,5 @@ public class ImageGridView extends GridView<ImageInfo> {
             }
         }
     }
+
 }

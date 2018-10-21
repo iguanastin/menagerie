@@ -34,3 +34,6 @@ menagerie.iml
 # Build files
 target/
 out/
+
+# Other
+menagerie.settings

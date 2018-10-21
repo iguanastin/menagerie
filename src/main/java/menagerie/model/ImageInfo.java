@@ -110,27 +110,32 @@ public class ImageInfo implements Comparable<ImageInfo> {
     }
 
     public String getMD5() {
-        if (md5 == null) {
-            try {
-                md5 = HexBin.encode(MD5Hasher.hash(getFile()));
-
-                if (md5 != null) {
-                    menagerie.getUpdateQueue().enqueueUpdate(() -> {
-                        try {
-                            menagerie.PS_SET_IMG_MD5.setNString(1, md5);
-                            menagerie.PS_SET_IMG_MD5.setInt(2, id);
-                            menagerie.PS_SET_IMG_MD5.executeUpdate();
-                        } catch (SQLException e) {
-                            e.printStackTrace();
-                        }
-                    });
-                    menagerie.getUpdateQueue().commit();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
         return md5;
+    }
+
+    public void initializeMD5() {
+        if (md5 != null) return;
+
+        try {
+            md5 = HexBin.encode(MD5Hasher.hash(getFile()));
+            menagerie.putMD5(md5, this);
+
+            if (md5 != null) {
+                menagerie.getUpdateQueue().enqueueUpdate(() -> {
+                    try {
+                        menagerie.PS_SET_IMG_MD5.setNString(1, md5);
+                        menagerie.PS_SET_IMG_MD5.setInt(2, id);
+                        menagerie.PS_SET_IMG_MD5.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                });
+                menagerie.getUpdateQueue().commit();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     public List<Tag> getTags() {

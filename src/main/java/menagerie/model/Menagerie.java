@@ -6,8 +6,7 @@ import menagerie.model.search.SearchRule;
 
 import java.io.File;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Menagerie {
 
@@ -19,6 +18,9 @@ public class Menagerie {
     // -------------------------------- SQL Statements ----------------------------
 
     private final PreparedStatement PS_GET_IMG_TAG_IDS;
+    private final PreparedStatement PS_GET_HIGHEST_IMG_ID;
+    private final PreparedStatement PS_DELETE_IMG;
+    private final PreparedStatement PS_CREATE_IMG;
     final PreparedStatement PS_SET_IMG_MD5;
     final PreparedStatement PS_SET_IMG_THUMBNAIL;
     final PreparedStatement PS_GET_IMG_THUMBNAIL;
@@ -29,6 +31,7 @@ public class Menagerie {
 
     private List<ImageInfo> images = new ArrayList<>();
     private List<Tag> tags = new ArrayList<>();
+    Map<String, HashSet<ImageInfo>> knownMD5s = new HashMap<>();
 
     private Connection database;
     private DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
@@ -37,9 +40,6 @@ public class Menagerie {
     public Menagerie(Connection database) throws SQLException {
         this.database = database;
 
-        // Update/verify database
-        DatabaseVersionUpdater.updateDatabaseIfNecessary(database);
-
         //Initialize prepared database statements
         PS_GET_IMG_TAG_IDS = database.prepareStatement("SELECT tagged.tag_id FROM tagged JOIN imgs ON tagged.img_id=imgs.id WHERE imgs.id=?;");
         PS_SET_IMG_MD5 = database.prepareStatement("UPDATE imgs SET imgs.md5=? WHERE imgs.id=?;");
@@ -47,6 +47,9 @@ public class Menagerie {
         PS_GET_IMG_THUMBNAIL = database.prepareStatement("SELECT imgs.thumbnail FROM imgs WHERE imgs.id=?;");
         PS_ADD_TAG_TO_IMG = database.prepareStatement("INSERT INTO tagged(img_id, tag_id) VALUES (?, ?);");
         PS_REMOVE_TAG_FROM_IMG = database.prepareStatement("DELETE FROM tagged WHERE img_id=? AND tag_id=?;");
+        PS_GET_HIGHEST_IMG_ID = database.prepareStatement("SELECT TOP 1 imgs.id FROM imgs ORDER BY imgs.id DESC;");
+        PS_DELETE_IMG = database.prepareStatement("DELETE FROM imgs WHERE imgs.id=?;");
+        PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5) VALUES (?, ?, ?, ?);");
 
         // Load data from database
         loadTagsFromDatabase();
@@ -65,6 +68,8 @@ public class Menagerie {
         while (rs.next()) {
             ImageInfo img = new ImageInfo(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"));
             images.add(img);
+
+            if (img.getMD5() != null) putMD5(img.getMD5(), img);
 
             PS_GET_IMG_TAG_IDS.setInt(1, img.getId());
             ResultSet tagRS = PS_GET_IMG_TAG_IDS.executeQuery();
@@ -90,6 +95,77 @@ public class Menagerie {
         s.close();
 
         System.out.println("Finished loading " + tags.size() + " tags from database");
+    }
+
+    public boolean importImage(File file, boolean computeMD5, boolean computeHistogram) {
+        ImageInfo img = new ImageInfo(this, getNextAvailableImageID(), System.currentTimeMillis(), file, null);
+        if (computeMD5) {
+            img.initializeMD5();
+            if (knownMD5s.get(img.getMD5()).size() > 1) {
+                //TODO: Notify of duplicate image
+                return false;
+            }
+        }
+        //TODO: Compute histogram
+
+        images.add(img);
+        updateQueue.enqueueUpdate(() -> {
+            try {
+                PS_CREATE_IMG.setInt(1, img.getId());
+                PS_CREATE_IMG.setNString(2, img.getFile().getAbsolutePath());
+                PS_CREATE_IMG.setLong(3, img.getDateAdded());
+                PS_CREATE_IMG.setNString(4, img.getMD5());
+                PS_CREATE_IMG.executeUpdate();
+
+                PS_ADD_TAG_TO_IMG.setInt(1, img.getId());
+                PS_ADD_TAG_TO_IMG.setInt(2, getTagByName("tagme").getId());
+                PS_ADD_TAG_TO_IMG.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+        updateQueue.commit();
+
+        return true;
+    }
+
+    public void removeImage(ImageInfo image, boolean deleteFile) {
+        if (image != null && images.remove(image)) {
+            if (deleteFile) {
+                if (!image.getFile().delete()) System.out.println("Could not delete file: " + image.getFile());
+            }
+
+            updateQueue.enqueueUpdate(() -> {
+                try {
+                    PS_DELETE_IMG.setInt(1, image.getId());
+                    PS_DELETE_IMG.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            });
+            updateQueue.commit();
+        }
+    }
+
+    void putMD5(String hash, ImageInfo image) {
+        if (knownMD5s.get(hash) == null) {
+            knownMD5s.put(hash, new HashSet<>(Collections.singletonList(image)));
+        } else {
+            knownMD5s.get(hash).add(image);
+        }
+    }
+
+    private int getNextAvailableImageID() {
+        try {
+            ResultSet rs = PS_GET_HIGHEST_IMG_ID.executeQuery();
+
+            if (!rs.next()) return -1;
+
+            return rs.getInt("id") + 1;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return -1;
+        }
     }
 
     private Tag getTagByID(int id) {

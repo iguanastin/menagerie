@@ -4,18 +4,32 @@ import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.TransferMode;
+import javafx.stage.FileChooser;
 import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
 import menagerie.model.Tag;
+import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.search.DateAddedRule;
 import menagerie.model.search.IDRule;
 import menagerie.model.search.SearchRule;
 import menagerie.model.search.TagRule;
-import org.controlsfx.control.StatusBar;
+import menagerie.model.settings.Settings;
+import menagerie.util.Filters;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -28,9 +42,11 @@ public class MainController {
     public ImageGridView imageGridView;
     public DynamicImageView previewImageView;
     public Label resultsLabel;
-    public StatusBar databaseProgressBar;
+    public SplitPane rootPane;
 
     private Menagerie menagerie;
+
+    private Settings settings = new Settings(new File("menagerie.settings"));
 
     private String dbPath = "jdbc:h2:~/test", dbUser = "sa", dbPass = "";
 
@@ -38,19 +54,67 @@ public class MainController {
     @FXML
     public void initialize() {
         try {
-            menagerie = new Menagerie(DriverManager.getConnection(dbPath, dbUser, dbPass));
+            Connection db = DriverManager.getConnection(dbPath, dbUser, dbPass);
+            if (!DatabaseVersionUpdater.upToDate(db)) {
+                DatabaseVersionUpdater.updateDatabase(db);
+            }
+
+            menagerie = new Menagerie(db);
         } catch (SQLException e) {
             e.printStackTrace();
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
             Platform.exit();
         }
 
+        //Ensure two columns for grid
+        imageGridView.setMinWidth(18 + (ImageInfo.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + imageGridView.getHorizontalCellSpacing() * 2) * 2);
+
         imageGridView.setSelectionListener(image -> {
             previewImageView.setImage(image.getImage());
         });
+        imageGridView.setOnDragOver(event -> {
+            if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
+                event.acceptTransferModes(TransferMode.ANY);
+            }
+            event.consume();
+        });
+        rootPane.setOnDragDropped(event -> {
+            List<File> files = event.getDragboard().getFiles();
+            String url = event.getDragboard().getUrl();
 
-        //Ensure two columns for grid
-        imageGridView.setMinWidth(18 + (ImageInfo.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + imageGridView.getHorizontalCellSpacing() * 2) * 2);
+            if (files != null && !files.isEmpty()) {
+                files.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport()));
+            } else if (url != null && !url.isEmpty()) {
+                String folder = settings.getLastFolder();
+                String filename = URI.create(url).getPath().replaceAll("^.*/", "");
+                if (!settings.isAutoImportFromWeb() || folder == null || !new File(folder).exists()) {
+                    FileChooser fc = new FileChooser();
+                    fc.setTitle("Save file from web");
+                    fc.setInitialFileName(filename);
+                    fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+                    File result = fc.showSaveDialog(rootPane.getScene().getWindow());
+
+                    settings.setLastFolder(result.getParent());
+                    folder = settings.getLastFolder();
+                    filename = result.getName();
+                }
+
+                if (!folder.endsWith("\\") && !folder.endsWith("/")) folder = folder + "/";
+                File target = new File(folder + filename);
+
+                new Thread(() -> {
+                    try {
+                        downloadAndSaveFile(url, target);
+                        Platform.runLater(() -> {
+                            if (!menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport())) target.delete();
+                        });
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
+            }
+            event.consume();
+        });
     }
 
     private void searchOnAction() {
@@ -132,6 +196,7 @@ public class MainController {
 
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
+        imageGridView.requestFocus();
     }
 
     public void searchTextFieldOnAction(ActionEvent event) {
@@ -153,6 +218,21 @@ public class MainController {
                     break;
             }
         }
+
+        switch (event.getCode()) {
+            case ESCAPE:
+                imageGridView.requestFocus();
+                event.consume();
+                break;
+        }
+    }
+
+    private static void downloadAndSaveFile(String url, File target) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.addRequestProperty("User-Agent", "Mozilla/4.0");
+        ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
+        FileOutputStream fos = new FileOutputStream(target);
+        fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
     }
 
 }

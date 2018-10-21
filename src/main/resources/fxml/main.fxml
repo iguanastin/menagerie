@@ -11,54 +11,43 @@
 <?import javafx.scene.layout.VBox?>
 <?import menagerie.gui.DynamicImageView?>
 <?import menagerie.gui.ImageGridView?>
-<?import org.controlsfx.control.StatusBar?>
 
-<SplitPane dividerPositions="0.66" onKeyPressed="#rootPaneOnKeyPressed" prefHeight="576.0" prefWidth="994.0"
-           xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="menagerie.gui.MainController">
+<SplitPane fx:id="rootPane" dividerPositions="0.66" onKeyPressed="#rootPaneOnKeyPressed" prefHeight="576.0" prefWidth="994.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
     <BorderPane>
         <center>
-            <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true"
-                              BorderPane.alignment="CENTER"/>
+            <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true" />
         </center>
     </BorderPane>
     <BorderPane>
         <center>
-            <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
-                           BorderPane.alignment="CENTER"/>
+            <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3" BorderPane.alignment="CENTER" />
         </center>
         <top>
             <VBox BorderPane.alignment="CENTER">
                 <HBox spacing="5.0">
                     <padding>
-                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                     </padding>
-                    <TextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search"
-                               HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search" HBox.hgrow="ALWAYS" />
                 </HBox>
                 <BorderPane>
                     <right>
                         <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                            <Label fx:id="resultsLabel" text="Results: 0"/>
-                            <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search"/>
+                            <Label fx:id="resultsLabel" text="Results: 0" />
+                            <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search" />
                         </HBox>
                     </right>
                     <VBox.margin>
-                        <Insets/>
+                        <Insets />
                     </VBox.margin>
                     <padding>
-                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                     </padding>
                     <left>
-                        <ToggleButton fx:id="descendingToggleButton" mnemonicParsing="false" selected="true"
-                                      text="Descending" BorderPane.alignment="CENTER"/>
+                        <ToggleButton fx:id="descendingToggleButton" mnemonicParsing="false" selected="true" text="Descending" BorderPane.alignment="CENTER" />
                     </left>
                 </BorderPane>
             </VBox>
         </top>
-        <bottom>
-            <StatusBar fx:id="databaseProgressBar" prefHeight="200.0" prefWidth="200.0" text="Waiting"
-                       BorderPane.alignment="CENTER"/>
-        </bottom>
     </BorderPane>
 </SplitPane>
