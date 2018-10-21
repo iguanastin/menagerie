@@ -186,19 +186,16 @@ public class ImageInfo implements Comparable<ImageInfo> {
             case "jpg":
             case "jpeg":
             case "bmp":
-                Image img = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
-                return img;
             case "gif":
-                //TODO: Make thumbnail still and have "GIF" text applied
                 return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
             case "webm":
             case "mp4":
             case "avi":
                 //TODO: Load video into VLCJ player and take snapshot
                 return null;
-            default:
-                return null;
         }
+
+        return null;
     }
 
 }
