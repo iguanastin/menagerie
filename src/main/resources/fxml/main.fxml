@@ -13,7 +13,7 @@
 <?import menagerie.gui.ImageGridView?>
 
 <SplitPane dividerPositions="0.66" prefHeight="576.0" prefWidth="994.0" xmlns="http://javafx.com/javafx/8.0.121"
-           xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
+           xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController" onKeyPressed="#rootPaneOnKeyPressed">
     <BorderPane>
         <center>
             <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true"

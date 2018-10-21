@@ -6,6 +6,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
@@ -42,6 +43,10 @@ public class MainController {
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
             Platform.exit();
         }
+
+        imageGridView.setSelectionListener(image -> {
+            previewImageView.setImage(image.getImage());
+        });
     }
 
     private void searchOnAction() {
@@ -83,8 +88,6 @@ public class MainController {
                     e.printStackTrace();
                     Main.showErrorMessage("Error", "Error converting long value for date added rule", e.getLocalizedMessage());
                 }
-            } else if (arg.startsWith("md5:")) {
-
             } else if (arg.startsWith("-")) {
                 Tag tag = menagerie.getTagByName(arg.substring(1));
                 if (tag == null) tag = new Tag(-1, arg.substring(1));
@@ -129,6 +132,23 @@ public class MainController {
 
     public void searchTextFieldOnAction(ActionEvent event) {
         searchOnAction();
+        imageGridView.requestFocus();
+    }
+
+    public void rootPaneOnKeyPressed(KeyEvent event) {
+        if (event.isControlDown()) {
+            switch (event.getCode()) {
+                case F:
+                    searchTextField.requestFocus();
+                    event.consume();
+                    break;
+                case Q:
+                    menagerie.getUpdateQueue().enqueueUpdate(Platform::exit);
+                    menagerie.getUpdateQueue().commit();
+                    event.consume();
+                    break;
+            }
+        }
     }
 
 }

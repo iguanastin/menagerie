@@ -103,7 +103,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
         Image img = null;
         if (image != null) img = image.get();
         if (img == null) {
-            img = new Image(file.toURI().toString());
+            img = new Image(file.toURI().toString(), true);
             image = new SoftReference<>(img);
         }
         return img;

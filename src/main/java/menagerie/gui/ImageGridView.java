@@ -17,6 +17,9 @@ public class ImageGridView extends GridView<ImageInfo> {
     private static final int CELL_BORDER = 2;
 
     private final List<ImageInfo> selected = new ArrayList<>();
+    private ImageInfo lastSelected = null;
+
+    private SelectionListener selectionListener = null;
 
 
     public ImageGridView() {
@@ -42,6 +45,10 @@ public class ImageGridView extends GridView<ImageInfo> {
             event.consume();
         });
 
+        initOnKeyPressed();
+    }
+
+    private void initOnKeyPressed() {
         setOnKeyPressed(event -> {
             if (getItems().isEmpty()) return;
 
@@ -57,18 +64,20 @@ public class ImageGridView extends GridView<ImageInfo> {
                     event.consume();
                     break;
                 case DOWN:
-                    int rowLength = getRowLength();
-                    if (index + rowLength < getItems().size()) {
-                        select(getItems().get(index + rowLength), event.isControlDown(), event.isShiftDown());
+                    if (selected.isEmpty() && index == -1) {
+                        select(getItems().get(0), event.isControlDown(), event.isShiftDown());
                     } else {
-                        select(getItems().get(getItems().size() - 1), event.isControlDown(), event.isShiftDown());
+                        if (index + getRowLength() < getItems().size()) {
+                            select(getItems().get(index + getRowLength()), event.isControlDown(), event.isShiftDown());
+                        } else {
+                            select(getItems().get(getItems().size() - 1), event.isControlDown(), event.isShiftDown());
+                        }
                     }
                     event.consume();
                     break;
                 case UP:
-                    rowLength = getRowLength();
-                    if (index - rowLength >= 0) {
-                        select(getItems().get(index - rowLength), event.isControlDown(), event.isShiftDown());
+                    if (index - getRowLength() >= 0) {
+                        select(getItems().get(index - getRowLength()), event.isControlDown(), event.isShiftDown());
                     } else {
                         select(getItems().get(0), event.isControlDown(), event.isShiftDown());
                     }
@@ -94,12 +103,32 @@ public class ImageGridView extends GridView<ImageInfo> {
                     select(getItems().get(getItems().size() - 1), event.isControlDown(), event.isShiftDown());
                     event.consume();
                     break;
+                case PAGE_DOWN:
+                    if (index + (getPageLength() - 1) * getRowLength() < getItems().size()) {
+                        select(getItems().get(index + (getPageLength() - 1) * getRowLength()), event.isControlDown(), event.isShiftDown());
+                    } else {
+                        select(getItems().get(getItems().size() - 1), event.isControlDown(), event.isShiftDown());
+                    }
+                    event.consume();
+                    break;
+                case PAGE_UP:
+                    if (index - (getPageLength() - 1) * getRowLength() >= 0) {
+                        select(getItems().get(index - (getPageLength() - 1) * getRowLength()), event.isControlDown(), event.isShiftDown());
+                    } else {
+                        select(getItems().get(0), event.isControlDown(), event.isShiftDown());
+                    }
+                    event.consume();
+                    break;
             }
         });
     }
 
     private int getRowLength() {
         return (int) Math.floor((getWidth() - 18) / (ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
+    }
+
+    private int getPageLength() {
+        return (int) Math.floor(getHeight() / (ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
     }
 
     void cellMousePressed(ImageGridCell cell, MouseEvent event) {
@@ -133,15 +162,21 @@ public class ImageGridView extends GridView<ImageInfo> {
             }
             updateCellSelectionCSS();
         }
+        lastSelected = item;
 
         // Ensure last selected cell is visible
-        for (Node n : getChildren()) {
-            if (n instanceof VirtualFlow) {
-                VirtualFlow<ImageGridCell> vf = (VirtualFlow<ImageGridCell>) n;
-                vf.show(getItems().indexOf(getLastSelected()) / getRowLength()); // Garbage API, doesn't account for multi-element rows
-                break;
+        if (getLastSelected() != null) {
+            for (Node n : getChildren()) {
+                if (n instanceof VirtualFlow) {
+                    VirtualFlow<ImageGridCell> vf = (VirtualFlow<ImageGridCell>) n;
+                    vf.show(getItems().indexOf(getLastSelected()) / getRowLength()); // Garbage API, doesn't account for multi-element rows
+                    break;
+                }
             }
         }
+
+        // Notify selection listener
+        if (selectionListener != null) selectionListener.targetSelected(item);
     }
 
     private void selectRange(ImageInfo first, ImageInfo last) {
@@ -169,11 +204,7 @@ public class ImageGridView extends GridView<ImageInfo> {
     }
 
     private ImageInfo getLastSelected() {
-        if (selected.isEmpty()) {
-            return null;
-        } else {
-            return selected.get(selected.size() - 1);
-        }
+        return lastSelected;
     }
 
     void clearSelection() {
@@ -187,6 +218,10 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     public List<ImageInfo> getSelected() {
         return selected;
+    }
+
+    public void setSelectionListener(SelectionListener selectionListener) {
+        this.selectionListener = selectionListener;
     }
 
     private void updateCellSelectionCSS() {
