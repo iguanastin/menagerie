@@ -124,6 +124,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
                             e.printStackTrace();
                         }
                     });
+                    menagerie.getUpdateQueue().commit();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -148,7 +149,16 @@ public class ImageInfo implements Comparable<ImageInfo> {
         if (hasTag(t)) return false;
         tags.add(t);
 
-        //TODO: Queue db update
+        menagerie.getUpdateQueue().enqueueUpdate(() -> {
+            try {
+                menagerie.PS_ADD_TAG_TO_IMG.setInt(1, id);
+                menagerie.PS_ADD_TAG_TO_IMG.setInt(2, t.getId());
+                menagerie.PS_ADD_TAG_TO_IMG.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+        menagerie.getUpdateQueue().commit();
 
         return true;
     }
@@ -157,7 +167,16 @@ public class ImageInfo implements Comparable<ImageInfo> {
         if (!hasTag(t)) return false;
         tags.remove(t);
 
-        //TODO: Queue db update
+        menagerie.getUpdateQueue().enqueueUpdate(() -> {
+            try {
+                menagerie.PS_REMOVE_TAG_FROM_IMG.setInt(1, id);
+                menagerie.PS_REMOVE_TAG_FROM_IMG.setInt(2, t.getId());
+                menagerie.PS_REMOVE_TAG_FROM_IMG.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+        menagerie.getUpdateQueue().commit();
 
         return true;
     }

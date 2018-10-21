@@ -19,10 +19,11 @@ public class Menagerie {
     // -------------------------------- SQL Statements ----------------------------
 
     private final PreparedStatement PS_GET_IMG_TAG_IDS;
-    public final PreparedStatement PS_SET_IMG_MD5;
-    public final PreparedStatement PS_SET_IMG_THUMBNAIL;
-    public final PreparedStatement PS_GET_IMG_THUMBNAIL;
-    public final PreparedStatement PS_ADD_TAG_TO_IMG;
+    final PreparedStatement PS_SET_IMG_MD5;
+    final PreparedStatement PS_SET_IMG_THUMBNAIL;
+    final PreparedStatement PS_GET_IMG_THUMBNAIL;
+    final PreparedStatement PS_ADD_TAG_TO_IMG;
+    final PreparedStatement PS_REMOVE_TAG_FROM_IMG;
 
     // ------------------------------ Variables -----------------------------------
 
@@ -45,6 +46,7 @@ public class Menagerie {
         PS_SET_IMG_THUMBNAIL = database.prepareStatement("UPDATE imgs SET imgs.thumbnail=? WHERE imgs.id=?;");
         PS_GET_IMG_THUMBNAIL = database.prepareStatement("SELECT imgs.thumbnail FROM imgs WHERE imgs.id=?;");
         PS_ADD_TAG_TO_IMG = database.prepareStatement("INSERT INTO tagged(img_id, tag_id) VALUES (?, ?);");
+        PS_REMOVE_TAG_FROM_IMG = database.prepareStatement("DELETE FROM tagged WHERE img_id=? AND tag_id=?;");
 
         // Load data from database
         loadTagsFromDatabase();

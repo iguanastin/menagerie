@@ -6,7 +6,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
@@ -15,6 +14,7 @@ import menagerie.model.search.DateAddedRule;
 import menagerie.model.search.IDRule;
 import menagerie.model.search.SearchRule;
 import menagerie.model.search.TagRule;
+import org.controlsfx.control.StatusBar;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -28,6 +28,7 @@ public class MainController {
     public ImageGridView imageGridView;
     public DynamicImageView previewImageView;
     public Label resultsLabel;
+    public StatusBar databaseProgressBar;
 
     private Menagerie menagerie;
 
@@ -47,6 +48,9 @@ public class MainController {
         imageGridView.setSelectionListener(image -> {
             previewImageView.setImage(image.getImage());
         });
+
+        //Ensure two columns for grid
+        imageGridView.setMinWidth(18 + (ImageInfo.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + imageGridView.getHorizontalCellSpacing() * 2) * 2);
     }
 
     private void searchOnAction() {

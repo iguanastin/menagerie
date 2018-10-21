@@ -14,7 +14,7 @@ import java.util.List;
 
 public class ImageGridView extends GridView<ImageInfo> {
 
-    private static final int CELL_BORDER = 2;
+    public static final int CELL_BORDER = 2;
 
     private final List<ImageInfo> selected = new ArrayList<>();
     private ImageInfo lastSelected = null;
