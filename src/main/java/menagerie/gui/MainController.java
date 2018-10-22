@@ -101,7 +101,7 @@ public class MainController {
 
                 if (!folder.endsWith("\\") && !folder.endsWith("/")) folder = folder + "/";
                 File target = new File(folder + filename);
-                
+
                 new Thread(() -> {
                     try {
                         downloadAndSaveFile(url, target);

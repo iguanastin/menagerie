@@ -3,6 +3,7 @@ package menagerie.gui;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseButton;
