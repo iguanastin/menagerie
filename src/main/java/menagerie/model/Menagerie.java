@@ -97,13 +97,13 @@ public class Menagerie {
         System.out.println("Finished loading " + tags.size() + " tags from database");
     }
 
-    public boolean importImage(File file, boolean computeMD5, boolean computeHistogram) {
+    public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram) {
         ImageInfo img = new ImageInfo(this, getNextAvailableImageID(), System.currentTimeMillis(), file, null);
         if (computeMD5) {
             img.initializeMD5();
             if (knownMD5s.get(img.getMD5()).size() > 1) {
                 //TODO: Notify of duplicate image
-                return false;
+                return null;
             }
         }
         //TODO: Compute histogram
@@ -126,7 +126,7 @@ public class Menagerie {
         });
         updateQueue.commit();
 
-        return true;
+        return img;
     }
 
     public void removeImage(ImageInfo image, boolean deleteFile) {

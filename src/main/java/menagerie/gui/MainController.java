@@ -101,12 +101,14 @@ public class MainController {
 
                 if (!folder.endsWith("\\") && !folder.endsWith("/")) folder = folder + "/";
                 File target = new File(folder + filename);
-
+                
                 new Thread(() -> {
                     try {
                         downloadAndSaveFile(url, target);
                         Platform.runLater(() -> {
-                            if (!menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport())) target.delete();
+                            ImageInfo img = menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
+                            if (img == null) target.delete();
+                            else if (settings.isBuildThumbnailOnImport()) img.getThumbnail();
                         });
                     } catch (IOException e) {
                         e.printStackTrace();

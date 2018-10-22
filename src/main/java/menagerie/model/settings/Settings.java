@@ -10,11 +10,13 @@ public class Settings {
     private static final String AUTO_IMPORT_TAG = "autoimportfromweb";
     private static final String COMPUTE_MD5_TAG = "computemd5onimport";
     private static final String COMPUTE_HIST_TAG = "computehistogramonimport";
+    private static final String BUILD_THUMBNAIL_TAG = "buildthumbnailonimport";
     private static final String LAST_FOLDER_TAG = "lastfolder";
 
     private boolean autoImportFromWeb = false;
     private boolean computeMD5OnImport = true;
     private boolean computeHistogramOnImport = true;
+    private boolean buildThumbnailOnImport = false;
     private String lastFolder = null;
 
     private final File file;
@@ -50,6 +52,10 @@ public class Settings {
         return computeMD5OnImport;
     }
 
+    public boolean isBuildThumbnailOnImport() {
+        return buildThumbnailOnImport;
+    }
+
     public void setAutoImportFromWeb(boolean autoImportFromWeb) {
         this.autoImportFromWeb = autoImportFromWeb;
         try {
@@ -77,6 +83,15 @@ public class Settings {
         }
     }
 
+    public void setBuildThumbnailOnImport(boolean buildThumbnailOnImport) {
+        this.buildThumbnailOnImport = buildThumbnailOnImport;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void setLastFolder(String lastFolder) {
         this.lastFolder = lastFolder;
         try {
@@ -93,6 +108,7 @@ public class Settings {
         writer.println(AUTO_IMPORT_TAG + "=" + autoImportFromWeb);
         writer.println(COMPUTE_MD5_TAG + "=" + computeMD5OnImport);
         writer.println(COMPUTE_HIST_TAG + "=" + computeHistogramOnImport);
+        writer.println(BUILD_THUMBNAIL_TAG + "=" + buildThumbnailOnImport);
         if (lastFolder != null) writer.println(LAST_FOLDER_TAG + "=" + lastFolder);
 
         writer.close();
@@ -118,6 +134,9 @@ public class Settings {
                         break;
                     case LAST_FOLDER_TAG:
                         lastFolder = val;
+                        break;
+                    case BUILD_THUMBNAIL_TAG:
+                        buildThumbnailOnImport = Boolean.parseBoolean(val);
                         break;
                 }
             }
