@@ -7,6 +7,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.stage.FileChooser;
@@ -21,6 +22,9 @@ import menagerie.model.search.TagRule;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
 
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -33,6 +37,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class MainController {
@@ -43,6 +48,7 @@ public class MainController {
     public DynamicImageView previewImageView;
     public Label resultsLabel;
     public SplitPane rootPane;
+    public Label imageInfoLabel;
 
     private Menagerie menagerie;
 
@@ -66,11 +72,22 @@ public class MainController {
             Platform.exit();
         }
 
+        updateImageInfoLabel(null);
+
         //Ensure two columns for grid
         imageGridView.setMinWidth(18 + (ImageInfo.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + imageGridView.getHorizontalCellSpacing() * 2) * 2);
 
         imageGridView.setSelectionListener(image -> {
             previewImageView.setImage(image.getImage());
+
+            if (!image.getImage().isBackgroundLoading() || image.getImage().getProgress() == 1) {
+                updateImageInfoLabel(image);
+            } else {
+                updateImageInfoLabel(null);
+                image.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
+                    if (newValue.doubleValue() == 1 && !image.getImage().isError()) updateImageInfoLabel(image);
+                });
+            }
         });
         imageGridView.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
@@ -117,6 +134,24 @@ public class MainController {
             }
             event.consume();
         });
+    }
+
+    private void updateImageInfoLabel(ImageInfo image) {
+        if (image == null) {
+            imageInfoLabel.setText("Size: N/A - Res: N/A");
+
+            return;
+        }
+
+        //Find size string
+        double size = image.getFile().length();
+        String sizeStr;
+        if (size > 1024 * 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024 / 1024) + "GB";
+        else if (size > 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024) + "MB";
+        else if (size > 1024) sizeStr = String.format("%.2f", size / 1024) + "KB";
+        else sizeStr = String.format("%.2f", size) + "B";
+
+        imageInfoLabel.setText("Size: " + sizeStr + " - Res: " + image.getImage().getWidth() + "x" + image.getImage().getHeight());
     }
 
     private void searchOnAction() {
