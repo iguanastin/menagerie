@@ -3,17 +3,19 @@ package menagerie.gui;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
-import javafx.scene.control.Tooltip;
+import javafx.scene.control.*;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.TransferMode;
 import menagerie.model.ImageInfo;
+import menagerie.model.Menagerie;
 import org.controlsfx.control.GridView;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class ImageGridView extends GridView<ImageInfo> {
 
@@ -151,6 +153,30 @@ public class ImageGridView extends GridView<ImageInfo> {
                         select(getItems().get(0), event.isControlDown(), event.isShiftDown());
                     }
                     event.consume();
+                    break;
+                case DELETE:
+                    if (!selected.isEmpty()) {
+                        Alert d = new Alert(Alert.AlertType.CONFIRMATION);
+
+                        if (event.isControlDown()) {
+                            d.setTitle("Forget files");
+                            d.setHeaderText("Remove selected files from database? (" + selected.size() + " files)");
+                            d.setContentText("This action CANNOT be undone");
+                        } else {
+                            d.setTitle("Delete files");
+                            d.setHeaderText("Permanently delete selected files? (" + selected.size() + " files)");
+                            d.setContentText("This action CANNOT be undone (files will be deleted)");
+                        }
+
+                        Optional result = d.showAndWait();
+                        if (result.isPresent() && result.get() == ButtonType.OK) {
+                            Menagerie menagerie = selected.get(0).getMenagerie();
+                            selected.forEach(img -> menagerie.removeImage(img, !event.isControlDown()));
+                            //TODO: Update the current search, files may no longer be present in model, but still visible in view
+                        }
+
+                        event.consume();
+                    }
                     break;
             }
         });
