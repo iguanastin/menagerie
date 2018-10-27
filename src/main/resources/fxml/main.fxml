@@ -12,55 +12,51 @@
 <?import menagerie.gui.DynamicImageView?>
 <?import menagerie.gui.ImageGridView?>
 
-<SplitPane fx:id="rootPane" dividerPositions="0.66" onKeyPressed="#rootPaneOnKeyPressed" prefHeight="576.0"
-           prefWidth="994.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="menagerie.gui.MainController">
-    <BorderPane>
-        <center>
-            <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true"/>
-        </center>
-    </BorderPane>
-    <BorderPane>
-        <center>
-            <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
-                           BorderPane.alignment="CENTER"/>
-        </center>
-        <top>
-            <VBox BorderPane.alignment="CENTER">
-                <HBox spacing="5.0">
-                    <padding>
-                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                    </padding>
-                    <TextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search"
-                               HBox.hgrow="ALWAYS"/>
-                </HBox>
-                <BorderPane>
-                    <right>
-                        <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                            <Label fx:id="resultsLabel" text="Results: 0"/>
-                            <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search"/>
-                        </HBox>
-                    </right>
-                    <VBox.margin>
-                        <Insets/>
-                    </VBox.margin>
-                    <padding>
-                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                    </padding>
-                    <left>
-                        <ToggleButton fx:id="descendingToggleButton" mnemonicParsing="false" selected="true"
-                                      text="Descending" BorderPane.alignment="CENTER"/>
-                    </left>
-                </BorderPane>
-            </VBox>
-        </top>
-        <bottom>
-            <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                <padding>
-                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                </padding>
-                <Label fx:id="imageInfoLabel" text="Size: 123.12KB - Res: 1920x1080" HBox.hgrow="ALWAYS"/>
-            </HBox>
-        </bottom>
-    </BorderPane>
-</SplitPane>
+
+  <SplitPane fx:id="rootPane" dividerPositions="0.66" onKeyPressed="#rootPaneOnKeyPressed" prefHeight="576.0" prefWidth="994.0" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
+      <BorderPane>
+          <center>
+              <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true" />
+          </center>
+      </BorderPane>
+      <BorderPane>
+          <center>
+              <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3" BorderPane.alignment="CENTER" />
+          </center>
+          <top>
+              <VBox BorderPane.alignment="CENTER">
+                  <HBox spacing="5.0">
+                      <padding>
+                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                      </padding>
+                      <TextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search" HBox.hgrow="ALWAYS" />
+                  </HBox>
+                  <BorderPane>
+                      <right>
+                          <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
+                              <Label fx:id="resultsLabel" text="Results: 0" />
+                              <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search" />
+                          </HBox>
+                      </right>
+                      <VBox.margin>
+                          <Insets />
+                      </VBox.margin>
+                      <padding>
+                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                      </padding>
+                      <left>
+                          <ToggleButton fx:id="descendingToggleButton" mnemonicParsing="false" selected="true" text="Descending" BorderPane.alignment="CENTER" />
+                      </left>
+                  </BorderPane>
+              </VBox>
+          </top>
+          <bottom>
+              <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
+                  <padding>
+                      <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                  </padding>
+                  <Label fx:id="imageInfoLabel" text="Size: 123.12KB - Res: 1920x1080" HBox.hgrow="ALWAYS" />
+              </HBox>
+          </bottom>
+      </BorderPane>
+  </SplitPane>
