@@ -4,6 +4,7 @@ import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
@@ -60,6 +61,7 @@ public class MainController {
     public TextField dbURLTextfield;
     public TextField dbUserTextfield;
     public TextField dbPassTextfield;
+    public TextField editTagsTextfield;
 
     private Menagerie menagerie;
     private Search currentSearch = null;
@@ -179,7 +181,8 @@ public class MainController {
                             Platform.runLater(() -> {
                                 ImageInfo img = menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                                 if (img == null) {
-                                    if (!target.delete()) System.out.println("Tried to delete a downloaded file, as it couldn't be imported, but failed: " + target);
+                                    if (!target.delete())
+                                        System.out.println("Tried to delete a downloaded file, as it couldn't be imported, but failed: " + target);
                                 }
                             });
                         } catch (IOException e) {
@@ -446,6 +449,22 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
+    private void editTagsOfSelected(String text) {
+        if (text == null || text.isEmpty() || text.contains(" ")) return;
+        if (text.startsWith("-")) {
+            Tag t = menagerie.getTagByName(text.substring(1));
+            if (t != null) {
+                new ArrayList<>(imageGridView.getSelected()).forEach(img -> img.removeTag(t)); // New arraylist to avoid concurrent modification
+            }
+        } else {
+            Tag t = menagerie.getTagByName(text);
+            if (t == null) t = menagerie.createTag(text);
+            for (ImageInfo img : new ArrayList<>(imageGridView.getSelected())) { // New arraylist to avoid concurrent modification
+                img.addTag(t);
+            }
+        }
+    }
+
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
         imageGridView.requestFocus();
@@ -461,6 +480,10 @@ public class MainController {
             switch (event.getCode()) {
                 case F:
                     searchTextField.requestFocus();
+                    event.consume();
+                    break;
+                case E:
+                    editTagsTextfield.requestFocus();
                     event.consume();
                     break;
                 case Q:
@@ -514,6 +537,27 @@ public class MainController {
                 break;
             case ENTER:
                 closeSettingsScreen(true);
+                event.consume();
+                break;
+        }
+    }
+
+    public void editTagsTextfieldOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case SPACE:
+                editTagsOfSelected(editTagsTextfield.getText());
+                Platform.runLater(() -> editTagsTextfield.setText(null));
+                event.consume();
+                break;
+            case ENTER:
+                editTagsOfSelected(editTagsTextfield.getText());
+                editTagsTextfield.setText(null);
+                imageGridView.requestFocus();
+                event.consume();
+                break;
+            case ESCAPE:
+                editTagsTextfield.setText(null);
+                imageGridView.requestFocus();
                 event.consume();
                 break;
         }

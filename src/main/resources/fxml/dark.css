@@ -31,7 +31,7 @@
 
 /* Fix derived prompt color for text fields */
 .text-input {
-    -fx-prompt-text-fill: derive(-fx-control-inner-background, +50%);
+    -fx-prompt-text-fill: derive(-fx-control-inner-background, +100%);
 }
 
 /* Keep prompt invisible when focused (above color fix overrides it) */

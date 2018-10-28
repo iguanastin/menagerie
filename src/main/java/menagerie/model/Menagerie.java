@@ -19,8 +19,10 @@ public class Menagerie {
 
     private final PreparedStatement PS_GET_IMG_TAG_IDS;
     private final PreparedStatement PS_GET_HIGHEST_IMG_ID;
+    private final PreparedStatement PS_GET_HIGHEST_TAG_ID;
     private final PreparedStatement PS_DELETE_IMG;
     private final PreparedStatement PS_CREATE_IMG;
+    private final PreparedStatement PS_CREATE_TAG;
     final PreparedStatement PS_SET_IMG_MD5;
     final PreparedStatement PS_SET_IMG_THUMBNAIL;
     final PreparedStatement PS_GET_IMG_THUMBNAIL;
@@ -31,6 +33,9 @@ public class Menagerie {
 
     private List<ImageInfo> images = new ArrayList<>();
     private List<Tag> tags = new ArrayList<>();
+
+    private int nextImageID;
+    private int nextTagID;
 
     private Connection database;
     private DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
@@ -49,8 +54,10 @@ public class Menagerie {
         PS_ADD_TAG_TO_IMG = database.prepareStatement("INSERT INTO tagged(img_id, tag_id) VALUES (?, ?);");
         PS_REMOVE_TAG_FROM_IMG = database.prepareStatement("DELETE FROM tagged WHERE img_id=? AND tag_id=?;");
         PS_GET_HIGHEST_IMG_ID = database.prepareStatement("SELECT TOP 1 imgs.id FROM imgs ORDER BY imgs.id DESC;");
+        PS_GET_HIGHEST_TAG_ID = database.prepareStatement("SELECT TOP 1 tags.id FROM tags ORDER BY tags.id DESC;");
         PS_DELETE_IMG = database.prepareStatement("DELETE FROM imgs WHERE imgs.id=?;");
         PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5, histogram) VALUES (?, ?, ?, ?, ?);");
+        PS_CREATE_TAG = database.prepareStatement("INSERT INTO tags(id, name) VALUES (?, ?);");
 
         // Load data from database
         loadTagsFromDatabase();
@@ -60,6 +67,19 @@ public class Menagerie {
         Thread thread = new Thread(updateQueue);
         thread.setDaemon(true);
         thread.start();
+
+        initializeIdCounters();
+    }
+
+    private void initializeIdCounters() throws SQLException {
+        ResultSet rs = PS_GET_HIGHEST_IMG_ID.executeQuery();
+        if (!rs.next()) nextImageID = 1;
+        nextImageID = rs.getInt("id") + 1;
+        rs.close();
+        rs = PS_GET_HIGHEST_TAG_ID.executeQuery();
+        if (!rs.next()) nextTagID = 1;
+        nextTagID = rs.getInt("id") + 1;
+        rs.close();
     }
 
     private void loadImagesFromDatabase() throws SQLException {
@@ -106,7 +126,8 @@ public class Menagerie {
             return null;
         }
 
-        ImageInfo img = new ImageInfo(this, getNextAvailableImageID(), System.currentTimeMillis(), file, null, null);
+        ImageInfo img = new ImageInfo(this, nextImageID, System.currentTimeMillis(), file, null, null);
+        nextImageID++;
 
         if (computeMD5) img.initializeMD5();
 //        if (computeHistogram) img.initializeHistogram();
@@ -119,7 +140,8 @@ public class Menagerie {
                 PS_CREATE_IMG.setNString(2, img.getFile().getAbsolutePath());
                 PS_CREATE_IMG.setLong(3, img.getDateAdded());
                 PS_CREATE_IMG.setNString(4, img.getMD5());
-                if (img.getHistogram() != null) PS_CREATE_IMG.setObject(5, img.getHistogram().getBins()); // TODO: Find a way to actually put the histogram into the damn database
+                if (img.getHistogram() != null)
+                    PS_CREATE_IMG.setObject(5, img.getHistogram().getBins()); // TODO: Find a way to actually put the histogram into the damn database
                 else PS_CREATE_IMG.setObject(5, null);
                 PS_CREATE_IMG.executeUpdate();
 
@@ -158,19 +180,6 @@ public class Menagerie {
                 }
             });
             updateQueue.commit();
-        }
-    }
-
-    private int getNextAvailableImageID() {
-        try {
-            ResultSet rs = PS_GET_HIGHEST_IMG_ID.executeQuery();
-
-            if (!rs.next()) return -1;
-
-            return rs.getInt("id") + 1;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return -1;
         }
     }
 
@@ -214,4 +223,24 @@ public class Menagerie {
     public void registerSearch(Search search) {
         activeSearches.add(search);
     }
+
+    public Tag createTag(String name) {
+        Tag t = new Tag(this, nextTagID, name);
+        nextTagID++;
+
+        tags.add(t);
+
+        updateQueue.enqueueUpdate(() -> {
+            try {
+                PS_CREATE_TAG.setInt(1, t.getId());
+                PS_CREATE_TAG.setNString(2, t.getName());
+                PS_CREATE_TAG.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+
+        return t;
+    }
+
 }
