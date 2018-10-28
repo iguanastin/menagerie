@@ -77,6 +77,8 @@ public class MainController {
 
         initFX();
         initListeners();
+
+        Platform.runLater(this::searchOnAction);
     }
 
     private void initMenagerie() {
