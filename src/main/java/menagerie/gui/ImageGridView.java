@@ -292,4 +292,8 @@ public class ImageGridView extends GridView<ImageInfo> {
         }
     }
 
+    void setLastSelected(ImageInfo img) {
+        lastSelected = img;
+    }
+
 }

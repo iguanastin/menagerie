@@ -356,6 +356,12 @@ public class MainController {
 
             @Override
             public void imageRemoved(ImageInfo img) {
+                int index = imageGridView.getItems().indexOf(img) + 1;
+                if (index < imageGridView.getItems().size()) imageGridView.setLastSelected(imageGridView.getItems().get(index));
+                else if (index - 1 >= 0) imageGridView.setLastSelected(imageGridView.getItems().get(index - 1));
+
+                if (img.equals(currentlyPreviewing)) previewImage(null);
+
                 imageGridView.getItems().remove(img);
             }
         });
