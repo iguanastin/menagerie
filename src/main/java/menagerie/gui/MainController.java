@@ -90,71 +90,39 @@ public class MainController {
     }
 
     private void initFX() {
-        Platform.runLater(() -> {
-            Stage stage = ((Stage) explorerPane.getScene().getWindow());
-            stage.setMaximized(settings.isWindowMaximized());
-            if (settings.getWindowWidth() > 0) stage.setWidth(settings.getWindowWidth());
-            if (settings.getWindowHeight() > 0) stage.setHeight(settings.getWindowHeight());
-            if (settings.getWindowX() >= 0) stage.setX(settings.getWindowX());
-            if (settings.getWindowY() >= 0) stage.setY(settings.getWindowY());
-        });
+        //Init window props from settings
+        Platform.runLater(this::initWindowPropertiesFromSettings);
 
-        updateImageInfoLabel(null);
+        //Ensure image preview is cleared
+        previewImage(null);
 
         //Ensure two columns for grid
         setImageGridWidth(settings.getImageGridWidth());
 
+        //Initialize grid width setting choicebox
         Integer[] elements = new Integer[Settings.MAX_IMAGE_GRID_WIDTH - Settings.MIN_IMAGE_GRID_WIDTH + 1];
         for (int i = 0; i < elements.length; i++) elements[i] = i + Settings.MIN_IMAGE_GRID_WIDTH;
         gridWidthChoiceBox.getItems().addAll(elements);
         gridWidthChoiceBox.getSelectionModel().clearAndSelect(0);
     }
 
+    private void initWindowPropertiesFromSettings() {
+        Stage stage = ((Stage) explorerPane.getScene().getWindow());
+        stage.setMaximized(settings.isWindowMaximized());
+        if (settings.getWindowWidth() > 0) stage.setWidth(settings.getWindowWidth());
+        if (settings.getWindowHeight() > 0) stage.setHeight(settings.getWindowHeight());
+        if (settings.getWindowX() >= 0) stage.setX(settings.getWindowX());
+        if (settings.getWindowY() >= 0) stage.setY(settings.getWindowY());
+    }
+
     private void initListeners() {
-        Platform.runLater(() -> {
-            Stage stage = ((Stage) rootPane.getScene().getWindow());
-
-            //Bind window properties to settings
-            stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setWindowMaximized(newValue));
-            stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setWindowWidth(newValue.intValue()));
-            stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setWindowHeight(newValue.intValue()));
-            stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setWindowX(newValue.intValue()));
-            stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
-        });
-
-        tagListView.setCellFactory(param -> {
-            TagListCell c = new TagListCell();
-            c.setOnContextMenuRequested(event -> {
-                if (c.getItem() != null) {
-                    MenuItem i1 = new MenuItem("Add to search");
-                    i1.setOnAction(event1 -> {
-                        if (searchTextField.getText().trim().isEmpty()) {
-                            searchTextField.setText(c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
-                        }
-                        searchTextField.requestFocus();
-                    });
-                    MenuItem i2 = new MenuItem("Subtract from search");
-                    i2.setOnAction(event1 -> {
-                        if (searchTextField.getText().trim().isEmpty()) {
-                            searchTextField.setText("-" + c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
-                        }
-                        searchTextField.requestFocus();
-                    });
-                    MenuItem i3 = new MenuItem("Remove from selected");
-                    i3.setOnAction(event1 -> imageGridView.getSelected().forEach(img -> img.removeTag(c.getItem())));
-                    ContextMenu m = new ContextMenu(i1, i2, new SeparatorMenuItem(), i3);
-                    m.show(c, event.getScreenX(), event.getScreenY());
-                }
-            });
-            return c;
-        });
-
+        initWindowListeners();
+        initTagListViewListeners();
         imageGridView.setSelectionListener(this::previewImage);
+        initExplorerPaneListeners();
+    }
 
+    private void initExplorerPaneListeners() {
         explorerPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
                 event.acceptTransferModes(TransferMode.ANY);
@@ -218,6 +186,52 @@ public class MainController {
                 });
             }
             event.consume();
+        });
+    }
+
+    private void initTagListViewListeners() {
+        tagListView.setCellFactory(param -> {
+            TagListCell c = new TagListCell();
+            c.setOnContextMenuRequested(event -> {
+                if (c.getItem() != null) {
+                    MenuItem i1 = new MenuItem("Add to search");
+                    i1.setOnAction(event1 -> {
+                        if (searchTextField.getText().trim().isEmpty()) {
+                            searchTextField.setText(c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
+                        }
+                        searchTextField.requestFocus();
+                    });
+                    MenuItem i2 = new MenuItem("Subtract from search");
+                    i2.setOnAction(event1 -> {
+                        if (searchTextField.getText().trim().isEmpty()) {
+                            searchTextField.setText("-" + c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
+                        }
+                        searchTextField.requestFocus();
+                    });
+                    MenuItem i3 = new MenuItem("Remove from selected");
+                    i3.setOnAction(event1 -> imageGridView.getSelected().forEach(img -> img.removeTag(c.getItem())));
+                    ContextMenu m = new ContextMenu(i1, i2, new SeparatorMenuItem(), i3);
+                    m.show(c, event.getScreenX(), event.getScreenY());
+                }
+            });
+            return c;
+        });
+    }
+
+    private void initWindowListeners() {
+        Platform.runLater(() -> {
+            Stage stage = ((Stage) rootPane.getScene().getWindow());
+
+            //Bind window properties to settings
+            stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setWindowMaximized(newValue));
+            stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setWindowWidth(newValue.intValue()));
+            stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setWindowHeight(newValue.intValue()));
+            stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setWindowX(newValue.intValue()));
+            stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
         });
     }
 
@@ -372,43 +386,6 @@ public class MainController {
         imageGridView.setPrefWidth(width);
     }
 
-    public void searchButtonOnAction(ActionEvent event) {
-        searchOnAction();
-        imageGridView.requestFocus();
-    }
-
-    public void searchTextFieldOnAction(ActionEvent event) {
-        searchOnAction();
-        imageGridView.requestFocus();
-    }
-
-    public void explorerPaneOnKeyPressed(KeyEvent event) {
-        if (event.isControlDown()) {
-            switch (event.getCode()) {
-                case F:
-                    searchTextField.requestFocus();
-                    event.consume();
-                    break;
-                case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(Platform::exit);
-                    menagerie.getUpdateQueue().commit();
-                    event.consume();
-                    break;
-                case S:
-                    openSettingsScreen();
-                    event.consume();
-                    break;
-            }
-        }
-
-        switch (event.getCode()) {
-            case ESCAPE:
-                imageGridView.requestFocus();
-                event.consume();
-                break;
-        }
-    }
-
     private static void downloadAndSaveFile(String url, File target) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
         conn.addRequestProperty("User-Agent", "Mozilla/4.0");
@@ -453,6 +430,43 @@ public class MainController {
         settingsPane.setDisable(true);
         settingsPane.setOpacity(0);
         imageGridView.requestFocus();
+    }
+
+    public void searchButtonOnAction(ActionEvent event) {
+        searchOnAction();
+        imageGridView.requestFocus();
+    }
+
+    public void searchTextFieldOnAction(ActionEvent event) {
+        searchOnAction();
+        imageGridView.requestFocus();
+    }
+
+    public void explorerPaneOnKeyPressed(KeyEvent event) {
+        if (event.isControlDown()) {
+            switch (event.getCode()) {
+                case F:
+                    searchTextField.requestFocus();
+                    event.consume();
+                    break;
+                case Q:
+                    menagerie.getUpdateQueue().enqueueUpdate(Platform::exit);
+                    menagerie.getUpdateQueue().commit();
+                    event.consume();
+                    break;
+                case S:
+                    openSettingsScreen();
+                    event.consume();
+                    break;
+            }
+        }
+
+        switch (event.getCode()) {
+            case ESCAPE:
+                imageGridView.requestFocus();
+                event.consume();
+                break;
+        }
     }
 
     public void settingsAcceptButtonOnAction(ActionEvent event) {
