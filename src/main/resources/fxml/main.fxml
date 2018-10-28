@@ -6,6 +6,7 @@
 <?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.effect.DropShadow?>
@@ -16,39 +17,43 @@
 <?import menagerie.gui.DynamicImageView?>
 <?import menagerie.gui.ImageGridView?>
 
-<StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
+<StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="menagerie.gui.MainController">
     <BorderPane fx:id="explorerPane" onKeyPressed="#explorerPaneOnKeyPressed" prefHeight="576.0" prefWidth="994.0">
         <center>
-            <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true" />
+            <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true"/>
         </center>
         <right>
             <BorderPane>
                 <center>
-                    <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3" BorderPane.alignment="CENTER" />
+                    <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
+                                   BorderPane.alignment="CENTER"/>
                 </center>
                 <top>
                     <VBox BorderPane.alignment="CENTER">
                         <HBox spacing="5.0">
                             <padding>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                             </padding>
-                            <TextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search" HBox.hgrow="ALWAYS" />
+                            <TextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search"
+                                       HBox.hgrow="ALWAYS"/>
                         </HBox>
                         <BorderPane>
                             <right>
                                 <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                                    <Label fx:id="resultCountLabel" text="Results: 0" />
-                                    <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search" />
+                                    <Label fx:id="resultCountLabel" text="Results: 0"/>
+                                    <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search"/>
                                 </HBox>
                             </right>
                             <VBox.margin>
-                                <Insets />
+                                <Insets/>
                             </VBox.margin>
                             <padding>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                             </padding>
                             <left>
-                                <ToggleButton fx:id="descendingToggleButton" mnemonicParsing="false" selected="true" text="Descending" BorderPane.alignment="CENTER" />
+                                <ToggleButton fx:id="descendingToggleButton" mnemonicParsing="false" selected="true"
+                                              text="Descending" BorderPane.alignment="CENTER"/>
                             </left>
                         </BorderPane>
                     </VBox>
@@ -56,83 +61,94 @@
                 <bottom>
                     <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
                         <padding>
-                            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                         </padding>
-                        <Label fx:id="imageInfoLabel" text="Size: N/A - Res: N/A" HBox.hgrow="ALWAYS" />
+                        <Label fx:id="imageInfoLabel" text="Size: N/A - Res: N/A" HBox.hgrow="ALWAYS"/>
                     </HBox>
                 </bottom>
             </BorderPane>
         </right>
         <left>
-            <ListView fx:id="tagListView" focusTraversable="false" maxWidth="-Infinity" prefWidth="200.0" BorderPane.alignment="CENTER">
+            <ListView fx:id="tagListView" focusTraversable="false" maxWidth="-Infinity" prefWidth="200.0"
+                      BorderPane.alignment="CENTER">
                 <padding>
-                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                 </padding>
             </ListView>
         </left>
     </BorderPane>
-    <BorderPane fx:id="settingsPane" disable="true" onKeyPressed="#settingsPaneKeyPressed" opacity="0.0">
+    <BorderPane fx:id="settingsPane" onKeyPressed="#settingsPaneKeyPressed">
         <center>
-            <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="400.0" prefWidth="500.0" style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
+            <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="400.0" prefWidth="500.0"
+                        style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
                 <effect>
-                    <DropShadow color="#00000080" spread="0.5" />
+                    <DropShadow color="#00000080" spread="0.5"/>
                 </effect>
                 <bottom>
                     <HBox alignment="TOP_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
                         <padding>
-                            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                         </padding>
-                        <Button mnemonicParsing="false" onAction="#settingsAcceptButtonOnAction" text="Accept" />
-                        <Button fx:id="settingsCancelButton" mnemonicParsing="false" onAction="#settingsCancelButtonOnAction" text="Cancel" />
+                        <Button mnemonicParsing="false" onAction="#settingsAcceptButtonOnAction" text="Accept"/>
+                        <Button fx:id="settingsCancelButton" mnemonicParsing="false"
+                                onAction="#settingsCancelButtonOnAction" text="Cancel"/>
                     </HBox>
                 </bottom>
                 <center>
                     <VBox spacing="5.0" BorderPane.alignment="CENTER">
                         <padding>
-                            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                         </padding>
+                        <Label text="Settings:"/>
+                        <Separator prefWidth="200.0"/>
                         <HBox alignment="CENTER_LEFT" spacing="5.0">
-                            <Label text="Default save folder:" />
-                            <TextField fx:id="lastFolderSettingTextField" editable="false" promptText="Folder will be asked for when saving regardless of settings" HBox.hgrow="ALWAYS" />
-                            <Button mnemonicParsing="false" onAction="#lastFolderSettingBrowseButtonOnAction" text="Browse" />
+                            <Label text="Default save folder:"/>
+                            <TextField fx:id="lastFolderSettingTextField" editable="false"
+                                       promptText="Folder will be asked for when saving regardless of settings"
+                                       HBox.hgrow="ALWAYS"/>
+                            <Button mnemonicParsing="false" onAction="#lastFolderSettingBrowseButtonOnAction"
+                                    text="Browse"/>
                             <VBox.margin>
-                                <Insets />
+                                <Insets/>
                             </VBox.margin>
                         </HBox>
-                        <CheckBox fx:id="autoImportWebSettingCheckbox" text="Auto-import from web (saves to default folder with name from URL)" />
-                        <Label text="On file import:" />
+                        <CheckBox fx:id="autoImportWebSettingCheckbox"
+                                  text="Auto-import from web (saves to default folder with name from URL)"/>
+                        <Label text="On file import:"/>
                         <VBox spacing="5.0">
                             <padding>
-                                <Insets left="25.0" />
+                                <Insets left="25.0"/>
                             </padding>
-                            <CheckBox fx:id="computeMD5SettingCheckbox" text="Compute MD5" />
-                            <CheckBox fx:id="computeHistSettingCheckbox" text="Compute Histogram" />
-                            <CheckBox fx:id="buildThumbSettingCheckbox" text="Build thumbnail" />
+                            <CheckBox fx:id="computeMD5SettingCheckbox" text="Compute MD5"/>
+                            <CheckBox fx:id="computeHistSettingCheckbox" text="Compute Histogram"/>
+                            <CheckBox fx:id="buildThumbSettingCheckbox" text="Build thumbnail"/>
                         </VBox>
                         <HBox alignment="CENTER_LEFT" spacing="5.0">
-                            <Label text="Explorer Grid row width:" />
-                            <ChoiceBox fx:id="gridWidthChoiceBox" />
+                            <Label text="Explorer Grid row width:"/>
+                            <ChoiceBox fx:id="gridWidthChoiceBox"/>
                         </HBox>
-                        <Label text="Database (changes will be applied on restart):" />
+                        <Label text="Database (changes will be applied on restart):"/>
                         <VBox>
                             <padding>
-                                <Insets left="25.0" />
+                                <Insets left="25.0"/>
                             </padding>
                             <BorderPane>
                                 <left>
-                                    <Label text="URL:" BorderPane.alignment="CENTER" />
+                                    <Label text="URL:" BorderPane.alignment="CENTER"/>
                                 </left>
                                 <center>
-                                    <Label text="Username:" BorderPane.alignment="CENTER" />
+                                    <Label text="Username:" BorderPane.alignment="CENTER"/>
                                 </center>
                                 <right>
-                                    <Label text="Password:" BorderPane.alignment="CENTER" />
+                                    <Label text="Password:" BorderPane.alignment="CENTER"/>
                                 </right>
                             </BorderPane>
                             <HBox spacing="5.0">
-                                <TextField fx:id="dbURLTextfield" promptText="~/menagerie" HBox.hgrow="ALWAYS" />
-                                <TextField fx:id="dbUserTextfield" layoutX="10.0" layoutY="10.0" promptText="sa" HBox.hgrow="ALWAYS" />
-                                <TextField fx:id="dbPassTextfield" layoutX="159.0" layoutY="10.0" promptText="[Empty]" HBox.hgrow="ALWAYS" />
+                                <TextField fx:id="dbURLTextfield" promptText="~/menagerie" HBox.hgrow="ALWAYS"/>
+                                <TextField fx:id="dbUserTextfield" layoutX="10.0" layoutY="10.0" promptText="sa"
+                                           HBox.hgrow="ALWAYS"/>
+                                <TextField fx:id="dbPassTextfield" layoutX="159.0" layoutY="10.0" promptText="[Empty]"
+                                           HBox.hgrow="ALWAYS"/>
                             </HBox>
                         </VBox>
                     </VBox>
