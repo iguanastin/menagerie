@@ -99,6 +99,9 @@ public class DatabaseVersionUpdater {
         System.out.println("  Initialized tags table");
         s.executeUpdate(CREATE_TAGGED_TABLE_V1);
         System.out.println("  Initialized tagged table");
+        s.executeUpdate("CREATE TABLE version(version INT NOT NULL PRIMARY KEY);");
+        s.executeUpdate("INSERT INTO version(version) VALUES (1);");
+        System.out.println("  Initialized version table and inserted current version");
 
         s.executeUpdate("INSERT INTO tags(name) VALUES ('tagme');");
         System.out.println("  Created 'tagme' tag");
