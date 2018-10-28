@@ -50,13 +50,16 @@ public class MainController {
     public ListView<Tag> tagListView;
 
     public BorderPane settingsPane;
-    public ToggleSwitch computeMD5SettingCheckbox;
-    public ToggleSwitch computeHistSettingCheckbox;
-    public ToggleSwitch buildThumbSettingCheckbox;
-    public ToggleSwitch autoImportWebSettingCheckbox;
+    public CheckBox computeMD5SettingCheckbox;
+    public CheckBox computeHistSettingCheckbox;
+    public CheckBox buildThumbSettingCheckbox;
+    public CheckBox autoImportWebSettingCheckbox;
     public TextField lastFolderSettingTextField;
     public Button settingsCancelButton;
     public ChoiceBox<Integer> gridWidthChoiceBox;
+    public TextField dbURLTextfield;
+    public TextField dbUserTextfield;
+    public TextField dbPassTextfield;
 
     private Menagerie menagerie;
     private Search currentSearch = null;
@@ -400,10 +403,15 @@ public class MainController {
     private void openSettingsScreen() {
         //Update settings fx nodes
         lastFolderSettingTextField.setText(settings.getLastFolder());
+        dbURLTextfield.setText(settings.getDbUrl());
+        dbUserTextfield.setText(settings.getDbUser());
+        dbPassTextfield.setText(settings.getDbPass());
+
         autoImportWebSettingCheckbox.setSelected(settings.isAutoImportFromWeb());
         computeMD5SettingCheckbox.setSelected(settings.isComputeMD5OnImport());
         computeHistSettingCheckbox.setSelected(settings.isComputeHistogramOnImport());
         buildThumbSettingCheckbox.setSelected(settings.isBuildThumbnailOnImport());
+
         gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
 
         //Enable pane
@@ -417,11 +425,17 @@ public class MainController {
         if (saveChanges) {
             //Save settings to settings object
             settings.setLastFolder(lastFolderSettingTextField.getText());
+            settings.setDbUrl(dbURLTextfield.getText());
+            settings.setDbUser(dbUserTextfield.getText());
+            settings.setDbPass(dbPassTextfield.getText());
+
             settings.setAutoImportFromWeb(autoImportWebSettingCheckbox.isSelected());
             settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
             settings.setComputeHistogramOnImport(computeHistSettingCheckbox.isSelected());
             settings.setBuildThumbnailOnImport(buildThumbSettingCheckbox.isSelected());
+
             settings.setImageGridWidth(gridWidthChoiceBox.getValue());
+
             setImageGridWidth(gridWidthChoiceBox.getValue());
         }
 
