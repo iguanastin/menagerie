@@ -3,12 +3,12 @@ package menagerie.gui;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Label;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
+import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
+import javafx.scene.layout.BorderPane;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
@@ -34,13 +34,21 @@ import java.util.List;
 
 public class MainController {
 
+    public SplitPane explorerPane;
     public ToggleButton descendingToggleButton;
     public TextField searchTextField;
     public ImageGridView imageGridView;
     public DynamicImageView previewImageView;
-    public Label resultsLabel;
-    public SplitPane explorerPane;
+    public Label resultCountLabel;
     public Label imageInfoLabel;
+
+    public BorderPane settingsPane;
+    public CheckBox computeMD5SettingCheckbox;
+    public CheckBox computeHistSettingCheckbox;
+    public CheckBox buildThumbSettingCheckbox;
+    public CheckBox autoImportWebSettingCheckbox;
+    public TextField lastFolderSettingTextField;
+    public Button settingsCancelButton;
 
     private Menagerie menagerie;
     private Search currentSearch = null;
@@ -238,7 +246,7 @@ public class MainController {
 //        thread.setDaemon(true);
 //        thread.start();
 
-        resultsLabel.setText("Results: " + currentSearch.getResults().size());
+        resultCountLabel.setText("Results: " + currentSearch.getResults().size());
         imageGridView.clearSelection();
         imageGridView.getItems().clear();
         imageGridView.getItems().addAll(currentSearch.getResults());
@@ -254,7 +262,7 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
-    public void rootPaneOnKeyPressed(KeyEvent event) {
+    public void explorerPaneOnKeyPressed(KeyEvent event) {
         if (event.isControlDown()) {
             switch (event.getCode()) {
                 case F:
@@ -264,6 +272,10 @@ public class MainController {
                 case Q:
                     menagerie.getUpdateQueue().enqueueUpdate(Platform::exit);
                     menagerie.getUpdateQueue().commit();
+                    event.consume();
+                    break;
+                case S:
+                    openSettingsScreen();
                     event.consume();
                     break;
             }
@@ -286,6 +298,66 @@ public class MainController {
         conn.disconnect();
         rbc.close();
         fos.close();
+    }
+
+    private void openSettingsScreen() {
+        //Update settings fx nodes
+        lastFolderSettingTextField.setText(settings.getLastFolder());
+        autoImportWebSettingCheckbox.setSelected(settings.isAutoImportFromWeb());
+        computeMD5SettingCheckbox.setSelected(settings.isComputeMD5OnImport());
+        computeHistSettingCheckbox.setSelected(settings.isComputeHistogramOnImport());
+        buildThumbSettingCheckbox.setSelected(settings.isBuildThumbnailOnImport());
+
+        //Enable pane
+        settingsPane.setDisable(false);
+        settingsPane.setOpacity(1);
+        settingsCancelButton.requestFocus();
+    }
+
+    private void closeSettingsScreen(boolean saveChanges) {
+        if (saveChanges) {
+            //Save settings to settings object
+            settings.setLastFolder(lastFolderSettingTextField.getText());
+            settings.setAutoImportFromWeb(autoImportWebSettingCheckbox.isSelected());
+            settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
+            settings.setComputeHistogramOnImport(computeHistSettingCheckbox.isSelected());
+            settings.setBuildThumbnailOnImport(buildThumbSettingCheckbox.isSelected());
+        }
+
+        //Disable pane
+        settingsPane.setDisable(true);
+        settingsPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    public void settingsAcceptButtonOnAction(ActionEvent event) {
+        closeSettingsScreen(true);
+        event.consume();
+    }
+
+    public void settingsCancelButtonOnAction(ActionEvent event) {
+        closeSettingsScreen(false);
+        event.consume();
+    }
+
+    public void lastFolderSettingBrowseButtonOnAction(ActionEvent event) {
+        DirectoryChooser dc = new DirectoryChooser();
+        dc.setTitle("Choose default save folder");
+        dc.setInitialDirectory(new File(lastFolderSettingTextField.getText()));
+        File result = dc.showDialog(settingsPane.getScene().getWindow());
+
+        if (result != null) {
+            lastFolderSettingTextField.setText(result.getAbsolutePath());
+        }
+
+        event.consume();
+    }
+
+    public void settingsPaneKeyPressed(KeyEvent event) {
+        if (event.getCode() == KeyCode.ESCAPE) {
+            closeSettingsScreen(false);
+            event.consume();
+        }
     }
 
 }
