@@ -457,19 +457,21 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
-    private void editTagsOfSelected(String text) {
-        if (text == null || text.isEmpty() || text.contains(" ") || imageGridView.getSelected().isEmpty()) return;
+    private void editTagsOfSelected(String input) {
+        if (input == null || input.isEmpty() || imageGridView.getSelected().isEmpty()) return;
 
-        if (text.startsWith("-")) {
-            Tag t = menagerie.getTagByName(text.substring(1));
-            if (t != null) {
-                new ArrayList<>(imageGridView.getSelected()).forEach(img -> img.removeTag(t)); // New arraylist to avoid concurrent modification
-            }
-        } else {
-            Tag t = menagerie.getTagByName(text);
-            if (t == null) t = menagerie.createTag(text);
-            for (ImageInfo img : new ArrayList<>(imageGridView.getSelected())) { // New arraylist to avoid concurrent modification
-                img.addTag(t);
+        for (String text : input.split("\\s+")) {
+            if (text.startsWith("-")) {
+                Tag t = menagerie.getTagByName(text.substring(1));
+                if (t != null) {
+                    new ArrayList<>(imageGridView.getSelected()).forEach(img -> img.removeTag(t)); // New arraylist to avoid concurrent modification
+                }
+            } else {
+                Tag t = menagerie.getTagByName(text);
+                if (t == null) t = menagerie.createTag(text);
+                for (ImageInfo img : new ArrayList<>(imageGridView.getSelected())) { // New arraylist to avoid concurrent modification
+                    img.addTag(t);
+                }
             }
         }
     }
