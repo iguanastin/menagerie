@@ -2,12 +2,15 @@ package menagerie.model;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
+import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
-import menagerie.util.ThumbnailBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.ref.SoftReference;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -20,6 +23,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
     // -------------------------------- Variables ------------------------------------
 
+    private final Menagerie menagerie;
+
     private final int id;
     private final long dateAdded;
     private final File file;
@@ -31,7 +36,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private SoftReference<Image> image;
 
 
-    public ImageInfo(int id, long dateAdded, File file, String md5) {
+    public ImageInfo(Menagerie menagerie, int id, long dateAdded, File file, String md5) {
+        this.menagerie = menagerie;
         this.id = id;
         this.dateAdded = dateAdded;
         this.file = file;
@@ -54,9 +60,41 @@ public class ImageInfo implements Comparable<ImageInfo> {
         Image img = null;
         if (thumbnail != null) img = thumbnail.get();
         if (img == null) {
-            img = makeThumbnail(getFile());
+            try {
+                menagerie.PS_GET_IMG_THUMBNAIL.setInt(1, id);
+                ResultSet rs = menagerie.PS_GET_IMG_THUMBNAIL.executeQuery();
+                if (rs.next()) {
+                    InputStream binaryStream = rs.getBinaryStream("thumbnail");
+                    if (binaryStream != null) {
+                        img = ImageInputStreamConverter.imageFromInputStream(binaryStream);
+                        thumbnail = new SoftReference<>(img);
+                    }
+                }
+            } catch (SQLException | IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if (img == null) {
+            img = buildThumbnail();
             thumbnail = new SoftReference<>(img);
-            //TODO: Save thumbnail to database?
+
+            if (img != null) {
+                final Image finalBullshit = img;
+                img.progressProperty().addListener((observable, oldValue, newValue) -> {
+                    if (!finalBullshit.isError() && newValue.doubleValue() == 1.0) {
+                        menagerie.getUpdateQueue().enqueueUpdate(() -> {
+                            try {
+                                menagerie.PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(finalBullshit));
+                                menagerie.PS_SET_IMG_THUMBNAIL.setInt(2, id);
+                                menagerie.PS_SET_IMG_THUMBNAIL.executeUpdate();
+                            } catch (SQLException | IOException e) {
+                                e.printStackTrace();
+                            }
+                        });
+                        menagerie.getUpdateQueue().commit();
+                    }
+                });
+            }
         }
         return img;
     }
@@ -65,36 +103,87 @@ public class ImageInfo implements Comparable<ImageInfo> {
         Image img = null;
         if (image != null) img = image.get();
         if (img == null) {
-            img = new Image(file.toURI().toString());
+            img = new Image(file.toURI().toString(), true);
             image = new SoftReference<>(img);
         }
         return img;
     }
 
-    public String getMd5() {
-        if (md5 == null) {
-            try {
-                md5 = HexBin.encode(MD5Hasher.hash(getFile()));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+    public String getMD5() {
         return md5;
     }
 
-    public boolean hasTag(String name) {
-        for (Tag tag : tags) {
-            if (tag.getName().equalsIgnoreCase(name)) return true;
+    public void initializeMD5() {
+        if (md5 != null) return;
+
+        try {
+            md5 = HexBin.encode(MD5Hasher.hash(getFile()));
+            menagerie.putMD5(md5, this);
+
+            if (md5 != null) {
+                menagerie.getUpdateQueue().enqueueUpdate(() -> {
+                    try {
+                        menagerie.PS_SET_IMG_MD5.setNString(1, md5);
+                        menagerie.PS_SET_IMG_MD5.setInt(2, id);
+                        menagerie.PS_SET_IMG_MD5.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                });
+                menagerie.getUpdateQueue().commit();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        return false;
+
+    }
+
+    public List<Tag> getTags() {
+        return tags;
+    }
+
+    public Menagerie getMenagerie() {
+        return menagerie;
     }
 
     public boolean hasTag(Tag t) {
         return getTags().contains(t);
     }
 
-    public List<Tag> getTags() {
-        return tags;
+    public boolean addTag(Tag t) {
+        if (hasTag(t)) return false;
+        tags.add(t);
+
+        menagerie.getUpdateQueue().enqueueUpdate(() -> {
+            try {
+                menagerie.PS_ADD_TAG_TO_IMG.setInt(1, id);
+                menagerie.PS_ADD_TAG_TO_IMG.setInt(2, t.getId());
+                menagerie.PS_ADD_TAG_TO_IMG.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+        menagerie.getUpdateQueue().commit();
+
+        return true;
+    }
+
+    public boolean removeTag(Tag t) {
+        if (!hasTag(t)) return false;
+        tags.remove(t);
+
+        menagerie.getUpdateQueue().enqueueUpdate(() -> {
+            try {
+                menagerie.PS_REMOVE_TAG_FROM_IMG.setInt(1, id);
+                menagerie.PS_REMOVE_TAG_FROM_IMG.setInt(2, t.getId());
+                menagerie.PS_REMOVE_TAG_FROM_IMG.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+        menagerie.getUpdateQueue().commit();
+
+        return true;
     }
 
     @Override
@@ -112,7 +201,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return getId() - o.getId();
     }
 
-    private static Image makeThumbnail(File file) {
+    private Image buildThumbnail() {
         String extension = file.getName().toLowerCase();
         extension = extension.substring(extension.indexOf('.') + 1);
 
@@ -121,18 +210,16 @@ public class ImageInfo implements Comparable<ImageInfo> {
             case "jpg":
             case "jpeg":
             case "bmp":
-                return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
             case "gif":
-                //TODO: Make thumbnail still and have "GIF" text applied
                 return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
             case "webm":
             case "mp4":
             case "avi":
                 //TODO: Load video into VLCJ player and take snapshot
                 return null;
-            default:
-                return null;
         }
+
+        return null;
     }
 
 }

@@ -5,19 +5,27 @@ import java.sql.*;
 import java.util.ArrayList;
 
 
-public class DatabaseUpdater {
+public class DatabaseVersionUpdater {
 
 
     private static final String CREATE_TAGS_TABLE_V1 = "CREATE TABLE tags(id INT PRIMARY KEY AUTO_INCREMENT, name NVARCHAR(128) NOT NULL UNIQUE);";
     private static final String CREATE_IMGS_TABLE_V1 = "CREATE TABLE imgs(id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, path NVARCHAR(1024) UNIQUE, added LONG NOT NULL, thumbnail BLOB, histogram OBJECT, md5 NVARCHAR(32));";
-    private static final String CREATE_TAGGED_TABLE_V1 = "CREATE TABLE tagged(img_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (img_id) REFERENCES imgs(id), FOREIGN KEY (tag_id) REFERENCES tags(id), PRIMARY KEY (img_id, tag_id));";
+    private static final String CREATE_TAGGED_TABLE_V1 = "CREATE TABLE tagged(img_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (img_id) REFERENCES imgs(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (img_id, tag_id));";
+
+    private static final int CURRENT_VERSION = 1;
+
 
     private static class Tag {
         int id;
         String name;
     }
 
-    public static void updateDatabaseIfNecessary(Connection db) throws SQLException {
+
+    public static boolean upToDate(Connection db) throws SQLException {
+        return getVersion(db) == CURRENT_VERSION;
+    }
+
+    public static void updateDatabase(Connection db) throws SQLException {
         Statement s = db.createStatement();
 
         final int version = getVersion(db);
@@ -39,7 +47,6 @@ public class DatabaseUpdater {
         }
 
         s.close();
-
     }
 
     /**
@@ -216,7 +223,7 @@ public class DatabaseUpdater {
 
     public static void main(String[] args) throws SQLException {
         Connection db = DriverManager.getConnection("jdbc:h2:~/test", "sa", "");
-        DatabaseUpdater.updateDatabaseIfNecessary(db);
+        DatabaseVersionUpdater.updateDatabase(db);
     }
 
 }

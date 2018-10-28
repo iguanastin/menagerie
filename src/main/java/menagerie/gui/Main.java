@@ -6,6 +6,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 
 import java.io.IOException;
 
@@ -20,13 +21,16 @@ public class Main extends Application {
     }
 
     public void start(Stage stage) {
-        final String fxml = "main.fxml";
+        final String fxml = "/fxml/main.fxml";
+        final String css = "/fxml/dark.css";
         final String title = "Menagerie";
 
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/" + fxml));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
             Parent root = loader.load();
-            stage.setScene(new Scene(root));
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(css);
+            stage.setScene(scene);
             stage.setTitle(title);
             stage.show();
         } catch (IOException e) {
