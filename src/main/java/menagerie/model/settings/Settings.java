@@ -16,6 +16,8 @@ public class Settings {
     private static final String WINDOW_WIDTH_TAG = "windowwidth";
     private static final String WINDOW_HEIGHT_TAG = "windowheight";
     private static final String WINDOW_MAXIMZED_TAG = "windowmaximized";
+    private static final String WINDOW_X_TAG = "windowx";
+    private static final String WINDOW_Y_TAG = "windowy";
 
     private boolean autoImportFromWeb = false;
     private boolean computeMD5OnImport = true;
@@ -24,8 +26,10 @@ public class Settings {
     private boolean windowMaximized = false;
     private String lastFolder = null;
     private int imageGridWidth = 2;
-    private int windowWidth = 800;
-    private int windowHeight = 600;
+    private int windowWidth = -1;
+    private int windowHeight = -1;
+    private int windowX = -1;
+    private int windowY = -1;
 
     public static final int MIN_IMAGE_GRID_WIDTH = 2;
     public static final int MAX_IMAGE_GRID_WIDTH = 8;
@@ -61,6 +65,14 @@ public class Settings {
 
     public int getWindowHeight() {
         return windowHeight;
+    }
+
+    public int getWindowX() {
+        return windowX;
+    }
+
+    public int getWindowY() {
+        return windowY;
     }
 
     public boolean isAutoImportFromWeb() {
@@ -165,6 +177,24 @@ public class Settings {
         }
     }
 
+    public void setWindowX(int windowX) {
+        this.windowX = windowX;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setWindowY(int windowY) {
+        this.windowY = windowY;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void saveToFile() throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(file);
 
@@ -174,9 +204,11 @@ public class Settings {
         writer.println(COMPUTE_HIST_TAG + "=" + computeHistogramOnImport);
         writer.println(BUILD_THUMBNAIL_TAG + "=" + buildThumbnailOnImport);
         writer.println(IMAGE_GRID_WIDTH_TAG + "=" + imageGridWidth);
+        writer.println(WINDOW_MAXIMZED_TAG + "=" + windowMaximized);
         writer.println(WINDOW_WIDTH_TAG + "=" + windowWidth);
         writer.println(WINDOW_HEIGHT_TAG + "=" + windowHeight);
-        writer.println(WINDOW_MAXIMZED_TAG + "=" + windowMaximized);
+        writer.println(WINDOW_X_TAG + "="+ windowX);
+        writer.println(WINDOW_Y_TAG + "=" + windowY);
         if (lastFolder != null) writer.println(LAST_FOLDER_TAG + "=" + lastFolder);
 
         writer.close();
@@ -201,7 +233,7 @@ public class Settings {
                         computeHistogramOnImport = Boolean.parseBoolean(val);
                         break;
                     case LAST_FOLDER_TAG:
-                        lastFolder = val;
+                        if (!val.isEmpty()) lastFolder = val;
                         break;
                     case BUILD_THUMBNAIL_TAG:
                         buildThumbnailOnImport = Boolean.parseBoolean(val);
@@ -217,6 +249,13 @@ public class Settings {
                         break;
                     case WINDOW_MAXIMZED_TAG:
                         windowMaximized = Boolean.parseBoolean(val);
+                        break;
+                    case WINDOW_X_TAG:
+                        windowX = Integer.parseInt(val);
+                        break;
+                    case WINDOW_Y_TAG:
+                        windowY = Integer.parseInt(val);
+                        break;
                 }
             }
         }

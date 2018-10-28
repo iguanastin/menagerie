@@ -90,8 +90,10 @@ public class MainController {
         Platform.runLater(() -> {
             Stage stage = ((Stage) explorerPane.getScene().getWindow());
             stage.setMaximized(settings.isWindowMaximized());
-            stage.setWidth(settings.getWindowWidth());
-            stage.setHeight(settings.getWindowHeight());
+            if (settings.getWindowWidth() > 0) stage.setWidth(settings.getWindowWidth());
+            if (settings.getWindowHeight() > 0) stage.setHeight(settings.getWindowHeight());
+            if (settings.getWindowX() >= 0) stage.setX(settings.getWindowX());
+            if (settings.getWindowY() >= 0) stage.setY(settings.getWindowY());
         });
 
         updateImageInfoLabel(null);
@@ -111,6 +113,8 @@ public class MainController {
             stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setWindowMaximized(newValue));
             stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setWindowWidth(newValue.intValue()));
             stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setWindowHeight(newValue.intValue()));
+            stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setWindowX(newValue.intValue()));
+            stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
         });
 
         imageGridView.setSelectionListener(image -> {
