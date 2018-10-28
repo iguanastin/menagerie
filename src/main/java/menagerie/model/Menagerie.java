@@ -145,7 +145,10 @@ public class Menagerie {
     public void removeImage(ImageInfo image, boolean deleteFile) {
         if (image != null && images.remove(image)) {
             if (deleteFile) {
-                if (!image.getFile().delete()) System.out.println("Could not delete file: " + image.getFile());
+                if (!image.getFile().delete()) {
+                    Main.showErrorMessage("Deletion Error", "Unable to delete file", image.getFile().toString());
+                    return;
+                }
             }
 
             activeSearches.forEach(search -> search.remove(image));
