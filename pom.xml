@@ -23,7 +23,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>manimage.main.Main</mainClass>
+                            <mainClass>menagerie.gui.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>
