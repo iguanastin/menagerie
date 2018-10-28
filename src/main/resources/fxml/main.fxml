@@ -2,8 +2,8 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.effect.DropShadow?>
@@ -16,54 +16,58 @@
 <?import org.controlsfx.control.ToggleSwitch?>
 
 <StackPane xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
-    <SplitPane fx:id="explorerPane" dividerPositions="0.66" onKeyPressed="#explorerPaneOnKeyPressed" prefHeight="576.0" prefWidth="994.0">
-        <BorderPane>
-            <center>
-                <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true" />
-            </center>
-        </BorderPane>
-        <BorderPane>
-            <center>
-                <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3" BorderPane.alignment="CENTER" />
-            </center>
-            <top>
-                <VBox BorderPane.alignment="CENTER">
-                    <HBox spacing="5.0">
+    <BorderPane fx:id="explorerPane" onKeyPressed="#explorerPaneOnKeyPressed" prefHeight="576.0" prefWidth="994.0">
+        <center>
+            <BorderPane>
+                <center>
+                    <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true" />
+                </center>
+            </BorderPane>
+        </center>
+        <right>
+            <BorderPane>
+                <center>
+                    <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3" BorderPane.alignment="CENTER" />
+                </center>
+                <top>
+                    <VBox BorderPane.alignment="CENTER">
+                        <HBox spacing="5.0">
+                            <padding>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                            </padding>
+                            <TextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search" HBox.hgrow="ALWAYS" />
+                        </HBox>
+                        <BorderPane>
+                            <right>
+                                <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
+                                    <Label fx:id="resultCountLabel" text="Results: 0" />
+                                    <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search" />
+                                </HBox>
+                            </right>
+                            <VBox.margin>
+                                <Insets />
+                            </VBox.margin>
+                            <padding>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                            </padding>
+                            <left>
+                                <ToggleButton fx:id="descendingToggleButton" mnemonicParsing="false" selected="true" text="Descending" BorderPane.alignment="CENTER" />
+                            </left>
+                        </BorderPane>
+                    </VBox>
+                </top>
+                <bottom>
+                    <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
                         <padding>
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                         </padding>
-                        <TextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search" HBox.hgrow="ALWAYS" />
+                        <Label fx:id="imageInfoLabel" text="Size: N/A - Res: N/A" HBox.hgrow="ALWAYS" />
                     </HBox>
-                    <BorderPane>
-                        <right>
-                            <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                                <Label fx:id="resultCountLabel" text="Results: 0" />
-                                <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search" />
-                            </HBox>
-                        </right>
-                        <VBox.margin>
-                            <Insets />
-                        </VBox.margin>
-                        <padding>
-                            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                        </padding>
-                        <left>
-                            <ToggleButton fx:id="descendingToggleButton" mnemonicParsing="false" selected="true" text="Descending" BorderPane.alignment="CENTER" />
-                        </left>
-                    </BorderPane>
-                </VBox>
-            </top>
-            <bottom>
-                <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                    <padding>
-                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                    </padding>
-                    <Label fx:id="imageInfoLabel" text="Size: N/A - Res: N/A" HBox.hgrow="ALWAYS" />
-                </HBox>
-            </bottom>
-        </BorderPane>
-    </SplitPane>
-    <BorderPane fx:id="settingsPane" onKeyPressed="#settingsPaneKeyPressed" prefHeight="200.0" prefWidth="200.0">
+                </bottom>
+            </BorderPane>
+        </right>
+    </BorderPane>
+    <BorderPane fx:id="settingsPane" disable="true" onKeyPressed="#settingsPaneKeyPressed" opacity="0.0" prefHeight="200.0" prefWidth="200.0">
         <center>
             <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="400.0" prefWidth="500.0" style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
                 <effect>
@@ -84,7 +88,7 @@
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                         </padding>
                         <HBox alignment="CENTER_LEFT" spacing="5.0">
-                           <Label text="Default save folder:" />
+                            <Label text="Default save folder:" />
                             <TextField fx:id="lastFolderSettingTextField" editable="false" promptText="Folder will be asked for when saving regardless of settings" HBox.hgrow="ALWAYS" />
                             <Button mnemonicParsing="false" onAction="#lastFolderSettingBrowseButtonOnAction" text="Browse" />
                             <VBox.margin>
@@ -101,6 +105,10 @@
                             <ToggleSwitch fx:id="computeHistSettingCheckbox" text="Compute Histogram" />
                             <ToggleSwitch fx:id="buildThumbSettingCheckbox" text="Build thumbnail" />
                         </VBox>
+                        <HBox alignment="CENTER_LEFT" spacing="5.0">
+                            <Label text="Explorer Grid row width:" />
+                            <ChoiceBox fx:id="gridWidthChoiceBox" />
+                        </HBox>
                     </VBox>
                 </center>
             </BorderPane>

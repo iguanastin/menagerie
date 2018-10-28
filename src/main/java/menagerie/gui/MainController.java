@@ -10,6 +10,9 @@ import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.stage.Window;
+import jdk.nashorn.internal.ir.annotations.Ignore;
 import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
 import menagerie.model.Tag;
@@ -35,7 +38,7 @@ import java.util.List;
 
 public class MainController {
 
-    public SplitPane explorerPane;
+    public BorderPane explorerPane;
     public ToggleButton descendingToggleButton;
     public TextField searchTextField;
     public ImageGridView imageGridView;
@@ -50,6 +53,7 @@ public class MainController {
     public ToggleSwitch autoImportWebSettingCheckbox;
     public TextField lastFolderSettingTextField;
     public Button settingsCancelButton;
+    public ChoiceBox<Integer> gridWidthChoiceBox;
 
     private Menagerie menagerie;
     private Search currentSearch = null;
@@ -61,6 +65,13 @@ public class MainController {
 
     @FXML
     public void initialize() {
+        initMenagerie();
+
+        initFX();
+        initListeners();
+    }
+
+    private void initMenagerie() {
         try {
             Connection db = DriverManager.getConnection(dbPath, dbUser, dbPass);
             if (!DatabaseVersionUpdater.upToDate(db)) {
@@ -73,11 +84,34 @@ public class MainController {
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
             Platform.exit();
         }
+    }
+
+    private void initFX() {
+        Platform.runLater(() -> {
+            Stage stage = ((Stage) explorerPane.getScene().getWindow());
+            stage.setMaximized(settings.isWindowMaximized());
+            stage.setWidth(settings.getWindowWidth());
+            stage.setHeight(settings.getWindowHeight());
+        });
 
         updateImageInfoLabel(null);
 
         //Ensure two columns for grid
-        imageGridView.setMinWidth(18 + (ImageInfo.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + imageGridView.getHorizontalCellSpacing() * 2) * 2);
+        setImageGridWidth(settings.getImageGridWidth());
+
+        Integer[] elements = new Integer[Settings.MAX_IMAGE_GRID_WIDTH - Settings.MIN_IMAGE_GRID_WIDTH + 1];
+        for (int i = 0; i < elements.length; i++) elements[i] = i + Settings.MIN_IMAGE_GRID_WIDTH;
+        gridWidthChoiceBox.getItems().addAll(elements);
+        gridWidthChoiceBox.getSelectionModel().clearAndSelect(0);
+    }
+
+    private void initListeners() {
+        Platform.runLater(() -> {
+            Stage stage = ((Stage) imageGridView.getScene().getWindow());
+            stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setWindowMaximized(newValue));
+            stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setWindowWidth(newValue.intValue()));
+            stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setWindowHeight(newValue.intValue()));
+        });
 
         imageGridView.setSelectionListener(image -> {
             previewImageView.setImage(image.getImage());
@@ -91,12 +125,14 @@ public class MainController {
                 });
             }
         });
+
         explorerPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
                 event.acceptTransferModes(TransferMode.ANY);
             }
             event.consume();
         });
+
         explorerPane.setOnDragDropped(event -> {
             List<File> files = event.getDragboard().getFiles();
             String url = event.getDragboard().getUrl();
@@ -253,6 +289,13 @@ public class MainController {
         imageGridView.getItems().addAll(currentSearch.getResults());
     }
 
+    private void setImageGridWidth(int n) {
+        final double width = 18 + (ImageInfo.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + imageGridView.getHorizontalCellSpacing() * 2) * n;
+        imageGridView.setMinWidth(width);
+        imageGridView.setMaxWidth(width);
+        imageGridView.setPrefWidth(width);
+    }
+
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
         imageGridView.requestFocus();
@@ -308,8 +351,10 @@ public class MainController {
         computeMD5SettingCheckbox.setSelected(settings.isComputeMD5OnImport());
         computeHistSettingCheckbox.setSelected(settings.isComputeHistogramOnImport());
         buildThumbSettingCheckbox.setSelected(settings.isBuildThumbnailOnImport());
+        gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
 
         //Enable pane
+        explorerPane.setDisable(true);
         settingsPane.setDisable(false);
         settingsPane.setOpacity(1);
         settingsCancelButton.requestFocus();
@@ -323,9 +368,12 @@ public class MainController {
             settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
             settings.setComputeHistogramOnImport(computeHistSettingCheckbox.isSelected());
             settings.setBuildThumbnailOnImport(buildThumbSettingCheckbox.isSelected());
+            settings.setImageGridWidth(gridWidthChoiceBox.getValue());
+            setImageGridWidth(gridWidthChoiceBox.getValue());
         }
 
         //Disable pane
+        explorerPane.setDisable(false);
         settingsPane.setDisable(true);
         settingsPane.setOpacity(0);
         imageGridView.requestFocus();
@@ -355,9 +403,15 @@ public class MainController {
     }
 
     public void settingsPaneKeyPressed(KeyEvent event) {
-        if (event.getCode() == KeyCode.ESCAPE) {
-            closeSettingsScreen(false);
-            event.consume();
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeSettingsScreen(false);
+                event.consume();
+                break;
+            case ENTER:
+                closeSettingsScreen(true);
+                event.consume();
+                break;
         }
     }
 
