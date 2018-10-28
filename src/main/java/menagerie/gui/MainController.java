@@ -4,15 +4,13 @@ import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.stage.Window;
-import jdk.nashorn.internal.ir.annotations.Ignore;
 import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
 import menagerie.model.Tag;
@@ -35,8 +33,11 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class MainController {
+
+    public StackPane rootPane;
 
     public BorderPane explorerPane;
     public ToggleButton descendingToggleButton;
@@ -109,7 +110,9 @@ public class MainController {
 
     private void initListeners() {
         Platform.runLater(() -> {
-            Stage stage = ((Stage) imageGridView.getScene().getWindow());
+            Stage stage = ((Stage) rootPane.getScene().getWindow());
+
+            //Bind window properties to settings
             stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setWindowMaximized(newValue));
             stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setWindowWidth(newValue.intValue()));
             stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setWindowHeight(newValue.intValue()));
@@ -148,6 +151,7 @@ public class MainController {
                     String folder = settings.getLastFolder();
                     // Regex removes everything up through the last slash of the url's path
                     String filename = URI.create(url).getPath().replaceAll("^.*/", "");
+
                     if (!settings.isAutoImportFromWeb() || folder == null || !new File(folder).exists()) {
                         FileChooser fc = new FileChooser();
                         fc.setTitle("Save file from web");
@@ -164,6 +168,17 @@ public class MainController {
 
                     if (!folder.endsWith("\\") && !folder.endsWith("/")) folder = folder + "/";
                     File target = new File(folder + filename);
+
+                    if (target.exists()) {
+                        Alert a = new Alert(Alert.AlertType.CONFIRMATION);
+                        a.setTitle("Replace file?");
+                        a.setHeaderText(target.toString());
+                        a.setContentText("File already exists, replace?");
+                        Optional r = a.showAndWait();
+                        if (r.isPresent() && r.get() != ButtonType.OK) {
+                            return;
+                        }
+                    }
 
                     new Thread(() -> {
                         try {

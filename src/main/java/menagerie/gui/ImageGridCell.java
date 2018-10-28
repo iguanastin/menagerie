@@ -16,8 +16,8 @@ import java.util.Iterator;
 
 public class ImageGridCell extends GridCell<ImageInfo> {
 
-    private static final String UNSELECTED_BG_CSS = "-fx-background-color: lightgray";
-    private static final String SELECTED_BG_CSS = "-fx-background-color: blue";
+    private static final String UNSELECTED_BG_CSS = "-fx-background-color: derive(-fx-color, 50%)";
+    private static final String SELECTED_BG_CSS = "-fx-background-color: derive(-fx-accent, 100%)";
 
     final private ImageView view;
     final private ImageGridView grid;

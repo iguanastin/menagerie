@@ -74,12 +74,9 @@ public class ImageGridView extends GridView<ImageInfo> {
 
         getItems().addListener((ListChangeListener<? super ImageInfo>) c -> {
             while (c.next()) {
-                c.getRemoved().forEach(image -> {
-                    if (isSelected(image)) {
-                        selected.remove(image);
-                    }
-                });
+                c.getRemoved().forEach(selected::remove);
             }
+            updateCellSelectionCSS();
         });
 
         setOnMouseReleased(event -> {

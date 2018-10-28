@@ -2,9 +2,7 @@ package menagerie.model;
 
 import menagerie.gui.Main;
 import menagerie.model.db.DatabaseUpdateQueue;
-import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.search.Search;
-import menagerie.model.search.SearchRule;
 
 import java.io.File;
 import java.sql.*;
@@ -33,7 +31,6 @@ public class Menagerie {
 
     private List<ImageInfo> images = new ArrayList<>();
     private List<Tag> tags = new ArrayList<>();
-    Map<String, HashSet<ImageInfo>> knownMD5s = new HashMap<>();
 
     private Connection database;
     private DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
@@ -53,7 +50,7 @@ public class Menagerie {
         PS_REMOVE_TAG_FROM_IMG = database.prepareStatement("DELETE FROM tagged WHERE img_id=? AND tag_id=?;");
         PS_GET_HIGHEST_IMG_ID = database.prepareStatement("SELECT TOP 1 imgs.id FROM imgs ORDER BY imgs.id DESC;");
         PS_DELETE_IMG = database.prepareStatement("DELETE FROM imgs WHERE imgs.id=?;");
-        PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5) VALUES (?, ?, ?, ?);");
+        PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5, histogram) VALUES (?, ?, ?, ?, ?);");
 
         // Load data from database
         loadTagsFromDatabase();
@@ -70,10 +67,12 @@ public class Menagerie {
         ResultSet rs = s.executeQuery(SQL_GET_IMGS);
 
         while (rs.next()) {
-            ImageInfo img = new ImageInfo(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"));
-            images.add(img);
+            double[][] bins = (double[][]) rs.getObject("histogram");
+            ImageHistogram hist = null;
+            if (bins != null) hist = new ImageHistogram(bins);
 
-            if (img.getMD5() != null) putMD5(img.getMD5(), img);
+            ImageInfo img = new ImageInfo(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
+            images.add(img);
 
             PS_GET_IMG_TAG_IDS.setInt(1, img.getId());
             ResultSet tagRS = PS_GET_IMG_TAG_IDS.executeQuery();
@@ -102,19 +101,15 @@ public class Menagerie {
     }
 
     public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram, boolean buildThumbnail) {
-        ImageInfo img = new ImageInfo(this, getNextAvailableImageID(), System.currentTimeMillis(), file, null);
-        if (computeMD5) {
-            img.initializeMD5();
-            if (knownMD5s.get(img.getMD5()).size() > 1) {
-                //TODO: Handle duplicate image
-                Main.showErrorMessage("Duplicate image already exists", "An image already exists with the same MD5 hash", "Existing image ID: " + knownMD5s.get(img.getMD5()));
-                //TODO: Remove duplicate md5 from hashmap
-                return null;
-            }
+        if (isFilePresent(file)) {
+            System.out.println("User tried to re-add file: " + file);
+            return null;
         }
-        if (computeHistogram) {
-            //TODO: Compute histogram
-        }
+
+        ImageInfo img = new ImageInfo(this, getNextAvailableImageID(), System.currentTimeMillis(), file, null, null);
+
+        if (computeMD5) img.initializeMD5();
+//        if (computeHistogram) img.initializeHistogram();
 
         images.add(img);
         activeSearches.forEach(search -> search.addIfValid(img));
@@ -124,6 +119,8 @@ public class Menagerie {
                 PS_CREATE_IMG.setNString(2, img.getFile().getAbsolutePath());
                 PS_CREATE_IMG.setLong(3, img.getDateAdded());
                 PS_CREATE_IMG.setNString(4, img.getMD5());
+                if (img.getHistogram() != null) PS_CREATE_IMG.setObject(5, img.getHistogram().getBins()); // TODO: Find a way to actually put the histogram into the damn database
+                else PS_CREATE_IMG.setObject(5, null);
                 PS_CREATE_IMG.executeUpdate();
 
                 PS_ADD_TAG_TO_IMG.setInt(1, img.getId());
@@ -164,14 +161,6 @@ public class Menagerie {
         }
     }
 
-    void putMD5(String hash, ImageInfo image) {
-        if (knownMD5s.get(hash) == null) {
-            knownMD5s.put(hash, new HashSet<>(Collections.singletonList(image)));
-        } else {
-            knownMD5s.get(hash).add(image);
-        }
-    }
-
     private int getNextAvailableImageID() {
         try {
             ResultSet rs = PS_GET_HIGHEST_IMG_ID.executeQuery();
@@ -199,27 +188,19 @@ public class Menagerie {
         return null;
     }
 
-    public List<Tag> getTagsByNames(List<String> names) {
-        List<Tag> results = new ArrayList<>();
-
-        for (String name : names) {
-            Tag t = getTagByName(name);
-            if (t != null) {
-                results.add(t);
-            } else {
-                results.add(new Tag(-1, name));
-            }
-        }
-
-        return results;
-    }
-
     public List<ImageInfo> getImages() {
         return images;
     }
 
     public DatabaseUpdateQueue getUpdateQueue() {
         return updateQueue;
+    }
+
+    private boolean isFilePresent(File file) {
+        for (ImageInfo img : images) {
+            if (img.getFile().equals(file)) return true;
+        }
+        return false;
     }
 
     public void closeSearch(Search search) {
