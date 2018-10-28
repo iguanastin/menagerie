@@ -7,7 +7,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.stage.FileChooser;
@@ -19,9 +18,6 @@ import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
 
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.stream.ImageInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -34,7 +30,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class MainController {
@@ -44,7 +39,7 @@ public class MainController {
     public ImageGridView imageGridView;
     public DynamicImageView previewImageView;
     public Label resultsLabel;
-    public SplitPane rootPane;
+    public SplitPane explorerPane;
     public Label imageInfoLabel;
 
     private Menagerie menagerie;
@@ -87,48 +82,53 @@ public class MainController {
                 });
             }
         });
-        imageGridView.setOnDragOver(event -> {
+        explorerPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
                 event.acceptTransferModes(TransferMode.ANY);
             }
             event.consume();
         });
-        rootPane.setOnDragDropped(event -> {
+        explorerPane.setOnDragDropped(event -> {
             List<File> files = event.getDragboard().getFiles();
             String url = event.getDragboard().getUrl();
 
             if (files != null && !files.isEmpty()) {
                 files.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
             } else if (url != null && !url.isEmpty()) {
-                String folder = settings.getLastFolder();
-                String filename = URI.create(url).getPath().replaceAll("^.*/", "");
-                if (!settings.isAutoImportFromWeb() || folder == null || !new File(folder).exists()) {
-                    FileChooser fc = new FileChooser();
-                    fc.setTitle("Save file from web");
-                    fc.setInitialFileName(filename);
-                    fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
-                    File result = fc.showSaveDialog(rootPane.getScene().getWindow());
+                Platform.runLater(() -> {
+                    String folder = settings.getLastFolder();
+                    // Regex removes everything up through the last slash of the url's path
+                    String filename = URI.create(url).getPath().replaceAll("^.*/", "");
+                    if (!settings.isAutoImportFromWeb() || folder == null || !new File(folder).exists()) {
+                        FileChooser fc = new FileChooser();
+                        fc.setTitle("Save file from web");
+                        fc.setInitialFileName(filename);
+                        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+                        File result = fc.showSaveDialog(explorerPane.getScene().getWindow());
 
-                    settings.setLastFolder(result.getParent());
-                    folder = settings.getLastFolder();
-                    filename = result.getName();
-                }
+                        if (result == null) return;
 
-                if (!folder.endsWith("\\") && !folder.endsWith("/")) folder = folder + "/";
-                File target = new File(folder + filename);
-
-                new Thread(() -> {
-                    try {
-                        downloadAndSaveFile(url, target);
-                        Platform.runLater(() -> {
-                            ImageInfo img = menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
-                            if (img == null) target.delete();
-                            else if (settings.isBuildThumbnailOnImport()) img.getThumbnail();
-                        });
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                        settings.setLastFolder(result.getParent());
+                        folder = result.getParent();
+                        filename = result.getName();
                     }
-                }).start();
+
+                    if (!folder.endsWith("\\") && !folder.endsWith("/")) folder = folder + "/";
+                    File target = new File(folder + filename);
+
+                    new Thread(() -> {
+                        try {
+                            downloadAndSaveFile(url, target);
+                            Platform.runLater(() -> {
+                                ImageInfo img = menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                                if (img == null) target.delete();
+                                else if (settings.isBuildThumbnailOnImport()) img.getThumbnail();
+                            });
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }).start();
+                });
             }
             event.consume();
         });
@@ -283,6 +283,9 @@ public class MainController {
         ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
         FileOutputStream fos = new FileOutputStream(target);
         fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+        conn.disconnect();
+        rbc.close();
+        fos.close();
     }
 
 }
