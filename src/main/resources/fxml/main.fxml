@@ -2,7 +2,6 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TextField?>
@@ -14,6 +13,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import menagerie.gui.DynamicImageView?>
 <?import menagerie.gui.ImageGridView?>
+<?import org.controlsfx.control.ToggleSwitch?>
 
 <StackPane xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
     <SplitPane fx:id="explorerPane" dividerPositions="0.66" onKeyPressed="#explorerPaneOnKeyPressed" prefHeight="576.0" prefWidth="994.0">
@@ -63,7 +63,7 @@
             </bottom>
         </BorderPane>
     </SplitPane>
-    <BorderPane fx:id="settingsPane" disable="true" onKeyPressed="#settingsPaneKeyPressed" opacity="0.0" prefHeight="200.0" prefWidth="200.0">
+    <BorderPane fx:id="settingsPane" onKeyPressed="#settingsPaneKeyPressed" prefHeight="200.0" prefWidth="200.0">
         <center>
             <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="400.0" prefWidth="500.0" style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
                 <effect>
@@ -83,23 +83,23 @@
                         <padding>
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                         </padding>
-                        <Label text="Default save folder:" />
-                        <HBox spacing="5.0">
-                            <TextField fx:id="lastFolderSettingTextField" editable="false" promptText="Default save folder" HBox.hgrow="ALWAYS" />
+                        <HBox alignment="CENTER_LEFT" spacing="5.0">
+                           <Label text="Default save folder:" />
+                            <TextField fx:id="lastFolderSettingTextField" editable="false" promptText="Folder will be asked for when saving regardless of settings" HBox.hgrow="ALWAYS" />
                             <Button mnemonicParsing="false" onAction="#lastFolderSettingBrowseButtonOnAction" text="Browse" />
                             <VBox.margin>
-                                <Insets left="25.0" />
+                                <Insets />
                             </VBox.margin>
                         </HBox>
-                        <CheckBox fx:id="autoImportWebSettingCheckbox" mnemonicParsing="false" text="Auto-import from web (saves to default folder with name from URL)" />
+                        <ToggleSwitch fx:id="autoImportWebSettingCheckbox" text="Auto-import from web (saves to default folder with name from URL)" />
                         <Label text="On file import:" />
                         <VBox spacing="5.0">
                             <padding>
                                 <Insets left="25.0" />
                             </padding>
-                            <CheckBox fx:id="computeMD5SettingCheckbox" mnemonicParsing="false" text="Compute MD5" />
-                            <CheckBox fx:id="computeHistSettingCheckbox" mnemonicParsing="false" text="Compute Histogram" />
-                            <CheckBox fx:id="buildThumbSettingCheckbox" mnemonicParsing="false" text="Build thumbnail" />
+                            <ToggleSwitch fx:id="computeMD5SettingCheckbox" text="Compute MD5" />
+                            <ToggleSwitch fx:id="computeHistSettingCheckbox" text="Compute Histogram" />
+                            <ToggleSwitch fx:id="buildThumbSettingCheckbox" text="Build thumbnail" />
                         </VBox>
                     </VBox>
                 </center>

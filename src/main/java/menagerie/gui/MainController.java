@@ -17,6 +17,7 @@ import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
+import org.controlsfx.control.ToggleSwitch;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,10 +44,10 @@ public class MainController {
     public Label imageInfoLabel;
 
     public BorderPane settingsPane;
-    public CheckBox computeMD5SettingCheckbox;
-    public CheckBox computeHistSettingCheckbox;
-    public CheckBox buildThumbSettingCheckbox;
-    public CheckBox autoImportWebSettingCheckbox;
+    public ToggleSwitch computeMD5SettingCheckbox;
+    public ToggleSwitch computeHistSettingCheckbox;
+    public ToggleSwitch buildThumbSettingCheckbox;
+    public ToggleSwitch autoImportWebSettingCheckbox;
     public TextField lastFolderSettingTextField;
     public Button settingsCancelButton;
 
