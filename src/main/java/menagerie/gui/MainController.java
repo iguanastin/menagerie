@@ -450,7 +450,8 @@ public class MainController {
     }
 
     private void editTagsOfSelected(String text) {
-        if (text == null || text.isEmpty() || text.contains(" ")) return;
+        if (text == null || text.isEmpty() || text.contains(" ") || imageGridView.getSelected().isEmpty()) return;
+
         if (text.startsWith("-")) {
             Tag t = menagerie.getTagByName(text.substring(1));
             if (t != null) {
@@ -468,11 +469,13 @@ public class MainController {
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
         imageGridView.requestFocus();
+        event.consume();
     }
 
     public void searchTextFieldOnAction(ActionEvent event) {
         searchOnAction();
         imageGridView.requestFocus();
+        event.consume();
     }
 
     public void explorerPaneOnKeyPressed(KeyEvent event) {
