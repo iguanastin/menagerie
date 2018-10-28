@@ -15,10 +15,7 @@ import menagerie.model.ImageInfo;
 import menagerie.model.Menagerie;
 import menagerie.model.Tag;
 import menagerie.model.db.DatabaseVersionUpdater;
-import menagerie.model.search.DateAddedRule;
-import menagerie.model.search.IDRule;
-import menagerie.model.search.SearchRule;
-import menagerie.model.search.TagRule;
+import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
 
@@ -51,6 +48,7 @@ public class MainController {
     public Label imageInfoLabel;
 
     private Menagerie menagerie;
+    private Search currentSearch = null;
 
     private Settings settings = new Settings(new File("menagerie.settings"));
 
@@ -100,7 +98,7 @@ public class MainController {
             String url = event.getDragboard().getUrl();
 
             if (files != null && !files.isEmpty()) {
-                files.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport()));
+                files.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
             } else if (url != null && !url.isEmpty()) {
                 String folder = settings.getLastFolder();
                 String filename = URI.create(url).getPath().replaceAll("^.*/", "");
@@ -123,7 +121,7 @@ public class MainController {
                     try {
                         downloadAndSaveFile(url, target);
                         Platform.runLater(() -> {
-                            ImageInfo img = menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
+                            ImageInfo img = menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                             if (img == null) target.delete();
                             else if (settings.isBuildThumbnailOnImport()) img.getThumbnail();
                         });
@@ -155,6 +153,8 @@ public class MainController {
     }
 
     private void searchOnAction() {
+        previewImageView.setImage(null);
+
         final boolean descending = descendingToggleButton.isSelected();
 
         List<SearchRule> rules = new ArrayList<>();
@@ -204,7 +204,20 @@ public class MainController {
             }
         }
 
-        List<ImageInfo> images = menagerie.searchImages(rules, descending);
+        if (currentSearch != null) currentSearch.close();
+        currentSearch = new Search(menagerie, rules, descending);
+        currentSearch.setListener(new SearchUpdateListener() {
+            @Override
+            public void imageAdded(ImageInfo img) {
+                currentSearch.sortResults();
+                imageGridView.getItems().add(currentSearch.getResults().indexOf(img), img);
+            }
+
+            @Override
+            public void imageRemoved(ImageInfo img) {
+                imageGridView.getItems().remove(img);
+            }
+        });
 
 //        Thread thread = new Thread(() -> {
 //            long t = System.currentTimeMillis();
@@ -225,10 +238,10 @@ public class MainController {
 //        thread.setDaemon(true);
 //        thread.start();
 
-        resultsLabel.setText("Results: " + images.size());
+        resultsLabel.setText("Results: " + currentSearch.getResults().size());
         imageGridView.clearSelection();
         imageGridView.getItems().clear();
-        imageGridView.getItems().addAll(images);
+        imageGridView.getItems().addAll(currentSearch.getResults());
     }
 
     public void searchButtonOnAction(ActionEvent event) {

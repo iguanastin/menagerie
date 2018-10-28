@@ -1,7 +1,9 @@
 package menagerie.model;
 
+import menagerie.gui.Main;
 import menagerie.model.db.DatabaseUpdateQueue;
 import menagerie.model.db.DatabaseVersionUpdater;
+import menagerie.model.search.Search;
 import menagerie.model.search.SearchRule;
 
 import java.io.File;
@@ -35,6 +37,8 @@ public class Menagerie {
 
     private Connection database;
     private DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
+
+    private List<Search> activeSearches = new ArrayList<>();
 
 
     public Menagerie(Connection database) throws SQLException {
@@ -97,18 +101,23 @@ public class Menagerie {
         System.out.println("Finished loading " + tags.size() + " tags from database");
     }
 
-    public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram) {
+    public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram, boolean buildThumbnail) {
         ImageInfo img = new ImageInfo(this, getNextAvailableImageID(), System.currentTimeMillis(), file, null);
         if (computeMD5) {
             img.initializeMD5();
             if (knownMD5s.get(img.getMD5()).size() > 1) {
-                //TODO: Notify of duplicate image
+                //TODO: Handle duplicate image
+                Main.showErrorMessage("Duplicate image already exists", "An image already exists with the same MD5 hash", "Existing image ID: " + knownMD5s.get(img.getMD5()));
+                //TODO: Remove duplicate md5 from hashmap
                 return null;
             }
         }
-        //TODO: Compute histogram
+        if (computeHistogram) {
+            //TODO: Compute histogram
+        }
 
         images.add(img);
+        activeSearches.forEach(search -> search.addIfValid(img));
         updateQueue.enqueueUpdate(() -> {
             try {
                 PS_CREATE_IMG.setInt(1, img.getId());
@@ -123,6 +132,10 @@ public class Menagerie {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+
+            if (buildThumbnail) {
+                img.getThumbnail();
+            }
         });
         updateQueue.commit();
 
@@ -135,6 +148,7 @@ public class Menagerie {
                 if (!image.getFile().delete()) System.out.println("Could not delete file: " + image.getFile());
             }
 
+            activeSearches.forEach(search -> search.remove(image));
             updateQueue.enqueueUpdate(() -> {
                 try {
                     PS_DELETE_IMG.setInt(1, image.getId());
@@ -197,40 +211,19 @@ public class Menagerie {
         return results;
     }
 
+    public List<ImageInfo> getImages() {
+        return images;
+    }
+
     public DatabaseUpdateQueue getUpdateQueue() {
         return updateQueue;
     }
 
-    public List<ImageInfo> searchImages(List<SearchRule> rules, boolean descending) {
-        List<ImageInfo> results = new ArrayList<>();
-
-        rules.sort(null);
-
-        rules.forEach(System.out::println);
-
-        for (ImageInfo img : images) {
-            if (imageFitsSearch(img, rules)) results.add(img);
-        }
-
-        results.sort((o1, o2) -> {
-            if (descending) {
-                return o2.getId() - o1.getId();
-            } else {
-                return o1.getId() - o2.getId();
-            }
-        });
-
-        return results;
+    public void closeSearch(Search search) {
+        activeSearches.remove(search);
     }
 
-    private boolean imageFitsSearch(ImageInfo img, List<SearchRule> rules) {
-        if (rules != null) {
-            for (SearchRule rule : rules) {
-                if (!rule.accept(img)) return false;
-            }
-        }
-
-        return true;
+    public void registerSearch(Search search) {
+        activeSearches.add(search);
     }
-
 }

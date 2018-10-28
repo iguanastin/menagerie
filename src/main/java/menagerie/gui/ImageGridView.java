@@ -14,6 +14,7 @@ import org.controlsfx.control.GridView;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,9 +58,16 @@ public class ImageGridView extends GridView<ImageInfo> {
                 event.consume();
             });
             c.setOnMouseReleased(event -> {
-                if (!dragging && event.getButton() == MouseButton.PRIMARY)
-                    select(c.getItem(), event.isControlDown(), event.isShiftDown());
-                event.consume();
+                if (!dragging) {
+                    if (event.getButton() == MouseButton.PRIMARY) {
+                        select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                        event.consume();
+                    } else if (event.getButton() == MouseButton.SECONDARY) {
+                        ContextMenu m = new ContextMenu(new MenuItem("TEst 1"), new MenuItem("test 2"));
+                        m.show(c, event.getScreenX(), event.getScreenY());
+                        event.consume();
+                    }
+                }
             });
             return c;
         });
@@ -170,9 +178,9 @@ public class ImageGridView extends GridView<ImageInfo> {
 
                         Optional result = d.showAndWait();
                         if (result.isPresent() && result.get() == ButtonType.OK) {
-                            Menagerie menagerie = selected.get(0).getMenagerie();
-                            selected.forEach(img -> menagerie.removeImage(img, !event.isControlDown()));
-                            //TODO: Update the current search, files may no longer be present in model, but still visible in view
+                            List<ImageInfo> temp = new ArrayList<>(selected.size());
+                            temp.addAll(selected);
+                            temp.forEach(img -> img.getMenagerie().removeImage(img, !event.isControlDown()));
                         }
 
                         event.consume();
