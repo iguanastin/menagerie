@@ -54,3 +54,13 @@
 .scroll-bar > .decrement-button:pressed > .decrement-arrow {
     -fx-background-color: -fx-mark-highlight-color, rgb(255, 255, 255);
 }
+
+.list-view {
+    -fx-background-color: derive(-fx-control-inner-background, +25%);
+}
+.list-cell {
+    -fx-background-color: derive(-fx-control-inner-background, +35%);
+}
+.list-cell:odd {
+    -fx-background-color: derive(-fx-control-inner-background, +25%)
+}

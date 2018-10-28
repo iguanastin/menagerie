@@ -18,6 +18,9 @@ public class Settings {
     private static final String WINDOW_MAXIMZED_TAG = "windowmaximized";
     private static final String WINDOW_X_TAG = "windowx";
     private static final String WINDOW_Y_TAG = "windowy";
+    private static final String DB_USER_TAG = "dbuser";
+    private static final String DB_PASS_TAG = "dbpass";
+    private static final String DB_URL_TAG = "dburl";
 
     private boolean autoImportFromWeb = false;
     private boolean computeMD5OnImport = true;
@@ -25,6 +28,9 @@ public class Settings {
     private boolean buildThumbnailOnImport = false;
     private boolean windowMaximized = false;
     private String lastFolder = null;
+    private String dbUser = "sa";
+    private String dbPass = "";
+    private String dbUrl = "~/menagerie";
     private int imageGridWidth = 2;
     private int windowWidth = -1;
     private int windowHeight = -1;
@@ -53,6 +59,18 @@ public class Settings {
 
     public String getLastFolder() {
         return lastFolder;
+    }
+
+    public String getDbUser() {
+        return dbUser;
+    }
+
+    public String getDbPass() {
+        return dbPass;
+    }
+
+    public String getDbUrl() {
+        return dbUrl;
     }
 
     public int getImageGridWidth() {
@@ -195,6 +213,33 @@ public class Settings {
         }
     }
 
+    public void setDbUser(String dbUser) {
+        this.dbUser = dbUser;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setDbPass(String dbPass) {
+        this.dbPass = dbPass;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setDbUrl(String dbUrl) {
+        this.dbUrl = dbUrl;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void saveToFile() throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(file);
 
@@ -209,6 +254,9 @@ public class Settings {
         writer.println(WINDOW_HEIGHT_TAG + "=" + windowHeight);
         writer.println(WINDOW_X_TAG + "="+ windowX);
         writer.println(WINDOW_Y_TAG + "=" + windowY);
+        writer.println(DB_URL_TAG + "=" + dbUrl);
+        writer.println(DB_USER_TAG + "=" + dbUser);
+        writer.println(DB_PASS_TAG + "=" + dbPass);
         if (lastFolder != null) writer.println(LAST_FOLDER_TAG + "=" + lastFolder);
 
         writer.close();
@@ -255,6 +303,15 @@ public class Settings {
                         break;
                     case WINDOW_Y_TAG:
                         windowY = Integer.parseInt(val);
+                        break;
+                    case DB_URL_TAG:
+                        dbUrl = val;
+                        break;
+                    case DB_USER_TAG:
+                        dbUser = val;
+                        break;
+                    case DB_PASS_TAG:
+                        dbPass = val;
                         break;
                 }
             }

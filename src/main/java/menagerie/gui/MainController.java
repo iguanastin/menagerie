@@ -46,6 +46,7 @@ public class MainController {
     public DynamicImageView previewImageView;
     public Label resultCountLabel;
     public Label imageInfoLabel;
+    public ListView<String> tagListView;
 
     public BorderPane settingsPane;
     public ToggleSwitch computeMD5SettingCheckbox;
@@ -61,8 +62,6 @@ public class MainController {
 
     private Settings settings = new Settings(new File("menagerie.settings"));
 
-    private String dbPath = "jdbc:h2:~/test", dbUser = "sa", dbPass = "";
-
 
     @FXML
     public void initialize() {
@@ -74,7 +73,7 @@ public class MainController {
 
     private void initMenagerie() {
         try {
-            Connection db = DriverManager.getConnection(dbPath, dbUser, dbPass);
+            Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getDbUrl(), settings.getDbUser(), settings.getDbPass());
             if (!DatabaseVersionUpdater.upToDate(db)) {
                 DatabaseVersionUpdater.updateDatabase(db);
             }
@@ -122,6 +121,9 @@ public class MainController {
 
         imageGridView.setSelectionListener(image -> {
             previewImageView.setImage(image.getImage());
+            tagListView.getItems().clear();
+            image.getTags().forEach(tag -> tagListView.getItems().add(tag.getName()));
+            tagListView.getItems().sort(null);
 
             if (!image.getImage().isBackgroundLoading() || image.getImage().getProgress() == 1) {
                 updateImageInfoLabel(image);
