@@ -522,7 +522,7 @@ public class MainController {
     public void lastFolderSettingBrowseButtonOnAction(ActionEvent event) {
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("Choose default save folder");
-        dc.setInitialDirectory(new File(lastFolderSettingTextField.getText()));
+        if (lastFolderSettingTextField.getText() != null && !lastFolderSettingTextField.getText().isEmpty()) dc.setInitialDirectory(new File(lastFolderSettingTextField.getText()));
         File result = dc.showDialog(settingsPane.getScene().getWindow());
 
         if (result != null) {
