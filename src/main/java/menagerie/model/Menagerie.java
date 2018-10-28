@@ -92,7 +92,7 @@ public class Menagerie {
         ResultSet rs = s.executeQuery(SQL_GET_TAGS);
 
         while (rs.next()) {
-            tags.add(new Tag(rs.getInt("id"), rs.getNString("name")));
+            tags.add(new Tag(this, rs.getInt("id"), rs.getNString("name")));
         }
 
         s.close();
@@ -186,6 +186,10 @@ public class Menagerie {
             if (t.getName().equalsIgnoreCase(name)) return t;
         }
         return null;
+    }
+
+    void imageTagsUpdated(ImageInfo img) {
+        activeSearches.forEach(search -> search.removeIfInvalid(img));
     }
 
     public List<ImageInfo> getImages() {

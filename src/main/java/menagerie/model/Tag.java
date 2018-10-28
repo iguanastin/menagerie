@@ -2,11 +2,13 @@ package menagerie.model;
 
 public class Tag implements Comparable<Tag> {
 
+    private Menagerie menagerie;
     private final int id;
     private final String name;
 
 
-    public Tag(int id, String name) {
+    public Tag(Menagerie menagerie, int id, String name) {
+        this.menagerie = menagerie;
         this.id = id;
         this.name = name;
     }
@@ -17,6 +19,20 @@ public class Tag implements Comparable<Tag> {
 
     public String getName() {
         return name;
+    }
+
+    public Menagerie getMenagerie() {
+        return menagerie;
+    }
+
+    public int computeFrequency() {
+        int count = 0;
+
+        for (ImageInfo img : menagerie.getImages()) {
+            if (img.hasTag(this)) count++;
+        }
+
+        return count;
     }
 
     @Override

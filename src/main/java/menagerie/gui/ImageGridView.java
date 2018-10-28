@@ -195,7 +195,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         return (int) Math.floor(getHeight() / (ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
     }
 
-    private void select(ImageInfo item, boolean ctrlDown, boolean shiftDown) {
+    void select(ImageInfo item, boolean ctrlDown, boolean shiftDown) {
         if (ctrlDown) {
             if (isSelected(item)) {
                 selected.remove(item);
@@ -265,6 +265,10 @@ public class ImageGridView extends GridView<ImageInfo> {
         return lastSelected;
     }
 
+    List<ImageInfo> getSelected() {
+        return selected;
+    }
+
     void clearSelection() {
         selected.clear();
         updateCellSelectionCSS();
@@ -274,7 +278,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         return selected.contains(img);
     }
 
-    public void setSelectionListener(SelectionListener selectionListener) {
+    void setSelectionListener(SelectionListener selectionListener) {
         this.selectionListener = selectionListener;
     }
 

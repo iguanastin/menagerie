@@ -36,6 +36,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private SoftReference<Image> thumbnail;
     private SoftReference<Image> image;
 
+    private ImageTagUpdateListener tagListener = null;
+
 
     public ImageInfo(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
         this.menagerie = menagerie;
@@ -193,7 +195,9 @@ public class ImageInfo implements Comparable<ImageInfo> {
         });
         menagerie.getUpdateQueue().commit();
 
-        //TODO: notify menagerie of tag updates so it can check it against active searches
+        menagerie.imageTagsUpdated(this);
+
+        if (tagListener != null) tagListener.tagsChanged();
 
         return true;
     }
@@ -213,9 +217,15 @@ public class ImageInfo implements Comparable<ImageInfo> {
         });
         menagerie.getUpdateQueue().commit();
 
-        //TODO: notify menagerie of tag updates so it can check it against active searches
+        menagerie.imageTagsUpdated(this);
+
+        if (tagListener != null) tagListener.tagsChanged();
 
         return true;
+    }
+
+    public void setTagListener(ImageTagUpdateListener tagListener) {
+        this.tagListener = tagListener;
     }
 
     @Override

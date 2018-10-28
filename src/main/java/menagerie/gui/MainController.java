@@ -32,6 +32,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,7 +47,7 @@ public class MainController {
     public DynamicImageView previewImageView;
     public Label resultCountLabel;
     public Label imageInfoLabel;
-    public ListView<String> tagListView;
+    public ListView<Tag> tagListView;
 
     public BorderPane settingsPane;
     public ToggleSwitch computeMD5SettingCheckbox;
@@ -59,6 +60,8 @@ public class MainController {
 
     private Menagerie menagerie;
     private Search currentSearch = null;
+
+    private ImageInfo currentlyPreviewing = null;
 
     private Settings settings = new Settings(new File("menagerie.settings"));
 
@@ -119,21 +122,38 @@ public class MainController {
             stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
         });
 
-        imageGridView.setSelectionListener(image -> {
-            previewImageView.setImage(image.getImage());
-            tagListView.getItems().clear();
-            image.getTags().forEach(tag -> tagListView.getItems().add(tag.getName()));
-            tagListView.getItems().sort(null);
-
-            if (!image.getImage().isBackgroundLoading() || image.getImage().getProgress() == 1) {
-                updateImageInfoLabel(image);
-            } else {
-                updateImageInfoLabel(null);
-                image.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
-                    if (newValue.doubleValue() == 1 && !image.getImage().isError()) updateImageInfoLabel(image);
-                });
-            }
+        tagListView.setCellFactory(param -> {
+            TagListCell c = new TagListCell();
+            c.setOnContextMenuRequested(event -> {
+                if (c.getItem() != null) {
+                    MenuItem i1 = new MenuItem("Add to search");
+                    i1.setOnAction(event1 -> {
+                        if (searchTextField.getText().trim().isEmpty()) {
+                            searchTextField.setText(c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
+                        }
+                        searchTextField.requestFocus();
+                    });
+                    MenuItem i2 = new MenuItem("Subtract from search");
+                    i2.setOnAction(event1 -> {
+                        if (searchTextField.getText().trim().isEmpty()) {
+                            searchTextField.setText("-" + c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
+                        }
+                        searchTextField.requestFocus();
+                    });
+                    MenuItem i3 = new MenuItem("Remove from selected");
+                    i3.setOnAction(event1 -> imageGridView.getSelected().forEach(img -> img.removeTag(c.getItem())));
+                    ContextMenu m = new ContextMenu(i1, i2, new SeparatorMenuItem(), i3);
+                    m.show(c, event.getScreenX(), event.getScreenY());
+                }
+            });
+            return c;
         });
+
+        imageGridView.setSelectionListener(this::previewImage);
 
         explorerPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
@@ -187,8 +207,9 @@ public class MainController {
                             downloadAndSaveFile(url, target);
                             Platform.runLater(() -> {
                                 ImageInfo img = menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
-                                if (img == null) target.delete();
-                                else if (settings.isBuildThumbnailOnImport()) img.getThumbnail();
+                                if (img == null) {
+                                    if (!target.delete()) System.out.println("Tried to delete a downloaded file, as it couldn't be imported, but failed: " + target);
+                                }
                             });
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -198,6 +219,38 @@ public class MainController {
             }
             event.consume();
         });
+    }
+
+    private void previewImage(ImageInfo image) {
+        if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
+        currentlyPreviewing = image;
+
+        if (image != null) {
+            image.setTagListener(() -> updateTagListViewContents(image));
+
+            previewImageView.setImage(image.getImage());
+
+            updateTagListViewContents(image);
+
+            if (!image.getImage().isBackgroundLoading() || image.getImage().getProgress() == 1) {
+                updateImageInfoLabel(image);
+            } else {
+                updateImageInfoLabel(null);
+                image.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
+                    if (newValue.doubleValue() == 1 && !image.getImage().isError()) updateImageInfoLabel(image);
+                });
+            }
+        } else {
+            previewImageView.setImage(null);
+            tagListView.getItems().clear();
+            updateImageInfoLabel(null);
+        }
+    }
+
+    private void updateTagListViewContents(ImageInfo image) {
+        tagListView.getItems().clear();
+        image.getTags().forEach(tag -> tagListView.getItems().add(tag));
+        tagListView.getItems().sort(Comparator.comparing(Tag::getName));
     }
 
     private void updateImageInfoLabel(ImageInfo image) {
@@ -261,11 +314,11 @@ public class MainController {
                 }
             } else if (arg.startsWith("-")) {
                 Tag tag = menagerie.getTagByName(arg.substring(1));
-                if (tag == null) tag = new Tag(-1, arg.substring(1));
+                if (tag == null) tag = new Tag(menagerie, -1, arg.substring(1));
                 rules.add(new TagRule(tag, true));
             } else {
                 Tag tag = menagerie.getTagByName(arg);
-                if (tag == null) tag = new Tag(-1, arg);
+                if (tag == null) tag = new Tag(menagerie, -1, arg);
                 rules.add(new TagRule(tag, false));
             }
         }
@@ -308,6 +361,8 @@ public class MainController {
         imageGridView.clearSelection();
         imageGridView.getItems().clear();
         imageGridView.getItems().addAll(currentSearch.getResults());
+
+        imageGridView.select(imageGridView.getItems().get(0), false, false);
     }
 
     private void setImageGridWidth(int n) {

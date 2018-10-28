@@ -59,8 +59,8 @@
     -fx-background-color: derive(-fx-control-inner-background, +25%);
 }
 .list-cell {
-    -fx-background-color: derive(-fx-control-inner-background, +35%);
+    -fx-background-color: derive(-fx-control-inner-background, +40%);
 }
 .list-cell:odd {
-    -fx-background-color: derive(-fx-control-inner-background, +25%)
+    -fx-background-color: derive(-fx-control-inner-background, +20%)
 }
