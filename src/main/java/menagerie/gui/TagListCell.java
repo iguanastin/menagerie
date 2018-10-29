@@ -15,6 +15,8 @@ public class TagListCell extends ListCell<Tag> {
         countLabel = new Label("(0)");
         nameLabel = new Label("N/A");
         setGraphic(new BorderPane(null, null, countLabel, null, nameLabel));
+
+        //TODO: Add a small '-' button for easily removal
     }
 
     @Override

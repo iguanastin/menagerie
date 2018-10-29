@@ -226,6 +226,8 @@ public class MainController {
                     if (!folder.endsWith("\\") && !folder.endsWith("/")) folder = folder + "/";
                     File target = new File(folder + filename);
 
+                    //TODO: Ensure filename has a valid image extension
+
                     if (target.exists()) {
                         Alert a = new Alert(Alert.AlertType.CONFIRMATION);
                         a.setTitle("Replace file?");
@@ -423,6 +425,7 @@ public class MainController {
 
                 if (img.equals(currentlyPreviewing)) previewImage(null);
 
+                imageGridView.unselect(img);
                 imageGridView.getItems().remove(img);
             }
         });

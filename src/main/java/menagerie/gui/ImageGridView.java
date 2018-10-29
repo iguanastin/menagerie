@@ -296,4 +296,10 @@ public class ImageGridView extends GridView<ImageInfo> {
         lastSelected = img;
     }
 
+    boolean unselect(ImageInfo img) {
+        boolean r = selected.remove(img);
+        updateCellSelectionCSS();
+        return r;
+    }
+
 }
