@@ -144,10 +144,6 @@ public class Menagerie {
                     PS_CREATE_IMG.setObject(5, img.getHistogram().getBins()); // TODO: Find a way to actually put the histogram into the damn database
                 else PS_CREATE_IMG.setObject(5, null);
                 PS_CREATE_IMG.executeUpdate();
-
-                PS_ADD_TAG_TO_IMG.setInt(1, img.getId());
-                PS_ADD_TAG_TO_IMG.setInt(2, getTagByName("tagme").getId());
-                PS_ADD_TAG_TO_IMG.executeUpdate();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -157,6 +153,8 @@ public class Menagerie {
             }
         });
         updateQueue.commit();
+
+        img.addTag(getTagByName("tagme"));
 
         return img;
     }
