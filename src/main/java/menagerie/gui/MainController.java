@@ -31,10 +31,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class MainController {
 
@@ -48,6 +45,7 @@ public class MainController {
     public Label resultCountLabel;
     public Label imageInfoLabel;
     public ListView<Tag> tagListView;
+    public TextField editTagsTextfield;
 
     private ContextMenu autoCompleteContextMenu;
 
@@ -62,7 +60,10 @@ public class MainController {
     public TextField dbURLTextfield;
     public TextField dbUserTextfield;
     public TextField dbPassTextfield;
-    public TextField editTagsTextfield;
+
+    public BorderPane tagListPane;
+    public ChoiceBox<String> tagListOrderChoiceBox;
+    public ListView<Tag> tagListListView;
 
     private Menagerie menagerie;
     private Search currentSearch = null;
@@ -116,6 +117,10 @@ public class MainController {
         for (int i = 0; i < elements.length; i++) elements[i] = i + Settings.MIN_IMAGE_GRID_WIDTH;
         gridWidthChoiceBox.getItems().addAll(elements);
         gridWidthChoiceBox.getSelectionModel().clearAndSelect(0);
+
+        //Initialize tagList order choicebox
+        tagListOrderChoiceBox.getItems().addAll("Name", "ID", "Frequency");
+        tagListOrderChoiceBox.getSelectionModel().clearAndSelect(0);
     }
 
     private void initWindowPropertiesFromSettings() {
@@ -131,9 +136,16 @@ public class MainController {
         initWindowListeners();
         initTagListViewListeners();
         initExplorerPaneListeners();
+        initTagListScreenListeners();
         imageGridView.setSelectionListener(this::previewImage);
         //TODO: Fix event passthrough. Pressing enter or space doesn't get caught by the onKeyPressed handler that's pushing tag changes into the model
 //        initEditTagsAutoComplete();
+    }
+
+    private void initTagListScreenListeners() {
+        tagListOrderChoiceBox.setOnAction(event -> updateTagListListViewOrder());
+        //TODO: Find more efficient way to order by frequency
+        //TODO: Make listview display frequency, as well
     }
 
     private void initEditTagsAutoComplete() {
@@ -506,6 +518,52 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
+    private void openTagListScreen() {
+        tagListListView.getItems().clear();
+        tagListListView.getItems().addAll(menagerie.getTags());
+        updateTagListListViewOrder();
+
+        explorerPane.setDisable(true);
+        tagListPane.setDisable(false);
+        tagListPane.setOpacity(1);
+        tagListListView.requestFocus();
+    }
+
+    private void closeTagListScreen() {
+        explorerPane.setDisable(false);
+        tagListPane.setDisable(true);
+        tagListPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void updateTagListListViewOrder() {
+        switch (tagListOrderChoiceBox.getValue()) {
+            case "ID":
+                tagListListView.getItems().sort(Comparator.comparingInt(Tag::getId));
+                break;
+            case "Frequency":
+                HashMap<Integer, Integer> m = new HashMap<>();
+                tagListListView.getItems().sort((o1, o2) -> {
+                    int f1 = m.getOrDefault(o1.getId(), -1);
+                    if (f1 == -1) {
+                        f1 = o1.computeFrequency();
+                        m.put(o1.getId(), f1);
+                    }
+                    int f2 = m.getOrDefault(o2.getId(), -1);
+                    if (f2 == -1) {
+                        f2 = o2.computeFrequency();
+                        m.put(o2.getId(), f2);
+                    }
+
+                    return f2 - f1;
+                });
+                break;
+            case "Name":
+                tagListListView.getItems().sort(Comparator.comparing(Tag::getName));
+                break;
+        }
+    }
+
     private void editTagsOfSelected(String input) {
         if (input == null || input.isEmpty() || imageGridView.getSelected().isEmpty()) return;
         lastTagString = input;
@@ -557,6 +615,10 @@ public class MainController {
                     break;
                 case S:
                     openSettingsScreen();
+                    event.consume();
+                    break;
+                case T:
+                    openTagListScreen();
                     event.consume();
                     break;
             }
@@ -623,6 +685,19 @@ public class MainController {
             case ESCAPE:
                 editTagsTextfield.setText(null);
                 imageGridView.requestFocus();
+                event.consume();
+                break;
+        }
+    }
+
+    public void tagListExitButtonOnAction(ActionEvent event) {
+        closeTagListScreen();
+    }
+
+    public void tagListPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeTagListScreen();
                 event.consume();
                 break;
         }
