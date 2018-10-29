@@ -3,8 +3,8 @@ package menagerie.gui;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.geometry.Bounds;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
@@ -19,7 +19,6 @@ import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
-import org.controlsfx.control.ToggleSwitch;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -50,6 +49,8 @@ public class MainController {
     public Label imageInfoLabel;
     public ListView<Tag> tagListView;
 
+    private ContextMenu autoCompleteContextMenu;
+
     public BorderPane settingsPane;
     public CheckBox computeMD5SettingCheckbox;
     public CheckBox computeHistSettingCheckbox;
@@ -67,6 +68,7 @@ public class MainController {
     private Search currentSearch = null;
 
     private ImageInfo currentlyPreviewing = null;
+    private String lastTagString = null;
 
     private Settings settings = new Settings(new File("menagerie.settings"));
 
@@ -106,6 +108,9 @@ public class MainController {
         //Ensure two columns for grid
         setImageGridWidth(settings.getImageGridWidth());
 
+        //Init editTagsTextfield autocomplete context menu
+        autoCompleteContextMenu = new ContextMenu();
+
         //Initialize grid width setting choicebox
         Integer[] elements = new Integer[Settings.MAX_IMAGE_GRID_WIDTH - Settings.MIN_IMAGE_GRID_WIDTH + 1];
         for (int i = 0; i < elements.length; i++) elements[i] = i + Settings.MIN_IMAGE_GRID_WIDTH;
@@ -125,8 +130,51 @@ public class MainController {
     private void initListeners() {
         initWindowListeners();
         initTagListViewListeners();
-        imageGridView.setSelectionListener(this::previewImage);
         initExplorerPaneListeners();
+        imageGridView.setSelectionListener(this::previewImage);
+        //TODO: Fix event passthrough. Pressing enter or space doesn't get caught by the onKeyPressed handler that's pushing tag changes into the model
+//        initEditTagsAutoComplete();
+    }
+
+    private void initEditTagsAutoComplete() {
+        editTagsTextfield.textProperty().addListener((observable, oldValue, str) -> {
+            if (str != null && !str.isEmpty()) {
+                str = str.trim();
+                boolean subtract = str.startsWith("-");
+                if (subtract) str = str.substring(1);
+
+                if (autoCompleteContextMenu.isShowing()) autoCompleteContextMenu.hide();
+
+                autoCompleteContextMenu.getItems().clear();
+                int i = 0;
+                for (Tag t : menagerie.getTags()) {
+                    if (i >= 10) break;
+
+                    if (t.getName().startsWith(str)) {
+                        MenuItem m = new MenuItem(t.getName());
+                        m.setMnemonicParsing(false);
+                        m.setOnAction(event -> {
+                            if (subtract) editTagsTextfield.setText("-" + t.getName());
+                            else editTagsTextfield.setText(t.getName());
+                            editTagsTextfield.positionCaret(editTagsTextfield.getText().length());
+                            event.consume();
+                        });
+                        autoCompleteContextMenu.getItems().add(m);
+                        i++;
+                    }
+                }
+
+                if (i > 0) {
+                    Bounds b = editTagsTextfield.localToScreen(editTagsTextfield.getBoundsInLocal());
+                    if (!autoCompleteContextMenu.isShowing())
+                        autoCompleteContextMenu.show(editTagsTextfield, 0, 0);
+                    autoCompleteContextMenu.setX(b.getMinX() - 10);
+                    autoCompleteContextMenu.setY(b.getMinY() - autoCompleteContextMenu.getHeight() + 20);
+                }
+            } else if (autoCompleteContextMenu.isShowing()) {
+                autoCompleteContextMenu.hide();
+            }
+        });
     }
 
     private void initExplorerPaneListeners() {
@@ -357,7 +405,8 @@ public class MainController {
             @Override
             public void imageRemoved(ImageInfo img) {
                 int index = imageGridView.getItems().indexOf(img) + 1;
-                if (index < imageGridView.getItems().size()) imageGridView.setLastSelected(imageGridView.getItems().get(index));
+                if (index < imageGridView.getItems().size())
+                    imageGridView.setLastSelected(imageGridView.getItems().get(index));
                 else if (index - 1 >= 0) imageGridView.setLastSelected(imageGridView.getItems().get(index - 1));
 
                 if (img.equals(currentlyPreviewing)) previewImage(null);
@@ -459,6 +508,7 @@ public class MainController {
 
     private void editTagsOfSelected(String input) {
         if (input == null || input.isEmpty() || imageGridView.getSelected().isEmpty()) return;
+        lastTagString = input;
 
         for (String text : input.split("\\s+")) {
             if (text.startsWith("-")) {
@@ -496,6 +546,7 @@ public class MainController {
                     event.consume();
                     break;
                 case E:
+                    editTagsTextfield.setText(lastTagString);
                     editTagsTextfield.requestFocus();
                     event.consume();
                     break;
@@ -532,7 +583,8 @@ public class MainController {
     public void lastFolderSettingBrowseButtonOnAction(ActionEvent event) {
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("Choose default save folder");
-        if (lastFolderSettingTextField.getText() != null && !lastFolderSettingTextField.getText().isEmpty()) dc.setInitialDirectory(new File(lastFolderSettingTextField.getText()));
+        if (lastFolderSettingTextField.getText() != null && !lastFolderSettingTextField.getText().isEmpty())
+            dc.setInitialDirectory(new File(lastFolderSettingTextField.getText()));
         File result = dc.showDialog(settingsPane.getScene().getWindow());
 
         if (result != null) {

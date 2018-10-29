@@ -183,6 +183,10 @@ public class Menagerie {
         }
     }
 
+    public List<Tag> getTags() {
+        return tags;
+    }
+
     private Tag getTagByID(int id) {
         for (Tag t : tags) {
             if (t.getId() == id) return t;
