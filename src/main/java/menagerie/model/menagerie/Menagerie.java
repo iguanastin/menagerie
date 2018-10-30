@@ -1,4 +1,4 @@
-package menagerie.model;
+package menagerie.model.menagerie;
 
 import menagerie.gui.Main;
 import menagerie.model.db.DatabaseUpdateQueue;

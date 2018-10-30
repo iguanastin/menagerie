@@ -1,4 +1,4 @@
-package menagerie.model;
+package menagerie.model.menagerie;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;

@@ -1,4 +1,4 @@
-package menagerie.model;
+package menagerie.model.menagerie;
 
 public class Tag implements Comparable<Tag> {
 

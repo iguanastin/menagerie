@@ -1,4 +1,4 @@
-package menagerie.model;
+package menagerie.model.menagerie;
 
 
 import javafx.scene.image.Image;

@@ -12,9 +12,12 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import menagerie.model.ImageInfo;
-import menagerie.model.Menagerie;
-import menagerie.model.Tag;
+import menagerie.gui.grid.ImageGridView;
+import menagerie.gui.image.DynamicImageView;
+import menagerie.gui.progress.ProgressLockThread;
+import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Menagerie;
+import menagerie.model.menagerie.Tag;
 import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
@@ -32,7 +35,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.text.DecimalFormat;
 import java.util.*;
 
 public class MainController {

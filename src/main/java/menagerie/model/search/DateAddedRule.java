@@ -1,6 +1,6 @@
 package menagerie.model.search;
 
-import menagerie.model.ImageInfo;
+import menagerie.model.menagerie.ImageInfo;
 
 import java.util.Date;
 

@@ -16,8 +16,8 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<?import menagerie.gui.DynamicImageView?>
-<?import menagerie.gui.ImageGridView?>
+<?import menagerie.gui.image.DynamicImageView?>
+<?import menagerie.gui.grid.ImageGridView?>
 
 <StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
     <BorderPane fx:id="explorerPane" onKeyPressed="#explorerPaneOnKeyPressed" prefHeight="576.0" prefWidth="994.0">

@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.progress;
 
 import java.util.ArrayList;
 import java.util.List;

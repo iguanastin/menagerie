@@ -4,7 +4,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
-import menagerie.model.Tag;
+import menagerie.model.menagerie.Tag;
 
 public class TagListCell extends ListCell<Tag> {
 

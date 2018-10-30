@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.progress;
 
 public interface ProgressLockThreadListener {
 

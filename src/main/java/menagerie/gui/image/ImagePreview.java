@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.image;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;

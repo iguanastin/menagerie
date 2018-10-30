@@ -1,11 +1,13 @@
-package menagerie.gui;
+package menagerie.gui.grid;
 
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
-import menagerie.model.ImageInfo;
+import menagerie.gui.Main;
+import menagerie.gui.progress.ProgressQueueListener;
+import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridView;
 
 import java.io.File;
@@ -16,7 +18,7 @@ import java.util.Optional;
 
 public class ImageGridView extends GridView<ImageInfo> {
 
-    static final int CELL_BORDER = 2;
+    public static final int CELL_BORDER = 2;
 
 
     private final ClipboardContent clipboard = new ClipboardContent();
@@ -259,7 +261,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         return (int) Math.floor(getHeight() / (ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
     }
 
-    void select(ImageInfo item, boolean ctrlDown, boolean shiftDown) {
+    public void select(ImageInfo item, boolean ctrlDown, boolean shiftDown) {
         if (ctrlDown) {
             if (isSelected(item)) {
                 selected.remove(item);
@@ -329,11 +331,11 @@ public class ImageGridView extends GridView<ImageInfo> {
         return lastSelected;
     }
 
-    List<ImageInfo> getSelected() {
+    public List<ImageInfo> getSelected() {
         return selected;
     }
 
-    void clearSelection() {
+    public void clearSelection() {
         selected.clear();
         updateCellSelectionCSS();
     }
@@ -342,7 +344,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         return selected.contains(img);
     }
 
-    void setSelectionListener(SelectionListener selectionListener) {
+    public void setSelectionListener(SelectionListener selectionListener) {
         this.selectionListener = selectionListener;
     }
 
@@ -360,11 +362,11 @@ public class ImageGridView extends GridView<ImageInfo> {
         }
     }
 
-    void setLastSelected(ImageInfo img) {
+    public void setLastSelected(ImageInfo img) {
         lastSelected = img;
     }
 
-    boolean unselect(ImageInfo img) {
+    public boolean unselect(ImageInfo img) {
         boolean r = selected.remove(img);
         updateCellSelectionCSS();
         return r;
