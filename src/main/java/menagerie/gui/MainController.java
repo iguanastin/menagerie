@@ -21,6 +21,7 @@ import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -426,20 +427,22 @@ public class MainController {
             @Override
             public void imageAdded(ImageInfo img) {
                 currentSearch.sortResults();
-                imageGridView.getItems().add(currentSearch.getResults().indexOf(img), img);
+                Platform.runLater(() -> imageGridView.getItems().add(currentSearch.getResults().indexOf(img), img));
             }
 
             @Override
             public void imageRemoved(ImageInfo img) {
-                int index = imageGridView.getItems().indexOf(img) + 1;
-                if (index < imageGridView.getItems().size())
-                    imageGridView.setLastSelected(imageGridView.getItems().get(index));
-                else if (index - 1 >= 0) imageGridView.setLastSelected(imageGridView.getItems().get(index - 1));
+                Platform.runLater(() -> {
+                    int index = imageGridView.getItems().indexOf(img) + 1;
+                    if (index < imageGridView.getItems().size())
+                        imageGridView.setLastSelected(imageGridView.getItems().get(index));
+                    else if (index - 1 >= 0) imageGridView.setLastSelected(imageGridView.getItems().get(index - 1));
 
-                if (img.equals(currentlyPreviewing)) previewImage(null);
+                    if (img.equals(currentlyPreviewing)) previewImage(null);
 
-                imageGridView.unselect(img);
-                imageGridView.getItems().remove(img);
+                    imageGridView.unselect(img);
+                    imageGridView.getItems().remove(img);
+                });
             }
         });
 
@@ -600,6 +603,18 @@ public class MainController {
         }
     }
 
+    private List<File> getFilesRecursive(File folder, FileFilter filter) {
+        List<File> results = new ArrayList<>();
+        for (File file : Objects.requireNonNull(folder.listFiles())) {
+            if (file.isDirectory()) {
+                results.addAll(getFilesRecursive(file, filter));
+            } else {
+                if (filter.accept(file)) results.add(file);
+            }
+        }
+        return results;
+    }
+
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
         imageGridView.requestFocus();
@@ -731,7 +746,28 @@ public class MainController {
     }
 
     public void importFilesMenuItemOnAction(ActionEvent event) {
-        //TODO
+        FileChooser fc = new FileChooser();
+        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
+            fc.setInitialDirectory(new File(settings.getLastFolder()));
+        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
+
+        if (results != null)
+            results.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
+
+        event.consume();
+    }
+
+    public void importFolderMenuItemOnAction(ActionEvent event) {
+        DirectoryChooser dc = new DirectoryChooser();
+        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
+            dc.setInitialDirectory(new File(settings.getLastFolder()));
+        File result = dc.showDialog(rootPane.getScene().getWindow());
+
+        if (result != null) {
+            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
+        }
+
         event.consume();
     }
 

@@ -87,6 +87,7 @@
             <MenuBar BorderPane.alignment="CENTER">
                 <Menu mnemonicParsing="false" text="File">
                     <MenuItem mnemonicParsing="false" onAction="#importFilesMenuItemOnAction" text="Import Files" />
+                    <MenuItem mnemonicParsing="false" onAction="#importFolderMenuItemOnAction" text="Import Folder" />
                 </Menu>
                 <Menu mnemonicParsing="false" text="View">
                     <MenuItem mnemonicParsing="false" onAction="#settingsMenuItemOnAction" text="Settings" />
