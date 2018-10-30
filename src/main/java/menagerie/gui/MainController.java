@@ -144,8 +144,21 @@ public class MainController {
 
     private void initTagListScreenListeners() {
         tagListOrderChoiceBox.setOnAction(event -> updateTagListListViewOrder());
-        //TODO: Find more efficient way to order by frequency
-        //TODO: Make listview display frequency, as well
+        tagListListView.setCellFactory(param -> {
+            TagListCell c = new TagListCell();
+            c.setOnContextMenuRequested(event -> {
+                MenuItem i1 = new MenuItem("Search this tag");
+                i1.setOnAction(event1 -> {
+                    searchTextField.setText(c.getItem().getName());
+                    searchTextField.positionCaret(searchTextField.getText().length());
+                    closeTagListScreen();
+                    searchOnAction();
+                });
+                ContextMenu m = new ContextMenu(i1);
+                m.show(c, event.getScreenX(), event.getScreenY());
+            });
+            return c;
+        });
     }
 
     private void initEditTagsAutoComplete() {
@@ -454,7 +467,7 @@ public class MainController {
         imageGridView.getItems().clear();
         imageGridView.getItems().addAll(currentSearch.getResults());
 
-        imageGridView.select(imageGridView.getItems().get(0), false, false);
+        if (!imageGridView.getItems().isEmpty()) imageGridView.select(imageGridView.getItems().get(0), false, false);
     }
 
     private void setImageGridWidth(int n) {
@@ -695,6 +708,7 @@ public class MainController {
 
     public void tagListExitButtonOnAction(ActionEvent event) {
         closeTagListScreen();
+        event.consume();
     }
 
     public void tagListPaneOnKeyPressed(KeyEvent event) {
