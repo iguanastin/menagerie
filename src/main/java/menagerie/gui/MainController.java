@@ -32,6 +32,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.util.*;
 
 public class MainController {
@@ -68,9 +69,17 @@ public class MainController {
 
     public BorderPane helpPane;
 
+    public BorderPane progressLockPane;
+    public ProgressBar progressLockProgressBar;
+    public Label progressLockTitleLabel;
+    public Label progressLockMessageLabel;
+    public Label progressLockCountLabel;
+
+
     private Menagerie menagerie;
     private Search currentSearch = null;
 
+    private ProgressLockThread currentProgressLockThread;
     private ImageInfo currentlyPreviewing = null;
     private String lastTagString = null;
 
@@ -141,6 +150,7 @@ public class MainController {
         initExplorerPaneListeners();
         initTagListScreenListeners();
         imageGridView.setSelectionListener(this::previewImage);
+        imageGridView.setProgressQueueListener(this::openProgressLockScreen);
         //TODO: Fix event passthrough. Pressing enter or space doesn't get caught by the onKeyPressed handler that's pushing tag changes into the model
 //        initEditTagsAutoComplete();
     }
@@ -571,6 +581,40 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
+    private void openProgressLockScreen(String title, String message, List<Runnable> queue) {
+        if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
+
+        currentProgressLockThread = new ProgressLockThread(queue, (num, total, finished) -> Platform.runLater(() -> {
+            if (finished) {
+                closeProgressLockScreen();
+            } else {
+                final double progress = (double) num / total;
+                progressLockProgressBar.setProgress(progress);
+                progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
+            }
+        }));
+        currentProgressLockThread.start();
+
+        progressLockTitleLabel.setText(title);
+        progressLockMessageLabel.setText(message);
+        progressLockProgressBar.setProgress(0);
+        progressLockCountLabel.setText("0/" + queue.size());
+
+        explorerPane.setDisable(true);
+        progressLockPane.setDisable(false);
+        progressLockPane.setOpacity(1);
+        progressLockPane.requestFocus();
+    }
+
+    private void closeProgressLockScreen() {
+        if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
+
+        explorerPane.setDisable(false);
+        progressLockPane.setDisable(true);
+        progressLockPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
     private void updateTagListListViewOrder() {
         switch (tagListOrderChoiceBox.getValue()) {
             case "ID":
@@ -812,6 +856,20 @@ public class MainController {
                     closeHelpScreen();
                     event.consume();
                 }
+                break;
+        }
+    }
+
+    public void progressLockStopButtonOnAction(ActionEvent event) {
+        closeProgressLockScreen();
+        event.consume();
+    }
+
+    public void progressLockPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeProgressLockScreen();
+                event.consume();
                 break;
         }
     }

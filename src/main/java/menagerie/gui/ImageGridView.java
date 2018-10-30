@@ -23,7 +23,9 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     private final List<ImageInfo> selected = new ArrayList<>();
     private ImageInfo lastSelected = null;
+
     private SelectionListener selectionListener = null;
+    private ProgressQueueListener progressQueueListener = null;
 
     private boolean dragging = false;
 
@@ -72,23 +74,41 @@ public class ImageGridView extends GridView<ImageInfo> {
 
                 MenuItem i2 = new MenuItem("Build MD5 Hash");
                 i2.setOnAction(event1 -> {
-                    //TODO: Progress bar, work in background thread
+                    List<Runnable> queue = new ArrayList<>();
                     selected.forEach(img -> {
                         if (img.getMD5() == null) {
-                            img.initializeMD5();
-                            img.commitMD5ToDatabase();
+                            queue.add(() -> {
+                                img.initializeMD5();
+                                img.commitMD5ToDatabase();
+                            });
                         }
                     });
+                    if (!queue.isEmpty()) {
+                        if (progressQueueListener != null) {
+                            progressQueueListener.processProgressQueue("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue);
+                        } else {
+                            queue.forEach(Runnable::run);
+                        }
+                    }
                 });
                 MenuItem i3 = new MenuItem("Build Histogram");
                 i3.setOnAction(event1 -> {
-                    //TODO: Progress bar, work in background thread (if possible with image loading)
+                    List<Runnable> queue = new ArrayList<>();
                     selected.forEach(img -> {
                         if (img.getHistogram() == null) {
-                            img.initializeHistogram();
-                            img.commitHistogramToDatabase();
+                            queue.add(() -> {
+                                img.initializeHistogram();
+                                img.commitHistogramToDatabase();
+                            });
                         }
                     });
+                    if (!queue.isEmpty()) {
+                        if (progressQueueListener != null) {
+                            progressQueueListener.processProgressQueue("Building Histograms", "Building image histograms for " + queue.size() + " files...", queue);
+                        } else {
+                            queue.forEach(Runnable::run);
+                        }
+                    }
                 });
 
                 MenuItem i4 = new MenuItem("Find Duplicates");
@@ -324,6 +344,10 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     void setSelectionListener(SelectionListener selectionListener) {
         this.selectionListener = selectionListener;
+    }
+
+    public void setProgressQueueListener(ProgressQueueListener progressQueueListener) {
+        this.progressQueueListener = progressQueueListener;
     }
 
     private void updateCellSelectionCSS() {
