@@ -234,57 +234,45 @@ public class MainController {
             } else if (url != null && !url.isEmpty()) {
                 Platform.runLater(() -> {
                     String folder = settings.getLastFolder();
-                    // Regex removes everything up through the last slash of the url's path
+                    if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
                     String filename = URI.create(url).getPath().replaceAll("^.*/", "");
-
-                    if (!settings.isAutoImportFromWeb() || folder == null || !new File(folder).exists()) {
-                        FileChooser fc = new FileChooser();
-                        fc.setTitle("Save file from web");
-                        fc.setInitialFileName(filename);
-                        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
-                        File result = fc.showSaveDialog(explorerPane.getScene().getWindow());
-
-                        if (result == null) return;
-
-                        settings.setLastFolder(result.getParent());
-                        folder = result.getParent();
-                        filename = result.getName();
-                    }
-
-                    if (!folder.endsWith("\\") && !folder.endsWith("/")) folder = folder + "/";
                     File target = new File(folder + filename);
 
-                    //TODO: Ensure filename has a valid image extension
-
-                    if (target.exists()) {
-                        Alert a = new Alert(Alert.AlertType.CONFIRMATION);
-                        a.setTitle("Replace file?");
-                        a.setHeaderText(target.toString());
-                        a.setContentText("File already exists, replace?");
-                        Optional r = a.showAndWait();
-                        if (r.isPresent() && r.get() != ButtonType.OK) {
-                            return;
-                        }
+                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !Filters.IMAGE_FILTER.accept(target)) {
+                        target = openSaveImageDialog(new File(settings.getLastFolder()), filename);
+                        if (target == null) return;
+                        if (target.exists()) Main.showErrorMessage("Error", "File already exists, cannot be overwritten", target.getAbsolutePath());
                     }
 
+                    final File finalTarget = target;
                     new Thread(() -> {
                         try {
-                            downloadAndSaveFile(url, target);
+                            downloadAndSaveFile(url, finalTarget);
                             Platform.runLater(() -> {
-                                ImageInfo img = menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                                ImageInfo img = menagerie.importImage(finalTarget, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                                 if (img == null) {
-                                    if (!target.delete())
-                                        System.out.println("Tried to delete a downloaded file, as it couldn't be imported, but failed: " + target);
+                                    if (!finalTarget.delete())
+                                        System.out.println("Tried to delete a downloaded file, as it couldn't be imported, but failed: " + finalTarget);
                                 }
                             });
                         } catch (IOException e) {
                             e.printStackTrace();
+                            Main.showErrorMessage("Unexpected error", "Error while trying to download image", e.getLocalizedMessage());
                         }
                     }).start();
                 });
             }
             event.consume();
         });
+    }
+
+    private File openSaveImageDialog(File folder, String filename) {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Save file from web");
+        if (filename != null) fc.setInitialFileName(filename);
+        if (folder != null) fc.setInitialDirectory(folder);
+        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        return fc.showSaveDialog(explorerPane.getScene().getWindow());
     }
 
     private void initTagListViewListeners() {
