@@ -22,6 +22,7 @@ public class Menagerie {
     private final PreparedStatement PS_GET_HIGHEST_TAG_ID;
     private final PreparedStatement PS_DELETE_IMG;
     private final PreparedStatement PS_CREATE_IMG;
+    private final PreparedStatement PS_DELETE_TAG;
     private final PreparedStatement PS_CREATE_TAG;
     final PreparedStatement PS_SET_IMG_MD5;
     final PreparedStatement PS_SET_IMG_THUMBNAIL;
@@ -57,11 +58,13 @@ public class Menagerie {
         PS_GET_HIGHEST_TAG_ID = database.prepareStatement("SELECT TOP 1 tags.id FROM tags ORDER BY tags.id DESC;");
         PS_DELETE_IMG = database.prepareStatement("DELETE FROM imgs WHERE imgs.id=?;");
         PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5, histogram) VALUES (?, ?, ?, ?, ?);");
+        PS_DELETE_TAG = database.prepareStatement("DELETE FROM tags WHERE tags.id=?;");
         PS_CREATE_TAG = database.prepareStatement("INSERT INTO tags(id, name) VALUES (?, ?);");
 
         // Load data from database
         loadTagsFromDatabase();
         loadImagesFromDatabase();
+        clearUnusedTags();
 
         // Start runnable queue for database updates
         Thread thread = new Thread(updateQueue);
@@ -69,6 +72,25 @@ public class Menagerie {
         thread.start();
 
         initializeIdCounters();
+    }
+
+    private void clearUnusedTags() throws SQLException {
+        Set<Integer> usedTags = new HashSet<>();
+        for (ImageInfo img : images) {
+            for (Tag t : img.getTags()) {
+                usedTags.add(t.getId());
+            }
+        }
+        for (Tag t : new ArrayList<>(tags)) {
+            if (!usedTags.contains(t.getId())) {
+                System.out.println("Deleting unused tag: " + t);
+
+                tags.remove(t);
+
+                PS_DELETE_TAG.setInt(1, t.getId());
+                PS_DELETE_TAG.executeUpdate();
+            }
+        }
     }
 
     private void initializeIdCounters() throws SQLException {
