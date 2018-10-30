@@ -66,6 +66,8 @@ public class MainController {
     public ChoiceBox<String> tagListOrderChoiceBox;
     public ListView<Tag> tagListListView;
 
+    public BorderPane helpPane;
+
     private Menagerie menagerie;
     private Search currentSearch = null;
 
@@ -555,6 +557,20 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
+    private void openHelpScreen() {
+        explorerPane.setDisable(true);
+        helpPane.setDisable(false);
+        helpPane.setOpacity(1);
+        helpPane.requestFocus();
+    }
+
+    private void closeHelpScreen() {
+        explorerPane.setDisable(false);
+        helpPane.setDisable(true);
+        helpPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
     private void updateTagListListViewOrder() {
         switch (tagListOrderChoiceBox.getValue()) {
             case "ID":
@@ -675,11 +691,14 @@ public class MainController {
                     event.consume();
                     break;
                 case I:
-                case O:
                     if (event.isShiftDown())
                         requestImportFolder();
                     else
                         requestImportFiles();
+                    event.consume();
+                    break;
+                case H:
+                    openHelpScreen();
                     event.consume();
                     break;
             }
@@ -727,6 +746,12 @@ public class MainController {
                 closeSettingsScreen(true);
                 event.consume();
                 break;
+            case S:
+                if (event.isControlDown()) {
+                    closeSettingsScreen(false);
+                    event.consume();
+                }
+                break;
         }
     }
 
@@ -761,6 +786,32 @@ public class MainController {
             case ESCAPE:
                 closeTagListScreen();
                 event.consume();
+                break;
+            case T:
+                if (event.isControlDown()) {
+                    closeTagListScreen();
+                    event.consume();
+                }
+                break;
+        }
+    }
+
+    public void helpExitButtonOnAction(ActionEvent event) {
+        closeHelpScreen();
+        event.consume();
+    }
+
+    public void helpPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeHelpScreen();
+                event.consume();
+                break;
+            case H:
+                if (event.isControlDown()) {
+                    closeHelpScreen();
+                    event.consume();
+                }
                 break;
         }
     }
