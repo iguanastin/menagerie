@@ -83,22 +83,6 @@
                 </children>
             </VBox>
         </left>
-        <top>
-            <MenuBar BorderPane.alignment="CENTER">
-                <Menu mnemonicParsing="false" text="File">
-                    <MenuItem mnemonicParsing="false" onAction="#importFilesMenuItemOnAction" text="Import Files" />
-                    <MenuItem mnemonicParsing="false" onAction="#importFolderMenuItemOnAction" text="Import Folder" />
-                </Menu>
-                <Menu mnemonicParsing="false" text="View">
-                    <MenuItem mnemonicParsing="false" onAction="#settingsMenuItemOnAction" text="Settings" />
-                    <MenuItem mnemonicParsing="false" onAction="#tagsMenuItemOnAction" text="Tags" />
-                </Menu>
-                <Menu mnemonicParsing="false" text="Help">
-                    <MenuItem mnemonicParsing="false" onAction="#hotkeysMenuItemOnAction" text="Hotkeys" />
-                    <MenuItem mnemonicParsing="false" onAction="#aboutMenuItemOnAction" text="About" />
-                </Menu>
-            </MenuBar>
-        </top>
     </BorderPane>
     <BorderPane fx:id="settingsPane" disable="true" onKeyPressed="#settingsPaneKeyPressed" opacity="0.0">
         <center>

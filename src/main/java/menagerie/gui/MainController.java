@@ -765,36 +765,4 @@ public class MainController {
         }
     }
 
-    public void settingsMenuItemOnAction(ActionEvent event) {
-        openSettingsScreen();
-        event.consume();
-    }
-
-    public void tagsMenuItemOnAction(ActionEvent event) {
-        openTagListScreen();
-        event.consume();
-    }
-
-    public void importFilesMenuItemOnAction(ActionEvent event) {
-        requestImportFiles();
-
-        event.consume();
-    }
-
-    public void importFolderMenuItemOnAction(ActionEvent event) {
-        requestImportFolder();
-
-        event.consume();
-    }
-
-    public void hotkeysMenuItemOnAction(ActionEvent event) {
-        //TODO:
-        event.consume();
-    }
-
-    public void aboutMenuItemOnAction(ActionEvent event) {
-        //TODO:
-        event.consume();
-    }
-
 }
