@@ -168,6 +168,14 @@ public class ImageInfo implements Comparable<ImageInfo> {
         }
     }
 
+    public boolean commitHistogramToDatabase() {
+        if (histogram == null) return false;
+
+        //TODO: Commit to database somehow (:
+
+        return true;
+    }
+
     public List<Tag> getTags() {
         return tags;
     }
@@ -222,6 +230,10 @@ public class ImageInfo implements Comparable<ImageInfo> {
         if (tagListener != null) tagListener.tagsChanged();
 
         return true;
+    }
+
+    public void remove(boolean deleteFile) {
+        menagerie.removeImage(this, deleteFile);
     }
 
     public void setTagListener(ImageTagUpdateListener tagListener) {

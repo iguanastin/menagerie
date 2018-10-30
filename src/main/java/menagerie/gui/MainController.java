@@ -547,7 +547,7 @@ public class MainController {
         explorerPane.setDisable(true);
         tagListPane.setDisable(false);
         tagListPane.setOpacity(1);
-        tagListListView.requestFocus();
+        tagListPane.requestFocus();
     }
 
     private void closeTagListScreen() {

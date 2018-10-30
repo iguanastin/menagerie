@@ -4,17 +4,13 @@ import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.TransferMode;
+import javafx.scene.input.*;
 import menagerie.model.ImageInfo;
-import menagerie.model.Menagerie;
 import org.controlsfx.control.GridView;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -58,16 +54,60 @@ public class ImageGridView extends GridView<ImageInfo> {
                 event.consume();
             });
             c.setOnMouseReleased(event -> {
-                if (!dragging) {
-                    if (event.getButton() == MouseButton.PRIMARY) {
-                        select(c.getItem(), event.isControlDown(), event.isShiftDown());
-                        event.consume();
-                    } else if (event.getButton() == MouseButton.SECONDARY) {
-                        ContextMenu m = new ContextMenu(new MenuItem("TEst 1"), new MenuItem("test 2"));
-                        m.show(c, event.getScreenX(), event.getScreenY());
-                        event.consume();
-                    }
+                if (!dragging && event.getButton() == MouseButton.PRIMARY) {
+                    select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                    event.consume();
                 }
+            });
+            c.setOnContextMenuRequested(event -> {
+                MenuItem i1 = new MenuItem("Open in Explorer");
+                i1.setOnAction(event1 -> {
+                    try {
+                        Runtime.getRuntime().exec("explorer.exe /select, " + c.getItem().getFile().getAbsolutePath());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        Main.showErrorMessage("Unexpected Error", "Error opening file explorer", e.getLocalizedMessage());
+                    }
+                });
+
+                MenuItem i2 = new MenuItem("Build MD5 Hash");
+                i2.setOnAction(event1 -> {
+                    //TODO: Progress bar, work in background thread
+                    selected.forEach(img -> {
+                        if (img.getMD5() == null) {
+                            img.initializeMD5();
+                            img.commitMD5ToDatabase();
+                        }
+                    });
+                });
+                MenuItem i3 = new MenuItem("Build Histogram");
+                i3.setOnAction(event1 -> {
+                    //TODO: Progress bar, work in background thread (if possible with image loading)
+                    selected.forEach(img -> {
+                        if (img.getHistogram() == null) {
+                            img.initializeHistogram();
+                            img.commitHistogramToDatabase();
+                        }
+                    });
+                });
+
+                MenuItem i4 = new MenuItem("Find Duplicates");
+                i4.setOnAction(event1 -> {
+                    //TODO: handle this
+                });
+
+                MenuItem i5 = new MenuItem("Remove");
+                i5.setOnAction(event1 -> {
+                    deleteEventUserInput(false);
+                });
+                MenuItem i6 = new MenuItem("Delete");
+                i6.setOnAction(event1 -> {
+                    deleteEventUserInput(true);
+                });
+
+                ContextMenu m = new ContextMenu(i1, new SeparatorMenuItem(), i2, i3, new SeparatorMenuItem(), i4, new SeparatorMenuItem(), i5, i6);
+                m.show(c, event.getScreenX(), event.getScreenY());
+                event.consume();
             });
             return c;
         });
@@ -80,9 +120,11 @@ public class ImageGridView extends GridView<ImageInfo> {
         });
 
         setOnMouseReleased(event -> {
-            selected.clear();
-            updateCellSelectionCSS();
-            event.consume();
+            if (event.getButton() == MouseButton.PRIMARY) {
+                selected.clear();
+                updateCellSelectionCSS();
+                event.consume();
+            }
         });
 
         initOnKeyPressed();
@@ -160,31 +202,33 @@ public class ImageGridView extends GridView<ImageInfo> {
                     event.consume();
                     break;
                 case DELETE:
-                    if (!selected.isEmpty()) {
-                        Alert d = new Alert(Alert.AlertType.CONFIRMATION);
-
-                        if (event.isControlDown()) {
-                            d.setTitle("Forget files");
-                            d.setHeaderText("Remove selected files from database? (" + selected.size() + " files)");
-                            d.setContentText("This action CANNOT be undone");
-                        } else {
-                            d.setTitle("Delete files");
-                            d.setHeaderText("Permanently delete selected files? (" + selected.size() + " files)");
-                            d.setContentText("This action CANNOT be undone (files will be deleted)");
-                        }
-
-                        Optional result = d.showAndWait();
-                        if (result.isPresent() && result.get() == ButtonType.OK) {
-                            List<ImageInfo> temp = new ArrayList<>(selected.size());
-                            temp.addAll(selected);
-                            temp.forEach(img -> img.getMenagerie().removeImage(img, !event.isControlDown()));
-                        }
-
-                        event.consume();
-                    }
+                    deleteEventUserInput(!event.isControlDown());
+                    event.consume();
                     break;
             }
         });
+    }
+
+    private void deleteEventUserInput(boolean deleteFiles) {
+        if (!selected.isEmpty()) {
+            Alert d = new Alert(Alert.AlertType.CONFIRMATION);
+
+            if (deleteFiles) {
+                d.setTitle("Delete files");
+                d.setHeaderText("Permanently delete selected files? (" + selected.size() + " files)");
+                d.setContentText("This action CANNOT be undone (files will be deleted)");
+            } else {
+                d.setTitle("Forget files");
+                d.setHeaderText("Remove selected files from database? (" + selected.size() + " files)");
+                d.setContentText("This action CANNOT be undone");
+            }
+
+            Optional result = d.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                new ArrayList<>(selected).forEach(img -> img.remove(deleteFiles));
+            }
+
+        }
     }
 
     private int getRowLength() {
