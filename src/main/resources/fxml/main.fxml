@@ -6,6 +6,9 @@
 <?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
@@ -80,6 +83,21 @@
                 </children>
             </VBox>
         </left>
+        <top>
+            <MenuBar BorderPane.alignment="CENTER">
+                <Menu mnemonicParsing="false" text="File">
+                    <MenuItem mnemonicParsing="false" onAction="#importFilesMenuItemOnAction" text="Import Files" />
+                </Menu>
+                <Menu mnemonicParsing="false" text="View">
+                    <MenuItem mnemonicParsing="false" onAction="#settingsMenuItemOnAction" text="Settings" />
+                    <MenuItem mnemonicParsing="false" onAction="#tagsMenuItemOnAction" text="Tags" />
+                </Menu>
+                <Menu mnemonicParsing="false" text="Help">
+                    <MenuItem mnemonicParsing="false" onAction="#hotkeysMenuItemOnAction" text="Hotkeys" />
+                    <MenuItem mnemonicParsing="false" onAction="#aboutMenuItemOnAction" text="About" />
+                </Menu>
+            </MenuBar>
+        </top>
     </BorderPane>
     <BorderPane fx:id="settingsPane" disable="true" onKeyPressed="#settingsPaneKeyPressed" opacity="0.0">
         <center>
@@ -152,34 +170,34 @@
             </BorderPane>
         </center>
     </BorderPane>
-    <BorderPane fx:id="tagListPane" onKeyPressed="#tagListPaneOnKeyPressed" disable="true" opacity="0.0">
+    <BorderPane fx:id="tagListPane" disable="true" onKeyPressed="#tagListPaneOnKeyPressed" opacity="0.0">
         <center>
             <VBox maxWidth="-Infinity" prefWidth="300.0" spacing="5.0" style="-fx-background-color: -fx-base;">
                 <BorderPane.margin>
                     <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
                 </BorderPane.margin>
-            <BorderPane>
-               <center>
-                      <HBox alignment="CENTER_LEFT" spacing="5.0">
-                          <Label text="Order by:" />
-                     <BorderPane>
-                        <center>
-                                <ChoiceBox fx:id="tagListOrderChoiceBox" prefHeight="25.0" prefWidth="120.0" />
-                        </center>
-                     </BorderPane>
-                      </HBox>
-               </center>
-               <right>
-                  <Button mnemonicParsing="false" onAction="#tagListExitButtonOnAction" text="X" BorderPane.alignment="CENTER" />
-               </right>
-            </BorderPane>
+                <BorderPane>
+                    <center>
+                        <HBox alignment="CENTER_LEFT" spacing="5.0">
+                            <Label text="Order by:" />
+                            <BorderPane>
+                                <center>
+                                    <ChoiceBox fx:id="tagListOrderChoiceBox" prefHeight="25.0" prefWidth="120.0" />
+                                </center>
+                            </BorderPane>
+                        </HBox>
+                    </center>
+                    <right>
+                        <Button mnemonicParsing="false" onAction="#tagListExitButtonOnAction" text="X" BorderPane.alignment="CENTER" />
+                    </right>
+                </BorderPane>
                 <ListView fx:id="tagListListView" VBox.vgrow="ALWAYS" />
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                 </padding>
-            <effect>
-               <DropShadow spread="0.5" />
-            </effect>
+                <effect>
+                    <DropShadow spread="0.5" />
+                </effect>
             </VBox>
         </center>
     </BorderPane>
