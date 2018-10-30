@@ -615,6 +615,28 @@ public class MainController {
         return results;
     }
 
+    private void requestImportFolder() {
+        DirectoryChooser dc = new DirectoryChooser();
+        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
+            dc.setInitialDirectory(new File(settings.getLastFolder()));
+        File result = dc.showDialog(rootPane.getScene().getWindow());
+
+        if (result != null) {
+            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
+        }
+    }
+
+    private void requestImportFiles() {
+        FileChooser fc = new FileChooser();
+        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
+            fc.setInitialDirectory(new File(settings.getLastFolder()));
+        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
+
+        if (results != null)
+            results.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
+    }
+
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
         imageGridView.requestFocus();
@@ -650,6 +672,14 @@ public class MainController {
                     break;
                 case T:
                     openTagListScreen();
+                    event.consume();
+                    break;
+                case I:
+                case O:
+                    if (event.isShiftDown())
+                        requestImportFolder();
+                    else
+                        requestImportFiles();
                     event.consume();
                     break;
             }
@@ -746,27 +776,13 @@ public class MainController {
     }
 
     public void importFilesMenuItemOnAction(ActionEvent event) {
-        FileChooser fc = new FileChooser();
-        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
-            fc.setInitialDirectory(new File(settings.getLastFolder()));
-        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
-        List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
-
-        if (results != null)
-            results.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
+        requestImportFiles();
 
         event.consume();
     }
 
     public void importFolderMenuItemOnAction(ActionEvent event) {
-        DirectoryChooser dc = new DirectoryChooser();
-        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
-            dc.setInitialDirectory(new File(settings.getLastFolder()));
-        File result = dc.showDialog(rootPane.getScene().getWindow());
-
-        if (result != null) {
-            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
-        }
+        requestImportFolder();
 
         event.consume();
     }
