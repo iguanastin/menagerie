@@ -146,6 +146,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
     public boolean commitMD5ToDatabase() {
         if (md5 == null) return false;
 
+        menagerie.imageMD5Updated(this);
+
         menagerie.getUpdateQueue().enqueueUpdate(() -> {
             try {
                 menagerie.PS_SET_IMG_MD5.setNString(1, md5);

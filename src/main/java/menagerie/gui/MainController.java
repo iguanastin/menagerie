@@ -241,7 +241,8 @@ public class MainController {
                     while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !Filters.IMAGE_FILTER.accept(target)) {
                         target = openSaveImageDialog(new File(settings.getLastFolder()), filename);
                         if (target == null) return;
-                        if (target.exists()) Main.showErrorMessage("Error", "File already exists, cannot be overwritten", target.getAbsolutePath());
+                        if (target.exists())
+                            Main.showErrorMessage("Error", "File already exists, cannot be overwritten", target.getAbsolutePath());
                     }
 
                     final File finalTarget = target;
@@ -257,7 +258,7 @@ public class MainController {
                             });
                         } catch (IOException e) {
                             e.printStackTrace();
-                            Main.showErrorMessage("Unexpected error", "Error while trying to download image", e.getLocalizedMessage());
+                            Platform.runLater(() -> Main.showErrorMessage("Unexpected error", "Error while trying to download image", e.getLocalizedMessage()));
                         }
                     }).start();
                 });
@@ -428,7 +429,7 @@ public class MainController {
         currentSearch.setListener(new SearchUpdateListener() {
             @Override
             public void imageAdded(ImageInfo img) {
-                currentSearch.sortResults();
+                currentSearch.sortResults(); // TODO: Search view is not being updated correctly. Likely due to some logic fail for how to insert items without rebuilding the entire grid list
                 Platform.runLater(() -> imageGridView.getItems().add(currentSearch.getResults().indexOf(img), img));
             }
 

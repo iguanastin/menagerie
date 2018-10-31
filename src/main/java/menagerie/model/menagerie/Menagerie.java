@@ -35,6 +35,8 @@ public class Menagerie {
     private List<ImageInfo> images = new ArrayList<>();
     private List<Tag> tags = new ArrayList<>();
 
+    private Map<String, ImageInfo> hashes = new HashMap<>();
+
     private int nextImageID;
     private int nextTagID;
 
@@ -116,6 +118,10 @@ public class Menagerie {
             ImageInfo img = new ImageInfo(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
             images.add(img);
 
+            if (img.getMD5() != null) {
+                hashes.put(img.getMD5(), img);
+            }
+
             PS_GET_IMG_TAG_IDS.setInt(1, img.getId());
             ResultSet tagRS = PS_GET_IMG_TAG_IDS.executeQuery();
 
@@ -149,12 +155,19 @@ public class Menagerie {
         }
 
         ImageInfo img = new ImageInfo(this, nextImageID, System.currentTimeMillis(), file, null, null);
-        nextImageID++;
 
-        if (computeMD5) img.initializeMD5();
+        if (computeMD5) {
+            img.initializeMD5();
+
+            if (hashes.get(img.getMD5()) != null)
+                return null;
+            else
+                hashes.put(img.getMD5(), img);
+        }
 //        if (computeHistogram) img.initializeHistogram();
 
         images.add(img);
+        nextImageID++;
         activeSearches.forEach(search -> search.addIfValid(img));
         updateQueue.enqueueUpdate(() -> {
             try {
@@ -190,6 +203,10 @@ public class Menagerie {
                 }
             }
 
+            if (image.getMD5() != null) {
+                hashes.remove(image.getMD5());
+            }
+
             activeSearches.forEach(search -> search.remove(image));
             updateQueue.enqueueUpdate(() -> {
                 try {
@@ -223,6 +240,10 @@ public class Menagerie {
 
     void imageTagsUpdated(ImageInfo img) {
         activeSearches.forEach(search -> search.removeIfInvalid(img));
+    }
+
+    void imageMD5Updated(ImageInfo img) {
+        hashes.put(img.getMD5(), img);
     }
 
     public List<ImageInfo> getImages() {
