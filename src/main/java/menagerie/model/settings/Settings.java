@@ -11,6 +11,8 @@ public class Settings {
     private static final String COMPUTE_MD5_TAG = "computemd5onimport";
     private static final String COMPUTE_HIST_TAG = "computehistogramonimport";
     private static final String BUILD_THUMBNAIL_TAG = "buildthumbnailonimport";
+    private static final String COMPUTE_MD5_FOR_SIMILARITY_TAG = "computemd5forsimilarity";
+    private static final String COMPUTE_HIST_FOR_SIMILARITY_TAG = "computehistforsimilarity";
     private static final String LAST_FOLDER_TAG = "lastfolder";
     private static final String IMAGE_GRID_WIDTH_TAG = "imagegridwidth";
     private static final String WINDOW_WIDTH_TAG = "windowwidth";
@@ -21,12 +23,15 @@ public class Settings {
     private static final String DB_USER_TAG = "dbuser";
     private static final String DB_PASS_TAG = "dbpass";
     private static final String DB_URL_TAG = "dburl";
+    private static final String SIMILARITY_THRESHOLD_TAG = "similaritythreshold";
 
     private boolean autoImportFromWeb = false;
     private boolean computeMD5OnImport = true;
     private boolean computeHistogramOnImport = true;
     private boolean buildThumbnailOnImport = false;
     private boolean windowMaximized = false;
+    private boolean computeMD5ForSimilarity = true;
+    private boolean computeHistogramForSimilarity = false;
     private String lastFolder = null;
     private String dbUser = "sa";
     private String dbPass = "";
@@ -36,6 +41,7 @@ public class Settings {
     private int windowHeight = -1;
     private int windowX = -1;
     private int windowY = -1;
+    private double similarityThreshold = 0.95;
 
     public static final int MIN_IMAGE_GRID_WIDTH = 2;
     public static final int MAX_IMAGE_GRID_WIDTH = 8;
@@ -93,6 +99,10 @@ public class Settings {
         return windowY;
     }
 
+    public double getSimilarityThreshold() {
+        return similarityThreshold;
+    }
+
     public boolean isAutoImportFromWeb() {
         return autoImportFromWeb;
     }
@@ -111,6 +121,14 @@ public class Settings {
 
     public boolean isWindowMaximized() {
         return windowMaximized;
+    }
+
+    public boolean isComputeMD5ForSimilarity() {
+        return computeMD5ForSimilarity;
+    }
+
+    public boolean isComputeHistogramForSimilarity() {
+        return computeHistogramForSimilarity;
     }
 
     public void setAutoImportFromWeb(boolean autoImportFromWeb) {
@@ -240,6 +258,33 @@ public class Settings {
         }
     }
 
+    public void setComputeMD5ForSimilarity(boolean computeMD5ForSimilarity) {
+        this.computeMD5ForSimilarity = computeMD5ForSimilarity;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setComputeHistogramForSimilarity(boolean computeHistogramForSimilarity) {
+        this.computeHistogramForSimilarity = computeHistogramForSimilarity;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setSimilarityThreshold(double similarityThreshold) {
+        this.similarityThreshold = similarityThreshold;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void saveToFile() throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(file);
 
@@ -248,6 +293,8 @@ public class Settings {
         writer.println(COMPUTE_MD5_TAG + "=" + computeMD5OnImport);
         writer.println(COMPUTE_HIST_TAG + "=" + computeHistogramOnImport);
         writer.println(BUILD_THUMBNAIL_TAG + "=" + buildThumbnailOnImport);
+        writer.println(COMPUTE_MD5_FOR_SIMILARITY_TAG + "=" + computeMD5ForSimilarity);
+        writer.println(COMPUTE_HIST_FOR_SIMILARITY_TAG + "=" + computeHistogramForSimilarity);
         writer.println(IMAGE_GRID_WIDTH_TAG + "=" + imageGridWidth);
         writer.println(WINDOW_MAXIMZED_TAG + "=" + windowMaximized);
         writer.println(WINDOW_WIDTH_TAG + "=" + windowWidth);
@@ -257,6 +304,7 @@ public class Settings {
         writer.println(DB_URL_TAG + "=" + dbUrl);
         writer.println(DB_USER_TAG + "=" + dbUser);
         writer.println(DB_PASS_TAG + "=" + dbPass);
+        writer.println(SIMILARITY_THRESHOLD_TAG + "=" + similarityThreshold);
         if (lastFolder != null) writer.println(LAST_FOLDER_TAG + "=" + lastFolder);
 
         writer.close();
@@ -286,6 +334,12 @@ public class Settings {
                     case BUILD_THUMBNAIL_TAG:
                         buildThumbnailOnImport = Boolean.parseBoolean(val);
                         break;
+                    case COMPUTE_MD5_FOR_SIMILARITY_TAG:
+                        computeMD5ForSimilarity = Boolean.parseBoolean(val);
+                        break;
+                    case COMPUTE_HIST_FOR_SIMILARITY_TAG:
+                        computeHistogramForSimilarity = Boolean.parseBoolean(val);
+                        break;
                     case IMAGE_GRID_WIDTH_TAG:
                         imageGridWidth = Math.max(MIN_IMAGE_GRID_WIDTH, Math.min(Integer.parseInt(val), MAX_IMAGE_GRID_WIDTH));
                         break;
@@ -312,6 +366,9 @@ public class Settings {
                         break;
                     case DB_PASS_TAG:
                         dbPass = val;
+                        break;
+                    case SIMILARITY_THRESHOLD_TAG:
+                        similarityThreshold = Double.parseDouble(val);
                         break;
                 }
             }

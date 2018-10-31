@@ -15,10 +15,12 @@ import javafx.stage.Stage;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.image.DynamicImageView;
 import menagerie.gui.progress.ProgressLockThread;
+import menagerie.gui.progress.ProgressLockThreadCancelListener;
+import menagerie.model.SimilarPair;
+import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
-import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
@@ -35,6 +37,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.util.*;
 
 public class MainController {
@@ -77,6 +80,17 @@ public class MainController {
     public Label progressLockMessageLabel;
     public Label progressLockCountLabel;
 
+    public BorderPane duplicatePane;
+    public Label duplicateSimilarityLabel;
+    public Label duplicateLeftInfoLabel;
+    public TextField duplicateLeftPathTextField;
+    public DynamicImageView duplicateLeftImageView;
+    public ListView<Tag> duplicateLeftTagListView;
+    public Label duplicateRightInfoLabel;
+    public TextField duplicateRightPathTextField;
+    public DynamicImageView duplicateRightImageView;
+    public ListView<Tag> duplicateRightTagListView;
+
 
     private Menagerie menagerie;
     private Search currentSearch = null;
@@ -84,6 +98,8 @@ public class MainController {
     private ProgressLockThread currentProgressLockThread;
     private ImageInfo currentlyPreviewing = null;
     private String lastTagString = null;
+    private List<SimilarPair> currentSimilarPairs = null;
+    private SimilarPair currentlyPreviewingPair = null;
 
     private Settings settings = new Settings(new File("menagerie.settings"));
 
@@ -151,10 +167,17 @@ public class MainController {
         initTagListViewListeners();
         initExplorerPaneListeners();
         initTagListScreenListeners();
-        imageGridView.setSelectionListener(this::previewImage);
-        imageGridView.setProgressQueueListener(this::openProgressLockScreen);
+        initImageGridViewListeners();
+        duplicateLeftTagListView.setCellFactory(param -> new TagListCell());
+        duplicateRightTagListView.setCellFactory(param -> new TagListCell());
         //TODO: Fix event passthrough. Pressing enter or space doesn't get caught by the onKeyPressed handler that's pushing tag changes into the model
 //        initEditTagsAutoComplete();
+    }
+
+    private void initImageGridViewListeners() {
+        imageGridView.setSelectionListener(this::previewImage);
+        imageGridView.setProgressQueueListener(this::openProgressLockScreen);
+        imageGridView.setDuplicateRequestListener(this::processAndShowDuplicatesFromGridSelection);
     }
 
     private void initTagListScreenListeners() {
@@ -333,18 +356,11 @@ public class MainController {
 
             updateTagListViewContents(image);
 
-            if (!image.getImage().isBackgroundLoading() || image.getImage().getProgress() == 1) {
-                updateImageInfoLabel(image);
-            } else {
-                updateImageInfoLabel(null);
-                image.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
-                    if (newValue.doubleValue() == 1 && !image.getImage().isError()) updateImageInfoLabel(image);
-                });
-            }
+            updateImageInfoLabel(image, imageInfoLabel);
         } else {
             previewImageView.setImage(null);
             tagListView.getItems().clear();
-            updateImageInfoLabel(null);
+            updateImageInfoLabel(null, imageInfoLabel);
         }
     }
 
@@ -354,22 +370,30 @@ public class MainController {
         tagListView.getItems().sort(Comparator.comparing(Tag::getName));
     }
 
-    private void updateImageInfoLabel(ImageInfo image) {
+    private static void updateImageInfoLabel(ImageInfo image, Label label) {
         if (image == null) {
-            imageInfoLabel.setText("Size: N/A - Res: N/A");
+            label.setText("Size: N/A - Res: N/A");
 
             return;
         }
 
-        //Find size string
-        double size = image.getFile().length();
-        String sizeStr;
-        if (size > 1024 * 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024 / 1024) + "GB";
-        else if (size > 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024) + "MB";
-        else if (size > 1024) sizeStr = String.format("%.2f", size / 1024) + "KB";
-        else sizeStr = String.format("%.2f", size) + "B";
+        if (image.getImage().isBackgroundLoading() && image.getImage().getProgress() != 1) {
+            label.setText("Size: N/A - Res: N/A");
 
-        imageInfoLabel.setText("Size: " + sizeStr + " - Res: " + image.getImage().getWidth() + "x" + image.getImage().getHeight());
+            image.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue.doubleValue() == 1 && !image.getImage().isError()) updateImageInfoLabel(image, label);
+            });
+        } else {
+            //Find size string
+            double size = image.getFile().length();
+            String sizeStr;
+            if (size > 1024 * 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024 / 1024) + "GB";
+            else if (size > 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024) + "MB";
+            else if (size > 1024) sizeStr = String.format("%.2f", size / 1024) + "KB";
+            else sizeStr = String.format("%.2f", size) + "B";
+
+            label.setText("Size: " + sizeStr + " - Res: " + (int) image.getImage().getWidth() + "x" + (int) image.getImage().getHeight());
+        }
     }
 
     private void searchOnAction() {
@@ -572,19 +596,20 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
-    private void openProgressLockScreen(String title, String message, List<Runnable> queue) {
+    private ProgressLockThread openProgressLockScreen(String title, String message, List<Runnable> queue, boolean doNotStart) {
         if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
 
-        currentProgressLockThread = new ProgressLockThread(queue, (num, total, finished) -> Platform.runLater(() -> {
-            if (finished) {
-                closeProgressLockScreen();
-            } else {
+        currentProgressLockThread = new ProgressLockThread(queue);
+        currentProgressLockThread.setUpdateListener((num, total) -> {
+            Platform.runLater(() -> {
                 final double progress = (double) num / total;
                 progressLockProgressBar.setProgress(progress);
                 progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
-            }
-        }));
-        currentProgressLockThread.start();
+            });
+        });
+        currentProgressLockThread.setCancelListener((num, total) -> Platform.runLater(this::closeProgressLockScreen));
+        currentProgressLockThread.setFinishListener(total -> Platform.runLater(this::closeProgressLockScreen));
+        if (!doNotStart) currentProgressLockThread.start();
 
         progressLockTitleLabel.setText(title);
         progressLockMessageLabel.setText(message);
@@ -595,6 +620,8 @@ public class MainController {
         progressLockPane.setDisable(false);
         progressLockPane.setOpacity(1);
         progressLockPane.requestFocus();
+
+        return currentProgressLockThread;
     }
 
     private void closeProgressLockScreen() {
@@ -604,6 +631,94 @@ public class MainController {
         progressLockPane.setDisable(true);
         progressLockPane.setOpacity(0);
         imageGridView.requestFocus();
+    }
+
+    private void openDuplicateScreen(List<SimilarPair> pairs) {
+        if (pairs == null || pairs.isEmpty()) return;
+
+        currentSimilarPairs = pairs;
+        previewSimilarPair(pairs.get(0));
+
+        explorerPane.setDisable(true);
+        duplicatePane.setDisable(false);
+        duplicatePane.setOpacity(1);
+        duplicatePane.requestFocus();
+    }
+
+    private void closeDuplicateScreen() {
+        previewSimilarPair(null);
+
+        explorerPane.setDisable(false);
+        duplicatePane.setDisable(true);
+        duplicatePane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void previewSimilarPair(SimilarPair pair) {
+        if (pair == null) {
+            currentlyPreviewingPair = null;
+
+            duplicateLeftImageView.setImage(null);
+            duplicateLeftTagListView.getItems().clear();
+            duplicateLeftPathTextField.setText("N/A");
+            updateImageInfoLabel(null, duplicateLeftInfoLabel);
+
+            duplicateRightImageView.setImage(null);
+            duplicateRightTagListView.getItems().clear();
+            duplicateRightPathTextField.setText("N/A");
+            updateImageInfoLabel(null, duplicateRightInfoLabel);
+
+            duplicateSimilarityLabel.setText("N/A% Match");
+        } else {
+            currentlyPreviewingPair = pair;
+
+            duplicateLeftImageView.setImage(pair.getImg1().getImage());
+            duplicateLeftPathTextField.setText(pair.getImg1().getFile().toString());
+            duplicateLeftTagListView.getItems().clear();
+            duplicateLeftTagListView.getItems().addAll(pair.getImg1().getTags());
+            duplicateLeftTagListView.getItems().sort(Comparator.comparing(Tag::getName));
+            updateImageInfoLabel(pair.getImg1(), duplicateLeftInfoLabel);
+
+            duplicateRightImageView.setImage(pair.getImg2().getImage());
+            duplicateRightPathTextField.setText(pair.getImg2().getFile().toString());
+            duplicateRightTagListView.getItems().clear();
+            duplicateRightTagListView.getItems().addAll(pair.getImg2().getTags());
+            duplicateRightTagListView.getItems().sort(Comparator.comparing(Tag::getName));
+            updateImageInfoLabel(pair.getImg2(), duplicateRightInfoLabel);
+
+            DecimalFormat df = new DecimalFormat("#.##");
+            duplicateSimilarityLabel.setText(df.format(pair.getSimilarity() * 100) + "% Match");
+        }
+    }
+
+    private void previewLastSimilarPair() {
+        if (currentSimilarPairs == null || currentSimilarPairs.isEmpty()) return;
+
+        if (currentlyPreviewingPair == null) {
+            previewSimilarPair(currentSimilarPairs.get(0));
+        } else {
+            int i = currentSimilarPairs.indexOf(currentlyPreviewingPair);
+            if (i > 0) {
+                previewSimilarPair(currentSimilarPairs.get(i - 1));
+            } else {
+                previewSimilarPair(currentSimilarPairs.get(0));
+            }
+        }
+    }
+
+    private void previewNextSimilarPair() {
+        if (currentSimilarPairs == null || currentSimilarPairs.isEmpty()) return;
+
+        if (currentlyPreviewingPair == null) {
+            previewSimilarPair(currentSimilarPairs.get(0));
+        } else {
+            int i = currentSimilarPairs.indexOf(currentlyPreviewingPair);
+            if (i >= 0) {
+                if (i + 1 < currentSimilarPairs.size()) previewSimilarPair(currentSimilarPairs.get(i + 1));
+            } else {
+                previewSimilarPair(currentSimilarPairs.get(0));
+            }
+        }
     }
 
     private void updateTagListListViewOrder() {
@@ -688,6 +803,32 @@ public class MainController {
             results.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
     }
 
+    private List<SimilarPair> getDuplicates(List<ImageInfo> images) {
+        List<SimilarPair> results = new ArrayList<>();
+
+        for (int i = 0; i < images.size(); i++) {
+            for (int j = i + 1; j < images.size(); j++) {
+                ImageInfo i1 = images.get(i), i2 = images.get(j);
+
+                //Compare md5 hashes
+                if (i1.getMD5() != null && i1.getMD5().equals(i2.getMD5())) {
+                    results.add(new SimilarPair(i1, i2, 1.0));
+                    continue;
+                }
+
+                //Compare histograms
+                if (i1.getHistogram() != null && i2.getHistogram() != null) {
+                    double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
+                    if (similarity >= settings.getSimilarityThreshold()) {
+                        results.add(new SimilarPair(i1, i2, similarity));
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
+
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
         imageGridView.requestFocus();
@@ -736,6 +877,10 @@ public class MainController {
                     openHelpScreen();
                     event.consume();
                     break;
+                case D:
+                    processAndShowDuplicatesFromGridSelection(imageGridView.getSelected());
+                    event.consume();
+                    break;
             }
         }
 
@@ -744,6 +889,50 @@ public class MainController {
                 imageGridView.requestFocus();
                 event.consume();
                 break;
+        }
+    }
+
+    private void processAndShowDuplicatesFromGridSelection(List<ImageInfo> images) {
+        if (settings.isComputeMD5ForSimilarity()) {
+            List<Runnable> queue = new ArrayList<>();
+
+            images.forEach(i -> {
+                if (i.getMD5() == null) queue.add(() -> {
+                    i.initializeMD5();
+                    i.commitMD5ToDatabase();
+                });
+            });
+
+            ProgressLockThread t = openProgressLockScreen("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, true);
+            t.setFinishListener(total -> {
+                Platform.runLater(this::closeProgressLockScreen);
+
+                //TODO: Fix this. If md5 computing is disabled, histogram building won't happen
+                if (settings.isComputeHistogramForSimilarity()) {
+                    List<Runnable> queue2 = new ArrayList<>();
+
+                    images.forEach(i -> {
+                        if (i.getHistogram() == null) queue2.add(() -> {
+                            i.initializeHistogram();
+                            i.commitHistogramToDatabase();
+                        });
+                    });
+
+                    Platform.runLater(() -> {
+                        ProgressLockThread t2 = openProgressLockScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, true);
+                        t2.setFinishListener(total1 -> Platform.runLater(() -> {
+                            closeProgressLockScreen();
+                            openDuplicateScreen(getDuplicates(images));
+                        }));
+                        t2.start();
+                    });
+                } else {
+                    Platform.runLater(() -> openDuplicateScreen(getDuplicates(images)));
+                }
+            });
+            t.start();
+        } else {
+            openDuplicateScreen(getDuplicates(images));
         }
     }
 
@@ -863,6 +1052,48 @@ public class MainController {
                 event.consume();
                 break;
         }
+    }
+
+    public void duplicateLeftDeleteButtonOnAction(ActionEvent event) {
+        previewLastSimilarPair();
+        event.consume();
+    }
+
+    public void duplicateRightDeleteButtonOnAction(ActionEvent event) {
+        previewNextSimilarPair();
+        event.consume();
+    }
+
+    public void duplicateCloseButtonOnAction(ActionEvent event) {
+        closeDuplicateScreen();
+        event.consume();
+    }
+
+    public void duplicatePaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeDuplicateScreen();
+                event.consume();
+                break;
+            case LEFT:
+                previewLastSimilarPair();
+                event.consume();
+                break;
+            case RIGHT:
+                previewNextSimilarPair();
+                event.consume();
+                break;
+        }
+    }
+
+    public void duplicatePrevPairButtonOnAction(ActionEvent event) {
+        previewLastSimilarPair();
+        event.consume();
+    }
+
+    public void duplicateNextPairButtonOnAction(ActionEvent event) {
+        previewNextSimilarPair();
+        event.consume();
     }
 
 }

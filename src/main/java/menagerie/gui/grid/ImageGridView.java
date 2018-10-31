@@ -6,7 +6,6 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
 import menagerie.gui.Main;
-import menagerie.gui.progress.ProgressQueueListener;
 import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridView;
 
@@ -28,6 +27,7 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     private SelectionListener selectionListener = null;
     private ProgressQueueListener progressQueueListener = null;
+    private DuplicateRequestListener duplicateRequestListener = null;
 
     private boolean dragging = false;
 
@@ -87,7 +87,7 @@ public class ImageGridView extends GridView<ImageInfo> {
                     });
                     if (!queue.isEmpty()) {
                         if (progressQueueListener != null) {
-                            progressQueueListener.processProgressQueue("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue);
+                            progressQueueListener.processProgressQueue("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, false);
                         } else {
                             queue.forEach(Runnable::run);
                         }
@@ -106,7 +106,7 @@ public class ImageGridView extends GridView<ImageInfo> {
                     });
                     if (!queue.isEmpty()) {
                         if (progressQueueListener != null) {
-                            progressQueueListener.processProgressQueue("Building Histograms", "Building image histograms for " + queue.size() + " files...", queue);
+                            progressQueueListener.processProgressQueue("Building Histograms", "Building image histograms for " + queue.size() + " files...", queue, false);
                         } else {
                             queue.forEach(Runnable::run);
                         }
@@ -115,17 +115,13 @@ public class ImageGridView extends GridView<ImageInfo> {
 
                 MenuItem i4 = new MenuItem("Find Duplicates");
                 i4.setOnAction(event1 -> {
-                    //TODO: handle this
+                    if (duplicateRequestListener != null) duplicateRequestListener.findAndShowDuplicates(selected);
                 });
 
                 MenuItem i5 = new MenuItem("Remove");
-                i5.setOnAction(event1 -> {
-                    deleteEventUserInput(false);
-                });
+                i5.setOnAction(event1 -> deleteEventUserInput(false));
                 MenuItem i6 = new MenuItem("Delete");
-                i6.setOnAction(event1 -> {
-                    deleteEventUserInput(true);
-                });
+                i6.setOnAction(event1 -> deleteEventUserInput(true));
 
                 ContextMenu m = new ContextMenu(i1, new SeparatorMenuItem(), i2, i3, new SeparatorMenuItem(), i4, new SeparatorMenuItem(), i5, i6);
                 m.show(c, event.getScreenX(), event.getScreenY());
@@ -305,7 +301,6 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     private void selectRange(ImageInfo first, ImageInfo last) {
         selected.clear();
-        selected.add(first);
         final int start = getItems().indexOf(first);
         final int end = getItems().indexOf(last);
         if (end >= start) {
@@ -350,6 +345,10 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     public void setProgressQueueListener(ProgressQueueListener progressQueueListener) {
         this.progressQueueListener = progressQueueListener;
+    }
+
+    public void setDuplicateRequestListener(DuplicateRequestListener duplicateRequestListener) {
+        this.duplicateRequestListener = duplicateRequestListener;
     }
 
     private void updateCellSelectionCSS() {

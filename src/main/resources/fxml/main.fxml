@@ -9,6 +9,7 @@
 <?import javafx.scene.control.ProgressBar?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.effect.DropShadow?>
@@ -16,8 +17,8 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<?import menagerie.gui.image.DynamicImageView?>
 <?import menagerie.gui.grid.ImageGridView?>
+<?import menagerie.gui.image.DynamicImageView?>
 
 <StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
     <BorderPane fx:id="explorerPane" onKeyPressed="#explorerPaneOnKeyPressed" prefHeight="576.0" prefWidth="994.0">
@@ -243,12 +244,27 @@
                                     <Insets left="20.0" />
                                 </VBox.margin>
                             </Label>
+                            <Label layoutX="30.0" layoutY="142.0" text="Ctrl+D: Find duplicates among currently selected">
+                                <VBox.margin>
+                                    <Insets left="20.0" />
+                                </VBox.margin>
+                            </Label>
                             <Label layoutX="30.0" layoutY="120.0" text="Ctrl+I: Show import dialog for files">
                                 <VBox.margin>
                                     <Insets left="20.0" />
                                 </VBox.margin>
                             </Label>
                             <Label layoutX="30.0" layoutY="142.0" text="Ctrl+Shift+I: Show import dialog for folders (recursive)">
+                                <VBox.margin>
+                                    <Insets left="20.0" />
+                                </VBox.margin>
+                            </Label>
+                            <Label layoutX="30.0" layoutY="208.0" text="Ctrl+D: Delete currently selected">
+                                <VBox.margin>
+                                    <Insets left="20.0" />
+                                </VBox.margin>
+                            </Label>
+                            <Label layoutX="30.0" layoutY="230.0" text="Ctrl+Shift+D: Forget currently selected (no files deleted)">
                                 <VBox.margin>
                                     <Insets left="20.0" />
                                 </VBox.margin>
@@ -275,21 +291,21 @@
                     </VBox>
                 </center>
                 <bottom>
-               <BorderPane BorderPane.alignment="CENTER_RIGHT">
-                  <BorderPane.margin>
-                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                  </BorderPane.margin>
-                  <right>
-                          <Button mnemonicParsing="false" onAction="#progressLockStopButtonOnAction" text="Stop" BorderPane.alignment="CENTER" />
-                  </right>
-                  <left>
-                     <Label fx:id="progressLockCountLabel" text="0/0" BorderPane.alignment="CENTER">
-                        <padding>
-                           <Insets left="5.0" />
-                        </padding>
-                     </Label>
-                  </left>
-               </BorderPane>
+                    <BorderPane BorderPane.alignment="CENTER_RIGHT">
+                        <BorderPane.margin>
+                            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                        </BorderPane.margin>
+                        <right>
+                            <Button mnemonicParsing="false" onAction="#progressLockStopButtonOnAction" text="Stop" BorderPane.alignment="CENTER" />
+                        </right>
+                        <left>
+                            <Label fx:id="progressLockCountLabel" text="0/0" BorderPane.alignment="CENTER">
+                                <padding>
+                                    <Insets left="5.0" />
+                                </padding>
+                            </Label>
+                        </left>
+                    </BorderPane>
                 </bottom>
                 <top>
                     <Label fx:id="progressLockTitleLabel" text="Title" BorderPane.alignment="CENTER_LEFT" />
@@ -298,6 +314,63 @@
                     <DropShadow spread="0.5" />
                 </effect>
             </BorderPane>
+        </center>
+    </BorderPane>
+    <BorderPane fx:id="duplicatePane" disable="true" onKeyPressed="#duplicatePaneOnKeyPressed" opacity="0.0" style="-fx-background-color: -fx-base;">
+        <bottom>
+            <VBox spacing="5.0" BorderPane.alignment="CENTER">
+                <padding>
+                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                </padding>
+                <BorderPane>
+                    <center>
+                        <Label fx:id="duplicateSimilarityLabel" text="0% Match" BorderPane.alignment="CENTER" />
+                    </center>
+                    <left>
+                        <HBox alignment="CENTER_LEFT" spacing="5.0" BorderPane.alignment="CENTER">
+                            <Button mnemonicParsing="false" onAction="#duplicateLeftDeleteButtonOnAction" text="Delete" />
+                            <Label fx:id="duplicateLeftInfoLabel" text="Size: N/A - Res: N/A" />
+                        </HBox>
+                    </left>
+                    <right>
+                        <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
+                            <Label fx:id="duplicateRightInfoLabel" text="Size: N/A - Res: N/A" />
+                            <Button mnemonicParsing="false" onAction="#duplicateRightDeleteButtonOnAction" text="Delete" />
+                        </HBox>
+                    </right>
+                </BorderPane>
+                <BorderPane>
+                    <center>
+                        <HBox alignment="CENTER" spacing="5.0">
+                            <TextField fx:id="duplicateLeftPathTextField" editable="false" text="Path 1" HBox.hgrow="ALWAYS" />
+                            <Button mnemonicParsing="false" onAction="#duplicatePrevPairButtonOnAction" text="&lt;-" />
+                            <Button mnemonicParsing="false" onAction="#duplicateCloseButtonOnAction" text="Close" />
+                            <Button mnemonicParsing="false" onAction="#duplicateNextPairButtonOnAction" text="-&gt;" />
+                            <TextField fx:id="duplicateRightPathTextField" editable="false" text="Path 2" HBox.hgrow="ALWAYS" />
+                        </HBox>
+                    </center>
+                </BorderPane>
+            </VBox>
+        </bottom>
+        <center>
+            <SplitPane dividerPositions="0.5" BorderPane.alignment="CENTER">
+                <StackPane>
+                    <DynamicImageView fx:id="duplicateLeftImageView" opacity="0.75" pickOnBounds="true" preserveRatio="true" />
+                    <BorderPane prefHeight="200.0" prefWidth="200.0">
+                        <right>
+                            <ListView fx:id="duplicateLeftTagListView" opacity="0.75" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+                        </right>
+                    </BorderPane>
+                </StackPane>
+                <StackPane>
+                    <DynamicImageView fx:id="duplicateRightImageView" opacity="0.75" pickOnBounds="true" preserveRatio="true" />
+                    <BorderPane prefHeight="200.0" prefWidth="200.0">
+                        <left>
+                            <ListView fx:id="duplicateRightTagListView" opacity="0.75" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+                        </left>
+                    </BorderPane>
+                </StackPane>
+            </SplitPane>
         </center>
     </BorderPane>
 </StackPane>
