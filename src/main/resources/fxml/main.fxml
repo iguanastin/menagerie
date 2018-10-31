@@ -353,7 +353,7 @@
             </VBox>
         </bottom>
         <center>
-            <SplitPane dividerPositions="0.5" BorderPane.alignment="CENTER">
+            <SplitPane dividerPositions="0.5" BorderPane.alignment="CENTER" onMouseEntered="#duplicateImagesPaneMouseEntered" onMouseExited="#duplicateImagesPaneMouseExited">
                 <StackPane>
                     <DynamicImageView fx:id="duplicateLeftImageView" opacity="0.75" pickOnBounds="true" preserveRatio="true" />
                     <BorderPane prefHeight="200.0" prefWidth="200.0">

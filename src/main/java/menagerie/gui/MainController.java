@@ -6,6 +6,7 @@ import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
@@ -1093,6 +1094,22 @@ public class MainController {
 
     public void duplicateNextPairButtonOnAction(ActionEvent event) {
         previewNextSimilarPair();
+        event.consume();
+    }
+
+    public void duplicateImagesPaneMouseEntered(MouseEvent event) {
+        duplicateLeftTagListView.setDisable(false);
+        duplicateRightTagListView.setDisable(false);
+        duplicateLeftTagListView.setOpacity(0.75);
+        duplicateRightTagListView.setOpacity(0.75);
+        event.consume();
+    }
+
+    public void duplicateImagesPaneMouseExited(MouseEvent event) {
+        duplicateLeftTagListView.setDisable(true);
+        duplicateRightTagListView.setDisable(true);
+        duplicateLeftTagListView.setOpacity(0);
+        duplicateRightTagListView.setOpacity(0);
         event.consume();
     }
 
