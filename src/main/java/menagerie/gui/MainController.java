@@ -192,7 +192,7 @@ public class MainController {
     private void initImageGridViewListeners() {
         imageGridView.setSelectionListener(this::previewImage);
         imageGridView.setProgressQueueListener(this::openProgressLockScreen);
-        imageGridView.setDuplicateRequestListener(this::processAndShowDuplicatesFromGridSelection);
+        imageGridView.setDuplicateRequestListener(this::processAndShowDuplicates);
     }
 
     private void initTagListScreenListeners() {
@@ -874,6 +874,29 @@ public class MainController {
         return results;
     }
 
+    private void deleteDuplicateImageEvent(ImageInfo img, boolean deleteFile) {
+        int index = currentSimilarPairs.indexOf(currentlyPreviewingPair);
+        img.remove(deleteFile);
+
+        for (SimilarPair pair : new ArrayList<>(currentSimilarPairs)) {
+            if (img.equals(pair.getImg1()) || img.equals(pair.getImg2())) {
+                int i = currentSimilarPairs.indexOf(pair);
+                currentSimilarPairs.remove(pair);
+                if (i < index) {
+                    index--;
+                }
+            }
+        }
+
+        if (index > currentSimilarPairs.size() - 1) index = currentSimilarPairs.size() - 1;
+
+        if (currentSimilarPairs.isEmpty()) {
+            closeDuplicateScreen();
+        } else {
+            previewSimilarPair(currentSimilarPairs.get(index));
+        }
+    }
+
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
         imageGridView.requestFocus();
@@ -923,7 +946,7 @@ public class MainController {
                     event.consume();
                     break;
                 case D:
-                    processAndShowDuplicatesFromGridSelection(imageGridView.getSelected());
+                    processAndShowDuplicates(imageGridView.getSelected());
                     event.consume();
                     break;
             }
@@ -937,7 +960,7 @@ public class MainController {
         }
     }
 
-    private void processAndShowDuplicatesFromGridSelection(List<ImageInfo> images) {
+    private void processAndShowDuplicates(List<ImageInfo> images) {
         if (settings.isComputeMD5ForSimilarity()) {
             List<Runnable> queue = new ArrayList<>();
 
@@ -1100,12 +1123,14 @@ public class MainController {
     }
 
     public void duplicateLeftDeleteButtonOnAction(ActionEvent event) {
-        previewLastSimilarPair();
+        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), true);
+
         event.consume();
     }
 
     public void duplicateRightDeleteButtonOnAction(ActionEvent event) {
-        previewNextSimilarPair();
+        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), true);
+
         event.consume();
     }
 

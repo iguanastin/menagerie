@@ -328,7 +328,7 @@
             </BorderPane>
         </center>
     </BorderPane>
-    <BorderPane fx:id="duplicatePane" onKeyPressed="#duplicatePaneOnKeyPressed" style="-fx-background-color: -fx-base;">
+    <BorderPane fx:id="duplicatePane" disable="true" onKeyPressed="#duplicatePaneOnKeyPressed" opacity="0.0" style="-fx-background-color: -fx-base;">
         <bottom>
             <VBox spacing="5.0" BorderPane.alignment="CENTER">
                 <padding>
