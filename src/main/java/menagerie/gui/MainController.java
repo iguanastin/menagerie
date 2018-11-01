@@ -257,8 +257,10 @@ public class MainController {
                 List<Runnable> queue = new ArrayList<>();
                 files.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
-                if (!queue.isEmpty()) {
+                if (queue.size() > 5) {
                     openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, false);
+                } else {
+                    queue.forEach(Runnable::run);
                 }
             } else if (url != null && !url.isEmpty()) {
                 Platform.runLater(() -> {
@@ -459,7 +461,7 @@ public class MainController {
         currentSearch.setListener(new SearchUpdateListener() {
             @Override
             public void imageAdded(ImageInfo img) {
-                currentSearch.sortResults(); // TODO: Search view is not being updated correctly. Likely due to some logic fail for how to insert items without rebuilding the entire grid list
+                currentSearch.sortResults();
                 Platform.runLater(() -> imageGridView.getItems().add(currentSearch.getResults().indexOf(img), img));
             }
 
@@ -797,8 +799,10 @@ public class MainController {
             List<Runnable> queue = new ArrayList<>();
             getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
-            if (!queue.isEmpty()) {
+            if (queue.size() > 5) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, false);
+            } else {
+                queue.forEach(Runnable::run);
             }
         }
     }
@@ -814,8 +818,10 @@ public class MainController {
             List<Runnable> queue = new ArrayList<>();
             results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
-            if (!queue.isEmpty()) {
+            if (queue.size() > 5) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, false);
+            } else {
+                queue.forEach(Runnable::run);
             }
         }
     }
