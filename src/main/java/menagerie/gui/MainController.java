@@ -16,7 +16,6 @@ import javafx.stage.Stage;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.image.DynamicImageView;
 import menagerie.gui.progress.ProgressLockThread;
-import menagerie.gui.progress.ProgressLockThreadCancelListener;
 import menagerie.model.SimilarPair;
 import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.ImageInfo;
@@ -68,6 +67,9 @@ public class MainController {
     public TextField dbURLTextfield;
     public TextField dbUserTextfield;
     public TextField dbPassTextfield;
+    public CheckBox duplicateComputeMD5SettingCheckbox;
+    public CheckBox duplicateComputeHistSettingCheckbox;
+    public TextField histConfidenceSettingTextField;
 
     public BorderPane tagListPane;
     public ChoiceBox<String> tagListOrderChoiceBox;
@@ -171,6 +173,18 @@ public class MainController {
         initImageGridViewListeners();
         duplicateLeftTagListView.setCellFactory(param -> new TagListCell());
         duplicateRightTagListView.setCellFactory(param -> new TagListCell());
+        histConfidenceSettingTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                try {
+                    double d = Double.parseDouble(histConfidenceSettingTextField.getText());
+                    if (d <= 0 || d > 1) {
+                        histConfidenceSettingTextField.setText("0.95");
+                    }
+                } catch (NullPointerException | NumberFormatException e) {
+                    histConfidenceSettingTextField.setText("0.95");
+                }
+            }
+        });
         //TODO: Fix event passthrough. Pressing enter or space doesn't get caught by the onKeyPressed handler that's pushing tag changes into the model
 //        initEditTagsAutoComplete();
     }
@@ -537,6 +551,10 @@ public class MainController {
         computeMD5SettingCheckbox.setSelected(settings.isComputeMD5OnImport());
         computeHistSettingCheckbox.setSelected(settings.isComputeHistogramOnImport());
         buildThumbSettingCheckbox.setSelected(settings.isBuildThumbnailOnImport());
+        duplicateComputeMD5SettingCheckbox.setSelected(settings.isComputeMD5ForSimilarity());
+        duplicateComputeHistSettingCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
+
+        histConfidenceSettingTextField.setText("" + settings.getSimilarityThreshold());
 
         gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
 
@@ -548,6 +566,12 @@ public class MainController {
     }
 
     private void closeSettingsScreen(boolean saveChanges) {
+        //Disable pane
+        explorerPane.setDisable(false);
+        settingsPane.setDisable(true);
+        settingsPane.setOpacity(0);
+        imageGridView.requestFocus();
+
         if (saveChanges) {
             //Save settings to settings object
             settings.setLastFolder(lastFolderSettingTextField.getText());
@@ -559,17 +583,15 @@ public class MainController {
             settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
             settings.setComputeHistogramOnImport(computeHistSettingCheckbox.isSelected());
             settings.setBuildThumbnailOnImport(buildThumbSettingCheckbox.isSelected());
+            settings.setComputeMD5ForSimilarity(duplicateComputeMD5SettingCheckbox.isSelected());
+            settings.setComputeHistogramForSimilarity(duplicateComputeHistSettingCheckbox.isSelected());
+
+            settings.setSimilarityThreshold(Double.parseDouble(histConfidenceSettingTextField.getText()));
 
             settings.setImageGridWidth(gridWidthChoiceBox.getValue());
 
             setImageGridWidth(gridWidthChoiceBox.getValue());
         }
-
-        //Disable pane
-        explorerPane.setDisable(false);
-        settingsPane.setDisable(true);
-        settingsPane.setOpacity(0);
-        imageGridView.requestFocus();
     }
 
     private void openTagListScreen() {
