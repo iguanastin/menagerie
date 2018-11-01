@@ -150,12 +150,13 @@ public class Menagerie {
 
     public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram, boolean buildThumbnail) {
         if (isFilePresent(file)) {
-            System.out.println("User tried to re-add file: " + file);
+            System.out.println("User tried to re-add existing file: " + file);
             return null;
         }
 
         ImageInfo img = new ImageInfo(this, nextImageID, System.currentTimeMillis(), file, null, null);
 
+        //Compute md5 if flagged
         if (computeMD5) {
             img.initializeMD5();
 
@@ -164,32 +165,39 @@ public class Menagerie {
             else
                 hashes.put(img.getMD5(), img);
         }
-//        if (computeHistogram) img.initializeHistogram();
 
+        //Compute histogram if flagged
+        if (computeHistogram) {
+            img.initializeHistogram();
+        }
+
+        //Add image and commit to database
         images.add(img);
         nextImageID++;
-        activeSearches.forEach(search -> search.addIfValid(img));
-        updateQueue.enqueueUpdate(() -> {
-            try {
-                PS_CREATE_IMG.setInt(1, img.getId());
-                PS_CREATE_IMG.setNString(2, img.getFile().getAbsolutePath());
-                PS_CREATE_IMG.setLong(3, img.getDateAdded());
-                PS_CREATE_IMG.setNString(4, img.getMD5());
-                if (img.getHistogram() != null)
-                    PS_CREATE_IMG.setObject(5, img.getHistogram().getBins()); // TODO: Find a way to actually put the histogram into the damn database
-                else PS_CREATE_IMG.setObject(5, null);
-                PS_CREATE_IMG.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+        try {
+            PS_CREATE_IMG.setInt(1, img.getId());
+            PS_CREATE_IMG.setNString(2, img.getFile().getAbsolutePath());
+            PS_CREATE_IMG.setLong(3, img.getDateAdded());
+            PS_CREATE_IMG.setNString(4, img.getMD5());
+            if (img.getHistogram() != null) {
+//                PS_CREATE_IMG.setObject(5, img.getHistogram().getBins()); // TODO: Find a way to actually put the histogram into the damn database
+                PS_CREATE_IMG.setObject(5, null);
+            } else PS_CREATE_IMG.setObject(5, null);
+            PS_CREATE_IMG.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
-            if (buildThumbnail) {
-                img.getThumbnail();
-            }
-        });
-        updateQueue.commit();
-
+        //Tag with tagme
         img.addTag(getTagByName("tagme"));
+
+        //Build thumbnail if flagged
+        if (buildThumbnail) {
+            img.getThumbnail();
+        }
+
+        //Update active searches
+        activeSearches.forEach(search -> search.addIfValid(img));
 
         return img;
     }

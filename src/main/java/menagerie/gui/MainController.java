@@ -254,7 +254,12 @@ public class MainController {
             String url = event.getDragboard().getUrl();
 
             if (files != null && !files.isEmpty()) {
-                files.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
+                List<Runnable> queue = new ArrayList<>();
+                files.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+
+                if (!queue.isEmpty()) {
+                    openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, false);
+                }
             } else if (url != null && !url.isEmpty()) {
                 Platform.runLater(() -> {
                     String folder = settings.getLastFolder();
@@ -789,7 +794,12 @@ public class MainController {
         File result = dc.showDialog(rootPane.getScene().getWindow());
 
         if (result != null) {
-            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
+            List<Runnable> queue = new ArrayList<>();
+            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+
+            if (!queue.isEmpty()) {
+                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, false);
+            }
         }
     }
 
@@ -800,8 +810,14 @@ public class MainController {
         fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
         List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
 
-        if (results != null)
-            results.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
+        if (results != null) {
+            List<Runnable> queue = new ArrayList<>();
+            results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+
+            if (!queue.isEmpty()) {
+                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, false);
+            }
+        }
     }
 
     private List<SimilarPair> getDuplicates(List<ImageInfo> images) {
