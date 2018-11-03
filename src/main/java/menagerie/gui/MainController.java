@@ -51,7 +51,7 @@ public class MainController {
     public ListView<Tag> tagListView;
     public TextField editTagsTextfield;
 
-    private ContextMenu autoCompleteContextMenu;
+    private ContextMenu autoCompleteContextMenu = new ContextMenu();
 
     public BorderPane settingsPane;
     public CheckBox computeMD5SettingCheckbox;
@@ -105,13 +105,27 @@ public class MainController {
     private Settings settings = new Settings(new File("menagerie.settings"));
 
 
+    // ---------------------------------- Initializers ------------------------------------
+
     @FXML
     public void initialize() {
+        //Initialize the menagerie
         initMenagerie();
 
-        initFX();
-        initListeners();
+        //Init window listeners
+        initWindowListeners();
 
+        //Init screens
+        initExplorerScreen();
+        initSettingsScreen();
+        initTagListScreen();
+        initDuplicateScreen();
+//        initEditTagsAutoComplete();
+
+        //Init window props from settings
+        Platform.runLater(this::initWindowPropertiesFromSettings);
+
+        //Apply a default search
         Platform.runLater(this::searchOnAction);
     }
 
@@ -130,28 +144,12 @@ public class MainController {
         }
     }
 
-    private void initFX() {
-        //Init window props from settings
-        Platform.runLater(this::initWindowPropertiesFromSettings);
-
-        //Ensure image preview is cleared
-        previewImage(null);
-
-        //Ensure two columns for grid
-        setImageGridWidth(settings.getImageGridWidth());
-
-        //Init editTagsTextfield autocomplete context menu
-        autoCompleteContextMenu = new ContextMenu();
-
+    private void initSettingsScreen() {
         //Initialize grid width setting choicebox
         Integer[] elements = new Integer[Settings.MAX_IMAGE_GRID_WIDTH - Settings.MIN_IMAGE_GRID_WIDTH + 1];
         for (int i = 0; i < elements.length; i++) elements[i] = i + Settings.MIN_IMAGE_GRID_WIDTH;
         gridWidthChoiceBox.getItems().addAll(elements);
         gridWidthChoiceBox.getSelectionModel().clearAndSelect(0);
-
-        //Initialize tagList order choicebox
-        tagListOrderChoiceBox.getItems().addAll("Name", "ID", "Frequency");
-        tagListOrderChoiceBox.getSelectionModel().clearAndSelect(0);
     }
 
     private void initWindowPropertiesFromSettings() {
@@ -163,15 +161,7 @@ public class MainController {
         if (settings.getWindowY() >= 0) stage.setY(settings.getWindowY());
     }
 
-    private void initListeners() {
-        initWindowListeners();
-        initExplorerScreenListeners();
-        initTagListScreenListeners();
-        initDuplicateScreenListeners();
-//        initEditTagsAutoComplete();
-    }
-
-    private void initDuplicateScreenListeners() {
+    private void initDuplicateScreen() {
         duplicateLeftTagListView.setCellFactory(param -> new TagListCell());
         duplicateRightTagListView.setCellFactory(param -> new TagListCell());
         histConfidenceSettingTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
@@ -188,8 +178,12 @@ public class MainController {
         });
     }
 
-    private void initTagListScreenListeners() {
+    private void initTagListScreen() {
+        //Initialize tagList order choicebox
+        tagListOrderChoiceBox.getItems().addAll("Name", "ID", "Frequency");
+        tagListOrderChoiceBox.getSelectionModel().clearAndSelect(0);
         tagListOrderChoiceBox.setOnAction(event -> updateTagListListViewOrder());
+
         tagListListView.setCellFactory(param -> {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
@@ -248,18 +242,22 @@ public class MainController {
         });
     }
 
-    private void initExplorerScreenListeners() {
+    private void initExplorerScreen() {
+        //Set image grid width from settings
+        setImageGridWidth(settings.getImageGridWidth());
+
+        //Init image grid
         imageGridView.setSelectionListener(this::previewImage);
         imageGridView.setProgressQueueListener(this::openProgressLockScreen);
         imageGridView.setDuplicateRequestListener(this::processAndShowDuplicates);
 
+        //Init drag/drop handlers
         explorerPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
                 event.acceptTransferModes(TransferMode.ANY);
             }
             event.consume();
         });
-
         explorerPane.setOnDragDropped(event -> {
             List<File> files = event.getDragboard().getFiles();
             String url = event.getDragboard().getUrl();
@@ -306,6 +304,7 @@ public class MainController {
             event.consume();
         });
 
+        //Init tag list cell factory
         tagListView.setCellFactory(param -> {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
@@ -338,15 +337,6 @@ public class MainController {
         });
     }
 
-    private File openSaveImageDialog(File folder, String filename) {
-        FileChooser fc = new FileChooser();
-        fc.setTitle("Save file from web");
-        if (filename != null) fc.setInitialFileName(filename);
-        if (folder != null) fc.setInitialDirectory(folder);
-        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
-        return fc.showSaveDialog(explorerPane.getScene().getWindow());
-    }
-
     private void initWindowListeners() {
         Platform.runLater(() -> {
             Stage stage = ((Stage) rootPane.getScene().getWindow());
@@ -359,6 +349,244 @@ public class MainController {
             stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
         });
     }
+
+    // ---------------------------------- Screen/Dialog openers ------------------------------------
+
+    private File openSaveImageDialog(File folder, String filename) {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Save file from web");
+        if (filename != null) fc.setInitialFileName(filename);
+        if (folder != null) fc.setInitialDirectory(folder);
+        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        return fc.showSaveDialog(explorerPane.getScene().getWindow());
+    }
+
+    private void openSettingsScreen() {
+        //Update settings fx nodes
+        lastFolderSettingTextField.setText(settings.getLastFolder());
+        dbURLTextfield.setText(settings.getDbUrl());
+        dbUserTextfield.setText(settings.getDbUser());
+        dbPassTextfield.setText(settings.getDbPass());
+
+        autoImportWebSettingCheckbox.setSelected(settings.isAutoImportFromWeb());
+        computeMD5SettingCheckbox.setSelected(settings.isComputeMD5OnImport());
+        computeHistSettingCheckbox.setSelected(settings.isComputeHistogramOnImport());
+        buildThumbSettingCheckbox.setSelected(settings.isBuildThumbnailOnImport());
+        duplicateComputeMD5SettingCheckbox.setSelected(settings.isComputeMD5ForSimilarity());
+        duplicateComputeHistSettingCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
+        duplicateConsolidateTagsSettingCheckbox.setSelected(settings.isConsolidateTags());
+
+        histConfidenceSettingTextField.setText("" + settings.getSimilarityThreshold());
+
+        gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
+
+        //Enable pane
+        explorerPane.setDisable(true);
+        settingsPane.setDisable(false);
+        settingsPane.setOpacity(1);
+        settingsCancelButton.requestFocus();
+    }
+
+    private void closeSettingsScreen(boolean saveChanges) {
+        //Disable pane
+        explorerPane.setDisable(false);
+        settingsPane.setDisable(true);
+        settingsPane.setOpacity(0);
+        imageGridView.requestFocus();
+
+        if (saveChanges) {
+            //Save settings to settings object
+            settings.setLastFolder(lastFolderSettingTextField.getText());
+            settings.setDbUrl(dbURLTextfield.getText());
+            settings.setDbUser(dbUserTextfield.getText());
+            settings.setDbPass(dbPassTextfield.getText());
+
+            settings.setAutoImportFromWeb(autoImportWebSettingCheckbox.isSelected());
+            settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
+            settings.setComputeHistogramOnImport(computeHistSettingCheckbox.isSelected());
+            settings.setBuildThumbnailOnImport(buildThumbSettingCheckbox.isSelected());
+            settings.setComputeMD5ForSimilarity(duplicateComputeMD5SettingCheckbox.isSelected());
+            settings.setComputeHistogramForSimilarity(duplicateComputeHistSettingCheckbox.isSelected());
+            settings.setConsolidateTags(duplicateConsolidateTagsSettingCheckbox.isSelected());
+
+            settings.setSimilarityThreshold(Double.parseDouble(histConfidenceSettingTextField.getText()));
+
+            settings.setImageGridWidth(gridWidthChoiceBox.getValue());
+
+            setImageGridWidth(gridWidthChoiceBox.getValue());
+        }
+    }
+
+    private void openTagListScreen() {
+        tagListListView.getItems().clear();
+        tagListListView.getItems().addAll(menagerie.getTags());
+        updateTagListListViewOrder();
+
+        explorerPane.setDisable(true);
+        tagListPane.setDisable(false);
+        tagListPane.setOpacity(1);
+        tagListPane.requestFocus();
+    }
+
+    private void closeTagListScreen() {
+        explorerPane.setDisable(false);
+        tagListPane.setDisable(true);
+        tagListPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void openHelpScreen() {
+        explorerPane.setDisable(true);
+        helpPane.setDisable(false);
+        helpPane.setOpacity(1);
+        helpPane.requestFocus();
+    }
+
+    private void closeHelpScreen() {
+        explorerPane.setDisable(false);
+        helpPane.setDisable(true);
+        helpPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void openProgressLockScreen(String title, String message, List<Runnable> queue, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
+        if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
+
+        currentProgressLockThread = new ProgressLockThread(queue);
+        currentProgressLockThread.setUpdateListener((num, total) -> {
+            Platform.runLater(() -> {
+                final double progress = (double) num / total;
+                progressLockProgressBar.setProgress(progress);
+                progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
+            });
+        });
+        currentProgressLockThread.setCancelListener((num, total) -> {
+            Platform.runLater(this::closeProgressLockScreen);
+            if (cancelListener != null) cancelListener.progressCanceled(num, total);
+        });
+        currentProgressLockThread.setFinishListener(total -> {
+            Platform.runLater(this::closeProgressLockScreen);
+            if (finishListener != null) finishListener.progressFinished(total);
+        });
+        currentProgressLockThread.start();
+
+        progressLockTitleLabel.setText(title);
+        progressLockMessageLabel.setText(message);
+        progressLockProgressBar.setProgress(0);
+        progressLockCountLabel.setText("0/" + queue.size());
+
+        explorerPane.setDisable(true);
+        progressLockPane.setDisable(false);
+        progressLockPane.setOpacity(1);
+        progressLockPane.requestFocus();
+
+    }
+
+    private void closeProgressLockScreen() {
+        if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
+
+        explorerPane.setDisable(false);
+        progressLockPane.setDisable(true);
+        progressLockPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void openDuplicateScreen(List<ImageInfo> images) {
+        currentSimilarPairs = new ArrayList<>();
+        List<Runnable> queue = new ArrayList<>();
+
+        for (int actualI = 0; actualI < images.size(); actualI++) {
+            final int i = actualI;
+            queue.add(() -> {
+                ImageInfo i1 = images.get(i);
+                for (int j = i + 1; j < images.size(); j++) {
+                    ImageInfo i2 = images.get(j);
+
+                    //Compare md5 hashes
+                    if (i1.getMD5() != null && i1.getMD5().equals(i2.getMD5())) {
+                        currentSimilarPairs.add(new SimilarPair(i1, i2, 1.0));
+                        continue;
+                    }
+
+                    //Compare histograms
+                    if (i1.getHistogram() != null && i2.getHistogram() != null) {
+                        double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
+                        if (similarity >= settings.getSimilarityThreshold()) {
+                            currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
+                        }
+                    }
+                }
+            });
+        }
+
+        if (queue.size() > 5000) {
+            openProgressLockScreen("Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, total -> Platform.runLater(() -> {
+                if (currentSimilarPairs.isEmpty()) return;
+
+                previewSimilarPair(currentSimilarPairs.get(0));
+
+                explorerPane.setDisable(true);
+                duplicatePane.setDisable(false);
+                duplicatePane.setOpacity(1);
+                duplicatePane.requestFocus();
+            }), null);
+        } else {
+            queue.forEach(Runnable::run);
+
+            if (currentSimilarPairs.isEmpty()) return;
+
+            previewSimilarPair(currentSimilarPairs.get(0));
+
+            explorerPane.setDisable(true);
+            duplicatePane.setDisable(false);
+            duplicatePane.setOpacity(1);
+            duplicatePane.requestFocus();
+        }
+    }
+
+    private void closeDuplicateScreen() {
+        previewSimilarPair(null);
+
+        explorerPane.setDisable(false);
+        duplicatePane.setDisable(true);
+        duplicatePane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void requestImportFolder() {
+        DirectoryChooser dc = new DirectoryChooser();
+        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
+            dc.setInitialDirectory(new File(settings.getLastFolder()));
+        File result = dc.showDialog(rootPane.getScene().getWindow());
+
+        if (result != null) {
+            List<Runnable> queue = new ArrayList<>();
+            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+
+            if (!queue.isEmpty()) {
+                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+            }
+        }
+    }
+
+    private void requestImportFiles() {
+        FileChooser fc = new FileChooser();
+        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
+            fc.setInitialDirectory(new File(settings.getLastFolder()));
+        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
+
+        if (results != null) {
+            List<Runnable> queue = new ArrayList<>();
+            results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+
+            if (!queue.isEmpty()) {
+                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+            }
+        }
+    }
+
+    // ---------------------------------- GUI Action Methods ------------------------------------
 
     private void previewImage(ImageInfo image) {
         if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
@@ -522,210 +750,6 @@ public class MainController {
         imageGridView.setPrefWidth(width);
     }
 
-    private static void downloadAndSaveFile(String url, File target) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.addRequestProperty("User-Agent", "Mozilla/4.0");
-        ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
-        FileOutputStream fos = new FileOutputStream(target);
-        fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-        conn.disconnect();
-        rbc.close();
-        fos.close();
-    }
-
-    private void openSettingsScreen() {
-        //Update settings fx nodes
-        lastFolderSettingTextField.setText(settings.getLastFolder());
-        dbURLTextfield.setText(settings.getDbUrl());
-        dbUserTextfield.setText(settings.getDbUser());
-        dbPassTextfield.setText(settings.getDbPass());
-
-        autoImportWebSettingCheckbox.setSelected(settings.isAutoImportFromWeb());
-        computeMD5SettingCheckbox.setSelected(settings.isComputeMD5OnImport());
-        computeHistSettingCheckbox.setSelected(settings.isComputeHistogramOnImport());
-        buildThumbSettingCheckbox.setSelected(settings.isBuildThumbnailOnImport());
-        duplicateComputeMD5SettingCheckbox.setSelected(settings.isComputeMD5ForSimilarity());
-        duplicateComputeHistSettingCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
-        duplicateConsolidateTagsSettingCheckbox.setSelected(settings.isConsolidateTags());
-
-        histConfidenceSettingTextField.setText("" + settings.getSimilarityThreshold());
-
-        gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
-
-        //Enable pane
-        explorerPane.setDisable(true);
-        settingsPane.setDisable(false);
-        settingsPane.setOpacity(1);
-        settingsCancelButton.requestFocus();
-    }
-
-    private void closeSettingsScreen(boolean saveChanges) {
-        //Disable pane
-        explorerPane.setDisable(false);
-        settingsPane.setDisable(true);
-        settingsPane.setOpacity(0);
-        imageGridView.requestFocus();
-
-        if (saveChanges) {
-            //Save settings to settings object
-            settings.setLastFolder(lastFolderSettingTextField.getText());
-            settings.setDbUrl(dbURLTextfield.getText());
-            settings.setDbUser(dbUserTextfield.getText());
-            settings.setDbPass(dbPassTextfield.getText());
-
-            settings.setAutoImportFromWeb(autoImportWebSettingCheckbox.isSelected());
-            settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
-            settings.setComputeHistogramOnImport(computeHistSettingCheckbox.isSelected());
-            settings.setBuildThumbnailOnImport(buildThumbSettingCheckbox.isSelected());
-            settings.setComputeMD5ForSimilarity(duplicateComputeMD5SettingCheckbox.isSelected());
-            settings.setComputeHistogramForSimilarity(duplicateComputeHistSettingCheckbox.isSelected());
-            settings.setConsolidateTags(duplicateConsolidateTagsSettingCheckbox.isSelected());
-
-            settings.setSimilarityThreshold(Double.parseDouble(histConfidenceSettingTextField.getText()));
-
-            settings.setImageGridWidth(gridWidthChoiceBox.getValue());
-
-            setImageGridWidth(gridWidthChoiceBox.getValue());
-        }
-    }
-
-    private void openTagListScreen() {
-        tagListListView.getItems().clear();
-        tagListListView.getItems().addAll(menagerie.getTags());
-        updateTagListListViewOrder();
-
-        explorerPane.setDisable(true);
-        tagListPane.setDisable(false);
-        tagListPane.setOpacity(1);
-        tagListPane.requestFocus();
-    }
-
-    private void closeTagListScreen() {
-        explorerPane.setDisable(false);
-        tagListPane.setDisable(true);
-        tagListPane.setOpacity(0);
-        imageGridView.requestFocus();
-    }
-
-    private void openHelpScreen() {
-        explorerPane.setDisable(true);
-        helpPane.setDisable(false);
-        helpPane.setOpacity(1);
-        helpPane.requestFocus();
-    }
-
-    private void closeHelpScreen() {
-        explorerPane.setDisable(false);
-        helpPane.setDisable(true);
-        helpPane.setOpacity(0);
-        imageGridView.requestFocus();
-    }
-
-    private ProgressLockThread openProgressLockScreen(String title, String message, List<Runnable> queue, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
-        if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
-
-        currentProgressLockThread = new ProgressLockThread(queue);
-        currentProgressLockThread.setUpdateListener((num, total) -> {
-            Platform.runLater(() -> {
-                final double progress = (double) num / total;
-                progressLockProgressBar.setProgress(progress);
-                progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
-            });
-        });
-        currentProgressLockThread.setCancelListener((num, total) -> {
-            Platform.runLater(this::closeProgressLockScreen);
-            if (cancelListener != null) cancelListener.progressCanceled(num, total);
-        });
-        currentProgressLockThread.setFinishListener(total -> {
-            Platform.runLater(this::closeProgressLockScreen);
-            if (finishListener != null) finishListener.progressFinished(total);
-        });
-        currentProgressLockThread.start();
-
-        progressLockTitleLabel.setText(title);
-        progressLockMessageLabel.setText(message);
-        progressLockProgressBar.setProgress(0);
-        progressLockCountLabel.setText("0/" + queue.size());
-
-        explorerPane.setDisable(true);
-        progressLockPane.setDisable(false);
-        progressLockPane.setOpacity(1);
-        progressLockPane.requestFocus();
-
-        return currentProgressLockThread;
-    }
-
-    private void closeProgressLockScreen() {
-        if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
-
-        explorerPane.setDisable(false);
-        progressLockPane.setDisable(true);
-        progressLockPane.setOpacity(0);
-        imageGridView.requestFocus();
-    }
-
-    private void openDuplicateScreen(List<ImageInfo> images) {
-        currentSimilarPairs = new ArrayList<>();
-        List<Runnable> queue = new ArrayList<>();
-
-        for (int actualI = 0; actualI < images.size(); actualI++) {
-            final int i = actualI;
-            queue.add(() -> {
-                ImageInfo i1 = images.get(i);
-                for (int j = i + 1; j < images.size(); j++) {
-                    ImageInfo i2 = images.get(j);
-
-                    //Compare md5 hashes
-                    if (i1.getMD5() != null && i1.getMD5().equals(i2.getMD5())) {
-                        currentSimilarPairs.add(new SimilarPair(i1, i2, 1.0));
-                        continue;
-                    }
-
-                    //Compare histograms
-                    if (i1.getHistogram() != null && i2.getHistogram() != null) {
-                        double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
-                        if (similarity >= settings.getSimilarityThreshold()) {
-                            currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
-                        }
-                    }
-                }
-            });
-        }
-
-        if (queue.size() > 5000) {
-            openProgressLockScreen("Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, total -> Platform.runLater(() -> {
-                if (currentSimilarPairs.isEmpty()) return;
-
-                previewSimilarPair(currentSimilarPairs.get(0));
-
-                explorerPane.setDisable(true);
-                duplicatePane.setDisable(false);
-                duplicatePane.setOpacity(1);
-                duplicatePane.requestFocus();
-            }), null);
-        } else {
-            queue.forEach(Runnable::run);
-
-            if (currentSimilarPairs.isEmpty()) return;
-
-            previewSimilarPair(currentSimilarPairs.get(0));
-
-            explorerPane.setDisable(true);
-            duplicatePane.setDisable(false);
-            duplicatePane.setOpacity(1);
-            duplicatePane.requestFocus();
-        }
-    }
-
-    private void closeDuplicateScreen() {
-        previewSimilarPair(null);
-
-        explorerPane.setDisable(false);
-        duplicatePane.setDisable(true);
-        duplicatePane.setOpacity(0);
-        imageGridView.requestFocus();
-    }
-
     private void previewSimilarPair(SimilarPair pair) {
         if (pair == null) {
             currentlyPreviewingPair = null;
@@ -799,21 +823,7 @@ public class MainController {
                 tagListListView.getItems().sort(Comparator.comparingInt(Tag::getId));
                 break;
             case "Frequency":
-                HashMap<Integer, Integer> m = new HashMap<>();
-                tagListListView.getItems().sort((o1, o2) -> {
-                    int f1 = m.getOrDefault(o1.getId(), -1);
-                    if (f1 == -1) {
-                        f1 = o1.computeFrequency();
-                        m.put(o1.getId(), f1);
-                    }
-                    int f2 = m.getOrDefault(o2.getId(), -1);
-                    if (f2 == -1) {
-                        f2 = o2.computeFrequency();
-                        m.put(o2.getId(), f2);
-                    }
-
-                    return f2 - f1;
-                });
+                tagListListView.getItems().sort(Comparator.comparingInt(Tag::getFrequency).reversed());
                 break;
             case "Name":
                 tagListListView.getItems().sort(Comparator.comparing(Tag::getName));
@@ -837,51 +847,6 @@ public class MainController {
                 for (ImageInfo img : new ArrayList<>(imageGridView.getSelected())) { // New arraylist to avoid concurrent modification
                     img.addTag(t);
                 }
-            }
-        }
-    }
-
-    private List<File> getFilesRecursive(File folder, FileFilter filter) {
-        List<File> results = new ArrayList<>();
-        for (File file : Objects.requireNonNull(folder.listFiles())) {
-            if (file.isDirectory()) {
-                results.addAll(getFilesRecursive(file, filter));
-            } else {
-                if (filter.accept(file)) results.add(file);
-            }
-        }
-        return results;
-    }
-
-    private void requestImportFolder() {
-        DirectoryChooser dc = new DirectoryChooser();
-        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
-            dc.setInitialDirectory(new File(settings.getLastFolder()));
-        File result = dc.showDialog(rootPane.getScene().getWindow());
-
-        if (result != null) {
-            List<Runnable> queue = new ArrayList<>();
-            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
-
-            if (!queue.isEmpty()) {
-                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
-            }
-        }
-    }
-
-    private void requestImportFiles() {
-        FileChooser fc = new FileChooser();
-        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
-            fc.setInitialDirectory(new File(settings.getLastFolder()));
-        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
-        List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
-
-        if (results != null) {
-            List<Runnable> queue = new ArrayList<>();
-            results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
-
-            if (!queue.isEmpty()) {
-                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
             }
         }
     }
@@ -916,6 +881,66 @@ public class MainController {
             previewSimilarPair(currentSimilarPairs.get(index));
         }
     }
+
+    private void processAndShowDuplicates(List<ImageInfo> images) {
+        if (settings.isComputeMD5ForSimilarity()) {
+            List<Runnable> queue = new ArrayList<>();
+
+            images.forEach(i -> {
+                if (i.getMD5() == null) queue.add(() -> {
+                    i.initializeMD5();
+                    i.commitMD5ToDatabase();
+                });
+            });
+
+            openProgressLockScreen("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, total -> {
+                //TODO: Fix this. If md5 computing is disabled, histogram building won't happen
+                if (settings.isComputeHistogramForSimilarity()) {
+                    List<Runnable> queue2 = new ArrayList<>();
+
+                    images.forEach(i -> {
+                        if (i.getHistogram() == null) queue2.add(() -> {
+                            i.initializeHistogram();
+                            i.commitHistogramToDatabase();
+                        });
+                    });
+
+                    Platform.runLater(() -> openProgressLockScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
+                } else {
+                    Platform.runLater(() -> openDuplicateScreen(images));
+                }
+            }, null);
+        } else {
+            openDuplicateScreen(images);
+        }
+    }
+
+    // ---------------------------------- Compute Utilities ------------------------------------
+
+    private static void downloadAndSaveFile(String url, File target) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+        conn.addRequestProperty("User-Agent", "Mozilla/4.0");
+        ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
+        FileOutputStream fos = new FileOutputStream(target);
+        fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
+        conn.disconnect();
+        rbc.close();
+        fos.close();
+    }
+
+    private static List<File> getFilesRecursive(File folder, FileFilter filter) {
+        List<File> results = new ArrayList<>();
+        for (File file : Objects.requireNonNull(folder.listFiles())) {
+            if (file.isDirectory()) {
+                results.addAll(getFilesRecursive(file, filter));
+            } else {
+                if (filter.accept(file)) results.add(file);
+            }
+        }
+        return results;
+    }
+
+    // ---------------------------------- Event Handlers ------------------------------------
 
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
@@ -977,39 +1002,6 @@ public class MainController {
                 imageGridView.requestFocus();
                 event.consume();
                 break;
-        }
-    }
-
-    private void processAndShowDuplicates(List<ImageInfo> images) {
-        if (settings.isComputeMD5ForSimilarity()) {
-            List<Runnable> queue = new ArrayList<>();
-
-            images.forEach(i -> {
-                if (i.getMD5() == null) queue.add(() -> {
-                    i.initializeMD5();
-                    i.commitMD5ToDatabase();
-                });
-            });
-
-            openProgressLockScreen("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, total -> {
-                //TODO: Fix this. If md5 computing is disabled, histogram building won't happen
-                if (settings.isComputeHistogramForSimilarity()) {
-                    List<Runnable> queue2 = new ArrayList<>();
-
-                    images.forEach(i -> {
-                        if (i.getHistogram() == null) queue2.add(() -> {
-                            i.initializeHistogram();
-                            i.commitHistogramToDatabase();
-                        });
-                    });
-
-                    Platform.runLater(() -> openProgressLockScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
-                } else {
-                    Platform.runLater(() -> openDuplicateScreen(images));
-                }
-            }, null);
-        } else {
-            openDuplicateScreen(images);
         }
     }
 

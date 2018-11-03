@@ -27,7 +27,7 @@ public class TagListCell extends ListCell<Tag> {
             setTooltip(null);
         } else {
             nameLabel.setText(tag.getName());
-            countLabel.setText("(" + tag.computeFrequency() + ")");
+            countLabel.setText("(" + tag.getFrequency() + ")");
             setTooltip(new Tooltip("(ID: " + tag.getId() + ") " + tag.getName()));
         }
     }

@@ -6,6 +6,8 @@ public class Tag implements Comparable<Tag> {
     private final int id;
     private final String name;
 
+    private int frequency = 0;
+
 
     public Tag(Menagerie menagerie, int id, String name) {
         this.menagerie = menagerie;
@@ -25,14 +27,26 @@ public class Tag implements Comparable<Tag> {
         return menagerie;
     }
 
-    public int computeFrequency() {
-        int count = 0;
+//    public int computeFrequency() {
+//        int count = 0;
+//
+//        for (ImageInfo img : menagerie.getImages()) {
+//            if (img.hasTag(this)) count++;
+//        }
+//
+//        return count;
+//    }
 
-        for (ImageInfo img : menagerie.getImages()) {
-            if (img.hasTag(this)) count++;
-        }
+    public int getFrequency() {
+        return frequency;
+    }
 
-        return count;
+    public void incrementFrequency() {
+        frequency++;
+    }
+
+    public void decrementFrequency() {
+        frequency--;
     }
 
     @Override

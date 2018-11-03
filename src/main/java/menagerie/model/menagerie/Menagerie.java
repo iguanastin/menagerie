@@ -137,7 +137,13 @@ public class Menagerie {
             ResultSet tagRS = PS_GET_IMG_TAG_IDS.executeQuery();
 
             while (tagRS.next()) {
-                img.getTags().add(getTagByID(tagRS.getInt("tag_id")));
+                Tag tag = getTagByID(tagRS.getInt("tag_id"));
+                if (tag != null) {
+                    tag.incrementFrequency();
+                    img.getTags().add(tag);
+                } else {
+                    System.err.println("Major issue, tag wasn't loaded in but somehow still exists in the database");
+                }
             }
         }
 
@@ -231,6 +237,8 @@ public class Menagerie {
             if (image.getMD5() != null) {
                 hashes.remove(image.getMD5());
             }
+
+            image.getTags().forEach(Tag::decrementFrequency);
 
             activeSearches.forEach(search -> search.remove(image));
             updateQueue.enqueueUpdate(() -> {
