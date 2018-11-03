@@ -17,7 +17,7 @@ import java.util.Optional;
 
 public class ImageGridView extends GridView<ImageInfo> {
 
-    public static final int CELL_BORDER = 2;
+    public static final int CELL_BORDER = 4;
 
 
     private final ClipboardContent clipboard = new ClipboardContent();
