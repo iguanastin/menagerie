@@ -660,16 +660,61 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
-    private void openDuplicateScreen(List<SimilarPair> pairs) {
-        if (pairs == null || pairs.isEmpty()) return;
+    private void openDuplicateScreen(List<ImageInfo> images) {
+        currentSimilarPairs = new ArrayList<>();
+        List<Runnable> queue = new ArrayList<>();
 
-        currentSimilarPairs = pairs;
-        previewSimilarPair(pairs.get(0));
+        for (int actualI = 0; actualI < images.size(); actualI++) {
+            final int i = actualI;
+            queue.add(() -> {
+                ImageInfo i1 = images.get(i);
+                for (int j = i + 1; j < images.size(); j++) {
+                    ImageInfo i2 = images.get(j);
 
-        explorerPane.setDisable(true);
-        duplicatePane.setDisable(false);
-        duplicatePane.setOpacity(1);
-        duplicatePane.requestFocus();
+                    //Compare md5 hashes
+                    if (i1.getMD5() != null && i1.getMD5().equals(i2.getMD5())) {
+                        currentSimilarPairs.add(new SimilarPair(i1, i2, 1.0));
+                        continue;
+                    }
+
+                    //Compare histograms
+                    if (i1.getHistogram() != null && i2.getHistogram() != null) {
+                        double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
+                        if (similarity >= settings.getSimilarityThreshold()) {
+                            currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
+                        }
+                    }
+                }
+            });
+        }
+
+        if (queue.size() > 5000) {
+            ProgressLockThread t = openProgressLockScreen("Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, true);
+            t.setFinishListener(total -> Platform.runLater(() -> {
+                closeProgressLockScreen();
+
+                if (currentSimilarPairs.isEmpty()) return;
+
+                previewSimilarPair(currentSimilarPairs.get(0));
+
+                explorerPane.setDisable(true);
+                duplicatePane.setDisable(false);
+                duplicatePane.setOpacity(1);
+                duplicatePane.requestFocus();
+            }));
+            t.start();
+        } else {
+            queue.forEach(Runnable::run);
+
+            if (currentSimilarPairs.isEmpty()) return;
+
+            previewSimilarPair(currentSimilarPairs.get(0));
+
+            explorerPane.setDisable(true);
+            duplicatePane.setDisable(false);
+            duplicatePane.setOpacity(1);
+            duplicatePane.requestFocus();
+        }
     }
 
     private void closeDuplicateScreen() {
@@ -845,32 +890,6 @@ public class MainController {
         }
     }
 
-    private List<SimilarPair> getDuplicates(List<ImageInfo> images) {
-        List<SimilarPair> results = new ArrayList<>();
-
-        for (int i = 0; i < images.size(); i++) {
-            for (int j = i + 1; j < images.size(); j++) {
-                ImageInfo i1 = images.get(i), i2 = images.get(j);
-
-                //Compare md5 hashes
-                if (i1.getMD5() != null && i1.getMD5().equals(i2.getMD5())) {
-                    results.add(new SimilarPair(i1, i2, 1.0));
-                    continue;
-                }
-
-                //Compare histograms
-                if (i1.getHistogram() != null && i2.getHistogram() != null) {
-                    double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
-                    if (similarity >= settings.getSimilarityThreshold()) {
-                        results.add(new SimilarPair(i1, i2, similarity));
-                    }
-                }
-            }
-        }
-
-        return results;
-    }
-
     private void deleteDuplicateImageEvent(ImageInfo img, boolean deleteFile) {
         int index = currentSimilarPairs.indexOf(currentlyPreviewingPair);
         img.remove(deleteFile);
@@ -987,17 +1006,17 @@ public class MainController {
                         ProgressLockThread t2 = openProgressLockScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, true);
                         t2.setFinishListener(total1 -> Platform.runLater(() -> {
                             closeProgressLockScreen();
-                            openDuplicateScreen(getDuplicates(images));
+                            openDuplicateScreen(images);
                         }));
                         t2.start();
                     });
                 } else {
-                    Platform.runLater(() -> openDuplicateScreen(getDuplicates(images)));
+                    Platform.runLater(() -> openDuplicateScreen(images));
                 }
             });
             t.start();
         } else {
-            openDuplicateScreen(getDuplicates(images));
+            openDuplicateScreen(images);
         }
     }
 
@@ -1191,7 +1210,7 @@ public class MainController {
 
         PreparedStatement ps = db.prepareStatement("INSERT INTO test VALUES (?, ?);");
         ps.setBinaryStream(1, is);
-        ps.setNString( 2,"D98D5AFC231AC4F3ED1A9F41DBB22D82");
+        ps.setNString(2, "D98D5AFC231AC4F3ED1A9F41DBB22D82");
         ps.executeUpdate();
         ps.close();
 
