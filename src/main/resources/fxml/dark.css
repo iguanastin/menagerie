@@ -31,7 +31,7 @@
 
 /* Fix derived prompt color for text fields */
 .text-input {
-    -fx-prompt-text-fill: derive(-fx-control-inner-background, +50%);
+    -fx-prompt-text-fill: derive(-fx-control-inner-background, +100%);
 }
 
 /* Keep prompt invisible when focused (above color fix overrides it) */
@@ -53,4 +53,14 @@
 .scroll-bar > .increment-button:pressed > .increment-arrow,
 .scroll-bar > .decrement-button:pressed > .decrement-arrow {
     -fx-background-color: -fx-mark-highlight-color, rgb(255, 255, 255);
+}
+
+.list-view {
+    -fx-background-color: derive(-fx-control-inner-background, +25%);
+}
+.list-cell {
+    -fx-background-color: derive(-fx-control-inner-background, +40%);
+}
+.list-cell:odd {
+    -fx-background-color: derive(-fx-control-inner-background, +20%)
 }

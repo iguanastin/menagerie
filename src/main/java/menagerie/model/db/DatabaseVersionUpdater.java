@@ -9,10 +9,10 @@ public class DatabaseVersionUpdater {
 
 
     private static final String CREATE_TAGS_TABLE_V1 = "CREATE TABLE tags(id INT PRIMARY KEY AUTO_INCREMENT, name NVARCHAR(128) NOT NULL UNIQUE);";
-    private static final String CREATE_IMGS_TABLE_V1 = "CREATE TABLE imgs(id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, path NVARCHAR(1024) UNIQUE, added LONG NOT NULL, thumbnail BLOB, histogram OBJECT, md5 NVARCHAR(32));";
+    private static final String CREATE_IMGS_TABLE_V1 = "CREATE TABLE imgs(id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, path NVARCHAR(1024) UNIQUE, added LONG NOT NULL, thumbnail BLOB, md5 NVARCHAR(32), histogram OBJECT);";
     private static final String CREATE_TAGGED_TABLE_V1 = "CREATE TABLE tagged(img_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (img_id) REFERENCES imgs(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (img_id, tag_id));";
 
-    private static final int CURRENT_VERSION = 1;
+    private static final int CURRENT_VERSION = 2;
 
 
     private static class Tag {
@@ -28,22 +28,27 @@ public class DatabaseVersionUpdater {
     public static void updateDatabase(Connection db) throws SQLException {
         Statement s = db.createStatement();
 
-        final int version = getVersion(db);
+        while (!upToDate(db)) {
+            int version = getVersion(db);
 
-        System.out.println("Database version: " + version);
+            System.out.println("Database version: " + version);
 
-        switch (version) {
-            case -1:
-                cleanDatabase(db);
-                initializeTables(db);
-                break;
-            case 0:
-                System.out.println("!!! Database needs to update from 0 to 1 !!!");
-                updateFromV0ToV1(db);
-                break;
-            case 1:
-                System.out.println("Database is up to date");
-                break;
+            switch (version) {
+                case -1:
+                    cleanDatabase(db);
+                    initializeTables(db);
+                    break;
+                case 0:
+                    System.out.println("!!! Database needs to update from 0 to 1 !!!");
+                    updateFromV0ToV1(db);
+                    break;
+                case 1:
+                    System.out.println("!!! Database needs to update from 0 to 1 !!!");
+                    updateFromV1ToV2(db);
+                case 2:
+                    System.out.println("Database is up to date");
+                    break;
+            }
         }
 
         s.close();
@@ -99,6 +104,9 @@ public class DatabaseVersionUpdater {
         System.out.println("  Initialized tags table");
         s.executeUpdate(CREATE_TAGGED_TABLE_V1);
         System.out.println("  Initialized tagged table");
+        s.executeUpdate("CREATE TABLE version(version INT NOT NULL PRIMARY KEY);");
+        s.executeUpdate("INSERT INTO version(version) VALUES (1);");
+        System.out.println("  Initialized version table and inserted current version");
 
         s.executeUpdate("INSERT INTO tags(name) VALUES ('tagme');");
         System.out.println("  Created 'tagme' tag");
@@ -190,6 +198,28 @@ public class DatabaseVersionUpdater {
 
         System.out.println("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
 
+    }
+
+    private static void updateFromV1ToV2(Connection db) throws SQLException {
+        System.out.println("Database updating from v1 to v2...");
+        long t = System.currentTimeMillis();
+        Statement s = db.createStatement();
+
+        //Update histogram storage
+        s.executeUpdate("ALTER TABLE imgs DROP COLUMN histogram;" +
+                "ALTER TABLE imgs ADD COLUMN hist_a BLOB;" +
+                "ALTER TABLE imgs ADD COLUMN hist_r BLOB;" +
+                "ALTER TABLE imgs ADD COLUMN hist_g BLOB;" +
+                "ALTER TABLE imgs ADD COLUMN hist_b BLOB;");
+
+        //Update version table
+        s.executeUpdate("INSERT INTO version VALUES (2);");
+
+        //------------------------------------ Done Updating -----------------------------------------------------------
+
+        s.close();
+
+        System.out.println("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
     }
 
     private static Tag getTagByName(Iterable<Tag> tags, String name) {

@@ -6,7 +6,7 @@
 
     <groupId>men.age.rie</groupId>
     <artifactId>menagerie</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 
     <build>
         <plugins>
@@ -23,7 +23,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>manimage.main.Main</mainClass>
+                            <mainClass>menagerie.gui.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

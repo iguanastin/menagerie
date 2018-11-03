@@ -1,42 +1,47 @@
 package menagerie.gui;
 
+import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.geometry.Bounds;
 import javafx.scene.control.*;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.stage.Window;
-import jdk.nashorn.internal.ir.annotations.Ignore;
-import menagerie.model.ImageInfo;
-import menagerie.model.Menagerie;
-import menagerie.model.Tag;
+import menagerie.gui.grid.ImageGridView;
+import menagerie.gui.image.DynamicImageView;
+import menagerie.gui.progress.ProgressLockThread;
+import menagerie.gui.progress.ProgressLockThreadCancelListener;
+import menagerie.gui.progress.ProgressLockThreadFinishListener;
+import menagerie.model.SimilarPair;
 import menagerie.model.db.DatabaseVersionUpdater;
+import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Menagerie;
+import menagerie.model.menagerie.Tag;
 import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
-import org.controlsfx.control.ToggleSwitch;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.*;
+import java.text.DecimalFormat;
+import java.util.*;
 
 public class MainController {
+
+    public StackPane rootPane;
 
     public BorderPane explorerPane;
     public ToggleButton descendingToggleButton;
@@ -45,22 +50,61 @@ public class MainController {
     public DynamicImageView previewImageView;
     public Label resultCountLabel;
     public Label imageInfoLabel;
+    public ListView<Tag> tagListView;
+    public TextField editTagsTextfield;
+
+    private ContextMenu autoCompleteContextMenu;
 
     public BorderPane settingsPane;
-    public ToggleSwitch computeMD5SettingCheckbox;
-    public ToggleSwitch computeHistSettingCheckbox;
-    public ToggleSwitch buildThumbSettingCheckbox;
-    public ToggleSwitch autoImportWebSettingCheckbox;
+    public CheckBox computeMD5SettingCheckbox;
+    public CheckBox computeHistSettingCheckbox;
+    public CheckBox buildThumbSettingCheckbox;
+    public CheckBox autoImportWebSettingCheckbox;
     public TextField lastFolderSettingTextField;
     public Button settingsCancelButton;
     public ChoiceBox<Integer> gridWidthChoiceBox;
+    public TextField dbURLTextfield;
+    public TextField dbUserTextfield;
+    public TextField dbPassTextfield;
+    public CheckBox duplicateComputeMD5SettingCheckbox;
+    public CheckBox duplicateComputeHistSettingCheckbox;
+    public TextField histConfidenceSettingTextField;
+    public CheckBox duplicateConsolidateTagsSettingCheckbox;
+
+    public BorderPane tagListPane;
+    public ChoiceBox<String> tagListOrderChoiceBox;
+    public ListView<Tag> tagListListView;
+
+    public BorderPane helpPane;
+
+    public BorderPane progressLockPane;
+    public ProgressBar progressLockProgressBar;
+    public Label progressLockTitleLabel;
+    public Label progressLockMessageLabel;
+    public Label progressLockCountLabel;
+
+    public BorderPane duplicatePane;
+    public Label duplicateSimilarityLabel;
+    public Label duplicateLeftInfoLabel;
+    public TextField duplicateLeftPathTextField;
+    public DynamicImageView duplicateLeftImageView;
+    public ListView<Tag> duplicateLeftTagListView;
+    public Label duplicateRightInfoLabel;
+    public TextField duplicateRightPathTextField;
+    public DynamicImageView duplicateRightImageView;
+    public ListView<Tag> duplicateRightTagListView;
+
 
     private Menagerie menagerie;
     private Search currentSearch = null;
 
-    private Settings settings = new Settings(new File("menagerie.settings"));
+    private ProgressLockThread currentProgressLockThread;
+    private ImageInfo currentlyPreviewing = null;
+    private String lastTagString = null;
+    private List<SimilarPair> currentSimilarPairs = null;
+    private SimilarPair currentlyPreviewingPair = null;
 
-    private String dbPath = "jdbc:h2:~/test", dbUser = "sa", dbPass = "";
+    private Settings settings = new Settings(new File("menagerie.settings"));
 
 
     @FXML
@@ -69,11 +113,13 @@ public class MainController {
 
         initFX();
         initListeners();
+
+        Platform.runLater(this::searchOnAction);
     }
 
     private void initMenagerie() {
         try {
-            Connection db = DriverManager.getConnection(dbPath, dbUser, dbPass);
+            Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getDbUrl(), settings.getDbUser(), settings.getDbPass());
             if (!DatabaseVersionUpdater.upToDate(db)) {
                 DatabaseVersionUpdater.updateDatabase(db);
             }
@@ -87,49 +133,129 @@ public class MainController {
     }
 
     private void initFX() {
-        Platform.runLater(() -> {
-            Stage stage = ((Stage) explorerPane.getScene().getWindow());
-            stage.setMaximized(settings.isWindowMaximized());
-            if (settings.getWindowWidth() > 0) stage.setWidth(settings.getWindowWidth());
-            if (settings.getWindowHeight() > 0) stage.setHeight(settings.getWindowHeight());
-            if (settings.getWindowX() >= 0) stage.setX(settings.getWindowX());
-            if (settings.getWindowY() >= 0) stage.setY(settings.getWindowY());
-        });
+        //Init window props from settings
+        Platform.runLater(this::initWindowPropertiesFromSettings);
 
-        updateImageInfoLabel(null);
+        //Ensure image preview is cleared
+        previewImage(null);
 
         //Ensure two columns for grid
         setImageGridWidth(settings.getImageGridWidth());
 
+        //Init editTagsTextfield autocomplete context menu
+        autoCompleteContextMenu = new ContextMenu();
+
+        //Initialize grid width setting choicebox
         Integer[] elements = new Integer[Settings.MAX_IMAGE_GRID_WIDTH - Settings.MIN_IMAGE_GRID_WIDTH + 1];
         for (int i = 0; i < elements.length; i++) elements[i] = i + Settings.MIN_IMAGE_GRID_WIDTH;
         gridWidthChoiceBox.getItems().addAll(elements);
         gridWidthChoiceBox.getSelectionModel().clearAndSelect(0);
+
+        //Initialize tagList order choicebox
+        tagListOrderChoiceBox.getItems().addAll("Name", "ID", "Frequency");
+        tagListOrderChoiceBox.getSelectionModel().clearAndSelect(0);
+    }
+
+    private void initWindowPropertiesFromSettings() {
+        Stage stage = ((Stage) explorerPane.getScene().getWindow());
+        stage.setMaximized(settings.isWindowMaximized());
+        if (settings.getWindowWidth() > 0) stage.setWidth(settings.getWindowWidth());
+        if (settings.getWindowHeight() > 0) stage.setHeight(settings.getWindowHeight());
+        if (settings.getWindowX() >= 0) stage.setX(settings.getWindowX());
+        if (settings.getWindowY() >= 0) stage.setY(settings.getWindowY());
     }
 
     private void initListeners() {
-        Platform.runLater(() -> {
-            Stage stage = ((Stage) imageGridView.getScene().getWindow());
-            stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setWindowMaximized(newValue));
-            stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setWindowWidth(newValue.intValue()));
-            stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setWindowHeight(newValue.intValue()));
-            stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setWindowX(newValue.intValue()));
-            stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
-        });
-
-        imageGridView.setSelectionListener(image -> {
-            previewImageView.setImage(image.getImage());
-
-            if (!image.getImage().isBackgroundLoading() || image.getImage().getProgress() == 1) {
-                updateImageInfoLabel(image);
-            } else {
-                updateImageInfoLabel(null);
-                image.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
-                    if (newValue.doubleValue() == 1 && !image.getImage().isError()) updateImageInfoLabel(image);
-                });
+        initWindowListeners();
+        initTagListViewListeners();
+        initExplorerPaneListeners();
+        initTagListScreenListeners();
+        initImageGridViewListeners();
+        duplicateLeftTagListView.setCellFactory(param -> new TagListCell());
+        duplicateRightTagListView.setCellFactory(param -> new TagListCell());
+        histConfidenceSettingTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                try {
+                    double d = Double.parseDouble(histConfidenceSettingTextField.getText());
+                    if (d <= 0 || d > 1) {
+                        histConfidenceSettingTextField.setText("0.95");
+                    }
+                } catch (NullPointerException | NumberFormatException e) {
+                    histConfidenceSettingTextField.setText("0.95");
+                }
             }
         });
+        //TODO: Fix event passthrough. Pressing enter or space doesn't get caught by the onKeyPressed handler that's pushing tag changes into the model
+//        initEditTagsAutoComplete();
+    }
 
+    private void initImageGridViewListeners() {
+        imageGridView.setSelectionListener(this::previewImage);
+        imageGridView.setProgressQueueListener(this::openProgressLockScreen);
+        imageGridView.setDuplicateRequestListener(this::processAndShowDuplicates);
+    }
+
+    private void initTagListScreenListeners() {
+        tagListOrderChoiceBox.setOnAction(event -> updateTagListListViewOrder());
+        tagListListView.setCellFactory(param -> {
+            TagListCell c = new TagListCell();
+            c.setOnContextMenuRequested(event -> {
+                MenuItem i1 = new MenuItem("Search this tag");
+                i1.setOnAction(event1 -> {
+                    searchTextField.setText(c.getItem().getName());
+                    searchTextField.positionCaret(searchTextField.getText().length());
+                    closeTagListScreen();
+                    searchOnAction();
+                });
+                ContextMenu m = new ContextMenu(i1);
+                m.show(c, event.getScreenX(), event.getScreenY());
+            });
+            return c;
+        });
+    }
+
+    private void initEditTagsAutoComplete() {
+        editTagsTextfield.textProperty().addListener((observable, oldValue, str) -> {
+            if (str != null && !str.isEmpty()) {
+                str = str.trim();
+                boolean subtract = str.startsWith("-");
+                if (subtract) str = str.substring(1);
+
+                if (autoCompleteContextMenu.isShowing()) autoCompleteContextMenu.hide();
+
+                autoCompleteContextMenu.getItems().clear();
+                int i = 0;
+                for (Tag t : menagerie.getTags()) {
+                    if (i >= 10) break;
+
+                    if (t.getName().startsWith(str)) {
+                        MenuItem m = new MenuItem(t.getName());
+                        m.setMnemonicParsing(false);
+                        m.setOnAction(event -> {
+                            if (subtract) editTagsTextfield.setText("-" + t.getName());
+                            else editTagsTextfield.setText(t.getName());
+                            editTagsTextfield.positionCaret(editTagsTextfield.getText().length());
+                            event.consume();
+                        });
+                        autoCompleteContextMenu.getItems().add(m);
+                        i++;
+                    }
+                }
+
+                if (i > 0) {
+                    Bounds b = editTagsTextfield.localToScreen(editTagsTextfield.getBoundsInLocal());
+                    if (!autoCompleteContextMenu.isShowing())
+                        autoCompleteContextMenu.show(editTagsTextfield, 0, 0);
+                    autoCompleteContextMenu.setX(b.getMinX() - 10);
+                    autoCompleteContextMenu.setY(b.getMinY() - autoCompleteContextMenu.getHeight() + 20);
+                }
+            } else if (autoCompleteContextMenu.isShowing()) {
+                autoCompleteContextMenu.hide();
+            }
+        });
+    }
+
+    private void initExplorerPaneListeners() {
         explorerPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
                 event.acceptTransferModes(TransferMode.ANY);
@@ -142,39 +268,42 @@ public class MainController {
             String url = event.getDragboard().getUrl();
 
             if (files != null && !files.isEmpty()) {
-                files.forEach(file -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()));
+                List<Runnable> queue = new ArrayList<>();
+                files.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+
+                if (queue.size() > 5) {
+                    openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+                } else {
+                    queue.forEach(Runnable::run);
+                }
             } else if (url != null && !url.isEmpty()) {
                 Platform.runLater(() -> {
                     String folder = settings.getLastFolder();
-                    // Regex removes everything up through the last slash of the url's path
+                    if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
                     String filename = URI.create(url).getPath().replaceAll("^.*/", "");
-                    if (!settings.isAutoImportFromWeb() || folder == null || !new File(folder).exists()) {
-                        FileChooser fc = new FileChooser();
-                        fc.setTitle("Save file from web");
-                        fc.setInitialFileName(filename);
-                        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
-                        File result = fc.showSaveDialog(explorerPane.getScene().getWindow());
-
-                        if (result == null) return;
-
-                        settings.setLastFolder(result.getParent());
-                        folder = result.getParent();
-                        filename = result.getName();
-                    }
-
-                    if (!folder.endsWith("\\") && !folder.endsWith("/")) folder = folder + "/";
                     File target = new File(folder + filename);
 
+                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !Filters.IMAGE_FILTER.accept(target)) {
+                        target = openSaveImageDialog(new File(settings.getLastFolder()), filename);
+                        if (target == null) return;
+                        if (target.exists())
+                            Main.showErrorMessage("Error", "File already exists, cannot be overwritten", target.getAbsolutePath());
+                    }
+
+                    final File finalTarget = target;
                     new Thread(() -> {
                         try {
-                            downloadAndSaveFile(url, target);
+                            downloadAndSaveFile(url, finalTarget);
                             Platform.runLater(() -> {
-                                ImageInfo img = menagerie.importImage(target, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
-                                if (img == null) target.delete();
-                                else if (settings.isBuildThumbnailOnImport()) img.getThumbnail();
+                                ImageInfo img = menagerie.importImage(finalTarget, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                                if (img == null) {
+                                    if (!finalTarget.delete())
+                                        System.out.println("Tried to delete a downloaded file, as it couldn't be imported, but failed: " + finalTarget);
+                                }
                             });
                         } catch (IOException e) {
                             e.printStackTrace();
+                            Platform.runLater(() -> Main.showErrorMessage("Unexpected error", "Error while trying to download image", e.getLocalizedMessage()));
                         }
                     }).start();
                 });
@@ -183,22 +312,110 @@ public class MainController {
         });
     }
 
-    private void updateImageInfoLabel(ImageInfo image) {
+    private File openSaveImageDialog(File folder, String filename) {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Save file from web");
+        if (filename != null) fc.setInitialFileName(filename);
+        if (folder != null) fc.setInitialDirectory(folder);
+        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        return fc.showSaveDialog(explorerPane.getScene().getWindow());
+    }
+
+    private void initTagListViewListeners() {
+        tagListView.setCellFactory(param -> {
+            TagListCell c = new TagListCell();
+            c.setOnContextMenuRequested(event -> {
+                if (c.getItem() != null) {
+                    MenuItem i1 = new MenuItem("Add to search");
+                    i1.setOnAction(event1 -> {
+                        if (searchTextField.getText().trim().isEmpty()) {
+                            searchTextField.setText(c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
+                        }
+                        searchTextField.requestFocus();
+                    });
+                    MenuItem i2 = new MenuItem("Subtract from search");
+                    i2.setOnAction(event1 -> {
+                        if (searchTextField.getText().trim().isEmpty()) {
+                            searchTextField.setText("-" + c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
+                        }
+                        searchTextField.requestFocus();
+                    });
+                    MenuItem i3 = new MenuItem("Remove from selected");
+                    i3.setOnAction(event1 -> imageGridView.getSelected().forEach(img -> img.removeTag(c.getItem())));
+                    ContextMenu m = new ContextMenu(i1, i2, new SeparatorMenuItem(), i3);
+                    m.show(c, event.getScreenX(), event.getScreenY());
+                }
+            });
+            return c;
+        });
+    }
+
+    private void initWindowListeners() {
+        Platform.runLater(() -> {
+            Stage stage = ((Stage) rootPane.getScene().getWindow());
+
+            //Bind window properties to settings
+            stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setWindowMaximized(newValue));
+            stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setWindowWidth(newValue.intValue()));
+            stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setWindowHeight(newValue.intValue()));
+            stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setWindowX(newValue.intValue()));
+            stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
+        });
+    }
+
+    private void previewImage(ImageInfo image) {
+        if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
+        currentlyPreviewing = image;
+
+        if (image != null) {
+            image.setTagListener(() -> updateTagListViewContents(image));
+
+            previewImageView.setImage(image.getImage());
+
+            updateTagListViewContents(image);
+
+            updateImageInfoLabel(image, imageInfoLabel);
+        } else {
+            previewImageView.setImage(null);
+            tagListView.getItems().clear();
+            updateImageInfoLabel(null, imageInfoLabel);
+        }
+    }
+
+    private void updateTagListViewContents(ImageInfo image) {
+        tagListView.getItems().clear();
+        image.getTags().forEach(tag -> tagListView.getItems().add(tag));
+        tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+    }
+
+    private static void updateImageInfoLabel(ImageInfo image, Label label) {
         if (image == null) {
-            imageInfoLabel.setText("Size: N/A - Res: N/A");
+            label.setText("Size: N/A - Res: N/A");
 
             return;
         }
 
-        //Find size string
-        double size = image.getFile().length();
-        String sizeStr;
-        if (size > 1024 * 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024 / 1024) + "GB";
-        else if (size > 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024) + "MB";
-        else if (size > 1024) sizeStr = String.format("%.2f", size / 1024) + "KB";
-        else sizeStr = String.format("%.2f", size) + "B";
+        if (image.getImage().isBackgroundLoading() && image.getImage().getProgress() != 1) {
+            label.setText("Size: N/A - Res: N/A");
 
-        imageInfoLabel.setText("Size: " + sizeStr + " - Res: " + image.getImage().getWidth() + "x" + image.getImage().getHeight());
+            image.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue.doubleValue() == 1 && !image.getImage().isError()) updateImageInfoLabel(image, label);
+            });
+        } else {
+            //Find size string
+            double size = image.getFile().length();
+            String sizeStr;
+            if (size > 1024 * 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024 / 1024) + "GB";
+            else if (size > 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024) + "MB";
+            else if (size > 1024) sizeStr = String.format("%.2f", size / 1024) + "KB";
+            else sizeStr = String.format("%.2f", size) + "B";
+
+            label.setText("Size: " + sizeStr + " - Res: " + (int) image.getImage().getWidth() + "x" + (int) image.getImage().getHeight());
+        }
     }
 
     private void searchOnAction() {
@@ -244,11 +461,11 @@ public class MainController {
                 }
             } else if (arg.startsWith("-")) {
                 Tag tag = menagerie.getTagByName(arg.substring(1));
-                if (tag == null) tag = new Tag(-1, arg.substring(1));
+                if (tag == null) tag = new Tag(menagerie, -1, arg.substring(1));
                 rules.add(new TagRule(tag, true));
             } else {
                 Tag tag = menagerie.getTagByName(arg);
-                if (tag == null) tag = new Tag(-1, arg);
+                if (tag == null) tag = new Tag(menagerie, -1, arg);
                 rules.add(new TagRule(tag, false));
             }
         }
@@ -259,12 +476,22 @@ public class MainController {
             @Override
             public void imageAdded(ImageInfo img) {
                 currentSearch.sortResults();
-                imageGridView.getItems().add(currentSearch.getResults().indexOf(img), img);
+                Platform.runLater(() -> imageGridView.getItems().add(currentSearch.getResults().indexOf(img), img));
             }
 
             @Override
             public void imageRemoved(ImageInfo img) {
-                imageGridView.getItems().remove(img);
+                Platform.runLater(() -> {
+                    int index = imageGridView.getItems().indexOf(img) + 1;
+                    if (index < imageGridView.getItems().size())
+                        imageGridView.setLastSelected(imageGridView.getItems().get(index));
+                    else if (index - 1 >= 0) imageGridView.setLastSelected(imageGridView.getItems().get(index - 1));
+
+                    if (img.equals(currentlyPreviewing)) previewImage(null);
+
+                    imageGridView.unselect(img);
+                    imageGridView.getItems().remove(img);
+                });
             }
         });
 
@@ -291,6 +518,8 @@ public class MainController {
         imageGridView.clearSelection();
         imageGridView.getItems().clear();
         imageGridView.getItems().addAll(currentSearch.getResults());
+
+        if (!imageGridView.getItems().isEmpty()) imageGridView.select(imageGridView.getItems().get(0), false, false);
     }
 
     private void setImageGridWidth(int n) {
@@ -298,43 +527,6 @@ public class MainController {
         imageGridView.setMinWidth(width);
         imageGridView.setMaxWidth(width);
         imageGridView.setPrefWidth(width);
-    }
-
-    public void searchButtonOnAction(ActionEvent event) {
-        searchOnAction();
-        imageGridView.requestFocus();
-    }
-
-    public void searchTextFieldOnAction(ActionEvent event) {
-        searchOnAction();
-        imageGridView.requestFocus();
-    }
-
-    public void explorerPaneOnKeyPressed(KeyEvent event) {
-        if (event.isControlDown()) {
-            switch (event.getCode()) {
-                case F:
-                    searchTextField.requestFocus();
-                    event.consume();
-                    break;
-                case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(Platform::exit);
-                    menagerie.getUpdateQueue().commit();
-                    event.consume();
-                    break;
-                case S:
-                    openSettingsScreen();
-                    event.consume();
-                    break;
-            }
-        }
-
-        switch (event.getCode()) {
-            case ESCAPE:
-                imageGridView.requestFocus();
-                event.consume();
-                break;
-        }
     }
 
     private static void downloadAndSaveFile(String url, File target) throws IOException {
@@ -351,10 +543,20 @@ public class MainController {
     private void openSettingsScreen() {
         //Update settings fx nodes
         lastFolderSettingTextField.setText(settings.getLastFolder());
+        dbURLTextfield.setText(settings.getDbUrl());
+        dbUserTextfield.setText(settings.getDbUser());
+        dbPassTextfield.setText(settings.getDbPass());
+
         autoImportWebSettingCheckbox.setSelected(settings.isAutoImportFromWeb());
         computeMD5SettingCheckbox.setSelected(settings.isComputeMD5OnImport());
         computeHistSettingCheckbox.setSelected(settings.isComputeHistogramOnImport());
         buildThumbSettingCheckbox.setSelected(settings.isBuildThumbnailOnImport());
+        duplicateComputeMD5SettingCheckbox.setSelected(settings.isComputeMD5ForSimilarity());
+        duplicateComputeHistSettingCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
+        duplicateConsolidateTagsSettingCheckbox.setSelected(settings.isConsolidateTags());
+
+        histConfidenceSettingTextField.setText("" + settings.getSimilarityThreshold());
+
         gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
 
         //Enable pane
@@ -365,22 +567,461 @@ public class MainController {
     }
 
     private void closeSettingsScreen(boolean saveChanges) {
-        if (saveChanges) {
-            //Save settings to settings object
-            settings.setLastFolder(lastFolderSettingTextField.getText());
-            settings.setAutoImportFromWeb(autoImportWebSettingCheckbox.isSelected());
-            settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
-            settings.setComputeHistogramOnImport(computeHistSettingCheckbox.isSelected());
-            settings.setBuildThumbnailOnImport(buildThumbSettingCheckbox.isSelected());
-            settings.setImageGridWidth(gridWidthChoiceBox.getValue());
-            setImageGridWidth(gridWidthChoiceBox.getValue());
-        }
-
         //Disable pane
         explorerPane.setDisable(false);
         settingsPane.setDisable(true);
         settingsPane.setOpacity(0);
         imageGridView.requestFocus();
+
+        if (saveChanges) {
+            //Save settings to settings object
+            settings.setLastFolder(lastFolderSettingTextField.getText());
+            settings.setDbUrl(dbURLTextfield.getText());
+            settings.setDbUser(dbUserTextfield.getText());
+            settings.setDbPass(dbPassTextfield.getText());
+
+            settings.setAutoImportFromWeb(autoImportWebSettingCheckbox.isSelected());
+            settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
+            settings.setComputeHistogramOnImport(computeHistSettingCheckbox.isSelected());
+            settings.setBuildThumbnailOnImport(buildThumbSettingCheckbox.isSelected());
+            settings.setComputeMD5ForSimilarity(duplicateComputeMD5SettingCheckbox.isSelected());
+            settings.setComputeHistogramForSimilarity(duplicateComputeHistSettingCheckbox.isSelected());
+            settings.setConsolidateTags(duplicateConsolidateTagsSettingCheckbox.isSelected());
+
+            settings.setSimilarityThreshold(Double.parseDouble(histConfidenceSettingTextField.getText()));
+
+            settings.setImageGridWidth(gridWidthChoiceBox.getValue());
+
+            setImageGridWidth(gridWidthChoiceBox.getValue());
+        }
+    }
+
+    private void openTagListScreen() {
+        tagListListView.getItems().clear();
+        tagListListView.getItems().addAll(menagerie.getTags());
+        updateTagListListViewOrder();
+
+        explorerPane.setDisable(true);
+        tagListPane.setDisable(false);
+        tagListPane.setOpacity(1);
+        tagListPane.requestFocus();
+    }
+
+    private void closeTagListScreen() {
+        explorerPane.setDisable(false);
+        tagListPane.setDisable(true);
+        tagListPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void openHelpScreen() {
+        explorerPane.setDisable(true);
+        helpPane.setDisable(false);
+        helpPane.setOpacity(1);
+        helpPane.requestFocus();
+    }
+
+    private void closeHelpScreen() {
+        explorerPane.setDisable(false);
+        helpPane.setDisable(true);
+        helpPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private ProgressLockThread openProgressLockScreen(String title, String message, List<Runnable> queue, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
+        if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
+
+        currentProgressLockThread = new ProgressLockThread(queue);
+        currentProgressLockThread.setUpdateListener((num, total) -> {
+            Platform.runLater(() -> {
+                final double progress = (double) num / total;
+                progressLockProgressBar.setProgress(progress);
+                progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
+            });
+        });
+        currentProgressLockThread.setCancelListener((num, total) -> {
+            Platform.runLater(this::closeProgressLockScreen);
+            if (cancelListener != null) cancelListener.progressCanceled(num, total);
+        });
+        currentProgressLockThread.setFinishListener(total -> {
+            Platform.runLater(this::closeProgressLockScreen);
+            if (finishListener != null) finishListener.progressFinished(total);
+        });
+        currentProgressLockThread.start();
+
+        progressLockTitleLabel.setText(title);
+        progressLockMessageLabel.setText(message);
+        progressLockProgressBar.setProgress(0);
+        progressLockCountLabel.setText("0/" + queue.size());
+
+        explorerPane.setDisable(true);
+        progressLockPane.setDisable(false);
+        progressLockPane.setOpacity(1);
+        progressLockPane.requestFocus();
+
+        return currentProgressLockThread;
+    }
+
+    private void closeProgressLockScreen() {
+        if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
+
+        explorerPane.setDisable(false);
+        progressLockPane.setDisable(true);
+        progressLockPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void openDuplicateScreen(List<ImageInfo> images) {
+        currentSimilarPairs = new ArrayList<>();
+        List<Runnable> queue = new ArrayList<>();
+
+        for (int actualI = 0; actualI < images.size(); actualI++) {
+            final int i = actualI;
+            queue.add(() -> {
+                ImageInfo i1 = images.get(i);
+                for (int j = i + 1; j < images.size(); j++) {
+                    ImageInfo i2 = images.get(j);
+
+                    //Compare md5 hashes
+                    if (i1.getMD5() != null && i1.getMD5().equals(i2.getMD5())) {
+                        currentSimilarPairs.add(new SimilarPair(i1, i2, 1.0));
+                        continue;
+                    }
+
+                    //Compare histograms
+                    if (i1.getHistogram() != null && i2.getHistogram() != null) {
+                        double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
+                        if (similarity >= settings.getSimilarityThreshold()) {
+                            currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
+                        }
+                    }
+                }
+            });
+        }
+
+        if (queue.size() > 5000) {
+            openProgressLockScreen("Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, total -> Platform.runLater(() -> {
+                if (currentSimilarPairs.isEmpty()) return;
+
+                previewSimilarPair(currentSimilarPairs.get(0));
+
+                explorerPane.setDisable(true);
+                duplicatePane.setDisable(false);
+                duplicatePane.setOpacity(1);
+                duplicatePane.requestFocus();
+            }), null);
+        } else {
+            queue.forEach(Runnable::run);
+
+            if (currentSimilarPairs.isEmpty()) return;
+
+            previewSimilarPair(currentSimilarPairs.get(0));
+
+            explorerPane.setDisable(true);
+            duplicatePane.setDisable(false);
+            duplicatePane.setOpacity(1);
+            duplicatePane.requestFocus();
+        }
+    }
+
+    private void closeDuplicateScreen() {
+        previewSimilarPair(null);
+
+        explorerPane.setDisable(false);
+        duplicatePane.setDisable(true);
+        duplicatePane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void previewSimilarPair(SimilarPair pair) {
+        if (pair == null) {
+            currentlyPreviewingPair = null;
+
+            duplicateLeftImageView.setImage(null);
+            duplicateLeftTagListView.getItems().clear();
+            duplicateLeftPathTextField.setText("N/A");
+            updateImageInfoLabel(null, duplicateLeftInfoLabel);
+
+            duplicateRightImageView.setImage(null);
+            duplicateRightTagListView.getItems().clear();
+            duplicateRightPathTextField.setText("N/A");
+            updateImageInfoLabel(null, duplicateRightInfoLabel);
+
+            duplicateSimilarityLabel.setText("N/A% Match");
+        } else {
+            currentlyPreviewingPair = pair;
+
+            duplicateLeftImageView.setImage(pair.getImg1().getImage());
+            duplicateLeftPathTextField.setText(pair.getImg1().getFile().toString());
+            duplicateLeftTagListView.getItems().clear();
+            duplicateLeftTagListView.getItems().addAll(pair.getImg1().getTags());
+            duplicateLeftTagListView.getItems().sort(Comparator.comparing(Tag::getName));
+            updateImageInfoLabel(pair.getImg1(), duplicateLeftInfoLabel);
+
+            duplicateRightImageView.setImage(pair.getImg2().getImage());
+            duplicateRightPathTextField.setText(pair.getImg2().getFile().toString());
+            duplicateRightTagListView.getItems().clear();
+            duplicateRightTagListView.getItems().addAll(pair.getImg2().getTags());
+            duplicateRightTagListView.getItems().sort(Comparator.comparing(Tag::getName));
+            updateImageInfoLabel(pair.getImg2(), duplicateRightInfoLabel);
+
+            DecimalFormat df = new DecimalFormat("#.##");
+            duplicateSimilarityLabel.setText((currentSimilarPairs.indexOf(pair) + 1) + "/" + currentSimilarPairs.size() + " - " + df.format(pair.getSimilarity() * 100) + "% Match");
+        }
+    }
+
+    private void previewLastSimilarPair() {
+        if (currentSimilarPairs == null || currentSimilarPairs.isEmpty()) return;
+
+        if (currentlyPreviewingPair == null) {
+            previewSimilarPair(currentSimilarPairs.get(0));
+        } else {
+            int i = currentSimilarPairs.indexOf(currentlyPreviewingPair);
+            if (i > 0) {
+                previewSimilarPair(currentSimilarPairs.get(i - 1));
+            } else {
+                previewSimilarPair(currentSimilarPairs.get(0));
+            }
+        }
+    }
+
+    private void previewNextSimilarPair() {
+        if (currentSimilarPairs == null || currentSimilarPairs.isEmpty()) return;
+
+        if (currentlyPreviewingPair == null) {
+            previewSimilarPair(currentSimilarPairs.get(0));
+        } else {
+            int i = currentSimilarPairs.indexOf(currentlyPreviewingPair);
+            if (i >= 0) {
+                if (i + 1 < currentSimilarPairs.size()) previewSimilarPair(currentSimilarPairs.get(i + 1));
+            } else {
+                previewSimilarPair(currentSimilarPairs.get(0));
+            }
+        }
+    }
+
+    private void updateTagListListViewOrder() {
+        switch (tagListOrderChoiceBox.getValue()) {
+            case "ID":
+                tagListListView.getItems().sort(Comparator.comparingInt(Tag::getId));
+                break;
+            case "Frequency":
+                HashMap<Integer, Integer> m = new HashMap<>();
+                tagListListView.getItems().sort((o1, o2) -> {
+                    int f1 = m.getOrDefault(o1.getId(), -1);
+                    if (f1 == -1) {
+                        f1 = o1.computeFrequency();
+                        m.put(o1.getId(), f1);
+                    }
+                    int f2 = m.getOrDefault(o2.getId(), -1);
+                    if (f2 == -1) {
+                        f2 = o2.computeFrequency();
+                        m.put(o2.getId(), f2);
+                    }
+
+                    return f2 - f1;
+                });
+                break;
+            case "Name":
+                tagListListView.getItems().sort(Comparator.comparing(Tag::getName));
+                break;
+        }
+    }
+
+    private void editTagsOfSelected(String input) {
+        if (input == null || input.isEmpty() || imageGridView.getSelected().isEmpty()) return;
+        lastTagString = input;
+
+        for (String text : input.split("\\s+")) {
+            if (text.startsWith("-")) {
+                Tag t = menagerie.getTagByName(text.substring(1));
+                if (t != null) {
+                    new ArrayList<>(imageGridView.getSelected()).forEach(img -> img.removeTag(t)); // New arraylist to avoid concurrent modification
+                }
+            } else {
+                Tag t = menagerie.getTagByName(text);
+                if (t == null) t = menagerie.createTag(text);
+                for (ImageInfo img : new ArrayList<>(imageGridView.getSelected())) { // New arraylist to avoid concurrent modification
+                    img.addTag(t);
+                }
+            }
+        }
+    }
+
+    private List<File> getFilesRecursive(File folder, FileFilter filter) {
+        List<File> results = new ArrayList<>();
+        for (File file : Objects.requireNonNull(folder.listFiles())) {
+            if (file.isDirectory()) {
+                results.addAll(getFilesRecursive(file, filter));
+            } else {
+                if (filter.accept(file)) results.add(file);
+            }
+        }
+        return results;
+    }
+
+    private void requestImportFolder() {
+        DirectoryChooser dc = new DirectoryChooser();
+        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
+            dc.setInitialDirectory(new File(settings.getLastFolder()));
+        File result = dc.showDialog(rootPane.getScene().getWindow());
+
+        if (result != null) {
+            List<Runnable> queue = new ArrayList<>();
+            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+
+            if (queue.size() > 5) {
+                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+            } else {
+                queue.forEach(Runnable::run);
+            }
+        }
+    }
+
+    private void requestImportFiles() {
+        FileChooser fc = new FileChooser();
+        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
+            fc.setInitialDirectory(new File(settings.getLastFolder()));
+        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
+
+        if (results != null) {
+            List<Runnable> queue = new ArrayList<>();
+            results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+
+            if (queue.size() > 5) {
+                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+            } else {
+                queue.forEach(Runnable::run);
+            }
+        }
+    }
+
+    private void deleteDuplicateImageEvent(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
+        int index = currentSimilarPairs.indexOf(currentlyPreviewingPair);
+        toDelete.remove(deleteFile);
+        
+        //Consolidate tags
+        if (settings.isConsolidateTags()) {
+            System.out.println(toKeep.getTags().size());
+            toDelete.getTags().forEach(toKeep::addTag);
+            System.out.println(toKeep.getTags().size());
+        }
+
+        //Remove other pairs containing the deleted image
+        for (SimilarPair pair : new ArrayList<>(currentSimilarPairs)) {
+            if (toDelete.equals(pair.getImg1()) || toDelete.equals(pair.getImg2())) {
+                int i = currentSimilarPairs.indexOf(pair);
+                currentSimilarPairs.remove(pair);
+                if (i < index) {
+                    index--;
+                }
+            }
+        }
+
+        if (index > currentSimilarPairs.size() - 1) index = currentSimilarPairs.size() - 1;
+
+        if (currentSimilarPairs.isEmpty()) {
+            closeDuplicateScreen();
+        } else {
+            previewSimilarPair(currentSimilarPairs.get(index));
+        }
+    }
+
+    public void searchButtonOnAction(ActionEvent event) {
+        searchOnAction();
+        imageGridView.requestFocus();
+        event.consume();
+    }
+
+    public void searchTextFieldOnAction(ActionEvent event) {
+        searchOnAction();
+        imageGridView.requestFocus();
+        event.consume();
+    }
+
+    public void explorerPaneOnKeyPressed(KeyEvent event) {
+        if (event.isControlDown()) {
+            switch (event.getCode()) {
+                case F:
+                    searchTextField.requestFocus();
+                    event.consume();
+                    break;
+                case E:
+                    editTagsTextfield.setText(lastTagString);
+                    editTagsTextfield.requestFocus();
+                    event.consume();
+                    break;
+                case Q:
+                    menagerie.getUpdateQueue().enqueueUpdate(Platform::exit);
+                    menagerie.getUpdateQueue().commit();
+                    event.consume();
+                    break;
+                case S:
+                    openSettingsScreen();
+                    event.consume();
+                    break;
+                case T:
+                    openTagListScreen();
+                    event.consume();
+                    break;
+                case I:
+                    if (event.isShiftDown())
+                        requestImportFolder();
+                    else
+                        requestImportFiles();
+                    event.consume();
+                    break;
+                case H:
+                    openHelpScreen();
+                    event.consume();
+                    break;
+                case D:
+                    processAndShowDuplicates(imageGridView.getSelected());
+                    event.consume();
+                    break;
+            }
+        }
+
+        switch (event.getCode()) {
+            case ESCAPE:
+                imageGridView.requestFocus();
+                event.consume();
+                break;
+        }
+    }
+
+    private void processAndShowDuplicates(List<ImageInfo> images) {
+        if (settings.isComputeMD5ForSimilarity()) {
+            List<Runnable> queue = new ArrayList<>();
+
+            images.forEach(i -> {
+                if (i.getMD5() == null) queue.add(() -> {
+                    i.initializeMD5();
+                    i.commitMD5ToDatabase();
+                });
+            });
+
+            openProgressLockScreen("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, total -> {
+                //TODO: Fix this. If md5 computing is disabled, histogram building won't happen
+                if (settings.isComputeHistogramForSimilarity()) {
+                    List<Runnable> queue2 = new ArrayList<>();
+
+                    images.forEach(i -> {
+                        if (i.getHistogram() == null) queue2.add(() -> {
+                            i.initializeHistogram();
+                            i.commitHistogramToDatabase();
+                        });
+                    });
+
+                    Platform.runLater(() -> openProgressLockScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
+                } else {
+                    Platform.runLater(() -> openDuplicateScreen(images));
+                }
+            }, null);
+        } else {
+            openDuplicateScreen(images);
+        }
     }
 
     public void settingsAcceptButtonOnAction(ActionEvent event) {
@@ -396,7 +1037,8 @@ public class MainController {
     public void lastFolderSettingBrowseButtonOnAction(ActionEvent event) {
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("Choose default save folder");
-        dc.setInitialDirectory(new File(lastFolderSettingTextField.getText()));
+        if (lastFolderSettingTextField.getText() != null && !lastFolderSettingTextField.getText().isEmpty())
+            dc.setInitialDirectory(new File(lastFolderSettingTextField.getText()));
         File result = dc.showDialog(settingsPane.getScene().getWindow());
 
         if (result != null) {
@@ -416,7 +1058,184 @@ public class MainController {
                 closeSettingsScreen(true);
                 event.consume();
                 break;
+            case S:
+                if (event.isControlDown()) {
+                    closeSettingsScreen(false);
+                    event.consume();
+                }
+                break;
         }
+    }
+
+    public void editTagsTextfieldOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case SPACE:
+                editTagsOfSelected(editTagsTextfield.getText());
+                Platform.runLater(() -> editTagsTextfield.setText(null));
+                event.consume();
+                break;
+            case ENTER:
+                editTagsOfSelected(editTagsTextfield.getText());
+                editTagsTextfield.setText(null);
+                imageGridView.requestFocus();
+                event.consume();
+                break;
+            case ESCAPE:
+                editTagsTextfield.setText(null);
+                imageGridView.requestFocus();
+                event.consume();
+                break;
+        }
+    }
+
+    public void tagListExitButtonOnAction(ActionEvent event) {
+        closeTagListScreen();
+        event.consume();
+    }
+
+    public void tagListPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeTagListScreen();
+                event.consume();
+                break;
+            case T:
+                if (event.isControlDown()) {
+                    closeTagListScreen();
+                    event.consume();
+                }
+                break;
+        }
+    }
+
+    public void helpExitButtonOnAction(ActionEvent event) {
+        closeHelpScreen();
+        event.consume();
+    }
+
+    public void helpPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeHelpScreen();
+                event.consume();
+                break;
+            case H:
+                if (event.isControlDown()) {
+                    closeHelpScreen();
+                    event.consume();
+                }
+                break;
+        }
+    }
+
+    public void progressLockStopButtonOnAction(ActionEvent event) {
+        closeProgressLockScreen();
+        event.consume();
+    }
+
+    public void progressLockPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeProgressLockScreen();
+                event.consume();
+                break;
+        }
+    }
+
+    public void duplicateLeftDeleteButtonOnAction(ActionEvent event) {
+        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), currentlyPreviewingPair.getImg2(), true);
+
+        event.consume();
+    }
+
+    public void duplicateRightDeleteButtonOnAction(ActionEvent event) {
+        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), currentlyPreviewingPair.getImg1(), true);
+
+        event.consume();
+    }
+
+    public void duplicateCloseButtonOnAction(ActionEvent event) {
+        closeDuplicateScreen();
+        event.consume();
+    }
+
+    public void duplicatePaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeDuplicateScreen();
+                event.consume();
+                break;
+            case LEFT:
+                previewLastSimilarPair();
+                event.consume();
+                break;
+            case RIGHT:
+                previewNextSimilarPair();
+                event.consume();
+                break;
+        }
+    }
+
+    public void duplicatePrevPairButtonOnAction(ActionEvent event) {
+        previewLastSimilarPair();
+        event.consume();
+    }
+
+    public void duplicateNextPairButtonOnAction(ActionEvent event) {
+        previewNextSimilarPair();
+        event.consume();
+    }
+
+    public void duplicateImagesPaneMouseEntered(MouseEvent event) {
+        duplicateLeftTagListView.setDisable(false);
+        duplicateRightTagListView.setDisable(false);
+        duplicateLeftTagListView.setOpacity(0.75);
+        duplicateRightTagListView.setOpacity(0.75);
+        event.consume();
+    }
+
+    public void duplicateImagesPaneMouseExited(MouseEvent event) {
+        duplicateLeftTagListView.setDisable(true);
+        duplicateRightTagListView.setDisable(true);
+        duplicateLeftTagListView.setOpacity(0);
+        duplicateRightTagListView.setOpacity(0);
+        event.consume();
+    }
+
+    public static void main(String[] args) throws IOException, SQLException {
+        Connection db = DriverManager.getConnection("jdbc:h2:~/test-delete");
+
+        Statement s = db.createStatement();
+
+        s.executeUpdate("DROP TABLE IF EXISTS test;" +
+                "CREATE TABLE test(test BLOB, test2 NVARCHAR(32));");
+
+        ByteArrayInputStream is = new ByteArrayInputStream(HexBin.decode("D98D5AFC231AC4F3ED1A9F41DBB22D82"));
+
+        PreparedStatement ps = db.prepareStatement("INSERT INTO test VALUES (?, ?);");
+        ps.setBinaryStream(1, is);
+        ps.setNString(2, "D98D5AFC231AC4F3ED1A9F41DBB22D82");
+        ps.executeUpdate();
+        ps.close();
+
+        ByteBuffer bb = ByteBuffer.wrap(new byte[16]).putDouble(0.23012312).putDouble(1230.12323);
+        System.out.println(Arrays.toString(bb.array()));
+        bb = ByteBuffer.wrap(bb.array());
+        System.out.println(bb.getDouble());
+        System.out.println(bb.getDouble());
+
+        long t = System.currentTimeMillis();
+        ResultSet rs = s.executeQuery("SELECT test FROM test;");
+        while (rs.next()) {
+            byte[] b = new byte[16];
+            rs.getBinaryStream(1).read(b);
+            System.out.println(Arrays.toString(b));
+//            System.out.println(rs.getNString(1));
+        }
+        System.out.println((System.currentTimeMillis() - t) / 1000.0 + "s");
+
+        s.close();
+        db.close();
     }
 
 }

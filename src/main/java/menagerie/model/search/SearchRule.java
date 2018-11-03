@@ -1,6 +1,6 @@
 package menagerie.model.search;
 
-import menagerie.model.ImageInfo;
+import menagerie.model.menagerie.ImageInfo;
 
 public abstract class SearchRule implements Comparable<SearchRule> {
 

@@ -1,7 +1,7 @@
 package menagerie.model.search;
 
-import menagerie.model.ImageInfo;
-import menagerie.model.Tag;
+import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Tag;
 
 public class TagRule extends SearchRule {
 

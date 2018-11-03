@@ -1,23 +1,15 @@
-package menagerie.gui;
+package menagerie.gui.grid;
 
 import javafx.geometry.Pos;
-import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
-import menagerie.model.ImageInfo;
+import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridCell;
-
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.stream.ImageInputStream;
-import java.awt.*;
-import java.io.IOException;
-import java.util.Iterator;
 
 
 public class ImageGridCell extends GridCell<ImageInfo> {
 
-    private static final String UNSELECTED_BG_CSS = "-fx-background-color: lightgray";
-    private static final String SELECTED_BG_CSS = "-fx-background-color: blue";
+    private static final String UNSELECTED_BG_CSS = "-fx-background-color: derive(-fx-color, 50%)";
+    private static final String SELECTED_BG_CSS = "-fx-background-color: derive(-fx-accent, 100%)";
 
     final private ImageView view;
     final private ImageGridView grid;

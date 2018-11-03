@@ -1,8 +1,7 @@
 package menagerie.model.search;
 
-import com.sun.istack.internal.NotNull;
-import menagerie.model.ImageInfo;
-import menagerie.model.Menagerie;
+import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Menagerie;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +17,7 @@ public class Search {
     private List<ImageInfo> results = new ArrayList<>();
 
 
-    public Search(@NotNull Menagerie menagerie, List<SearchRule> rules, boolean descending) {
+    public Search(Menagerie menagerie, List<SearchRule> rules, boolean descending) {
         this.menagerie = menagerie;
         this.rules = rules;
         this.descending = descending;

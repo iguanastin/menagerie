@@ -1,6 +1,6 @@
-package menagerie.gui;
+package menagerie.gui.grid;
 
-import menagerie.model.ImageInfo;
+import menagerie.model.menagerie.ImageInfo;
 
 public interface SelectionListener {
 

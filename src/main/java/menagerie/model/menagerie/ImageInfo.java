@@ -1,4 +1,4 @@
-package menagerie.model;
+package menagerie.model.menagerie;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
@@ -31,17 +31,21 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private final List<Tag> tags = new ArrayList<>();
 
     private String md5;
+    private ImageHistogram histogram;
 
     private SoftReference<Image> thumbnail;
     private SoftReference<Image> image;
 
+    private ImageTagUpdateListener tagListener = null;
 
-    public ImageInfo(Menagerie menagerie, int id, long dateAdded, File file, String md5) {
+
+    public ImageInfo(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
         this.menagerie = menagerie;
         this.id = id;
         this.dateAdded = dateAdded;
         this.file = file;
         this.md5 = md5;
+        this.histogram = histogram;
     }
 
     public File getFile() {
@@ -109,8 +113,24 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return img;
     }
 
+    private Image getImageAsync() {
+        Image img = null;
+        if (image != null) img = image.get();
+        if (img == null) {
+            img = new Image(file.toURI().toString());
+            image = new SoftReference<>(img);
+        } else if (img.isBackgroundLoading() && img.getProgress() != 1) {
+            img = new Image(file.toURI().toString());
+        }
+        return img;
+    }
+
     public String getMD5() {
         return md5;
+    }
+
+    public ImageHistogram getHistogram() {
+        return histogram;
     }
 
     public void initializeMD5() {
@@ -118,24 +138,54 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
         try {
             md5 = HexBin.encode(MD5Hasher.hash(getFile()));
-            menagerie.putMD5(md5, this);
-
-            if (md5 != null) {
-                menagerie.getUpdateQueue().enqueueUpdate(() -> {
-                    try {
-                        menagerie.PS_SET_IMG_MD5.setNString(1, md5);
-                        menagerie.PS_SET_IMG_MD5.setInt(2, id);
-                        menagerie.PS_SET_IMG_MD5.executeUpdate();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                });
-                menagerie.getUpdateQueue().commit();
-            }
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
 
+    public boolean commitMD5ToDatabase() {
+        if (md5 == null) return false;
+
+        menagerie.imageMD5Updated(this);
+
+        menagerie.getUpdateQueue().enqueueUpdate(() -> {
+            try {
+                menagerie.PS_SET_IMG_MD5.setNString(1, md5);
+                menagerie.PS_SET_IMG_MD5.setInt(2, id);
+                menagerie.PS_SET_IMG_MD5.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+        menagerie.getUpdateQueue().commit();
+
+        return true;
+    }
+
+    public void initializeHistogram() {
+        try {
+            histogram = new ImageHistogram(getImageAsync());
+        } catch (HistogramReadException e) {
+        }
+    }
+
+    public boolean commitHistogramToDatabase() {
+        if (histogram == null) return false;
+
+        menagerie.getUpdateQueue().enqueueUpdate(() -> {
+            try {
+                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(1, histogram.getAlphaAsInputStream());
+                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(2, histogram.getRedAsInputStream());
+                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(3, histogram.getGreenAsInputStream());
+                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(4, histogram.getBlueAsInputStream());
+                menagerie.PS_SET_IMG_HISTOGRAM.setInt(5, id);
+                menagerie.PS_SET_IMG_HISTOGRAM.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
+
+        return true;
     }
 
     public List<Tag> getTags() {
@@ -165,6 +215,10 @@ public class ImageInfo implements Comparable<ImageInfo> {
         });
         menagerie.getUpdateQueue().commit();
 
+        menagerie.imageTagsUpdated(this);
+
+        if (tagListener != null) tagListener.tagsChanged();
+
         return true;
     }
 
@@ -183,7 +237,19 @@ public class ImageInfo implements Comparable<ImageInfo> {
         });
         menagerie.getUpdateQueue().commit();
 
+        menagerie.imageTagsUpdated(this);
+
+        if (tagListener != null) tagListener.tagsChanged();
+
         return true;
+    }
+
+    public void remove(boolean deleteFile) {
+        menagerie.removeImage(this, deleteFile);
+    }
+
+    public void setTagListener(ImageTagUpdateListener tagListener) {
+        this.tagListener = tagListener;
     }
 
     @Override
