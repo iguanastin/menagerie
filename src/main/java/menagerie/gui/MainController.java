@@ -271,10 +271,8 @@ public class MainController {
                 List<Runnable> queue = new ArrayList<>();
                 files.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
-                if (queue.size() > 5) {
+                if (!queue.isEmpty()) {
                     openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
-                } else {
-                    queue.forEach(Runnable::run);
                 }
             } else if (url != null && !url.isEmpty()) {
                 Platform.runLater(() -> {
@@ -870,10 +868,8 @@ public class MainController {
             List<Runnable> queue = new ArrayList<>();
             getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
-            if (queue.size() > 5) {
+            if (!queue.isEmpty()) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
-            } else {
-                queue.forEach(Runnable::run);
             }
         }
     }
@@ -889,10 +885,8 @@ public class MainController {
             List<Runnable> queue = new ArrayList<>();
             results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
-            if (queue.size() > 5) {
+            if (!queue.isEmpty()) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
-            } else {
-                queue.forEach(Runnable::run);
             }
         }
     }
