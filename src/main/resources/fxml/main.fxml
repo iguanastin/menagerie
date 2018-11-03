@@ -133,6 +133,7 @@
                                 <Label text="Histogram confidence level:" />
                                 <TextField fx:id="histConfidenceSettingTextField" promptText="0.95 suggested" />
                             </HBox>
+                            <CheckBox fx:id="duplicateConsolidateTagsSettingCheckbox" text="Consolidate tags on delete" />
                         </VBox>
                         <HBox alignment="CENTER_LEFT" spacing="5.0">
                             <Label text="Explorer Grid row width:" />

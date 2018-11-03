@@ -24,6 +24,7 @@ public class Settings {
     private static final String DB_PASS_TAG = "dbpass";
     private static final String DB_URL_TAG = "dburl";
     private static final String SIMILARITY_THRESHOLD_TAG = "similaritythreshold";
+    private static final String CONSOLIDATE_TAGS_TAG = "consolidatetags";
 
     private boolean autoImportFromWeb = false;
     private boolean computeMD5OnImport = true;
@@ -32,6 +33,7 @@ public class Settings {
     private boolean windowMaximized = false;
     private boolean computeMD5ForSimilarity = true;
     private boolean computeHistogramForSimilarity = false;
+    private boolean consolidateTags = true;
     private String lastFolder = null;
     private String dbUser = "sa";
     private String dbPass = "";
@@ -129,6 +131,10 @@ public class Settings {
 
     public boolean isComputeHistogramForSimilarity() {
         return computeHistogramForSimilarity;
+    }
+
+    public boolean isConsolidateTags() {
+        return consolidateTags;
     }
 
     public void setAutoImportFromWeb(boolean autoImportFromWeb) {
@@ -285,6 +291,15 @@ public class Settings {
         }
     }
 
+    public void setConsolidateTags(boolean consolidateTags) {
+        this.consolidateTags = consolidateTags;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void saveToFile() throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(file);
 
@@ -295,6 +310,7 @@ public class Settings {
         writer.println(BUILD_THUMBNAIL_TAG + "=" + buildThumbnailOnImport);
         writer.println(COMPUTE_MD5_FOR_SIMILARITY_TAG + "=" + computeMD5ForSimilarity);
         writer.println(COMPUTE_HIST_FOR_SIMILARITY_TAG + "=" + computeHistogramForSimilarity);
+        writer.println(CONSOLIDATE_TAGS_TAG + "=" + consolidateTags);
         writer.println(IMAGE_GRID_WIDTH_TAG + "=" + imageGridWidth);
         writer.println(WINDOW_MAXIMZED_TAG + "=" + windowMaximized);
         writer.println(WINDOW_WIDTH_TAG + "=" + windowWidth);
@@ -339,6 +355,9 @@ public class Settings {
                         break;
                     case COMPUTE_HIST_FOR_SIMILARITY_TAG:
                         computeHistogramForSimilarity = Boolean.parseBoolean(val);
+                        break;
+                    case CONSOLIDATE_TAGS_TAG:
+                        consolidateTags = Boolean.parseBoolean(val);
                         break;
                     case IMAGE_GRID_WIDTH_TAG:
                         imageGridWidth = Math.max(MIN_IMAGE_GRID_WIDTH, Math.min(Integer.parseInt(val), MAX_IMAGE_GRID_WIDTH));

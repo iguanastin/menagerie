@@ -69,6 +69,7 @@ public class MainController {
     public CheckBox duplicateComputeMD5SettingCheckbox;
     public CheckBox duplicateComputeHistSettingCheckbox;
     public TextField histConfidenceSettingTextField;
+    public CheckBox duplicateConsolidateTagsSettingCheckbox;
 
     public BorderPane tagListPane;
     public ChoiceBox<String> tagListOrderChoiceBox;
@@ -552,6 +553,7 @@ public class MainController {
         buildThumbSettingCheckbox.setSelected(settings.isBuildThumbnailOnImport());
         duplicateComputeMD5SettingCheckbox.setSelected(settings.isComputeMD5ForSimilarity());
         duplicateComputeHistSettingCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
+        duplicateConsolidateTagsSettingCheckbox.setSelected(settings.isConsolidateTags());
 
         histConfidenceSettingTextField.setText("" + settings.getSimilarityThreshold());
 
@@ -584,6 +586,7 @@ public class MainController {
             settings.setBuildThumbnailOnImport(buildThumbSettingCheckbox.isSelected());
             settings.setComputeMD5ForSimilarity(duplicateComputeMD5SettingCheckbox.isSelected());
             settings.setComputeHistogramForSimilarity(duplicateComputeHistSettingCheckbox.isSelected());
+            settings.setConsolidateTags(duplicateConsolidateTagsSettingCheckbox.isSelected());
 
             settings.setSimilarityThreshold(Double.parseDouble(histConfidenceSettingTextField.getText()));
 
@@ -763,7 +766,7 @@ public class MainController {
             updateImageInfoLabel(pair.getImg2(), duplicateRightInfoLabel);
 
             DecimalFormat df = new DecimalFormat("#.##");
-            duplicateSimilarityLabel.setText(df.format(pair.getSimilarity() * 100) + "% Match");
+            duplicateSimilarityLabel.setText((currentSimilarPairs.indexOf(pair) + 1) + "/" + currentSimilarPairs.size() + " - " + df.format(pair.getSimilarity() * 100) + "% Match");
         }
     }
 
@@ -894,12 +897,20 @@ public class MainController {
         }
     }
 
-    private void deleteDuplicateImageEvent(ImageInfo img, boolean deleteFile) {
+    private void deleteDuplicateImageEvent(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
         int index = currentSimilarPairs.indexOf(currentlyPreviewingPair);
-        img.remove(deleteFile);
+        toDelete.remove(deleteFile);
+        
+        //Consolidate tags
+        if (settings.isConsolidateTags()) {
+            System.out.println(toKeep.getTags().size());
+            toDelete.getTags().forEach(toKeep::addTag);
+            System.out.println(toKeep.getTags().size());
+        }
 
+        //Remove other pairs containing the deleted image
         for (SimilarPair pair : new ArrayList<>(currentSimilarPairs)) {
-            if (img.equals(pair.getImg1()) || img.equals(pair.getImg2())) {
+            if (toDelete.equals(pair.getImg1()) || toDelete.equals(pair.getImg2())) {
                 int i = currentSimilarPairs.indexOf(pair);
                 currentSimilarPairs.remove(pair);
                 if (i < index) {
@@ -1132,13 +1143,13 @@ public class MainController {
     }
 
     public void duplicateLeftDeleteButtonOnAction(ActionEvent event) {
-        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), true);
+        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), currentlyPreviewingPair.getImg2(), true);
 
         event.consume();
     }
 
     public void duplicateRightDeleteButtonOnAction(ActionEvent event) {
-        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), true);
+        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), currentlyPreviewingPair.getImg1(), true);
 
         event.consume();
     }
