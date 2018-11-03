@@ -5,6 +5,7 @@ import menagerie.model.db.DatabaseUpdateQueue;
 import menagerie.model.search.Search;
 
 import java.io.File;
+import java.io.InputStream;
 import java.sql.*;
 import java.util.*;
 
@@ -25,6 +26,7 @@ public class Menagerie {
     private final PreparedStatement PS_DELETE_TAG;
     private final PreparedStatement PS_CREATE_TAG;
     final PreparedStatement PS_SET_IMG_MD5;
+    final PreparedStatement PS_SET_IMG_HISTOGRAM;
     final PreparedStatement PS_SET_IMG_THUMBNAIL;
     final PreparedStatement PS_GET_IMG_THUMBNAIL;
     final PreparedStatement PS_ADD_TAG_TO_IMG;
@@ -52,6 +54,7 @@ public class Menagerie {
         //Initialize prepared database statements
         PS_GET_IMG_TAG_IDS = database.prepareStatement("SELECT tagged.tag_id FROM tagged JOIN imgs ON tagged.img_id=imgs.id WHERE imgs.id=?;");
         PS_SET_IMG_MD5 = database.prepareStatement("UPDATE imgs SET imgs.md5=? WHERE imgs.id=?;");
+        PS_SET_IMG_HISTOGRAM = database.prepareStatement("UPDATE imgs SET imgs.hist_a=?, imgs.hist_r=?, imgs.hist_g=?, imgs.hist_b=? WHERE imgs.id=?");
         PS_SET_IMG_THUMBNAIL = database.prepareStatement("UPDATE imgs SET imgs.thumbnail=? WHERE imgs.id=?;");
         PS_GET_IMG_THUMBNAIL = database.prepareStatement("SELECT imgs.thumbnail FROM imgs WHERE imgs.id=?;");
         PS_ADD_TAG_TO_IMG = database.prepareStatement("INSERT INTO tagged(img_id, tag_id) VALUES (?, ?);");
@@ -59,7 +62,7 @@ public class Menagerie {
         PS_GET_HIGHEST_IMG_ID = database.prepareStatement("SELECT TOP 1 imgs.id FROM imgs ORDER BY imgs.id DESC;");
         PS_GET_HIGHEST_TAG_ID = database.prepareStatement("SELECT TOP 1 tags.id FROM tags ORDER BY tags.id DESC;");
         PS_DELETE_IMG = database.prepareStatement("DELETE FROM imgs WHERE imgs.id=?;");
-        PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5, histogram) VALUES (?, ?, ?, ?, ?);");
+        PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5, hist_a, hist_r, hist_g, hist_b) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
         PS_DELETE_TAG = database.prepareStatement("DELETE FROM tags WHERE tags.id=?;");
         PS_CREATE_TAG = database.prepareStatement("INSERT INTO tags(id, name) VALUES (?, ?);");
 
@@ -111,9 +114,17 @@ public class Menagerie {
         ResultSet rs = s.executeQuery(SQL_GET_IMGS);
 
         while (rs.next()) {
-            double[][] bins = (double[][]) rs.getObject("histogram");
             ImageHistogram hist = null;
-            if (bins != null) hist = new ImageHistogram(bins);
+
+            InputStream histAlpha = rs.getBinaryStream("hist_a");
+            if (histAlpha != null) {
+                try {
+                    hist = new ImageHistogram(histAlpha, rs.getBinaryStream("hist_r"), rs.getBinaryStream("hist_g"), rs.getBinaryStream("hist_b"));
+                } catch (HistogramReadException e) {
+                    System.out.println("Histogram failed to load from database:");
+                    e.printStackTrace();
+                }
+            }
 
             ImageInfo img = new ImageInfo(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
             images.add(img);
@@ -179,10 +190,16 @@ public class Menagerie {
             PS_CREATE_IMG.setNString(2, img.getFile().getAbsolutePath());
             PS_CREATE_IMG.setLong(3, img.getDateAdded());
             PS_CREATE_IMG.setNString(4, img.getMD5());
+            PS_CREATE_IMG.setBinaryStream(5, null);
+            PS_CREATE_IMG.setBinaryStream(6, null);
+            PS_CREATE_IMG.setBinaryStream(7, null);
+            PS_CREATE_IMG.setBinaryStream(8, null);
             if (img.getHistogram() != null) {
-//                PS_CREATE_IMG.setObject(5, img.getHistogram().getBins()); // TODO: Find a way to actually put the histogram into the damn database
-                PS_CREATE_IMG.setObject(5, null);
-            } else PS_CREATE_IMG.setObject(5, null);
+                PS_CREATE_IMG.setBinaryStream(5, img.getHistogram().getAlphaAsInputStream());
+                PS_CREATE_IMG.setBinaryStream(6, img.getHistogram().getRedAsInputStream());
+                PS_CREATE_IMG.setBinaryStream(7, img.getHistogram().getGreenAsInputStream());
+                PS_CREATE_IMG.setBinaryStream(8, img.getHistogram().getBlueAsInputStream());
+            }
             PS_CREATE_IMG.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();

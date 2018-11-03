@@ -1,5 +1,6 @@
 package menagerie.gui;
 
+import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -25,18 +26,14 @@ import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
 
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 import java.text.DecimalFormat;
 import java.util.*;
 
@@ -1180,6 +1177,42 @@ public class MainController {
         duplicateLeftTagListView.setOpacity(0);
         duplicateRightTagListView.setOpacity(0);
         event.consume();
+    }
+
+    public static void main(String[] args) throws IOException, SQLException {
+        Connection db = DriverManager.getConnection("jdbc:h2:~/test-delete");
+
+        Statement s = db.createStatement();
+
+        s.executeUpdate("DROP TABLE IF EXISTS test;" +
+                "CREATE TABLE test(test BLOB, test2 NVARCHAR(32));");
+
+        ByteArrayInputStream is = new ByteArrayInputStream(HexBin.decode("D98D5AFC231AC4F3ED1A9F41DBB22D82"));
+
+        PreparedStatement ps = db.prepareStatement("INSERT INTO test VALUES (?, ?);");
+        ps.setBinaryStream(1, is);
+        ps.setNString( 2,"D98D5AFC231AC4F3ED1A9F41DBB22D82");
+        ps.executeUpdate();
+        ps.close();
+
+        ByteBuffer bb = ByteBuffer.wrap(new byte[16]).putDouble(0.23012312).putDouble(1230.12323);
+        System.out.println(Arrays.toString(bb.array()));
+        bb = ByteBuffer.wrap(bb.array());
+        System.out.println(bb.getDouble());
+        System.out.println(bb.getDouble());
+
+        long t = System.currentTimeMillis();
+        ResultSet rs = s.executeQuery("SELECT test FROM test;");
+        while (rs.next()) {
+            byte[] b = new byte[16];
+            rs.getBinaryStream(1).read(b);
+            System.out.println(Arrays.toString(b));
+//            System.out.println(rs.getNString(1));
+        }
+        System.out.println((System.currentTimeMillis() - t) / 1000.0 + "s");
+
+        s.close();
+        db.close();
     }
 
 }

@@ -166,14 +166,24 @@ public class ImageInfo implements Comparable<ImageInfo> {
         try {
             histogram = new ImageHistogram(getImageAsync());
         } catch (HistogramReadException e) {
-            e.printStackTrace();
         }
     }
 
     public boolean commitHistogramToDatabase() {
         if (histogram == null) return false;
 
-        //TODO: Commit to database somehow (:
+        menagerie.getUpdateQueue().enqueueUpdate(() -> {
+            try {
+                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(1, histogram.getAlphaAsInputStream());
+                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(2, histogram.getRedAsInputStream());
+                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(3, histogram.getGreenAsInputStream());
+                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(4, histogram.getBlueAsInputStream());
+                menagerie.PS_SET_IMG_HISTOGRAM.setInt(5, id);
+                menagerie.PS_SET_IMG_HISTOGRAM.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        });
 
         return true;
     }
