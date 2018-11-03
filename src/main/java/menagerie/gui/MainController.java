@@ -1,6 +1,5 @@
 package menagerie.gui;
 
-import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -32,7 +31,6 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.sql.*;
@@ -167,10 +165,13 @@ public class MainController {
 
     private void initListeners() {
         initWindowListeners();
-        initTagListViewListeners();
-        initExplorerPaneListeners();
+        initExplorerScreenListeners();
         initTagListScreenListeners();
-        initImageGridViewListeners();
+        initDuplicateScreenListeners();
+//        initEditTagsAutoComplete();
+    }
+
+    private void initDuplicateScreenListeners() {
         duplicateLeftTagListView.setCellFactory(param -> new TagListCell());
         duplicateRightTagListView.setCellFactory(param -> new TagListCell());
         histConfidenceSettingTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
@@ -185,14 +186,6 @@ public class MainController {
                 }
             }
         });
-        //TODO: Fix event passthrough. Pressing enter or space doesn't get caught by the onKeyPressed handler that's pushing tag changes into the model
-//        initEditTagsAutoComplete();
-    }
-
-    private void initImageGridViewListeners() {
-        imageGridView.setSelectionListener(this::previewImage);
-        imageGridView.setProgressQueueListener(this::openProgressLockScreen);
-        imageGridView.setDuplicateRequestListener(this::processAndShowDuplicates);
     }
 
     private void initTagListScreenListeners() {
@@ -255,7 +248,11 @@ public class MainController {
         });
     }
 
-    private void initExplorerPaneListeners() {
+    private void initExplorerScreenListeners() {
+        imageGridView.setSelectionListener(this::previewImage);
+        imageGridView.setProgressQueueListener(this::openProgressLockScreen);
+        imageGridView.setDuplicateRequestListener(this::processAndShowDuplicates);
+
         explorerPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
                 event.acceptTransferModes(TransferMode.ANY);
@@ -308,18 +305,7 @@ public class MainController {
             }
             event.consume();
         });
-    }
 
-    private File openSaveImageDialog(File folder, String filename) {
-        FileChooser fc = new FileChooser();
-        fc.setTitle("Save file from web");
-        if (filename != null) fc.setInitialFileName(filename);
-        if (folder != null) fc.setInitialDirectory(folder);
-        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
-        return fc.showSaveDialog(explorerPane.getScene().getWindow());
-    }
-
-    private void initTagListViewListeners() {
         tagListView.setCellFactory(param -> {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
@@ -350,6 +336,15 @@ public class MainController {
             });
             return c;
         });
+    }
+
+    private File openSaveImageDialog(File folder, String filename) {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Save file from web");
+        if (filename != null) fc.setInitialFileName(filename);
+        if (folder != null) fc.setInitialDirectory(folder);
+        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        return fc.showSaveDialog(explorerPane.getScene().getWindow());
     }
 
     private void initWindowListeners() {
