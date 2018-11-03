@@ -17,6 +17,8 @@ import javafx.stage.Stage;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.image.DynamicImageView;
 import menagerie.gui.progress.ProgressLockThread;
+import menagerie.gui.progress.ProgressLockThreadCancelListener;
+import menagerie.gui.progress.ProgressLockThreadFinishListener;
 import menagerie.model.SimilarPair;
 import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.ImageInfo;
@@ -269,7 +271,7 @@ public class MainController {
                 files.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
                 if (queue.size() > 5) {
-                    openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, false);
+                    openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
                 } else {
                     queue.forEach(Runnable::run);
                 }
@@ -623,7 +625,7 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
-    private ProgressLockThread openProgressLockScreen(String title, String message, List<Runnable> queue, boolean doNotStart) {
+    private ProgressLockThread openProgressLockScreen(String title, String message, List<Runnable> queue, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
         if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
 
         currentProgressLockThread = new ProgressLockThread(queue);
@@ -634,9 +636,15 @@ public class MainController {
                 progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
             });
         });
-        currentProgressLockThread.setCancelListener((num, total) -> Platform.runLater(this::closeProgressLockScreen));
-        currentProgressLockThread.setFinishListener(total -> Platform.runLater(this::closeProgressLockScreen));
-        if (!doNotStart) currentProgressLockThread.start();
+        currentProgressLockThread.setCancelListener((num, total) -> {
+            Platform.runLater(this::closeProgressLockScreen);
+            if (cancelListener != null) cancelListener.progressCanceled(num, total);
+        });
+        currentProgressLockThread.setFinishListener(total -> {
+            Platform.runLater(this::closeProgressLockScreen);
+            if (finishListener != null) finishListener.progressFinished(total);
+        });
+        currentProgressLockThread.start();
 
         progressLockTitleLabel.setText(title);
         progressLockMessageLabel.setText(message);
@@ -689,10 +697,7 @@ public class MainController {
         }
 
         if (queue.size() > 5000) {
-            ProgressLockThread t = openProgressLockScreen("Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, true);
-            t.setFinishListener(total -> Platform.runLater(() -> {
-                closeProgressLockScreen();
-
+            openProgressLockScreen("Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, total -> Platform.runLater(() -> {
                 if (currentSimilarPairs.isEmpty()) return;
 
                 previewSimilarPair(currentSimilarPairs.get(0));
@@ -701,8 +706,7 @@ public class MainController {
                 duplicatePane.setDisable(false);
                 duplicatePane.setOpacity(1);
                 duplicatePane.requestFocus();
-            }));
-            t.start();
+            }), null);
         } else {
             queue.forEach(Runnable::run);
 
@@ -864,7 +868,7 @@ public class MainController {
             getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
             if (queue.size() > 5) {
-                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, false);
+                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
             } else {
                 queue.forEach(Runnable::run);
             }
@@ -883,7 +887,7 @@ public class MainController {
             results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
             if (queue.size() > 5) {
-                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, false);
+                openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
             } else {
                 queue.forEach(Runnable::run);
             }
@@ -987,10 +991,7 @@ public class MainController {
                 });
             });
 
-            ProgressLockThread t = openProgressLockScreen("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, true);
-            t.setFinishListener(total -> {
-                Platform.runLater(this::closeProgressLockScreen);
-
+            openProgressLockScreen("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, total -> {
                 //TODO: Fix this. If md5 computing is disabled, histogram building won't happen
                 if (settings.isComputeHistogramForSimilarity()) {
                     List<Runnable> queue2 = new ArrayList<>();
@@ -1002,19 +1003,11 @@ public class MainController {
                         });
                     });
 
-                    Platform.runLater(() -> {
-                        ProgressLockThread t2 = openProgressLockScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, true);
-                        t2.setFinishListener(total1 -> Platform.runLater(() -> {
-                            closeProgressLockScreen();
-                            openDuplicateScreen(images);
-                        }));
-                        t2.start();
-                    });
+                    Platform.runLater(() -> openProgressLockScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
                 } else {
                     Platform.runLater(() -> openDuplicateScreen(images));
                 }
-            });
-            t.start();
+            }, null);
         } else {
             openDuplicateScreen(images);
         }

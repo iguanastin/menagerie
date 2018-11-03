@@ -87,7 +87,7 @@ public class ImageGridView extends GridView<ImageInfo> {
                     });
                     if (!queue.isEmpty()) {
                         if (progressQueueListener != null) {
-                            progressQueueListener.processProgressQueue("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, false);
+                            progressQueueListener.processProgressQueue("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, null, null);
                         } else {
                             queue.forEach(Runnable::run);
                         }
@@ -106,7 +106,7 @@ public class ImageGridView extends GridView<ImageInfo> {
                     });
                     if (!queue.isEmpty()) {
                         if (progressQueueListener != null) {
-                            progressQueueListener.processProgressQueue("Building Histograms", "Building image histograms for " + queue.size() + " files...", queue, false);
+                            progressQueueListener.processProgressQueue("Building Histograms", "Building image histograms for " + queue.size() + " files...", queue, null, null);
                         } else {
                             queue.forEach(Runnable::run);
                         }
