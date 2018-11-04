@@ -618,7 +618,9 @@ public class MainController {
 
         if (result != null) {
             List<Runnable> queue = new ArrayList<>();
-            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+            List<File> files = getFilesRecursive(result, Filters.IMAGE_FILTER);
+            menagerie.getImages().forEach(img -> files.remove(img.getFile()));
+            files.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
             if (!queue.isEmpty()) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
@@ -633,7 +635,9 @@ public class MainController {
         fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
         List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
 
-        if (results != null) {
+        if (results != null && !results.isEmpty()) {
+            menagerie.getImages().forEach(img -> results.remove(img.getFile()));
+
             List<Runnable> queue = new ArrayList<>();
             results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 

@@ -166,10 +166,7 @@ public class Menagerie {
     }
 
     public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram, boolean buildThumbnail) {
-        if (isFilePresent(file)) {
-            System.out.println("User tried to re-add existing file: " + file);
-            return null;
-        }
+        if (isFilePresent(file)) return null;
 
         ImageInfo img = new ImageInfo(this, nextImageID, System.currentTimeMillis(), file, null, null);
 
