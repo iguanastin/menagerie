@@ -13,6 +13,7 @@ public class Settings {
     private static final String BUILD_THUMBNAIL_TAG = "buildthumbnailonimport";
     private static final String COMPUTE_MD5_FOR_SIMILARITY_TAG = "computemd5forsimilarity";
     private static final String COMPUTE_HIST_FOR_SIMILARITY_TAG = "computehistforsimilarity";
+    private static final String BACKUP_DATABASE_TAG = "backupdatabase";
     private static final String LAST_FOLDER_TAG = "lastfolder";
     private static final String IMAGE_GRID_WIDTH_TAG = "imagegridwidth";
     private static final String WINDOW_WIDTH_TAG = "windowwidth";
@@ -34,6 +35,7 @@ public class Settings {
     private boolean computeMD5ForSimilarity = true;
     private boolean computeHistogramForSimilarity = false;
     private boolean consolidateTags = true;
+    private boolean backupDatabase = true;
     private String lastFolder = null;
     private String dbUser = "sa";
     private String dbPass = "";
@@ -135,6 +137,10 @@ public class Settings {
 
     public boolean isConsolidateTags() {
         return consolidateTags;
+    }
+
+    public boolean isBackupDatabase() {
+        return backupDatabase;
     }
 
     public void setAutoImportFromWeb(boolean autoImportFromWeb) {
@@ -300,6 +306,15 @@ public class Settings {
         }
     }
 
+    public void setBackupDatabase(boolean backupDatabase) {
+        this.backupDatabase = backupDatabase;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void saveToFile() throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(file);
 
@@ -310,6 +325,7 @@ public class Settings {
         writer.println(BUILD_THUMBNAIL_TAG + "=" + buildThumbnailOnImport);
         writer.println(COMPUTE_MD5_FOR_SIMILARITY_TAG + "=" + computeMD5ForSimilarity);
         writer.println(COMPUTE_HIST_FOR_SIMILARITY_TAG + "=" + computeHistogramForSimilarity);
+        writer.println(BACKUP_DATABASE_TAG + "=" + backupDatabase);
         writer.println(CONSOLIDATE_TAGS_TAG + "=" + consolidateTags);
         writer.println(IMAGE_GRID_WIDTH_TAG + "=" + imageGridWidth);
         writer.println(WINDOW_MAXIMZED_TAG + "=" + windowMaximized);
@@ -358,6 +374,9 @@ public class Settings {
                         break;
                     case CONSOLIDATE_TAGS_TAG:
                         consolidateTags = Boolean.parseBoolean(val);
+                        break;
+                    case BACKUP_DATABASE_TAG:
+                        backupDatabase = Boolean.parseBoolean(val);
                         break;
                     case IMAGE_GRID_WIDTH_TAG:
                         imageGridWidth = Math.max(MIN_IMAGE_GRID_WIDTH, Math.min(Integer.parseInt(val), MAX_IMAGE_GRID_WIDTH));

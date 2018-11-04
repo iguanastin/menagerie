@@ -36,6 +36,8 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -76,6 +78,7 @@ public class MainController {
     public CheckBox duplicateComputeHistSettingCheckbox;
     public TextField histConfidenceSettingTextField;
     public CheckBox duplicateConsolidateTagsSettingCheckbox;
+    public CheckBox backupDatabaseSettingCheckBox;
 
     public BorderPane tagListPane;
     public ChoiceBox<String> tagListOrderChoiceBox;
@@ -118,6 +121,15 @@ public class MainController {
 
     @FXML
     public void initialize() {
+
+        //Backup database
+        try {
+            backupDatabase();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Main.showErrorMessage("Error", "Error while trying to back up the database: " + settings.getDbUrl(), e.getLocalizedMessage());
+        }
+
         //Initialize the menagerie
         initMenagerie();
 
@@ -391,6 +403,7 @@ public class MainController {
         duplicateComputeMD5SettingCheckbox.setSelected(settings.isComputeMD5ForSimilarity());
         duplicateComputeHistSettingCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
         duplicateConsolidateTagsSettingCheckbox.setSelected(settings.isConsolidateTags());
+        backupDatabaseSettingCheckBox.setSelected(settings.isBackupDatabase());
 
         histConfidenceSettingTextField.setText("" + settings.getSimilarityThreshold());
 
@@ -424,6 +437,7 @@ public class MainController {
             settings.setComputeMD5ForSimilarity(duplicateComputeMD5SettingCheckbox.isSelected());
             settings.setComputeHistogramForSimilarity(duplicateComputeHistSettingCheckbox.isSelected());
             settings.setConsolidateTags(duplicateConsolidateTagsSettingCheckbox.isSelected());
+            settings.setBackupDatabase(backupDatabaseSettingCheckBox.isSelected());
 
             settings.setSimilarityThreshold(Double.parseDouble(histConfidenceSettingTextField.getText()));
 
@@ -957,6 +971,29 @@ public class MainController {
             }
         }
         return results;
+    }
+
+    private void backupDatabase() throws IOException {
+        if (!settings.isBackupDatabase()) return;
+
+        String path = settings.getDbUrl() + ".mv.db";
+        if (path.startsWith("~")) {
+            String temp = System.getProperty("user.home");
+            if (!temp.endsWith("/") && !temp.endsWith("\\")) temp += "/";
+            path = path.substring(1);
+            if (path.startsWith("/") || path.startsWith("\\")) path = path.substring(1);
+
+            path = temp + path;
+        }
+
+        File currentDatabaseFile = new File(path);
+
+        if (currentDatabaseFile.exists()) {
+            System.out.println("Backing up database at: " + currentDatabaseFile);
+            File backupFile = new File(path + ".bak");
+            Files.copy(currentDatabaseFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("Successfully backed up database to: " + backupFile);
+        }
     }
 
     // ---------------------------------- Event Handlers ------------------------------------
