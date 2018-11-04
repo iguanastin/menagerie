@@ -857,9 +857,7 @@ public class MainController {
 
         //Consolidate tags
         if (settings.isConsolidateTags()) {
-            System.out.println(toKeep.getTags().size());
             toDelete.getTags().forEach(toKeep::addTag);
-            System.out.println(toKeep.getTags().size());
         }
 
         //Remove other pairs containing the deleted image
