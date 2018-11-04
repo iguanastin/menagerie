@@ -5,6 +5,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
@@ -60,6 +61,7 @@ public class MainController {
     public Label imageInfoLabel;
     public ListView<Tag> tagListView;
     public TextField editTagsTextfield;
+    public MenuBar menuBar;
 
     private final ContextMenu autoCompleteContextMenu = new ContextMenu();
 
@@ -1096,6 +1098,20 @@ public class MainController {
                 imageGridView.requestFocus();
                 event.consume();
                 break;
+            case ALT:
+                event.consume();
+                break;
+        }
+    }
+
+    public void explorerPaneOnKeyReleased(KeyEvent event) {
+        if (event.getCode() == KeyCode.ALT) {
+            if (menuBar.isFocused()) {
+                imageGridView.requestFocus();
+            } else {
+                menuBar.requestFocus();
+            }
+            event.consume();
         }
     }
 
@@ -1308,6 +1324,41 @@ public class MainController {
 
     public void slideshowNextButtonOnAction(ActionEvent event) {
         slideshowShowNext();
+        event.consume();
+    }
+
+    public void importFilesMenuButtonOnAction(ActionEvent event) {
+        requestImportFiles();
+        event.consume();
+    }
+
+    public void importFolderMenuButtonOnAction(ActionEvent event) {
+        requestImportFolder();
+        event.consume();
+    }
+
+    public void settingsMenuButtonOnAction(ActionEvent event) {
+        openSettingsScreen();
+        event.consume();
+    }
+
+    public void helpMenuButtonOnAction(ActionEvent event) {
+        openHelpScreen();
+        event.consume();
+    }
+
+    public void slideshowSearchedMenuButtonOnAction(ActionEvent event) {
+        openSlideshowScreen(currentSearch.getResults());
+        event.consume();
+    }
+
+    public void slideshowSelectedMenuButtonOnAction(ActionEvent event) {
+        openSlideshowScreen(imageGridView.getSelected());
+        event.consume();
+    }
+
+    public void viewTagsMenuButtonOnAction(ActionEvent event) {
+        openTagListScreen();
         event.consume();
     }
 
