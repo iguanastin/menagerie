@@ -4,13 +4,13 @@ import menagerie.model.menagerie.ImageInfo;
 
 public abstract class SearchRule implements Comparable<SearchRule> {
 
-    int priorty = Integer.MAX_VALUE;
+    int priority = Integer.MAX_VALUE;
 
     public abstract boolean accept(ImageInfo img);
 
     @Override
     public int compareTo(SearchRule o) {
-        return priorty - o.priorty;
+        return priority - o.priority;
     }
 
 }

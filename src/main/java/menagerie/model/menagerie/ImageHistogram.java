@@ -19,7 +19,7 @@ public final class ImageHistogram {
     private final double[] blue;
 
 
-    public ImageHistogram(InputStream a, InputStream r, InputStream g, InputStream b) throws HistogramReadException {
+    ImageHistogram(InputStream a, InputStream r, InputStream g, InputStream b) throws HistogramReadException {
         try {
             this.alpha = inputStreamAsArray(a);
             this.red = inputStreamAsArray(r);
@@ -30,7 +30,7 @@ public final class ImageHistogram {
         }
     }
 
-    public ImageHistogram(Image image) throws HistogramReadException {
+    ImageHistogram(Image image) throws HistogramReadException {
         alpha = new double[BIN_SIZE];
         red = new double[BIN_SIZE];
         green = new double[BIN_SIZE];
@@ -43,11 +43,11 @@ public final class ImageHistogram {
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                int argb = pixelReader.getArgb(x, y);
-                int a = (0xff & (argb >> 24));
-                int r = (0xff & (argb >> 16));
-                int g = (0xff & (argb >> 8));
-                int b = (0xff & argb);
+                int color = pixelReader.getArgb(x, y);
+                int a = (0xff & (color >> 24));
+                int r = (0xff & (color >> 16));
+                int g = (0xff & (color >> 8));
+                int b = (0xff & color);
 
                 alpha[a / (256 / BIN_SIZE)]++;
                 red[r / (256 / BIN_SIZE)]++;
@@ -65,35 +65,19 @@ public final class ImageHistogram {
         }
     }
 
-    public double[] getAlpha() {
-        return alpha;
-    }
-
-    public ByteArrayInputStream getAlphaAsInputStream() {
+    ByteArrayInputStream getAlphaAsInputStream() {
         return arrayAsInputStream(alpha);
     }
 
-    public double[] getRed() {
-        return red;
-    }
-
-    public ByteArrayInputStream getRedAsInputStream() {
+    ByteArrayInputStream getRedAsInputStream() {
         return arrayAsInputStream(red);
     }
 
-    public double[] getGreen() {
-        return green;
-    }
-
-    public ByteArrayInputStream getGreenAsInputStream() {
+    ByteArrayInputStream getGreenAsInputStream() {
         return arrayAsInputStream(green);
     }
 
-    public double[] getBlue() {
-        return blue;
-    }
-
-    public ByteArrayInputStream getBlueAsInputStream() {
+    ByteArrayInputStream getBlueAsInputStream() {
         return arrayAsInputStream(blue);
     }
 

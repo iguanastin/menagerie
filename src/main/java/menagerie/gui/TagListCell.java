@@ -8,7 +8,8 @@ import menagerie.model.menagerie.Tag;
 
 public class TagListCell extends ListCell<Tag> {
 
-    private Label countLabel, nameLabel;
+    private final Label countLabel;
+    private final Label nameLabel;
 
 
     TagListCell() {

@@ -8,13 +8,13 @@ import java.util.List;
 
 public class Search {
 
-    private Menagerie menagerie;
+    private final Menagerie menagerie;
     private SearchUpdateListener listener = null;
 
-    private List<SearchRule> rules;
-    private boolean descending;
+    private final List<SearchRule> rules;
+    private final boolean descending;
 
-    private List<ImageInfo> results = new ArrayList<>();
+    private final List<ImageInfo> results = new ArrayList<>();
 
 
     public Search(Menagerie menagerie, List<SearchRule> rules, boolean descending) {
@@ -82,8 +82,7 @@ public class Search {
 
     public void close() {
         menagerie.closeSearch(this);
-        rules = null;
-        results = null;
+        results.clear();
         listener = null;
     }
 

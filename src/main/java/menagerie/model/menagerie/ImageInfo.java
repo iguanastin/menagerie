@@ -191,10 +191,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return tags;
     }
 
-    public Menagerie getMenagerie() {
-        return menagerie;
-    }
-
     public boolean hasTag(Tag t) {
         return getTags().contains(t);
     }

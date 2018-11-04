@@ -2,15 +2,13 @@ package menagerie.model.menagerie;
 
 public class Tag implements Comparable<Tag> {
 
-    private Menagerie menagerie;
     private final int id;
     private final String name;
 
     private int frequency = 0;
 
 
-    public Tag(Menagerie menagerie, int id, String name) {
-        this.menagerie = menagerie;
+    public Tag(int id, String name) {
         this.id = id;
         this.name = name;
     }
@@ -21,10 +19,6 @@ public class Tag implements Comparable<Tag> {
 
     public String getName() {
         return name;
-    }
-
-    public Menagerie getMenagerie() {
-        return menagerie;
     }
 
     public int getFrequency() {

@@ -10,14 +10,10 @@ public class TagRule extends SearchRule {
 
 
     public TagRule(Tag tag, boolean exclude) {
-        priorty = 25;
+        priority = 25;
 
         this.tag = tag;
         this.exclude = exclude;
-    }
-
-    public Tag getTag() {
-        return tag;
     }
 
     @Override

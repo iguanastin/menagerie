@@ -17,7 +17,7 @@ public class DateAddedRule extends SearchRule {
 
 
     public DateAddedRule(Type type, long time) {
-        priorty = 10;
+        priority = 10;
 
         this.time = time;
         this.type = type;

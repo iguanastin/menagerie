@@ -5,8 +5,8 @@ import java.util.List;
 
 public class DatabaseUpdateQueue implements Runnable {
 
-    private List<Runnable> activeQueue = new ArrayList<>();
-    private List<Runnable> waitingQueue = new ArrayList<>();
+    private final List<Runnable> activeQueue = new ArrayList<>();
+    private final List<Runnable> waitingQueue = new ArrayList<>();
 
     private static final long DELTA_SINCE_LAST_PRINT = 30000;
     private long lastPrintTime = System.currentTimeMillis();

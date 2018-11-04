@@ -28,9 +28,7 @@ public class ImagePreview extends ImageView {
     private void initialize() {
         ObjectProperty<Point2D> mouseDown = new SimpleObjectProperty<>();
 
-        imageProperty().addListener((observable, oldValue, newValue) -> {
-            reset(newValue.getWidth(), newValue.getHeight());
-        });
+        imageProperty().addListener((observable, oldValue, newValue) -> reset(newValue.getWidth(), newValue.getHeight()));
         setOnMousePressed(e -> {
             Point2D mousePress = imageViewToImage(new Point2D(e.getX(), e.getY()));
             mouseDown.set(mousePress);

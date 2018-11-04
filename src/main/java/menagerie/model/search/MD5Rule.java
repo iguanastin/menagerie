@@ -8,7 +8,7 @@ public class MD5Rule extends SearchRule {
 
 
     public MD5Rule(String md5) {
-        priorty = 100;
+        priority = 100;
 
         this.md5 = md5;
     }

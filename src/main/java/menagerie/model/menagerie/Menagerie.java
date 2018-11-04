@@ -34,18 +34,18 @@ public class Menagerie {
 
     // ------------------------------ Variables -----------------------------------
 
-    private List<ImageInfo> images = new ArrayList<>();
-    private List<Tag> tags = new ArrayList<>();
+    private final List<ImageInfo> images = new ArrayList<>();
+    private final List<Tag> tags = new ArrayList<>();
 
-    private Map<String, ImageInfo> hashes = new HashMap<>();
+    private final Map<String, ImageInfo> hashes = new HashMap<>();
 
     private int nextImageID;
     private int nextTagID;
 
-    private Connection database;
-    private DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
+    private final Connection database;
+    private final DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
 
-    private List<Search> activeSearches = new ArrayList<>();
+    private final List<Search> activeSearches = new ArrayList<>();
 
 
     public Menagerie(Connection database) throws SQLException {
@@ -157,7 +157,7 @@ public class Menagerie {
         ResultSet rs = s.executeQuery(SQL_GET_TAGS);
 
         while (rs.next()) {
-            tags.add(new Tag(this, rs.getInt("id"), rs.getNString("name")));
+            tags.add(new Tag(rs.getInt("id"), rs.getNString("name")));
         }
 
         s.close();
@@ -303,7 +303,7 @@ public class Menagerie {
     }
 
     public Tag createTag(String name) {
-        Tag t = new Tag(this, nextTagID, name);
+        Tag t = new Tag(nextTagID, name);
         nextTagID++;
 
         tags.add(t);

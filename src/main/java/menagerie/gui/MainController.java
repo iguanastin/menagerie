@@ -59,7 +59,7 @@ public class MainController {
     public ListView<Tag> tagListView;
     public TextField editTagsTextfield;
 
-    private ContextMenu autoCompleteContextMenu = new ContextMenu();
+    private final ContextMenu autoCompleteContextMenu = new ContextMenu();
 
     public BorderPane settingsPane;
     public CheckBox computeMD5SettingCheckbox;
@@ -110,7 +110,7 @@ public class MainController {
     private List<SimilarPair> currentSimilarPairs = null;
     private SimilarPair currentlyPreviewingPair = null;
 
-    private Settings settings = new Settings(new File("menagerie.settings"));
+    private final Settings settings = new Settings(new File("menagerie.settings"));
 
 
     // ---------------------------------- Initializers ------------------------------------
@@ -456,6 +456,7 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
+    @SuppressWarnings("SameParameterValue")
     private void openProgressLockScreen(String title, String message, List<Runnable> queue, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
         if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
 
@@ -593,6 +594,7 @@ public class MainController {
 
     // ---------------------------------- GUI Action Methods ------------------------------------
 
+    @SuppressWarnings("SameParameterValue")
     private void previewImage(ImageInfo image) {
         if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
         currentlyPreviewing = image;
@@ -696,7 +698,7 @@ public class MainController {
                 }
 
                 Tag tag = menagerie.getTagByName(arg);
-                if (tag == null) tag = new Tag(menagerie, -1, arg);
+                if (tag == null) tag = new Tag(-1, arg);
                 rules.add(new TagRule(tag, exclude));
             }
         }
@@ -720,7 +722,7 @@ public class MainController {
 
                     if (img.equals(currentlyPreviewing)) previewImage(null);
 
-                    imageGridView.unselect(img);
+                    imageGridView.deselect(img);
                     imageGridView.getItems().remove(img);
                 });
             }
