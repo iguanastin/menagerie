@@ -17,6 +17,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 <?import menagerie.gui.grid.ImageGridView?>
 <?import menagerie.gui.image.DynamicImageView?>
 
@@ -232,62 +233,155 @@
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                         </padding>
                         <VBox spacing="5.0">
-                            <Label text="Shortcuts:" />
-                            <Label layoutX="30.0" layoutY="32.0" text="Ctrl+H: Show this menu">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="10.0" layoutY="10.0" text="Ctrl+F: Focus search bar">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="30.0" layoutY="32.0" text="Ctrl+E: Focus tag editor bar">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="30.0" layoutY="54.0" text="Ctrl+Q: Quit">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="30.0" layoutY="76.0" text="Ctrl+S: Show settings">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="30.0" layoutY="98.0" text="Ctrl+T: Show tags">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="30.0" layoutY="142.0" text="Ctrl+D: Find duplicates among currently selected">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="30.0" layoutY="120.0" text="Ctrl+I: Show import dialog for files">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="30.0" layoutY="142.0" text="Ctrl+Shift+I: Show import dialog for folders (recursive)">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="30.0" layoutY="208.0" text="Ctrl+D: Delete currently selected">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
-                            <Label layoutX="30.0" layoutY="230.0" text="Ctrl+Shift+D: Forget currently selected (no files deleted)">
-                                <VBox.margin>
-                                    <Insets left="20.0" />
-                                </VBox.margin>
-                            </Label>
+                     <Label layoutX="10.0" layoutY="10.0" text="Tag Editing:">
+                        <font>
+                           <Font name="System Bold Italic" size="12.0" />
+                        </font></Label>
+                     <VBox layoutX="10.0" layoutY="32.0" spacing="5.0">
+                        <children>
+                           <Label text="      Prepend a &quot;-&quot; character to remove a tag. E.g. while editing tags, type &quot;-tagme&quot; to remove the &quot;tagme&quot; tag from the selected images." wrapText="true" />
+                        </children>
+                        <padding>
+                           <Insets left="25.0" />
+                        </padding>
+                     </VBox>
+                     <Separator prefWidth="200.0" />
+                     <Label layoutX="10.0" layoutY="274.0" text="Searching:">
+                        <font>
+                           <Font name="System Bold Italic" size="12.0" />
+                        </font></Label>
+                     <VBox layoutX="10.0" layoutY="32.0" spacing="5.0">
+                        <children>
+                           <Label text="      Prepend a &quot;-&quot; character to exclude a tag from the search. E.g. type &quot;-tagme&quot; in the search bar to exclude all images that have the &quot;tagme&quot; tag." wrapText="true" />
+                           <Label layoutX="35.0" layoutY="10.0" text="      Search for specific image IDs like &quot;id:1234&quot;. Search for a range by using a &quot;&lt;&quot; or &quot;&gt;&quot; character before the number. E.g. &quot;id:&gt;1000&quot; only gets images with an ID higher than 1000." wrapText="true" />
+                           <Label layoutX="35.0" layoutY="49.0" text="      Search for images that have been added at certain times like &quot;time:1541361629900&quot; in milliseconds since epoch. Search for a range by using a &quot;&lt;&quot; or &quot;&gt;&quot; character before the number. E.g. &quot;time:&lt;1541361629900&quot;" wrapText="true" />
+                        </children>
+                        <padding>
+                           <Insets left="25.0" />
+                        </padding>
+                     </VBox>
+                     <Separator prefWidth="200.0" />
+                            <Label text="Shortcuts:">
+                        <font>
+                           <Font name="System Bold Italic" size="12.0" />
+                        </font></Label>
+                     <VBox spacing="5.0">
+                        <children>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+H">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Show this menu" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+F">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Focus search bar" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+E">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Focus tag editor bar" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+Q">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Quit" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+S">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Show settings" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+T">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Show tags" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+D">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Find duplicates among currently selected" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+I">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Show import dialog for files" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+Shift+I">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Show import dialog for folders (recursive)" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Del">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Delete currently selected" />
+                              </children>
+                           </HBox>
+                           <HBox spacing="5.0">
+                              <children>
+                                        <Label text="Ctrl+Del">
+                                    <font>
+                                       <Font name="System Bold" size="12.0" />
+                                    </font>
+                                 </Label>
+                                 <Label layoutX="10.0" layoutY="10.0" text="- Forget currently selected (no files deleted)" />
+                              </children>
+                           </HBox>
+                        </children>
+                        <padding>
+                           <Insets left="25.0" />
+                        </padding>
+                     </VBox>
                         </VBox>
                     </ScrollPane>
                 </center>
@@ -392,21 +486,19 @@
             </SplitPane>
         </center>
     </BorderPane>
-   <BorderPane disable="true" opacity="0" fx:id="slideshowPane" onKeyPressed="#slideshowPaneOnKeyPressed" style="-fx-background-color: -fx-base;">
-      <center>
-         <DynamicImageView fx:id="slideshowImageView" pickOnBounds="true" preserveRatio="true" BorderPane.alignment="CENTER" />
-      </center>
-      <bottom>
-          <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-              <padding>
-                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-              </padding>
-              <Button mnemonicParsing="false" onAction="#slideshowPreviousButtonOnAction" text="&lt;-"/>
-              <Button mnemonicParsing="false" onAction="#slideshowCloseButtonOnAction"
-                      text="Close"/>
-              <Button mnemonicParsing="false" onAction="#slideshowNextButtonOnAction"
-                      text="-&gt;"/>
-          </HBox>
-      </bottom>
-   </BorderPane>
+    <BorderPane fx:id="slideshowPane" disable="true" onKeyPressed="#slideshowPaneOnKeyPressed" opacity="0" style="-fx-background-color: -fx-base;">
+        <center>
+            <DynamicImageView fx:id="slideshowImageView" pickOnBounds="true" preserveRatio="true" BorderPane.alignment="CENTER" />
+        </center>
+        <bottom>
+            <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
+                <padding>
+                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                </padding>
+                <Button mnemonicParsing="false" onAction="#slideshowPreviousButtonOnAction" text="&lt;-" />
+                <Button mnemonicParsing="false" onAction="#slideshowCloseButtonOnAction" text="Close" />
+                <Button mnemonicParsing="false" onAction="#slideshowNextButtonOnAction" text="-&gt;" />
+            </HBox>
+        </bottom>
+    </BorderPane>
 </StackPane>
