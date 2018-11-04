@@ -739,8 +739,9 @@ public class MainController {
                     Main.showErrorMessage("Error", "Error converting long value for date added rule", e.getLocalizedMessage());
                 }
             } else if (arg.startsWith("md5:")) {
-                String temp = arg.substring(arg.indexOf(':') + 1);
-                rules.add(new MD5Rule(temp));
+                rules.add(new MD5Rule(arg.substring(arg.indexOf(':') + 1)));
+            } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
+                rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1)));
             } else {
                 boolean exclude = false;
                 if (arg.startsWith("-")) {
