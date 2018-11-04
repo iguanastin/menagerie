@@ -104,6 +104,9 @@ public class MainController {
     public DynamicImageView duplicateRightImageView;
     public ListView<Tag> duplicateRightTagListView;
 
+    public BorderPane slideshowPane;
+    public DynamicImageView slideshowImageView;
+
 
     private Menagerie menagerie;
     private Search currentSearch = null;
@@ -113,6 +116,8 @@ public class MainController {
     private String lastTagString = null;
     private List<SimilarPair> currentSimilarPairs = null;
     private SimilarPair currentlyPreviewingPair = null;
+    private List<ImageInfo> currentSlideshow = null;
+    private ImageInfo currentSlideshowShowing = null;
 
     private final Settings settings = new Settings(new File("menagerie.settings"));
 
@@ -278,6 +283,7 @@ public class MainController {
         imageGridView.setSelectionListener(this::previewImage);
         imageGridView.setProgressQueueListener(this::openProgressLockScreen);
         imageGridView.setDuplicateRequestListener(this::processAndShowDuplicates);
+        imageGridView.setSlideshowRequestListener(this::openSlideshowScreen);
 
         //Init drag/drop handlers
         explorerPane.setOnDragOver(event -> {
@@ -579,6 +585,26 @@ public class MainController {
         explorerPane.setDisable(false);
         duplicatePane.setDisable(true);
         duplicatePane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
+    private void openSlideshowScreen(List<ImageInfo> images) {
+        if (images == null || images.isEmpty()) return;
+
+        currentSlideshow = images;
+        currentSlideshowShowing = images.get(0);
+        slideshowImageView.setImage(currentSlideshowShowing.getImage());
+
+        explorerPane.setDisable(true);
+        slideshowPane.setDisable(false);
+        slideshowPane.setOpacity(1);
+        slideshowPane.requestFocus();
+    }
+
+    private void closeSlideshowScreen() {
+        explorerPane.setDisable(false);
+        slideshowPane.setDisable(true);
+        slideshowPane.setOpacity(0);
         imageGridView.requestFocus();
     }
 
@@ -948,6 +974,18 @@ public class MainController {
         }
     }
 
+    private void slideshowShowNext() {
+        int i = currentSlideshow.indexOf(currentSlideshowShowing);
+        if (i + 1 < currentSlideshow.size()) currentSlideshowShowing = currentSlideshow.get(i + 1);
+        slideshowImageView.setImage(currentSlideshowShowing.getImage());
+    }
+
+    private void slideshowShowPrevious() {
+        int i = currentSlideshow.indexOf(currentSlideshowShowing);
+        if (i - 1 >= 0) currentSlideshowShowing = currentSlideshow.get(i - 1);
+        slideshowImageView.setImage(currentSlideshowShowing.getImage());
+    }
+
     // ---------------------------------- Compute Utilities ------------------------------------
 
     private static void downloadAndSaveFile(String url, File target) throws IOException {
@@ -1238,6 +1276,38 @@ public class MainController {
         duplicateRightTagListView.setDisable(true);
         duplicateLeftTagListView.setOpacity(0);
         duplicateRightTagListView.setOpacity(0);
+        event.consume();
+    }
+
+    public void slideshowPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case RIGHT:
+                slideshowShowNext();
+                event.consume();
+                break;
+            case LEFT:
+                slideshowShowPrevious();
+                event.consume();
+                break;
+            case ESCAPE:
+                closeSlideshowScreen();
+                event.consume();
+                break;
+        }
+    }
+
+    public void slideshowPreviousButtonOnAction(ActionEvent event) {
+        slideshowShowPrevious();
+        event.consume();
+    }
+
+    public void slideshowCloseButtonOnAction(ActionEvent event) {
+        closeSlideshowScreen();
+        event.consume();
+    }
+
+    public void slideshowNextButtonOnAction(ActionEvent event) {
+        slideshowShowNext();
         event.consume();
     }
 

@@ -31,6 +31,7 @@ public class ImageGridView extends GridView<ImageInfo> {
     private SelectionListener selectionListener = null;
     private ProgressQueueListener progressQueueListener = null;
     private DuplicateRequestListener duplicateRequestListener = null;
+    private SlideshowRequestListener slideshowRequestListener = null;
 
     private boolean dragging = false;
 
@@ -76,8 +77,17 @@ public class ImageGridView extends GridView<ImageInfo> {
                 }
             });
             c.setOnContextMenuRequested(event -> {
-                MenuItem i1 = new MenuItem("Open in Explorer");
+                MenuItem i1 = new MenuItem("Slideshow: Selected");
                 i1.setOnAction(event1 -> {
+                    if (slideshowRequestListener != null) slideshowRequestListener.requestSlideshow(selected);
+                });
+                MenuItem i2 = new MenuItem("Slideshow: Searched");
+                i2.setOnAction(event1 -> {
+                    if (slideshowRequestListener != null) slideshowRequestListener.requestSlideshow(getItems());
+                });
+
+                MenuItem i3 = new MenuItem("Open in Explorer");
+                i3.setOnAction(event1 -> {
                     try {
                         Runtime.getRuntime().exec("explorer.exe /select, " + c.getItem().getFile().getAbsolutePath());
                     } catch (IOException e) {
@@ -86,8 +96,8 @@ public class ImageGridView extends GridView<ImageInfo> {
                     }
                 });
 
-                MenuItem i2 = new MenuItem("Build MD5 Hash");
-                i2.setOnAction(event1 -> {
+                MenuItem i4 = new MenuItem("Build MD5 Hash");
+                i4.setOnAction(event1 -> {
                     List<Runnable> queue = new ArrayList<>();
                     selected.forEach(img -> {
                         if (img.getMD5() == null) {
@@ -105,8 +115,8 @@ public class ImageGridView extends GridView<ImageInfo> {
                         }
                     }
                 });
-                MenuItem i3 = new MenuItem("Build Histogram");
-                i3.setOnAction(event1 -> {
+                MenuItem i5 = new MenuItem("Build Histogram");
+                i5.setOnAction(event1 -> {
                     List<Runnable> queue = new ArrayList<>();
                     selected.forEach(img -> {
                         if (img.getHistogram() == null) {
@@ -125,17 +135,17 @@ public class ImageGridView extends GridView<ImageInfo> {
                     }
                 });
 
-                MenuItem i4 = new MenuItem("Find Duplicates");
-                i4.setOnAction(event1 -> {
+                MenuItem i6 = new MenuItem("Find Duplicates");
+                i6.setOnAction(event1 -> {
                     if (duplicateRequestListener != null) duplicateRequestListener.findAndShowDuplicates(selected);
                 });
 
-                MenuItem i5 = new MenuItem("Remove");
-                i5.setOnAction(event1 -> deleteEventUserInput(false));
-                MenuItem i6 = new MenuItem("Delete");
-                i6.setOnAction(event1 -> deleteEventUserInput(true));
+                MenuItem i7 = new MenuItem("Remove");
+                i7.setOnAction(event1 -> deleteEventUserInput(false));
+                MenuItem i8 = new MenuItem("Delete");
+                i8.setOnAction(event1 -> deleteEventUserInput(true));
 
-                ContextMenu m = new ContextMenu(i1, new SeparatorMenuItem(), i2, i3, new SeparatorMenuItem(), i4, new SeparatorMenuItem(), i5, i6);
+                ContextMenu m = new ContextMenu(i1, i2, new SeparatorMenuItem(), i3, new SeparatorMenuItem(), i4, i5, new SeparatorMenuItem(), i6, new SeparatorMenuItem(), i7, i8);
                 m.show(c, event.getScreenX(), event.getScreenY());
                 event.consume();
             });
@@ -360,6 +370,10 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     public void setDuplicateRequestListener(DuplicateRequestListener duplicateRequestListener) {
         this.duplicateRequestListener = duplicateRequestListener;
+    }
+
+    public void setSlideshowRequestListener(SlideshowRequestListener slideshowRequestListener) {
+        this.slideshowRequestListener = slideshowRequestListener;
     }
 
     private void updateCellSelectionCSS() {
