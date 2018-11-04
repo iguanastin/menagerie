@@ -44,6 +44,15 @@ public class ImageGridView extends GridView<ImageInfo> {
                     if (!isSelected(c.getItem())) select(c.getItem(), event.isControlDown(), event.isShiftDown());
 
                     Dragboard db = c.startDragAndDrop(TransferMode.ANY);
+
+                    for (ImageInfo img : selected) {
+                        String filename = img.getFile().getName().toLowerCase();
+                        if (filename.endsWith(".png") || filename.endsWith(".jpg")) {
+                            db.setDragView(img.getThumbnail());
+                            break;
+                        }
+                    }
+
                     List<File> files = new ArrayList<>();
                     selected.forEach(img -> files.add(img.getFile()));
                     clipboard.putFiles(files);
