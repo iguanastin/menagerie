@@ -80,6 +80,7 @@ public class MainController {
     public BorderPane tagListPane;
     public ChoiceBox<String> tagListOrderChoiceBox;
     public ListView<Tag> tagListListView;
+    public TextField searchTagsScreenTextField;
 
     public BorderPane helpPane;
 
@@ -205,6 +206,14 @@ public class MainController {
                 m.show(c, event.getScreenX(), event.getScreenY());
             });
             return c;
+        });
+
+        searchTagsScreenTextField.textProperty().addListener((observable, oldValue, newValue) -> {
+            tagListListView.getItems().clear();
+            menagerie.getTags().forEach(tag -> {
+                if (tag.getName().toLowerCase().startsWith(newValue.toLowerCase())) tagListListView.getItems().add(tag);
+            });
+            updateTagListListViewOrder();
         });
     }
 

@@ -166,27 +166,32 @@
             </BorderPane>
         </center>
     </BorderPane>
-    <BorderPane fx:id="tagListPane" disable="true" onKeyPressed="#tagListPaneOnKeyPressed" opacity="0.0">
+    <BorderPane fx:id="tagListPane" onKeyPressed="#tagListPaneOnKeyPressed">
         <center>
             <VBox maxWidth="-Infinity" prefWidth="300.0" spacing="5.0" style="-fx-background-color: -fx-base;">
                 <BorderPane.margin>
                     <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
                 </BorderPane.margin>
-                <BorderPane>
-                    <center>
-                        <HBox alignment="CENTER_LEFT" spacing="5.0">
-                            <Label text="Order by:" />
-                            <BorderPane>
-                                <center>
-                                    <ChoiceBox fx:id="tagListOrderChoiceBox" prefHeight="25.0" prefWidth="120.0" />
-                                </center>
-                            </BorderPane>
-                        </HBox>
-                    </center>
-                    <right>
-                        <Button mnemonicParsing="false" onAction="#tagListExitButtonOnAction" text="X" BorderPane.alignment="CENTER" />
-                    </right>
-                </BorderPane>
+            <VBox spacing="5.0">
+               <children>
+                      <BorderPane>
+                          <center>
+                              <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                  <Label text="Order by:" />
+                                  <BorderPane>
+                                      <center>
+                                          <ChoiceBox fx:id="tagListOrderChoiceBox" prefHeight="25.0" prefWidth="120.0" />
+                                      </center>
+                                  </BorderPane>
+                              </HBox>
+                          </center>
+                          <right>
+                              <Button mnemonicParsing="false" onAction="#tagListExitButtonOnAction" text="X" BorderPane.alignment="CENTER" />
+                          </right>
+                      </BorderPane>
+                  <TextField fx:id="searchTagsScreenTextField" promptText="Search tags by name" />
+               </children>
+            </VBox>
                 <ListView fx:id="tagListListView" VBox.vgrow="ALWAYS" />
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
