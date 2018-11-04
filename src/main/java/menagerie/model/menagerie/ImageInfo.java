@@ -203,6 +203,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
     public boolean addTag(Tag t) {
         if (hasTag(t)) return false;
         tags.add(t);
+        t.incrementFrequency();
 
         menagerie.getUpdateQueue().enqueueUpdate(() -> {
             try {
@@ -225,6 +226,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
     public boolean removeTag(Tag t) {
         if (!hasTag(t)) return false;
         tags.remove(t);
+        t.decrementFrequency();
 
         menagerie.getUpdateQueue().enqueueUpdate(() -> {
             try {
