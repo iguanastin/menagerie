@@ -192,7 +192,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
     }
 
     public boolean hasTag(Tag t) {
-        return getTags().contains(t);
+        return tags.contains(t);
     }
 
     public void addTag(Tag t) {

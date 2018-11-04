@@ -616,7 +616,7 @@ public class MainController {
 
     private void updateTagListViewContents(ImageInfo image) {
         tagListView.getItems().clear();
-        image.getTags().forEach(tag -> tagListView.getItems().add(tag));
+        tagListView.getItems().addAll(image.getTags());
         tagListView.getItems().sort(Comparator.comparing(Tag::getName));
     }
 
