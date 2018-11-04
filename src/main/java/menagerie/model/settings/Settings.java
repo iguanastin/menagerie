@@ -315,7 +315,7 @@ public class Settings {
         writer.println(WINDOW_MAXIMZED_TAG + "=" + windowMaximized);
         writer.println(WINDOW_WIDTH_TAG + "=" + windowWidth);
         writer.println(WINDOW_HEIGHT_TAG + "=" + windowHeight);
-        writer.println(WINDOW_X_TAG + "="+ windowX);
+        writer.println(WINDOW_X_TAG + "=" + windowX);
         writer.println(WINDOW_Y_TAG + "=" + windowY);
         writer.println(DB_URL_TAG + "=" + dbUrl);
         writer.println(DB_USER_TAG + "=" + dbUser);

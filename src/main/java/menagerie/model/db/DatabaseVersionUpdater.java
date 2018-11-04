@@ -21,14 +21,14 @@ public class DatabaseVersionUpdater {
     }
 
 
-    public static boolean upToDate(Connection db) throws SQLException {
-        return getVersion(db) == CURRENT_VERSION;
+    private static boolean outOfDate(Connection db) throws SQLException {
+        return getVersion(db) != CURRENT_VERSION;
     }
 
     public static void updateDatabase(Connection db) throws SQLException {
         Statement s = db.createStatement();
 
-        while (!upToDate(db)) {
+        while (outOfDate(db)) {
             int version = getVersion(db);
 
             System.out.println("Database version: " + version);
@@ -232,7 +232,7 @@ public class DatabaseVersionUpdater {
         return null;
     }
 
-    public static void cleanDatabase(Connection db) throws SQLException {
+    private static void cleanDatabase(Connection db) throws SQLException {
         System.out.println("Cleaning database....");
 
         Statement s = db.createStatement();
@@ -249,11 +249,6 @@ public class DatabaseVersionUpdater {
         s.close();
 
         System.out.println("Finished cleaning database");
-    }
-
-    public static void main(String[] args) throws SQLException {
-        Connection db = DriverManager.getConnection("jdbc:h2:~/test", "sa", "");
-        DatabaseVersionUpdater.updateDatabase(db);
     }
 
 }

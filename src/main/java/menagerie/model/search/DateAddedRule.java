@@ -23,14 +23,6 @@ public class DateAddedRule extends SearchRule {
         this.type = type;
     }
 
-    public Type getType() {
-        return type;
-    }
-
-    public long getTime() {
-        return time;
-    }
-
     @Override
     public boolean accept(ImageInfo img) {
         if (type == DateAddedRule.Type.LESS_THAN) {

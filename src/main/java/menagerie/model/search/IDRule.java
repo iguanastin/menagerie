@@ -21,14 +21,6 @@ public class IDRule extends SearchRule {
         this.id = value;
     }
 
-    public int getId() {
-        return id;
-    }
-
-    public Type getType() {
-        return type;
-    }
-
     @Override
     public boolean accept(ImageInfo img) {
         if (type == Type.LESS_THAN) {

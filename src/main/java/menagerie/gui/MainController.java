@@ -27,15 +27,23 @@ import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 
 public class MainController {
 
@@ -120,21 +128,20 @@ public class MainController {
         initSettingsScreen();
         initTagListScreen();
         initDuplicateScreen();
+
 //        initEditTagsAutoComplete();
+
+        //Apply a default search
+        searchOnAction();
 
         //Init window props from settings
         Platform.runLater(this::initWindowPropertiesFromSettings);
-
-        //Apply a default search
-        Platform.runLater(this::searchOnAction);
     }
 
     private void initMenagerie() {
         try {
             Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getDbUrl(), settings.getDbUser(), settings.getDbPass());
-            if (!DatabaseVersionUpdater.upToDate(db)) {
-                DatabaseVersionUpdater.updateDatabase(db);
-            }
+            DatabaseVersionUpdater.updateDatabase(db);
 
             menagerie = new Menagerie(db);
         } catch (SQLException e) {
@@ -453,13 +460,11 @@ public class MainController {
         if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
 
         currentProgressLockThread = new ProgressLockThread(queue);
-        currentProgressLockThread.setUpdateListener((num, total) -> {
-            Platform.runLater(() -> {
-                final double progress = (double) num / total;
-                progressLockProgressBar.setProgress(progress);
-                progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
-            });
-        });
+        currentProgressLockThread.setUpdateListener((num, total) -> Platform.runLater(() -> {
+            final double progress = (double) num / total;
+            progressLockProgressBar.setProgress(progress);
+            progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
+        }));
         currentProgressLockThread.setCancelListener((num, total) -> {
             Platform.runLater(this::closeProgressLockScreen);
             if (cancelListener != null) cancelListener.progressCanceled(num, total);
@@ -649,7 +654,7 @@ public class MainController {
             if (arg == null || arg.isEmpty()) continue;
 
             if (arg.startsWith("id:")) {
-                String temp = arg.substring(3);
+                String temp = arg.substring(arg.indexOf(':') + 1);
                 IDRule.Type type = IDRule.Type.EQUAL_TO;
                 if (temp.startsWith("<")) {
                     type = IDRule.Type.LESS_THAN;
@@ -665,7 +670,7 @@ public class MainController {
                     Main.showErrorMessage("Error", "Error converting int value for ID rule", e.getLocalizedMessage());
                 }
             } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
-                String temp = arg.substring(5);
+                String temp = arg.substring(arg.indexOf(':') + 1);
                 DateAddedRule.Type type = DateAddedRule.Type.EQUAL_TO;
                 if (temp.startsWith("<")) {
                     type = DateAddedRule.Type.LESS_THAN;
@@ -680,14 +685,19 @@ public class MainController {
                     e.printStackTrace();
                     Main.showErrorMessage("Error", "Error converting long value for date added rule", e.getLocalizedMessage());
                 }
-            } else if (arg.startsWith("-")) {
-                Tag tag = menagerie.getTagByName(arg.substring(1));
-                if (tag == null) tag = new Tag(menagerie, -1, arg.substring(1));
-                rules.add(new TagRule(tag, true));
+            } else if (arg.startsWith("md5:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                rules.add(new MD5Rule(temp));
             } else {
+                boolean exclude = false;
+                if (arg.startsWith("-")) {
+                    arg = arg.substring(1);
+                    exclude = true;
+                }
+
                 Tag tag = menagerie.getTagByName(arg);
                 if (tag == null) tag = new Tag(menagerie, -1, arg);
-                rules.add(new TagRule(tag, false));
+                rules.add(new TagRule(tag, exclude));
             }
         }
 
@@ -851,9 +861,9 @@ public class MainController {
         }
     }
 
-    private void deleteDuplicateImageEvent(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
+    private void deleteDuplicateImageEvent(ImageInfo toDelete, ImageInfo toKeep) {
         int index = currentSimilarPairs.indexOf(currentlyPreviewingPair);
-        toDelete.remove(deleteFile);
+        toDelete.remove(true);
 
         //Consolidate tags
         if (settings.isConsolidateTags()) {
@@ -1122,13 +1132,15 @@ public class MainController {
     }
 
     public void duplicateLeftDeleteButtonOnAction(ActionEvent event) {
-        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), currentlyPreviewingPair.getImg2(), true);
+        if (currentlyPreviewingPair != null)
+            deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), currentlyPreviewingPair.getImg2());
 
         event.consume();
     }
 
     public void duplicateRightDeleteButtonOnAction(ActionEvent event) {
-        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), currentlyPreviewingPair.getImg1(), true);
+        if (currentlyPreviewingPair != null)
+            deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), currentlyPreviewingPair.getImg1());
 
         event.consume();
     }

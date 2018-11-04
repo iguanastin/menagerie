@@ -26,7 +26,6 @@ public class DatabaseUpdateQueue implements Runnable {
     }
 
     private synchronized Runnable dequeueUpdate() {
-        if (activeQueue.isEmpty()) return null;
         return activeQueue.remove(0);
     }
 
@@ -36,10 +35,6 @@ public class DatabaseUpdateQueue implements Runnable {
             waitingQueue.clear();
             notify();
         }
-    }
-
-    public synchronized int getQueueSize() {
-        return activeQueue.size();
     }
 
     @Override

@@ -4,7 +4,10 @@ import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.*;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.TransferMode;
 import menagerie.gui.Main;
 import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridView;
@@ -297,8 +300,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         if (getLastSelected() != null) {
             for (Node n : getChildren()) {
                 if (n instanceof VirtualFlow) {
-                    VirtualFlow<ImageGridCell> vf = (VirtualFlow<ImageGridCell>) n;
-                    vf.show(getItems().indexOf(getLastSelected()) / getRowLength()); // Garbage API, doesn't account for multi-element rows
+                    ((VirtualFlow) n).show(getItems().indexOf(getLastSelected()) / getRowLength()); // Garbage API, doesn't account for multi-element rows
                     break;
                 }
             }
@@ -363,8 +365,7 @@ public class ImageGridView extends GridView<ImageInfo> {
     private void updateCellSelectionCSS() {
         for (Node n : getChildren()) {
             if (n instanceof VirtualFlow) {
-                VirtualFlow<ImageGridCell> vf = (VirtualFlow<ImageGridCell>) n;
-                vf.rebuildCells();
+                ((VirtualFlow) n).rebuildCells();
                 break;
             }
         }
@@ -374,10 +375,9 @@ public class ImageGridView extends GridView<ImageInfo> {
         lastSelected = img;
     }
 
-    public boolean unselect(ImageInfo img) {
-        boolean r = selected.remove(img);
+    public void unselect(ImageInfo img) {
+        selected.remove(img);
         updateCellSelectionCSS();
-        return r;
     }
 
 }

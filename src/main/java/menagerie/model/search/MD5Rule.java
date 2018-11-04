@@ -13,10 +13,6 @@ public class MD5Rule extends SearchRule {
         this.md5 = md5;
     }
 
-    public String getMd5() {
-        return md5;
-    }
-
     @Override
     public boolean accept(ImageInfo img) {
         return img.getMD5().equalsIgnoreCase(md5);

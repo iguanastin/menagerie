@@ -27,25 +27,15 @@ public class Tag implements Comparable<Tag> {
         return menagerie;
     }
 
-//    public int computeFrequency() {
-//        int count = 0;
-//
-//        for (ImageInfo img : menagerie.getImages()) {
-//            if (img.hasTag(this)) count++;
-//        }
-//
-//        return count;
-//    }
-
     public int getFrequency() {
         return frequency;
     }
 
-    public void incrementFrequency() {
+    void incrementFrequency() {
         frequency++;
     }
 
-    public void decrementFrequency() {
+    void decrementFrequency() {
         frequency--;
     }
 

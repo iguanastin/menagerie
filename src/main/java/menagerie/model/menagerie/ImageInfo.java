@@ -143,8 +143,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
         }
     }
 
-    public boolean commitMD5ToDatabase() {
-        if (md5 == null) return false;
+    public void commitMD5ToDatabase() {
+        if (md5 == null) return;
 
         menagerie.imageMD5Updated(this);
 
@@ -159,18 +159,18 @@ public class ImageInfo implements Comparable<ImageInfo> {
         });
         menagerie.getUpdateQueue().commit();
 
-        return true;
     }
 
     public void initializeHistogram() {
         try {
             histogram = new ImageHistogram(getImageAsync());
         } catch (HistogramReadException e) {
+            // A comment to make the warning of an empty catch block go away
         }
     }
 
-    public boolean commitHistogramToDatabase() {
-        if (histogram == null) return false;
+    public void commitHistogramToDatabase() {
+        if (histogram == null) return;
 
         menagerie.getUpdateQueue().enqueueUpdate(() -> {
             try {
@@ -185,7 +185,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
             }
         });
 
-        return true;
     }
 
     public List<Tag> getTags() {
@@ -200,8 +199,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return getTags().contains(t);
     }
 
-    public boolean addTag(Tag t) {
-        if (hasTag(t)) return false;
+    public void addTag(Tag t) {
+        if (hasTag(t)) return;
         tags.add(t);
         t.incrementFrequency();
 
@@ -220,11 +219,10 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
         if (tagListener != null) tagListener.tagsChanged();
 
-        return true;
     }
 
-    public boolean removeTag(Tag t) {
-        if (!hasTag(t)) return false;
+    public void removeTag(Tag t) {
+        if (!hasTag(t)) return;
         tags.remove(t);
         t.decrementFrequency();
 
@@ -243,7 +241,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
         if (tagListener != null) tagListener.tagsChanged();
 
-        return true;
     }
 
     public void remove(boolean deleteFile) {

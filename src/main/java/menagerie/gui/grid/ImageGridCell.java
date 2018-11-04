@@ -15,7 +15,7 @@ public class ImageGridCell extends GridCell<ImageInfo> {
     final private ImageGridView grid;
 
 
-    public ImageGridCell(ImageGridView imageGridView) {
+    ImageGridCell(ImageGridView imageGridView) {
         super();
 
         this.grid = imageGridView;

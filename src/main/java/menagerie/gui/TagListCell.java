@@ -11,7 +11,7 @@ public class TagListCell extends ListCell<Tag> {
     private Label countLabel, nameLabel;
 
 
-    public TagListCell() {
+    TagListCell() {
         countLabel = new Label();
         nameLabel = new Label();
         setGraphic(new BorderPane(null, null, countLabel, null, nameLabel));

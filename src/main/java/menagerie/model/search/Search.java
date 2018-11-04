@@ -40,41 +40,34 @@ public class Search {
         return results;
     }
 
-    public boolean addIfValid(ImageInfo img) {
+    public void addIfValid(ImageInfo img) {
         if (rules != null) {
             for (SearchRule rule : rules) {
-                if (!rule.accept(img)) return false;
+                if (!rule.accept(img)) return;
             }
         }
         results.add(img);
         if (listener != null) listener.imageAdded(img);
 
-        return true;
     }
 
-    public boolean removeIfInvalid(ImageInfo img) {
+    public void removeIfInvalid(ImageInfo img) {
         if (rules != null) {
             for (SearchRule rule : rules) {
                 if (!rule.accept(img)) {
                     boolean result = results.remove(img);
                     if (listener != null && result) listener.imageRemoved(img);
-                    return true;
+                    return;
                 }
             }
         }
 
-        return false;
     }
 
-    public boolean remove(ImageInfo img) {
+    public void remove(ImageInfo img) {
         boolean result = results.remove(img);
         if (listener != null && result) listener.imageRemoved(img);
 
-        return result;
-    }
-
-    public boolean isDescending() {
-        return descending;
     }
 
     public void sortResults() {

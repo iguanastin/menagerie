@@ -20,13 +20,9 @@ public class TagRule extends SearchRule {
         return tag;
     }
 
-    public boolean isExcluding() {
-        return exclude;
-    }
-
     @Override
     public boolean accept(ImageInfo img) {
-        if (isExcluding()) {
+        if (exclude) {
             return !img.hasTag(tag);
         } else {
             return img.hasTag(tag);
@@ -35,7 +31,7 @@ public class TagRule extends SearchRule {
 
     @Override
     public String toString() {
-        if (isExcluding()) {
+        if (exclude) {
             return "Tag Rule: exclude \"" + tag.getName() + "\"";
         } else {
             return "Tag Rule: \"" + tag.getName() + "\"";
