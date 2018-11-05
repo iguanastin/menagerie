@@ -7,6 +7,7 @@
 <?import javafx.scene.text.*?>
 <?import menagerie.gui.grid.ImageGridView?>
 <?import menagerie.gui.image.DynamicImageView?>
+<?import menagerie.gui.PredictiveTextField?>
 <StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="menagerie.gui.MainController">
     <BorderPane fx:id="explorerPane" onKeyPressed="#explorerPaneOnKeyPressed" onKeyReleased="#explorerPaneOnKeyReleased"
@@ -26,7 +27,7 @@
                             <padding>
                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                             </padding>
-                            <TextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search"
+                            <PredictiveTextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search"
                                        HBox.hgrow="ALWAYS"/>
                         </HBox>
                         <BorderPane>
@@ -66,12 +67,12 @@
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                     </padding>
                 </ListView>
-                <TextField fx:id="editTagsTextfield" onKeyPressed="#editTagsTextfieldOnKeyPressed"
-                           promptText="Edit tags">
+                <PredictiveTextField fx:id="editTagsTextfield" onKeyPressed="#editTagsTextfieldOnKeyPressed"
+                                     promptText="Edit tags">
                     <VBox.margin>
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                     </VBox.margin>
-                </TextField>
+                </PredictiveTextField>
             </VBox>
         </left>
         <top>

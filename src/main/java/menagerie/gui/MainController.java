@@ -54,16 +54,14 @@ public class MainController {
 
     public BorderPane explorerPane;
     public ToggleButton descendingToggleButton;
-    public TextField searchTextField;
+    public PredictiveTextField searchTextField;
     public ImageGridView imageGridView;
     public DynamicImageView previewImageView;
     public Label resultCountLabel;
     public Label imageInfoLabel;
     public ListView<Tag> tagListView;
-    public TextField editTagsTextfield;
+    public PredictiveTextField editTagsTextfield;
     public MenuBar menuBar;
-
-    private final ContextMenu autoCompleteContextMenu = new ContextMenu();
 
     public BorderPane settingsPane;
     public CheckBox computeMD5SettingCheckbox;
@@ -149,8 +147,6 @@ public class MainController {
         initTagListScreen();
         initDuplicateScreen();
 
-//        initEditTagsAutoComplete();
-
         //Apply a default search
         searchOnAction();
 
@@ -233,47 +229,6 @@ public class MainController {
                 if (tag.getName().toLowerCase().startsWith(newValue.toLowerCase())) tagListListView.getItems().add(tag);
             });
             updateTagListListViewOrder();
-        });
-    }
-
-    private void initEditTagsAutoComplete() {
-        editTagsTextfield.textProperty().addListener((observable, oldValue, str) -> {
-            if (str != null && !str.isEmpty()) {
-                str = str.trim();
-                boolean subtract = str.startsWith("-");
-                if (subtract) str = str.substring(1);
-
-                if (autoCompleteContextMenu.isShowing()) autoCompleteContextMenu.hide();
-
-                autoCompleteContextMenu.getItems().clear();
-                int i = 0;
-                for (Tag t : menagerie.getTags()) {
-                    if (i >= 10) break;
-
-                    if (t.getName().startsWith(str)) {
-                        MenuItem m = new MenuItem(t.getName());
-                        m.setMnemonicParsing(false);
-                        m.setOnAction(event -> {
-                            if (subtract) editTagsTextfield.setText("-" + t.getName());
-                            else editTagsTextfield.setText(t.getName());
-                            editTagsTextfield.positionCaret(editTagsTextfield.getText().length());
-                            event.consume();
-                        });
-                        autoCompleteContextMenu.getItems().add(m);
-                        i++;
-                    }
-                }
-
-                if (i > 0) {
-                    Bounds b = editTagsTextfield.localToScreen(editTagsTextfield.getBoundsInLocal());
-                    if (!autoCompleteContextMenu.isShowing())
-                        autoCompleteContextMenu.show(editTagsTextfield, 0, 0);
-                    autoCompleteContextMenu.setX(b.getMinX() - 10);
-                    autoCompleteContextMenu.setY(b.getMinY() - autoCompleteContextMenu.getHeight() + 20);
-                }
-            } else if (autoCompleteContextMenu.isShowing()) {
-                autoCompleteContextMenu.hide();
-            }
         });
     }
 
@@ -363,6 +318,31 @@ public class MainController {
             });
             return c;
         });
+
+        editTagsTextfield.setConsumeEnter(false);
+        editTagsTextfield.setOptionsListener(prefix -> {
+            prefix = prefix.toLowerCase();
+            boolean negative = prefix.startsWith("-");
+            if (negative) prefix = prefix.substring(1);
+
+            List<String> results = new ArrayList<>();
+
+            List<Tag> tags = new ArrayList<>(menagerie.getTags());
+            tags.sort((o1, o2) -> o2.getFrequency() - o1.getFrequency());
+            for (Tag tag : tags) {
+                if (tag.getName().toLowerCase().startsWith(prefix)) {
+                    if (negative) results.add("-" + tag.getName());
+                    else results.add(tag.getName());
+                }
+
+                if (results.size() >= 8) break;
+            }
+
+            return results;
+        });
+
+        searchTextField.setTop(false);
+        searchTextField.setOptionsListener(editTagsTextfield.getOptionsListener());
     }
 
     private void initWindowListeners() {
