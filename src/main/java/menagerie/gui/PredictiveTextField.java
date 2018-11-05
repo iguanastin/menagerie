@@ -113,8 +113,8 @@ public class PredictiveTextField extends TextField {
                         positionCaret(getText().length() + 1);
 
                         popup.hide();
+                        if (consumeAccept) event.consume();
                     }
-                    if (consumeAccept) event.consume();
                     break;
             }
         }
