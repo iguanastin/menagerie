@@ -3,7 +3,6 @@ package menagerie.gui;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.geometry.Bounds;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -319,7 +318,7 @@ public class MainController {
             return c;
         });
 
-        editTagsTextfield.setConsumeEnter(false);
+        editTagsTextfield.setConsumeAccept(false);
         editTagsTextfield.setOptionsListener(prefix -> {
             prefix = prefix.toLowerCase();
             boolean negative = prefix.startsWith("-");
@@ -873,7 +872,7 @@ public class MainController {
 
     private void editTagsOfSelected(String input) {
         if (input == null || input.isEmpty() || imageGridView.getSelected().isEmpty()) return;
-        lastTagString = input;
+        lastTagString = input.trim();
 
         for (String text : input.split("\\s+")) {
             if (text.startsWith("-")) {

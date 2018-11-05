@@ -21,7 +21,7 @@ public class PredictiveTextField extends TextField {
     private int selectedIndex = -1;
 
     private boolean top = true;
-    private boolean consumeEnter = true;
+    private boolean consumeAccept = true;
 
 
     public PredictiveTextField() {
@@ -99,6 +99,7 @@ public class PredictiveTextField extends TextField {
                     updateOptionCSSStyles();
                     event.consume();
                     break;
+                case SPACE:
                 case ENTER:
                     if (selectedIndex >= 0) {
                         if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
@@ -107,13 +108,13 @@ public class PredictiveTextField extends TextField {
                             String temp = getText().substring(0, getText().lastIndexOf(' ') + 1);
                             setText(temp + ((Label) vBox.getChildren().get(selectedIndex)).getText());
                         }
-                        if (consumeEnter) setText(getText() + " ");
+                        if (consumeAccept) setText(getText() + " ");
 
                         positionCaret(getText().length() + 1);
 
                         popup.hide();
                     }
-                    if (consumeEnter) event.consume();
+                    if (consumeAccept) event.consume();
                     break;
             }
         }
@@ -141,12 +142,12 @@ public class PredictiveTextField extends TextField {
         this.top = top;
     }
 
-    public void setConsumeEnter(boolean consumeEnter) {
-        this.consumeEnter = consumeEnter;
+    public void setConsumeAccept(boolean consumeAccept) {
+        this.consumeAccept = consumeAccept;
     }
 
-    public boolean isConsumeEnter() {
-        return consumeEnter;
+    public boolean isConsumeAccept() {
+        return consumeAccept;
     }
 
 }
