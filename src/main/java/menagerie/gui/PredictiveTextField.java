@@ -21,7 +21,6 @@ public class PredictiveTextField extends TextField {
     private int selectedIndex = -1;
 
     private boolean top = true;
-    private boolean consumeAccept = true;
 
 
     public PredictiveTextField() {
@@ -48,7 +47,7 @@ public class PredictiveTextField extends TextField {
         if (word == null || word.isEmpty()) {
             return;
         }
-        if (word.contains(" ")) word = word.substring(word.lastIndexOf(' '));
+        if (word.contains(" ")) word = word.substring(word.lastIndexOf(' ') + 1);
 
         List<String> options = optionsListener.getOptionsFor(word);
         if (options == null || options.isEmpty()) {
@@ -100,6 +99,10 @@ public class PredictiveTextField extends TextField {
                     event.consume();
                     break;
                 case SPACE:
+                    if (event.isControlDown()) {
+                        if (top) selectedIndex = vBox.getChildren().size() - 1;
+                        else selectedIndex = 0;
+                    }
                 case ENTER:
                     if (selectedIndex >= 0) {
                         if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
@@ -108,12 +111,10 @@ public class PredictiveTextField extends TextField {
                             String temp = getText().substring(0, getText().lastIndexOf(' ') + 1);
                             setText(temp + ((Label) vBox.getChildren().get(selectedIndex)).getText());
                         }
-                        if (consumeAccept) setText(getText() + " ");
 
                         positionCaret(getText().length() + 1);
 
                         popup.hide();
-                        if (consumeAccept) event.consume();
                     }
                     break;
             }
@@ -140,14 +141,6 @@ public class PredictiveTextField extends TextField {
 
     public void setTop(boolean top) {
         this.top = top;
-    }
-
-    public void setConsumeAccept(boolean consumeAccept) {
-        this.consumeAccept = consumeAccept;
-    }
-
-    public boolean isConsumeAccept() {
-        return consumeAccept;
     }
 
 }

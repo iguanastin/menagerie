@@ -318,7 +318,6 @@ public class MainController {
             return c;
         });
 
-        editTagsTextfield.setConsumeAccept(false);
         editTagsTextfield.setOptionsListener(prefix -> {
             prefix = prefix.toLowerCase();
             boolean negative = prefix.startsWith("-");
