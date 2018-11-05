@@ -347,21 +347,13 @@ public class MainController {
                 if (c.getItem() != null) {
                     MenuItem i1 = new MenuItem("Add to search");
                     i1.setOnAction(event1 -> {
-                        if (searchTextField.getText().trim().isEmpty()) {
-                            searchTextField.setText(c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
-                        }
-                        searchTextField.requestFocus();
+                        searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
+                        searchOnAction();
                     });
-                    MenuItem i2 = new MenuItem("Subtract from search");
+                    MenuItem i2 = new MenuItem("Exclude from search");
                     i2.setOnAction(event1 -> {
-                        if (searchTextField.getText().trim().isEmpty()) {
-                            searchTextField.setText("-" + c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
-                        }
-                        searchTextField.requestFocus();
+                        searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
+                        searchOnAction();
                     });
                     MenuItem i3 = new MenuItem("Remove from selected");
                     i3.setOnAction(event1 -> imageGridView.getSelected().forEach(img -> img.removeTag(c.getItem())));
