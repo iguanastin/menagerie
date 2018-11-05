@@ -81,6 +81,16 @@ public final class ImageHistogram {
         return arrayAsInputStream(blue);
     }
 
+    public boolean isBlackAndWhite(double confidence) {
+        double d = 0;
+
+        for (int i = 0; i < BIN_SIZE; i++) {
+            d += Math.max(Math.max(red[i], green[i]), blue[i]) - Math.min(Math.min(red[i], green[i]), blue[i]);
+        }
+
+        return d < confidence;
+    }
+
     public double getSimilarity(ImageHistogram other) {
         double da = 0, dr = 0, dg = 0, db = 0;
 
