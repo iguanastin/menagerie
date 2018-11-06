@@ -715,8 +715,44 @@ public class MainController {
 
         final boolean descending = descendingToggleButton.isSelected();
 
+        List<SearchRule> rules = constructRuleSet(searchTextField.getText());
+
+        if (currentSearch != null) currentSearch.close();
+        currentSearch = new Search(menagerie, rules, descending);
+        currentSearch.setListener(new SearchUpdateListener() {
+            @Override
+            public void imageAdded(ImageInfo img) {
+                currentSearch.sortResults();
+                Platform.runLater(() -> imageGridView.getItems().add(currentSearch.getResults().indexOf(img), img));
+            }
+
+            @Override
+            public void imageRemoved(ImageInfo img) {
+                Platform.runLater(() -> {
+                    int index = imageGridView.getItems().indexOf(img) + 1;
+                    if (index < imageGridView.getItems().size())
+                        imageGridView.setLastSelected(imageGridView.getItems().get(index));
+                    else if (index - 1 >= 0) imageGridView.setLastSelected(imageGridView.getItems().get(index - 1));
+
+                    if (img.equals(currentlyPreviewing)) previewImage(null);
+
+                    imageGridView.deselect(img);
+                    imageGridView.getItems().remove(img);
+                });
+            }
+        });
+
+        resultCountLabel.setText("Results: " + currentSearch.getResults().size());
+        imageGridView.clearSelection();
+        imageGridView.getItems().clear();
+        imageGridView.getItems().addAll(currentSearch.getResults());
+
+        if (!imageGridView.getItems().isEmpty()) imageGridView.select(imageGridView.getItems().get(0), false, false);
+    }
+
+    private List<SearchRule> constructRuleSet(String str) {
         List<SearchRule> rules = new ArrayList<>();
-        for (String arg : searchTextField.getText().split("\\s+")) {
+        for (String arg : str.split("\\s+")) {
             if (arg == null || arg.isEmpty()) continue;
 
             if (arg.startsWith("id:")) {
@@ -755,6 +791,36 @@ public class MainController {
                 rules.add(new MD5Rule(arg.substring(arg.indexOf(':') + 1)));
             } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
                 rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1)));
+            } else if (arg.startsWith("missing:")) {
+                String type = arg.substring(arg.indexOf(':') + 1);
+                switch (type.toLowerCase()) {
+                    case "md5":
+                        rules.add(new MissingRule(MissingRule.Type.MD5));
+                        break;
+                    case "file":
+                        rules.add(new MissingRule(MissingRule.Type.FILE));
+                        break;
+                    case "histogram":
+                    case "hist":
+                        rules.add(new MissingRule(MissingRule.Type.HISTOGRAM));
+                        break;
+                }
+            } else if (arg.startsWith("tags:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                TagCountRule.Type type = TagCountRule.Type.EQUAL_TO;
+                if (temp.startsWith("<")) {
+                    type = TagCountRule.Type.LESS_THAN;
+                    temp = temp.substring(1);
+                } else if (temp.startsWith(">")) {
+                    type = TagCountRule.Type.GREATER_THAN;
+                    temp = temp.substring(1);
+                }
+                try {
+                    rules.add(new TagCountRule(type, Integer.parseInt(temp)));
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    Main.showErrorMessage("Error", "Error converting int value for tag count rule", e.getLocalizedMessage());
+                }
             } else {
                 boolean exclude = false;
                 if (arg.startsWith("-")) {
@@ -767,57 +833,7 @@ public class MainController {
                 rules.add(new TagRule(tag, exclude));
             }
         }
-
-        if (currentSearch != null) currentSearch.close();
-        currentSearch = new Search(menagerie, rules, descending);
-        currentSearch.setListener(new SearchUpdateListener() {
-            @Override
-            public void imageAdded(ImageInfo img) {
-                currentSearch.sortResults();
-                Platform.runLater(() -> imageGridView.getItems().add(currentSearch.getResults().indexOf(img), img));
-            }
-
-            @Override
-            public void imageRemoved(ImageInfo img) {
-                Platform.runLater(() -> {
-                    int index = imageGridView.getItems().indexOf(img) + 1;
-                    if (index < imageGridView.getItems().size())
-                        imageGridView.setLastSelected(imageGridView.getItems().get(index));
-                    else if (index - 1 >= 0) imageGridView.setLastSelected(imageGridView.getItems().get(index - 1));
-
-                    if (img.equals(currentlyPreviewing)) previewImage(null);
-
-                    imageGridView.deselect(img);
-                    imageGridView.getItems().remove(img);
-                });
-            }
-        });
-
-//        Thread thread = new Thread(() -> {
-//            long t = System.currentTimeMillis();
-//            List<String> md5s = new ArrayList<>();
-//            images.forEach(img -> md5s.add(img.getMD5()));
-//            for (int i = 0; i < images.size() - 1; i++) {
-//                String h1 = md5s.get(i);
-//                for (int j = i + 1; j < images.size(); j++) {
-//                    String h2 = md5s.get(j);
-//                    if (h1 != null && h1.equals(h2)) {
-//                        System.out.println(h1 + " duplicate pair (" + images.get(i).getId() + "," + images.get(j).getId() + ")");
-//                    }
-//                }
-//            }
-//            System.out.println((System.currentTimeMillis() - t) / 1000.0 + "s");
-//            menagerie.getUpdateQueue().commit();
-//        });
-//        thread.setDaemon(true);
-//        thread.start();
-
-        resultCountLabel.setText("Results: " + currentSearch.getResults().size());
-        imageGridView.clearSelection();
-        imageGridView.getItems().clear();
-        imageGridView.getItems().addAll(currentSearch.getResults());
-
-        if (!imageGridView.getItems().isEmpty()) imageGridView.select(imageGridView.getItems().get(0), false, false);
+        return rules;
     }
 
     private void setImageGridWidth(int n) {
