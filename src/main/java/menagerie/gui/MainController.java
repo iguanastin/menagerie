@@ -280,9 +280,9 @@ public class MainController {
                     String folder = settings.getLastFolder();
                     if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
                     String filename = URI.create(url).getPath().replaceAll("^.*/", "");
-                    File target = new File(folder + filename);
+                    File target = resolveDuplicateFilename(new File(folder + filename));
 
-                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !Filters.IMAGE_FILTER.accept(target)) {
+                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || !Filters.IMAGE_FILTER.accept(target)) {
                         target = openSaveImageDialog(new File(settings.getLastFolder()), filename);
                         if (target == null) return;
                         if (target.exists())
@@ -632,10 +632,11 @@ public class MainController {
         List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
 
         if (results != null && !results.isEmpty()) {
-            menagerie.getImages().forEach(img -> results.remove(img.getFile()));
+            final List<File> finalResults = new ArrayList<>(results);
+            menagerie.getImages().forEach(img -> finalResults.remove(img.getFile()));
 
             List<Runnable> queue = new ArrayList<>();
-            results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+            finalResults.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
             if (!queue.isEmpty()) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
@@ -993,10 +994,11 @@ public class MainController {
 
                     images.forEach(i -> {
                         String filename = i.getFile().getName().toLowerCase();
-                        if (i.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) queue2.add(() -> {
-                            i.initializeHistogram();
-                            i.commitHistogramToDatabase();
-                        });
+                        if (i.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")))
+                            queue2.add(() -> {
+                                i.initializeHistogram();
+                                i.commitHistogramToDatabase();
+                            });
                     });
 
                     Platform.runLater(() -> openProgressLockScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
@@ -1031,21 +1033,20 @@ public class MainController {
             if (watchFolder.exists() && watchFolder.isDirectory()) {
                 folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.IMAGE_FILTER, 30000, files -> {
                     for (File file : files) {
-                        if (!menagerie.isFilePresent(file)) {
-                            if (settings.isAutoImportFromFolderToDefault()) {
-                                String folder = settings.getLastFolder();
-                                if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
-                                File dest = new File(folder + file.getName());
+                        if (settings.isAutoImportFromFolderToDefault()) {
+                            String folder = settings.getLastFolder();
+                            if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
+                            File dest = resolveDuplicateFilename(new File(folder + file.getName()));
 
-                                if (dest.exists() || !file.renameTo(dest)) {
-                                    //TODO: Come up with a better handling for this instead of just giving up
-                                    continue;
-                                }
-
-                                file = dest;
+                            if (!file.renameTo(dest)) {
+                                continue;
                             }
 
-                            menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                            file = dest;
+                        }
+
+                        if (menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()) == null) {
+                            if (!file.delete()) System.out.println("Failed to delete file after it was denied by the Menagerie");
                         }
                     }
                 });
@@ -1115,6 +1116,24 @@ public class MainController {
             Files.copy(currentDatabaseFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             System.out.println("Successfully backed up database to: " + backupFile);
         }
+    }
+
+    public static File resolveDuplicateFilename(File file) {
+        while (file.exists()) {
+            String name = file.getName();
+            if (name.matches(".*\\s\\([0-9]+\\)\\..*")) {
+                int count = Integer.parseInt(name.substring(name.lastIndexOf('(') + 1, name.lastIndexOf(')')));
+                name = name.substring(0, name.lastIndexOf('(') + 1) + (count + 1) + name.substring(name.lastIndexOf(')'));
+            } else {
+                name = name.substring(0, name.lastIndexOf('.')) + " (2)" + name.substring(name.lastIndexOf('.'));
+            }
+
+            String parent = file.getParent();
+            if (!parent.endsWith("/") && !parent.endsWith("\\")) parent += "/";
+            file = new File(parent + name);
+        }
+
+        return file;
     }
 
     // ---------------------------------- Event Handlers ------------------------------------

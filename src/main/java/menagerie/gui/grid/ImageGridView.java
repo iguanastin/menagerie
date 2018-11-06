@@ -8,7 +8,9 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.TransferMode;
+import javafx.stage.DirectoryChooser;
 import menagerie.gui.Main;
+import menagerie.gui.MainController;
 import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridView;
 
@@ -77,17 +79,18 @@ public class ImageGridView extends GridView<ImageInfo> {
                 }
             });
             c.setOnContextMenuRequested(event -> {
-                MenuItem i1 = new MenuItem("Slideshow: Selected");
-                i1.setOnAction(event1 -> {
+                MenuItem si1 = new MenuItem("Selected");
+                si1.setOnAction(event1 -> {
                     if (slideshowRequestListener != null) slideshowRequestListener.requestSlideshow(selected);
                 });
-                MenuItem i2 = new MenuItem("Slideshow: Searched");
-                i2.setOnAction(event1 -> {
+                MenuItem si2 = new MenuItem("Searched");
+                si2.setOnAction(event1 -> {
                     if (slideshowRequestListener != null) slideshowRequestListener.requestSlideshow(getItems());
                 });
+                Menu i1 = new Menu("Slideshow", null, si1, si2);
 
-                MenuItem i3 = new MenuItem("Open in Explorer");
-                i3.setOnAction(event1 -> {
+                MenuItem i2 = new MenuItem("Open in Explorer");
+                i2.setOnAction(event1 -> {
                     try {
                         Runtime.getRuntime().exec("explorer.exe /select, " + c.getItem().getFile().getAbsolutePath());
                     } catch (IOException e) {
@@ -96,8 +99,8 @@ public class ImageGridView extends GridView<ImageInfo> {
                     }
                 });
 
-                MenuItem i4 = new MenuItem("Build MD5 Hash");
-                i4.setOnAction(event1 -> {
+                MenuItem i3 = new MenuItem("Build MD5 Hash");
+                i3.setOnAction(event1 -> {
                     List<Runnable> queue = new ArrayList<>();
                     selected.forEach(img -> {
                         if (img.getMD5() == null) {
@@ -115,8 +118,8 @@ public class ImageGridView extends GridView<ImageInfo> {
                         }
                     }
                 });
-                MenuItem i5 = new MenuItem("Build Histogram");
-                i5.setOnAction(event1 -> {
+                MenuItem i4 = new MenuItem("Build Histogram");
+                i4.setOnAction(event1 -> {
                     List<Runnable> queue = new ArrayList<>();
                     selected.forEach(img -> {
                         String filename = img.getFile().getName().toLowerCase();
@@ -136,9 +139,28 @@ public class ImageGridView extends GridView<ImageInfo> {
                     }
                 });
 
-                MenuItem i6 = new MenuItem("Find Duplicates");
-                i6.setOnAction(event1 -> {
+                MenuItem i5 = new MenuItem("Find Duplicates");
+                i5.setOnAction(event1 -> {
                     if (duplicateRequestListener != null) duplicateRequestListener.findAndShowDuplicates(selected);
+                });
+
+                MenuItem i6 = new MenuItem("Move To...");
+                i6.setOnAction(event1 -> {
+                    if (!selected.isEmpty()) {
+                        DirectoryChooser dc = new DirectoryChooser();
+                        dc.setTitle("Move files to folder...");
+                        File result = dc.showDialog(getScene().getWindow());
+
+                        if (result != null) {
+                            selected.forEach(img -> {
+                                File dest = MainController.resolveDuplicateFilename(result.toPath().resolve(img.getFile().getName()).toFile());
+
+                                if (!img.renameTo(dest)) {
+                                    Main.showErrorMessage("Error", "Unable to move file: " + img.getFile(), "Destination: " + dest);
+                                }
+                            });
+                        }
+                    }
                 });
 
                 MenuItem i7 = new MenuItem("Remove");
@@ -146,7 +168,7 @@ public class ImageGridView extends GridView<ImageInfo> {
                 MenuItem i8 = new MenuItem("Delete");
                 i8.setOnAction(event1 -> deleteEventUserInput(true));
 
-                ContextMenu m = new ContextMenu(i1, i2, new SeparatorMenuItem(), i3, new SeparatorMenuItem(), i4, i5, new SeparatorMenuItem(), i6, new SeparatorMenuItem(), i7, i8);
+                ContextMenu m = new ContextMenu(i1, new SeparatorMenuItem(), i2, new SeparatorMenuItem(), i3, i4, new SeparatorMenuItem(), i5, new SeparatorMenuItem(), i6, new SeparatorMenuItem(), i7, i8);
                 m.show(c, event.getScreenX(), event.getScreenY());
                 event.consume();
             });

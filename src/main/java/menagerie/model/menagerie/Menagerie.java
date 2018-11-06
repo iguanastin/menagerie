@@ -31,6 +31,7 @@ public class Menagerie {
     final PreparedStatement PS_GET_IMG_THUMBNAIL;
     final PreparedStatement PS_ADD_TAG_TO_IMG;
     final PreparedStatement PS_REMOVE_TAG_FROM_IMG;
+    final PreparedStatement PS_SET_IMG_PATH;
 
     // ------------------------------ Variables -----------------------------------
 
@@ -65,6 +66,7 @@ public class Menagerie {
         PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5, hist_a, hist_r, hist_g, hist_b) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
         PS_DELETE_TAG = database.prepareStatement("DELETE FROM tags WHERE tags.id=?;");
         PS_CREATE_TAG = database.prepareStatement("INSERT INTO tags(id, name) VALUES (?, ?);");
+        PS_SET_IMG_PATH = database.prepareStatement("UPDATE imgs SET path=? WHERE id=?;");
 
         // Load data from database
         loadTagsFromDatabase();

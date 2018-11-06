@@ -27,9 +27,9 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
     private final int id;
     private final long dateAdded;
-    private final File file;
     private final List<Tag> tags = new ArrayList<>();
 
+    private File file;
     private String md5;
     private ImageHistogram histogram;
 
@@ -237,6 +237,27 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
         if (tagListener != null) tagListener.tagsChanged();
 
+    }
+
+    public boolean renameTo(File dest) {
+        boolean succeeded = file.renameTo(dest);
+
+        if (succeeded) {
+            file = dest;
+
+            menagerie.getUpdateQueue().enqueueUpdate(() -> {
+                try {
+                    menagerie.PS_SET_IMG_PATH.setNString(1, file.getAbsolutePath());
+                    menagerie.PS_SET_IMG_PATH.setInt(2, id);
+                    menagerie.PS_SET_IMG_PATH.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            });
+            menagerie.getUpdateQueue().commit();
+        }
+
+        return succeeded;
     }
 
     public void remove(boolean deleteFile) {
