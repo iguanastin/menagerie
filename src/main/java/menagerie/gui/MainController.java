@@ -160,9 +160,7 @@ public class MainController {
         Platform.runLater(this::initWindowPropertiesFromSettings);
 
         //Init folder watcher
-        if (settings.isAutoImportFromFolder()) {
-            startWatchingFolderForImages();
-        }
+        startWatchingFolderForImages();
     }
 
     private void initMenagerie() {
@@ -1005,30 +1003,32 @@ public class MainController {
             folderWatcherThread.stopWatching();
         }
 
-        File watchFolder = new File(settings.getImportFromFolderPath());
-        if (watchFolder.exists() && watchFolder.isDirectory()) {
-            folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.IMAGE_FILTER, 30000, files -> {
-                for (File file : files) {
-                    if (!menagerie.isFilePresent(file)) {
-                        if (settings.isAutoImportFromFolderToDefault()) {
-                            String folder = settings.getLastFolder();
-                            if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
-                            File dest = new File(folder + file.getName());
+        if (settings.isAutoImportFromFolder()) {
+            File watchFolder = new File(settings.getImportFromFolderPath());
+            if (watchFolder.exists() && watchFolder.isDirectory()) {
+                folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.IMAGE_FILTER, 30000, files -> {
+                    for (File file : files) {
+                        if (!menagerie.isFilePresent(file)) {
+                            if (settings.isAutoImportFromFolderToDefault()) {
+                                String folder = settings.getLastFolder();
+                                if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
+                                File dest = new File(folder + file.getName());
 
-                            if (dest.exists() || !file.renameTo(dest)) {
-                                //TODO: Come up with a better handling for this instead of just giving up
-                                continue;
+                                if (dest.exists() || !file.renameTo(dest)) {
+                                    //TODO: Come up with a better handling for this instead of just giving up
+                                    continue;
+                                }
+
+                                file = dest;
                             }
 
-                            file = dest;
+                            menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                         }
-
-                        menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                     }
-                }
-            });
-            folderWatcherThread.setDaemon(true);
-            folderWatcherThread.start();
+                });
+                folderWatcherThread.setDaemon(true);
+                folderWatcherThread.start();
+            }
         }
     }
 
