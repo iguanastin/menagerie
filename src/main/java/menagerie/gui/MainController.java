@@ -38,7 +38,9 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -1053,15 +1055,15 @@ public class MainController {
     }
 
     private void exit() {
-        try {
-            Connection db = menagerie.getDatabase();
-
-            System.out.println("Attempting to shut down Menagerie database and compact the file");
-            db.createStatement().executeUpdate("SHUTDOWN COMPACT");
-            db.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        new Thread(() -> {
+            try {
+                System.out.println("Attempting to shut down Menagerie database and defragment the file");
+                menagerie.getDatabase().createStatement().executeUpdate("SHUTDOWN DEFRAG;");
+                System.out.println("Done defragging database file");
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }).start();
 
         Platform.exit();
     }
