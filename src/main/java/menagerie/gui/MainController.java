@@ -3,8 +3,8 @@ package menagerie.gui;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.geometry.Bounds;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
@@ -27,15 +27,25 @@ import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.sql.*;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 
 public class MainController {
 
@@ -43,15 +53,15 @@ public class MainController {
 
     public BorderPane explorerPane;
     public ToggleButton descendingToggleButton;
-    public TextField searchTextField;
+    public PredictiveTextField searchTextField;
     public ImageGridView imageGridView;
     public DynamicImageView previewImageView;
     public Label resultCountLabel;
     public Label imageInfoLabel;
+    public Label imageFileNameLabel;
     public ListView<Tag> tagListView;
-    public TextField editTagsTextfield;
-
-    private ContextMenu autoCompleteContextMenu = new ContextMenu();
+    public PredictiveTextField editTagsTextfield;
+    public MenuBar menuBar;
 
     public BorderPane settingsPane;
     public CheckBox computeMD5SettingCheckbox;
@@ -68,10 +78,16 @@ public class MainController {
     public CheckBox duplicateComputeHistSettingCheckbox;
     public TextField histConfidenceSettingTextField;
     public CheckBox duplicateConsolidateTagsSettingCheckbox;
+    public CheckBox backupDatabaseSettingCheckBox;
+    public TextField importFromFolderSettingTextField;
+    public CheckBox autoImportFolderSettingCheckBox;
+    public Button importFromFolderSettingBrowseButton;
+    public CheckBox autoImportFromFolderToDefaultSettingCheckBox;
 
     public BorderPane tagListPane;
     public ChoiceBox<String> tagListOrderChoiceBox;
     public ListView<Tag> tagListListView;
+    public TextField searchTagsScreenTextField;
 
     public BorderPane helpPane;
 
@@ -92,6 +108,9 @@ public class MainController {
     public DynamicImageView duplicateRightImageView;
     public ListView<Tag> duplicateRightTagListView;
 
+    public BorderPane slideshowPane;
+    public DynamicImageView slideshowImageView;
+
 
     private Menagerie menagerie;
     private Search currentSearch = null;
@@ -101,14 +120,27 @@ public class MainController {
     private String lastTagString = null;
     private List<SimilarPair> currentSimilarPairs = null;
     private SimilarPair currentlyPreviewingPair = null;
+    private List<ImageInfo> currentSlideshow = null;
+    private ImageInfo currentSlideshowShowing = null;
 
-    private Settings settings = new Settings(new File("menagerie.settings"));
+    private FolderWatcherThread folderWatcherThread = null;
+
+    private final Settings settings = new Settings(new File("menagerie.settings"));
 
 
     // ---------------------------------- Initializers ------------------------------------
 
     @FXML
     public void initialize() {
+
+        //Backup database
+        try {
+            backupDatabase();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Main.showErrorMessage("Error", "Error while trying to back up the database: " + settings.getDbUrl(), e.getLocalizedMessage());
+        }
+
         //Initialize the menagerie
         initMenagerie();
 
@@ -120,21 +152,27 @@ public class MainController {
         initSettingsScreen();
         initTagListScreen();
         initDuplicateScreen();
-//        initEditTagsAutoComplete();
-
-        //Init window props from settings
-        Platform.runLater(this::initWindowPropertiesFromSettings);
 
         //Apply a default search
-        Platform.runLater(this::searchOnAction);
+        searchOnAction();
+
+        //Init window props from settings
+        Platform.runLater(() -> {
+            initWindowPropertiesFromSettings();
+
+            rootPane.getScene().getWindow().setOnCloseRequest(event -> {
+                exit();
+            });
+        });
+
+        //Init folder watcher
+        startWatchingFolderForImages();
     }
 
     private void initMenagerie() {
         try {
             Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getDbUrl(), settings.getDbUser(), settings.getDbPass());
-            if (!DatabaseVersionUpdater.upToDate(db)) {
-                DatabaseVersionUpdater.updateDatabase(db);
-            }
+            DatabaseVersionUpdater.updateDatabase(db);
 
             menagerie = new Menagerie(db);
         } catch (SQLException e) {
@@ -199,46 +237,13 @@ public class MainController {
             });
             return c;
         });
-    }
 
-    private void initEditTagsAutoComplete() {
-        editTagsTextfield.textProperty().addListener((observable, oldValue, str) -> {
-            if (str != null && !str.isEmpty()) {
-                str = str.trim();
-                boolean subtract = str.startsWith("-");
-                if (subtract) str = str.substring(1);
-
-                if (autoCompleteContextMenu.isShowing()) autoCompleteContextMenu.hide();
-
-                autoCompleteContextMenu.getItems().clear();
-                int i = 0;
-                for (Tag t : menagerie.getTags()) {
-                    if (i >= 10) break;
-
-                    if (t.getName().startsWith(str)) {
-                        MenuItem m = new MenuItem(t.getName());
-                        m.setMnemonicParsing(false);
-                        m.setOnAction(event -> {
-                            if (subtract) editTagsTextfield.setText("-" + t.getName());
-                            else editTagsTextfield.setText(t.getName());
-                            editTagsTextfield.positionCaret(editTagsTextfield.getText().length());
-                            event.consume();
-                        });
-                        autoCompleteContextMenu.getItems().add(m);
-                        i++;
-                    }
-                }
-
-                if (i > 0) {
-                    Bounds b = editTagsTextfield.localToScreen(editTagsTextfield.getBoundsInLocal());
-                    if (!autoCompleteContextMenu.isShowing())
-                        autoCompleteContextMenu.show(editTagsTextfield, 0, 0);
-                    autoCompleteContextMenu.setX(b.getMinX() - 10);
-                    autoCompleteContextMenu.setY(b.getMinY() - autoCompleteContextMenu.getHeight() + 20);
-                }
-            } else if (autoCompleteContextMenu.isShowing()) {
-                autoCompleteContextMenu.hide();
-            }
+        searchTagsScreenTextField.textProperty().addListener((observable, oldValue, newValue) -> {
+            tagListListView.getItems().clear();
+            menagerie.getTags().forEach(tag -> {
+                if (tag.getName().toLowerCase().startsWith(newValue.toLowerCase())) tagListListView.getItems().add(tag);
+            });
+            updateTagListListViewOrder();
         });
     }
 
@@ -250,6 +255,7 @@ public class MainController {
         imageGridView.setSelectionListener(this::previewImage);
         imageGridView.setProgressQueueListener(this::openProgressLockScreen);
         imageGridView.setDuplicateRequestListener(this::processAndShowDuplicates);
+        imageGridView.setSlideshowRequestListener(this::openSlideshowScreen);
 
         //Init drag/drop handlers
         explorerPane.setOnDragOver(event -> {
@@ -274,9 +280,9 @@ public class MainController {
                     String folder = settings.getLastFolder();
                     if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
                     String filename = URI.create(url).getPath().replaceAll("^.*/", "");
-                    File target = new File(folder + filename);
+                    File target = resolveDuplicateFilename(new File(folder + filename));
 
-                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !Filters.IMAGE_FILTER.accept(target)) {
+                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || !Filters.IMAGE_FILTER.accept(target)) {
                         target = openSaveImageDialog(new File(settings.getLastFolder()), filename);
                         if (target == null) return;
                         if (target.exists())
@@ -311,21 +317,13 @@ public class MainController {
                 if (c.getItem() != null) {
                     MenuItem i1 = new MenuItem("Add to search");
                     i1.setOnAction(event1 -> {
-                        if (searchTextField.getText().trim().isEmpty()) {
-                            searchTextField.setText(c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
-                        }
-                        searchTextField.requestFocus();
+                        searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
+                        searchOnAction();
                     });
-                    MenuItem i2 = new MenuItem("Subtract from search");
+                    MenuItem i2 = new MenuItem("Exclude from search");
                     i2.setOnAction(event1 -> {
-                        if (searchTextField.getText().trim().isEmpty()) {
-                            searchTextField.setText("-" + c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
-                        }
-                        searchTextField.requestFocus();
+                        searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
+                        searchOnAction();
                     });
                     MenuItem i3 = new MenuItem("Remove from selected");
                     i3.setOnAction(event1 -> imageGridView.getSelected().forEach(img -> img.removeTag(c.getItem())));
@@ -335,6 +333,30 @@ public class MainController {
             });
             return c;
         });
+
+        editTagsTextfield.setOptionsListener(prefix -> {
+            prefix = prefix.toLowerCase();
+            boolean negative = prefix.startsWith("-");
+            if (negative) prefix = prefix.substring(1);
+
+            List<String> results = new ArrayList<>();
+
+            List<Tag> tags = new ArrayList<>(menagerie.getTags());
+            tags.sort((o1, o2) -> o2.getFrequency() - o1.getFrequency());
+            for (Tag tag : tags) {
+                if (tag.getName().toLowerCase().startsWith(prefix)) {
+                    if (negative) results.add("-" + tag.getName());
+                    else results.add(tag.getName());
+                }
+
+                if (results.size() >= 8) break;
+            }
+
+            return results;
+        });
+
+        searchTextField.setTop(false);
+        searchTextField.setOptionsListener(editTagsTextfield.getOptionsListener());
     }
 
     private void initWindowListeners() {
@@ -364,6 +386,7 @@ public class MainController {
     private void openSettingsScreen() {
         //Update settings fx nodes
         lastFolderSettingTextField.setText(settings.getLastFolder());
+        importFromFolderSettingTextField.setText(settings.getImportFromFolderPath());
         dbURLTextfield.setText(settings.getDbUrl());
         dbUserTextfield.setText(settings.getDbUser());
         dbPassTextfield.setText(settings.getDbPass());
@@ -375,10 +398,15 @@ public class MainController {
         duplicateComputeMD5SettingCheckbox.setSelected(settings.isComputeMD5ForSimilarity());
         duplicateComputeHistSettingCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
         duplicateConsolidateTagsSettingCheckbox.setSelected(settings.isConsolidateTags());
+        backupDatabaseSettingCheckBox.setSelected(settings.isBackupDatabase());
+        autoImportFolderSettingCheckBox.setSelected(settings.isAutoImportFromFolder());
+        autoImportFromFolderToDefaultSettingCheckBox.setSelected(settings.isAutoImportFromFolderToDefault());
 
         histConfidenceSettingTextField.setText("" + settings.getSimilarityThreshold());
 
         gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
+
+        updateAutoImportFolderDisabledStatus();
 
         //Enable pane
         explorerPane.setDisable(true);
@@ -400,6 +428,7 @@ public class MainController {
             settings.setDbUrl(dbURLTextfield.getText());
             settings.setDbUser(dbUserTextfield.getText());
             settings.setDbPass(dbPassTextfield.getText());
+            settings.setImportFromFolderPath(importFromFolderSettingTextField.getText());
 
             settings.setAutoImportFromWeb(autoImportWebSettingCheckbox.isSelected());
             settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
@@ -408,12 +437,17 @@ public class MainController {
             settings.setComputeMD5ForSimilarity(duplicateComputeMD5SettingCheckbox.isSelected());
             settings.setComputeHistogramForSimilarity(duplicateComputeHistSettingCheckbox.isSelected());
             settings.setConsolidateTags(duplicateConsolidateTagsSettingCheckbox.isSelected());
+            settings.setBackupDatabase(backupDatabaseSettingCheckBox.isSelected());
+            settings.setAutoImportFromFolder(autoImportFolderSettingCheckBox.isSelected());
+            settings.setAutoImportFromFolderToDefault(autoImportFromFolderToDefaultSettingCheckBox.isSelected());
 
             settings.setSimilarityThreshold(Double.parseDouble(histConfidenceSettingTextField.getText()));
 
             settings.setImageGridWidth(gridWidthChoiceBox.getValue());
 
             setImageGridWidth(gridWidthChoiceBox.getValue());
+
+            startWatchingFolderForImages();
         }
     }
 
@@ -449,17 +483,16 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
+    @SuppressWarnings("SameParameterValue")
     private void openProgressLockScreen(String title, String message, List<Runnable> queue, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
         if (currentProgressLockThread != null) currentProgressLockThread.stopRunning();
 
         currentProgressLockThread = new ProgressLockThread(queue);
-        currentProgressLockThread.setUpdateListener((num, total) -> {
-            Platform.runLater(() -> {
-                final double progress = (double) num / total;
-                progressLockProgressBar.setProgress(progress);
-                progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
-            });
-        });
+        currentProgressLockThread.setUpdateListener((num, total) -> Platform.runLater(() -> {
+            final double progress = (double) num / total;
+            progressLockProgressBar.setProgress(progress);
+            progressLockCountLabel.setText((int) (progress * 100) + "% - " + (total - num) + " remaining...");
+        }));
         currentProgressLockThread.setCancelListener((num, total) -> {
             Platform.runLater(this::closeProgressLockScreen);
             if (cancelListener != null) cancelListener.progressCanceled(num, total);
@@ -553,6 +586,26 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
+    private void openSlideshowScreen(List<ImageInfo> images) {
+        if (images == null || images.isEmpty()) return;
+
+        currentSlideshow = images;
+        currentSlideshowShowing = images.get(0);
+        slideshowImageView.setImage(currentSlideshowShowing.getImage());
+
+        explorerPane.setDisable(true);
+        slideshowPane.setDisable(false);
+        slideshowPane.setOpacity(1);
+        slideshowPane.requestFocus();
+    }
+
+    private void closeSlideshowScreen() {
+        explorerPane.setDisable(false);
+        slideshowPane.setDisable(true);
+        slideshowPane.setOpacity(0);
+        imageGridView.requestFocus();
+    }
+
     private void requestImportFolder() {
         DirectoryChooser dc = new DirectoryChooser();
         if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
@@ -561,7 +614,9 @@ public class MainController {
 
         if (result != null) {
             List<Runnable> queue = new ArrayList<>();
-            getFilesRecursive(result, Filters.IMAGE_FILTER).forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+            List<File> files = getFilesRecursive(result, Filters.IMAGE_FILTER);
+            menagerie.getImages().forEach(img -> files.remove(img.getFile()));
+            files.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
             if (!queue.isEmpty()) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
@@ -576,9 +631,12 @@ public class MainController {
         fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
         List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
 
-        if (results != null) {
+        if (results != null && !results.isEmpty()) {
+            final List<File> finalResults = new ArrayList<>(results);
+            menagerie.getImages().forEach(img -> finalResults.remove(img.getFile()));
+
             List<Runnable> queue = new ArrayList<>();
-            results.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+            finalResults.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
 
             if (!queue.isEmpty()) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
@@ -588,6 +646,7 @@ public class MainController {
 
     // ---------------------------------- GUI Action Methods ------------------------------------
 
+    @SuppressWarnings("SameParameterValue")
     private void previewImage(ImageInfo image) {
         if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
         currentlyPreviewing = image;
@@ -599,17 +658,20 @@ public class MainController {
 
             updateTagListViewContents(image);
 
+            imageFileNameLabel.setText(image.getFile().toString());
             updateImageInfoLabel(image, imageInfoLabel);
         } else {
             previewImageView.setImage(null);
             tagListView.getItems().clear();
+
+            imageFileNameLabel.setText("N/A");
             updateImageInfoLabel(null, imageInfoLabel);
         }
     }
 
     private void updateTagListViewContents(ImageInfo image) {
         tagListView.getItems().clear();
-        image.getTags().forEach(tag -> tagListView.getItems().add(tag));
+        tagListView.getItems().addAll(image.getTags());
         tagListView.getItems().sort(Comparator.comparing(Tag::getName));
     }
 
@@ -639,57 +701,24 @@ public class MainController {
         }
     }
 
+    private void updateAutoImportFolderDisabledStatus() {
+        if (autoImportFolderSettingCheckBox.isSelected()) {
+            importFromFolderSettingTextField.setDisable(false);
+            importFromFolderSettingBrowseButton.setDisable(false);
+            autoImportFromFolderToDefaultSettingCheckBox.setDisable(false);
+        } else {
+            importFromFolderSettingTextField.setDisable(true);
+            importFromFolderSettingBrowseButton.setDisable(true);
+            autoImportFromFolderToDefaultSettingCheckBox.setDisable(true);
+        }
+    }
+
     private void searchOnAction() {
         previewImageView.setImage(null);
 
         final boolean descending = descendingToggleButton.isSelected();
 
-        List<SearchRule> rules = new ArrayList<>();
-        for (String arg : searchTextField.getText().split("\\s+")) {
-            if (arg == null || arg.isEmpty()) continue;
-
-            if (arg.startsWith("id:")) {
-                String temp = arg.substring(3);
-                IDRule.Type type = IDRule.Type.EQUAL_TO;
-                if (temp.startsWith("<")) {
-                    type = IDRule.Type.LESS_THAN;
-                    temp = temp.substring(1);
-                } else if (temp.startsWith(">")) {
-                    type = IDRule.Type.GREATER_THAN;
-                    temp = temp.substring(1);
-                }
-                try {
-                    rules.add(new IDRule(type, Integer.parseInt(temp)));
-                } catch (NumberFormatException e) {
-                    e.printStackTrace();
-                    Main.showErrorMessage("Error", "Error converting int value for ID rule", e.getLocalizedMessage());
-                }
-            } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
-                String temp = arg.substring(5);
-                DateAddedRule.Type type = DateAddedRule.Type.EQUAL_TO;
-                if (temp.startsWith("<")) {
-                    type = DateAddedRule.Type.LESS_THAN;
-                    temp = temp.substring(1);
-                } else if (temp.startsWith(">")) {
-                    type = DateAddedRule.Type.GREATER_THAN;
-                    temp = temp.substring(1);
-                }
-                try {
-                    rules.add(new DateAddedRule(type, Long.parseLong(temp)));
-                } catch (NumberFormatException e) {
-                    e.printStackTrace();
-                    Main.showErrorMessage("Error", "Error converting long value for date added rule", e.getLocalizedMessage());
-                }
-            } else if (arg.startsWith("-")) {
-                Tag tag = menagerie.getTagByName(arg.substring(1));
-                if (tag == null) tag = new Tag(menagerie, -1, arg.substring(1));
-                rules.add(new TagRule(tag, true));
-            } else {
-                Tag tag = menagerie.getTagByName(arg);
-                if (tag == null) tag = new Tag(menagerie, -1, arg);
-                rules.add(new TagRule(tag, false));
-            }
-        }
+        List<SearchRule> rules = constructRuleSet(searchTextField.getText());
 
         if (currentSearch != null) currentSearch.close();
         currentSearch = new Search(menagerie, rules, descending);
@@ -710,30 +739,11 @@ public class MainController {
 
                     if (img.equals(currentlyPreviewing)) previewImage(null);
 
-                    imageGridView.unselect(img);
+                    imageGridView.deselect(img);
                     imageGridView.getItems().remove(img);
                 });
             }
         });
-
-//        Thread thread = new Thread(() -> {
-//            long t = System.currentTimeMillis();
-//            List<String> md5s = new ArrayList<>();
-//            images.forEach(img -> md5s.add(img.getMD5()));
-//            for (int i = 0; i < images.size() - 1; i++) {
-//                String h1 = md5s.get(i);
-//                for (int j = i + 1; j < images.size(); j++) {
-//                    String h2 = md5s.get(j);
-//                    if (h1 != null && h1.equals(h2)) {
-//                        System.out.println(h1 + " duplicate pair (" + images.get(i).getId() + "," + images.get(j).getId() + ")");
-//                    }
-//                }
-//            }
-//            System.out.println((System.currentTimeMillis() - t) / 1000.0 + "s");
-//            menagerie.getUpdateQueue().commit();
-//        });
-//        thread.setDaemon(true);
-//        thread.start();
 
         resultCountLabel.setText("Results: " + currentSearch.getResults().size());
         imageGridView.clearSelection();
@@ -741,6 +751,92 @@ public class MainController {
         imageGridView.getItems().addAll(currentSearch.getResults());
 
         if (!imageGridView.getItems().isEmpty()) imageGridView.select(imageGridView.getItems().get(0), false, false);
+    }
+
+    private List<SearchRule> constructRuleSet(String str) {
+        List<SearchRule> rules = new ArrayList<>();
+        for (String arg : str.split("\\s+")) {
+            if (arg == null || arg.isEmpty()) continue;
+
+            if (arg.startsWith("id:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                IDRule.Type type = IDRule.Type.EQUAL_TO;
+                if (temp.startsWith("<")) {
+                    type = IDRule.Type.LESS_THAN;
+                    temp = temp.substring(1);
+                } else if (temp.startsWith(">")) {
+                    type = IDRule.Type.GREATER_THAN;
+                    temp = temp.substring(1);
+                }
+                try {
+                    rules.add(new IDRule(type, Integer.parseInt(temp)));
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    Main.showErrorMessage("Error", "Error converting int value for ID rule", e.getLocalizedMessage());
+                }
+            } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                DateAddedRule.Type type = DateAddedRule.Type.EQUAL_TO;
+                if (temp.startsWith("<")) {
+                    type = DateAddedRule.Type.LESS_THAN;
+                    temp = temp.substring(1);
+                } else if (temp.startsWith(">")) {
+                    type = DateAddedRule.Type.GREATER_THAN;
+                    temp = temp.substring(1);
+                }
+                try {
+                    rules.add(new DateAddedRule(type, Long.parseLong(temp)));
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    Main.showErrorMessage("Error", "Error converting long value for date added rule", e.getLocalizedMessage());
+                }
+            } else if (arg.startsWith("md5:")) {
+                rules.add(new MD5Rule(arg.substring(arg.indexOf(':') + 1)));
+            } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
+                rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1)));
+            } else if (arg.startsWith("missing:")) {
+                String type = arg.substring(arg.indexOf(':') + 1);
+                switch (type.toLowerCase()) {
+                    case "md5":
+                        rules.add(new MissingRule(MissingRule.Type.MD5));
+                        break;
+                    case "file":
+                        rules.add(new MissingRule(MissingRule.Type.FILE));
+                        break;
+                    case "histogram":
+                    case "hist":
+                        rules.add(new MissingRule(MissingRule.Type.HISTOGRAM));
+                        break;
+                }
+            } else if (arg.startsWith("tags:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                TagCountRule.Type type = TagCountRule.Type.EQUAL_TO;
+                if (temp.startsWith("<")) {
+                    type = TagCountRule.Type.LESS_THAN;
+                    temp = temp.substring(1);
+                } else if (temp.startsWith(">")) {
+                    type = TagCountRule.Type.GREATER_THAN;
+                    temp = temp.substring(1);
+                }
+                try {
+                    rules.add(new TagCountRule(type, Integer.parseInt(temp)));
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    Main.showErrorMessage("Error", "Error converting int value for tag count rule", e.getLocalizedMessage());
+                }
+            } else {
+                boolean exclude = false;
+                if (arg.startsWith("-")) {
+                    arg = arg.substring(1);
+                    exclude = true;
+                }
+
+                Tag tag = menagerie.getTagByName(arg);
+                if (tag == null) tag = new Tag(-1, arg);
+                rules.add(new TagRule(tag, exclude));
+            }
+        }
+        return rules;
     }
 
     private void setImageGridWidth(int n) {
@@ -833,7 +929,7 @@ public class MainController {
 
     private void editTagsOfSelected(String input) {
         if (input == null || input.isEmpty() || imageGridView.getSelected().isEmpty()) return;
-        lastTagString = input;
+        lastTagString = input.trim();
 
         for (String text : input.split("\\s+")) {
             if (text.startsWith("-")) {
@@ -851,9 +947,9 @@ public class MainController {
         }
     }
 
-    private void deleteDuplicateImageEvent(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
+    private void deleteDuplicateImageEvent(ImageInfo toDelete, ImageInfo toKeep) {
         int index = currentSimilarPairs.indexOf(currentlyPreviewingPair);
-        toDelete.remove(deleteFile);
+        toDelete.remove(true);
 
         //Consolidate tags
         if (settings.isConsolidateTags()) {
@@ -897,10 +993,12 @@ public class MainController {
                     List<Runnable> queue2 = new ArrayList<>();
 
                     images.forEach(i -> {
-                        if (i.getHistogram() == null) queue2.add(() -> {
-                            i.initializeHistogram();
-                            i.commitHistogramToDatabase();
-                        });
+                        String filename = i.getFile().getName().toLowerCase();
+                        if (i.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")))
+                            queue2.add(() -> {
+                                i.initializeHistogram();
+                                i.commitHistogramToDatabase();
+                            });
                     });
 
                     Platform.runLater(() -> openProgressLockScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
@@ -911,6 +1009,65 @@ public class MainController {
         } else {
             openDuplicateScreen(images);
         }
+    }
+
+    private void slideshowShowNext() {
+        int i = currentSlideshow.indexOf(currentSlideshowShowing);
+        if (i + 1 < currentSlideshow.size()) currentSlideshowShowing = currentSlideshow.get(i + 1);
+        slideshowImageView.setImage(currentSlideshowShowing.getImage());
+    }
+
+    private void slideshowShowPrevious() {
+        int i = currentSlideshow.indexOf(currentSlideshowShowing);
+        if (i - 1 >= 0) currentSlideshowShowing = currentSlideshow.get(i - 1);
+        slideshowImageView.setImage(currentSlideshowShowing.getImage());
+    }
+
+    private void startWatchingFolderForImages() {
+        if (folderWatcherThread != null) {
+            folderWatcherThread.stopWatching();
+        }
+
+        if (settings.isAutoImportFromFolder()) {
+            File watchFolder = new File(settings.getImportFromFolderPath());
+            if (watchFolder.exists() && watchFolder.isDirectory()) {
+                folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.IMAGE_FILTER, 30000, files -> {
+                    for (File file : files) {
+                        if (settings.isAutoImportFromFolderToDefault()) {
+                            String folder = settings.getLastFolder();
+                            if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
+                            File dest = resolveDuplicateFilename(new File(folder + file.getName()));
+
+                            if (!file.renameTo(dest)) {
+                                continue;
+                            }
+
+                            file = dest;
+                        }
+
+                        if (menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()) == null) {
+                            if (!file.delete()) System.out.println("Failed to delete file after it was denied by the Menagerie");
+                        }
+                    }
+                });
+                folderWatcherThread.setDaemon(true);
+                folderWatcherThread.start();
+            }
+        }
+    }
+
+    private void exit() {
+        new Thread(() -> {
+            try {
+                System.out.println("Attempting to shut down Menagerie database and defragment the file");
+                menagerie.getDatabase().createStatement().executeUpdate("SHUTDOWN DEFRAG;");
+                System.out.println("Done defragging database file");
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
+        Platform.exit();
     }
 
     // ---------------------------------- Compute Utilities ------------------------------------
@@ -936,6 +1093,47 @@ public class MainController {
             }
         }
         return results;
+    }
+
+    private void backupDatabase() throws IOException {
+        if (!settings.isBackupDatabase()) return;
+
+        String path = settings.getDbUrl() + ".mv.db";
+        if (path.startsWith("~")) {
+            String temp = System.getProperty("user.home");
+            if (!temp.endsWith("/") && !temp.endsWith("\\")) temp += "/";
+            path = path.substring(1);
+            if (path.startsWith("/") || path.startsWith("\\")) path = path.substring(1);
+
+            path = temp + path;
+        }
+
+        File currentDatabaseFile = new File(path);
+
+        if (currentDatabaseFile.exists()) {
+            System.out.println("Backing up database at: " + currentDatabaseFile);
+            File backupFile = new File(path + ".bak");
+            Files.copy(currentDatabaseFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("Successfully backed up database to: " + backupFile);
+        }
+    }
+
+    public static File resolveDuplicateFilename(File file) {
+        while (file.exists()) {
+            String name = file.getName();
+            if (name.matches(".*\\s\\([0-9]+\\)\\..*")) {
+                int count = Integer.parseInt(name.substring(name.lastIndexOf('(') + 1, name.lastIndexOf(')')));
+                name = name.substring(0, name.lastIndexOf('(') + 1) + (count + 1) + name.substring(name.lastIndexOf(')'));
+            } else {
+                name = name.substring(0, name.lastIndexOf('.')) + " (2)" + name.substring(name.lastIndexOf('.'));
+            }
+
+            String parent = file.getParent();
+            if (!parent.endsWith("/") && !parent.endsWith("\\")) parent += "/";
+            file = new File(parent + name);
+        }
+
+        return file;
     }
 
     // ---------------------------------- Event Handlers ------------------------------------
@@ -965,7 +1163,7 @@ public class MainController {
                     event.consume();
                     break;
                 case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(Platform::exit);
+                    menagerie.getUpdateQueue().enqueueUpdate(this::exit);
                     menagerie.getUpdateQueue().commit();
                     event.consume();
                     break;
@@ -1000,6 +1198,20 @@ public class MainController {
                 imageGridView.requestFocus();
                 event.consume();
                 break;
+            case ALT:
+                event.consume();
+                break;
+        }
+    }
+
+    public void explorerPaneOnKeyReleased(KeyEvent event) {
+        if (event.getCode() == KeyCode.ALT) {
+            if (menuBar.isFocused()) {
+                imageGridView.requestFocus();
+            } else {
+                menuBar.requestFocus();
+            }
+            event.consume();
         }
     }
 
@@ -1016,8 +1228,10 @@ public class MainController {
     public void lastFolderSettingBrowseButtonOnAction(ActionEvent event) {
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("Choose default save folder");
-        if (lastFolderSettingTextField.getText() != null && !lastFolderSettingTextField.getText().isEmpty())
-            dc.setInitialDirectory(new File(lastFolderSettingTextField.getText()));
+        if (lastFolderSettingTextField.getText() != null && !lastFolderSettingTextField.getText().isEmpty()) {
+            File folder = new File(lastFolderSettingTextField.getText());
+            if (folder.exists() && folder.isDirectory()) dc.setInitialDirectory(folder);
+        }
         File result = dc.showDialog(settingsPane.getScene().getWindow());
 
         if (result != null) {
@@ -1122,13 +1336,15 @@ public class MainController {
     }
 
     public void duplicateLeftDeleteButtonOnAction(ActionEvent event) {
-        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), currentlyPreviewingPair.getImg2(), true);
+        if (currentlyPreviewingPair != null)
+            deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), currentlyPreviewingPair.getImg2());
 
         event.consume();
     }
 
     public void duplicateRightDeleteButtonOnAction(ActionEvent event) {
-        if (currentlyPreviewingPair != null) deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), currentlyPreviewingPair.getImg1(), true);
+        if (currentlyPreviewingPair != null)
+            deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), currentlyPreviewingPair.getImg1());
 
         event.consume();
     }
@@ -1178,6 +1394,94 @@ public class MainController {
         duplicateRightTagListView.setDisable(true);
         duplicateLeftTagListView.setOpacity(0);
         duplicateRightTagListView.setOpacity(0);
+        event.consume();
+    }
+
+    public void slideshowPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case RIGHT:
+                slideshowShowNext();
+                event.consume();
+                break;
+            case LEFT:
+                slideshowShowPrevious();
+                event.consume();
+                break;
+            case ESCAPE:
+                closeSlideshowScreen();
+                event.consume();
+                break;
+        }
+    }
+
+    public void slideshowPreviousButtonOnAction(ActionEvent event) {
+        slideshowShowPrevious();
+        event.consume();
+    }
+
+    public void slideshowCloseButtonOnAction(ActionEvent event) {
+        closeSlideshowScreen();
+        event.consume();
+    }
+
+    public void slideshowNextButtonOnAction(ActionEvent event) {
+        slideshowShowNext();
+        event.consume();
+    }
+
+    public void importFilesMenuButtonOnAction(ActionEvent event) {
+        requestImportFiles();
+        event.consume();
+    }
+
+    public void importFolderMenuButtonOnAction(ActionEvent event) {
+        requestImportFolder();
+        event.consume();
+    }
+
+    public void settingsMenuButtonOnAction(ActionEvent event) {
+        openSettingsScreen();
+        event.consume();
+    }
+
+    public void helpMenuButtonOnAction(ActionEvent event) {
+        openHelpScreen();
+        event.consume();
+    }
+
+    public void slideshowSearchedMenuButtonOnAction(ActionEvent event) {
+        openSlideshowScreen(currentSearch.getResults());
+        event.consume();
+    }
+
+    public void slideshowSelectedMenuButtonOnAction(ActionEvent event) {
+        openSlideshowScreen(imageGridView.getSelected());
+        event.consume();
+    }
+
+    public void viewTagsMenuButtonOnAction(ActionEvent event) {
+        openTagListScreen();
+        event.consume();
+    }
+
+    public void importFromFolderSettingBrowseButtonOnAction(ActionEvent event) {
+        DirectoryChooser dc = new DirectoryChooser();
+        dc.setTitle("Choose auto-import folder");
+        if (importFromFolderSettingTextField.getText() != null && !importFromFolderSettingTextField.getText().isEmpty()) {
+            File folder = new File(importFromFolderSettingTextField.getText());
+            if (folder.exists() && folder.isDirectory()) dc.setInitialDirectory(folder);
+        }
+        File result = dc.showDialog(settingsPane.getScene().getWindow());
+
+        if (result != null) {
+            importFromFolderSettingTextField.setText(result.getAbsolutePath());
+        }
+
+        event.consume();
+    }
+
+    public void autoImportFolderSettingCheckBoxOnAction(ActionEvent event) {
+        updateAutoImportFolderDisabledStatus();
         event.consume();
     }
 

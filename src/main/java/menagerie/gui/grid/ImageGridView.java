@@ -4,8 +4,13 @@ import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.*;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.TransferMode;
+import javafx.stage.DirectoryChooser;
 import menagerie.gui.Main;
+import menagerie.gui.MainController;
 import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridView;
 
@@ -28,6 +33,7 @@ public class ImageGridView extends GridView<ImageInfo> {
     private SelectionListener selectionListener = null;
     private ProgressQueueListener progressQueueListener = null;
     private DuplicateRequestListener duplicateRequestListener = null;
+    private SlideshowRequestListener slideshowRequestListener = null;
 
     private boolean dragging = false;
 
@@ -44,6 +50,15 @@ public class ImageGridView extends GridView<ImageInfo> {
                     if (!isSelected(c.getItem())) select(c.getItem(), event.isControlDown(), event.isShiftDown());
 
                     Dragboard db = c.startDragAndDrop(TransferMode.ANY);
+
+                    for (ImageInfo img : selected) {
+                        String filename = img.getFile().getName().toLowerCase();
+                        if (filename.endsWith(".png") || filename.endsWith(".jpg")) {
+                            db.setDragView(img.getThumbnail());
+                            break;
+                        }
+                    }
+
                     List<File> files = new ArrayList<>();
                     selected.forEach(img -> files.add(img.getFile()));
                     clipboard.putFiles(files);
@@ -64,8 +79,18 @@ public class ImageGridView extends GridView<ImageInfo> {
                 }
             });
             c.setOnContextMenuRequested(event -> {
-                MenuItem i1 = new MenuItem("Open in Explorer");
-                i1.setOnAction(event1 -> {
+                MenuItem si1 = new MenuItem("Selected");
+                si1.setOnAction(event1 -> {
+                    if (slideshowRequestListener != null) slideshowRequestListener.requestSlideshow(selected);
+                });
+                MenuItem si2 = new MenuItem("Searched");
+                si2.setOnAction(event1 -> {
+                    if (slideshowRequestListener != null) slideshowRequestListener.requestSlideshow(getItems());
+                });
+                Menu i1 = new Menu("Slideshow", null, si1, si2);
+
+                MenuItem i2 = new MenuItem("Open in Explorer");
+                i2.setOnAction(event1 -> {
                     try {
                         Runtime.getRuntime().exec("explorer.exe /select, " + c.getItem().getFile().getAbsolutePath());
                     } catch (IOException e) {
@@ -74,8 +99,8 @@ public class ImageGridView extends GridView<ImageInfo> {
                     }
                 });
 
-                MenuItem i2 = new MenuItem("Build MD5 Hash");
-                i2.setOnAction(event1 -> {
+                MenuItem i3 = new MenuItem("Build MD5 Hash");
+                i3.setOnAction(event1 -> {
                     List<Runnable> queue = new ArrayList<>();
                     selected.forEach(img -> {
                         if (img.getMD5() == null) {
@@ -93,11 +118,12 @@ public class ImageGridView extends GridView<ImageInfo> {
                         }
                     }
                 });
-                MenuItem i3 = new MenuItem("Build Histogram");
-                i3.setOnAction(event1 -> {
+                MenuItem i4 = new MenuItem("Build Histogram");
+                i4.setOnAction(event1 -> {
                     List<Runnable> queue = new ArrayList<>();
                     selected.forEach(img -> {
-                        if (img.getHistogram() == null) {
+                        String filename = img.getFile().getName().toLowerCase();
+                        if (img.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
                             queue.add(() -> {
                                 img.initializeHistogram();
                                 img.commitHistogramToDatabase();
@@ -113,17 +139,36 @@ public class ImageGridView extends GridView<ImageInfo> {
                     }
                 });
 
-                MenuItem i4 = new MenuItem("Find Duplicates");
-                i4.setOnAction(event1 -> {
+                MenuItem i5 = new MenuItem("Find Duplicates");
+                i5.setOnAction(event1 -> {
                     if (duplicateRequestListener != null) duplicateRequestListener.findAndShowDuplicates(selected);
                 });
 
-                MenuItem i5 = new MenuItem("Remove");
-                i5.setOnAction(event1 -> deleteEventUserInput(false));
-                MenuItem i6 = new MenuItem("Delete");
-                i6.setOnAction(event1 -> deleteEventUserInput(true));
+                MenuItem i6 = new MenuItem("Move To...");
+                i6.setOnAction(event1 -> {
+                    if (!selected.isEmpty()) {
+                        DirectoryChooser dc = new DirectoryChooser();
+                        dc.setTitle("Move files to folder...");
+                        File result = dc.showDialog(getScene().getWindow());
 
-                ContextMenu m = new ContextMenu(i1, new SeparatorMenuItem(), i2, i3, new SeparatorMenuItem(), i4, new SeparatorMenuItem(), i5, i6);
+                        if (result != null) {
+                            selected.forEach(img -> {
+                                File dest = MainController.resolveDuplicateFilename(result.toPath().resolve(img.getFile().getName()).toFile());
+
+                                if (!img.renameTo(dest)) {
+                                    Main.showErrorMessage("Error", "Unable to move file: " + img.getFile(), "Destination: " + dest);
+                                }
+                            });
+                        }
+                    }
+                });
+
+                MenuItem i7 = new MenuItem("Remove");
+                i7.setOnAction(event1 -> deleteEventUserInput(false));
+                MenuItem i8 = new MenuItem("Delete");
+                i8.setOnAction(event1 -> deleteEventUserInput(true));
+
+                ContextMenu m = new ContextMenu(i1, new SeparatorMenuItem(), i2, new SeparatorMenuItem(), i3, i4, new SeparatorMenuItem(), i5, new SeparatorMenuItem(), i6, new SeparatorMenuItem(), i7, i8);
                 m.show(c, event.getScreenX(), event.getScreenY());
                 event.consume();
             });
@@ -288,8 +333,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         if (getLastSelected() != null) {
             for (Node n : getChildren()) {
                 if (n instanceof VirtualFlow) {
-                    VirtualFlow<ImageGridCell> vf = (VirtualFlow<ImageGridCell>) n;
-                    vf.show(getItems().indexOf(getLastSelected()) / getRowLength()); // Garbage API, doesn't account for multi-element rows
+                    ((VirtualFlow) n).show(getItems().indexOf(getLastSelected()) / getRowLength()); // Garbage API, doesn't account for multi-element rows
                     break;
                 }
             }
@@ -351,11 +395,14 @@ public class ImageGridView extends GridView<ImageInfo> {
         this.duplicateRequestListener = duplicateRequestListener;
     }
 
+    public void setSlideshowRequestListener(SlideshowRequestListener slideshowRequestListener) {
+        this.slideshowRequestListener = slideshowRequestListener;
+    }
+
     private void updateCellSelectionCSS() {
         for (Node n : getChildren()) {
             if (n instanceof VirtualFlow) {
-                VirtualFlow<ImageGridCell> vf = (VirtualFlow<ImageGridCell>) n;
-                vf.rebuildCells();
+                ((VirtualFlow) n).rebuildCells();
                 break;
             }
         }
@@ -365,10 +412,9 @@ public class ImageGridView extends GridView<ImageInfo> {
         lastSelected = img;
     }
 
-    public boolean unselect(ImageInfo img) {
-        boolean r = selected.remove(img);
+    public void deselect(ImageInfo img) {
+        selected.remove(img);
         updateCellSelectionCSS();
-        return r;
     }
 
 }

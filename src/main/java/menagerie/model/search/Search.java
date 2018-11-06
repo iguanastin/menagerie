@@ -8,13 +8,13 @@ import java.util.List;
 
 public class Search {
 
-    private Menagerie menagerie;
+    private final Menagerie menagerie;
     private SearchUpdateListener listener = null;
 
-    private List<SearchRule> rules;
-    private boolean descending;
+    private final List<SearchRule> rules;
+    private final boolean descending;
 
-    private List<ImageInfo> results = new ArrayList<>();
+    private final List<ImageInfo> results = new ArrayList<>();
 
 
     public Search(Menagerie menagerie, List<SearchRule> rules, boolean descending) {
@@ -40,41 +40,34 @@ public class Search {
         return results;
     }
 
-    public boolean addIfValid(ImageInfo img) {
+    public void addIfValid(ImageInfo img) {
         if (rules != null) {
             for (SearchRule rule : rules) {
-                if (!rule.accept(img)) return false;
+                if (!rule.accept(img)) return;
             }
         }
         results.add(img);
         if (listener != null) listener.imageAdded(img);
 
-        return true;
     }
 
-    public boolean removeIfInvalid(ImageInfo img) {
+    public void removeIfInvalid(ImageInfo img) {
         if (rules != null) {
             for (SearchRule rule : rules) {
                 if (!rule.accept(img)) {
                     boolean result = results.remove(img);
                     if (listener != null && result) listener.imageRemoved(img);
-                    return true;
+                    return;
                 }
             }
         }
 
-        return false;
     }
 
-    public boolean remove(ImageInfo img) {
+    public void remove(ImageInfo img) {
         boolean result = results.remove(img);
         if (listener != null && result) listener.imageRemoved(img);
 
-        return result;
-    }
-
-    public boolean isDescending() {
-        return descending;
     }
 
     public void sortResults() {
@@ -89,8 +82,7 @@ public class Search {
 
     public void close() {
         menagerie.closeSearch(this);
-        rules = null;
-        results = null;
+        results.clear();
         listener = null;
     }
 

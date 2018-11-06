@@ -8,10 +8,11 @@ import menagerie.model.menagerie.Tag;
 
 public class TagListCell extends ListCell<Tag> {
 
-    private Label countLabel, nameLabel;
+    private final Label countLabel;
+    private final Label nameLabel;
 
 
-    public TagListCell() {
+    TagListCell() {
         countLabel = new Label();
         nameLabel = new Label();
         setGraphic(new BorderPane(null, null, countLabel, null, nameLabel));

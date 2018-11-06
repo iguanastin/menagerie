@@ -15,18 +15,10 @@ public class IDRule extends SearchRule {
 
 
     public IDRule(Type type, int value) {
-        priorty = 1;
+        priority = 1;
 
         this.type = type;
         this.id = value;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public Type getType() {
-        return type;
     }
 
     @Override

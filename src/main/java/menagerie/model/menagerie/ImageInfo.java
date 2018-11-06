@@ -27,9 +27,9 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
     private final int id;
     private final long dateAdded;
-    private final File file;
     private final List<Tag> tags = new ArrayList<>();
 
+    private File file;
     private String md5;
     private ImageHistogram histogram;
 
@@ -143,8 +143,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
         }
     }
 
-    public boolean commitMD5ToDatabase() {
-        if (md5 == null) return false;
+    public void commitMD5ToDatabase() {
+        if (md5 == null) return;
 
         menagerie.imageMD5Updated(this);
 
@@ -159,18 +159,18 @@ public class ImageInfo implements Comparable<ImageInfo> {
         });
         menagerie.getUpdateQueue().commit();
 
-        return true;
     }
 
     public void initializeHistogram() {
         try {
             histogram = new ImageHistogram(getImageAsync());
         } catch (HistogramReadException e) {
+            // A comment to make the warning of an empty catch block go away
         }
     }
 
-    public boolean commitHistogramToDatabase() {
-        if (histogram == null) return false;
+    public void commitHistogramToDatabase() {
+        if (histogram == null) return;
 
         menagerie.getUpdateQueue().enqueueUpdate(() -> {
             try {
@@ -185,23 +185,18 @@ public class ImageInfo implements Comparable<ImageInfo> {
             }
         });
 
-        return true;
     }
 
     public List<Tag> getTags() {
         return tags;
     }
 
-    public Menagerie getMenagerie() {
-        return menagerie;
-    }
-
     public boolean hasTag(Tag t) {
-        return getTags().contains(t);
+        return tags.contains(t);
     }
 
-    public boolean addTag(Tag t) {
-        if (hasTag(t)) return false;
+    public void addTag(Tag t) {
+        if (hasTag(t)) return;
         tags.add(t);
         t.incrementFrequency();
 
@@ -220,11 +215,10 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
         if (tagListener != null) tagListener.tagsChanged();
 
-        return true;
     }
 
-    public boolean removeTag(Tag t) {
-        if (!hasTag(t)) return false;
+    public void removeTag(Tag t) {
+        if (!hasTag(t)) return;
         tags.remove(t);
         t.decrementFrequency();
 
@@ -243,7 +237,27 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
         if (tagListener != null) tagListener.tagsChanged();
 
-        return true;
+    }
+
+    public boolean renameTo(File dest) {
+        boolean succeeded = file.renameTo(dest);
+
+        if (succeeded) {
+            file = dest;
+
+            menagerie.getUpdateQueue().enqueueUpdate(() -> {
+                try {
+                    menagerie.PS_SET_IMG_PATH.setNString(1, file.getAbsolutePath());
+                    menagerie.PS_SET_IMG_PATH.setInt(2, id);
+                    menagerie.PS_SET_IMG_PATH.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            });
+            menagerie.getUpdateQueue().commit();
+        }
+
+        return succeeded;
     }
 
     public void remove(boolean deleteFile) {

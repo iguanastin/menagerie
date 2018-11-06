@@ -31,21 +31,22 @@ public class Menagerie {
     final PreparedStatement PS_GET_IMG_THUMBNAIL;
     final PreparedStatement PS_ADD_TAG_TO_IMG;
     final PreparedStatement PS_REMOVE_TAG_FROM_IMG;
+    final PreparedStatement PS_SET_IMG_PATH;
 
     // ------------------------------ Variables -----------------------------------
 
-    private List<ImageInfo> images = new ArrayList<>();
-    private List<Tag> tags = new ArrayList<>();
+    private final List<ImageInfo> images = new ArrayList<>();
+    private final List<Tag> tags = new ArrayList<>();
 
-    private Map<String, ImageInfo> hashes = new HashMap<>();
+    private final Map<String, ImageInfo> hashes = new HashMap<>();
 
     private int nextImageID;
     private int nextTagID;
 
-    private Connection database;
-    private DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
+    private final Connection database;
+    private final DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
 
-    private List<Search> activeSearches = new ArrayList<>();
+    private final List<Search> activeSearches = new ArrayList<>();
 
 
     public Menagerie(Connection database) throws SQLException {
@@ -65,6 +66,7 @@ public class Menagerie {
         PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5, hist_a, hist_r, hist_g, hist_b) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
         PS_DELETE_TAG = database.prepareStatement("DELETE FROM tags WHERE tags.id=?;");
         PS_CREATE_TAG = database.prepareStatement("INSERT INTO tags(id, name) VALUES (?, ?);");
+        PS_SET_IMG_PATH = database.prepareStatement("UPDATE imgs SET path=? WHERE id=?;");
 
         // Load data from database
         loadTagsFromDatabase();
@@ -157,7 +159,7 @@ public class Menagerie {
         ResultSet rs = s.executeQuery(SQL_GET_TAGS);
 
         while (rs.next()) {
-            tags.add(new Tag(this, rs.getInt("id"), rs.getNString("name")));
+            tags.add(new Tag(rs.getInt("id"), rs.getNString("name")));
         }
 
         s.close();
@@ -166,10 +168,7 @@ public class Menagerie {
     }
 
     public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram, boolean buildThumbnail) {
-        if (isFilePresent(file)) {
-            System.out.println("User tried to re-add existing file: " + file);
-            return null;
-        }
+        if (isFilePresent(file)) return null;
 
         ImageInfo img = new ImageInfo(this, nextImageID, System.currentTimeMillis(), file, null, null);
 
@@ -287,7 +286,11 @@ public class Menagerie {
         return updateQueue;
     }
 
-    private boolean isFilePresent(File file) {
+    public Connection getDatabase() {
+        return database;
+    }
+
+    public boolean isFilePresent(File file) {
         for (ImageInfo img : images) {
             if (img.getFile().equals(file)) return true;
         }
@@ -303,7 +306,7 @@ public class Menagerie {
     }
 
     public Tag createTag(String name) {
-        Tag t = new Tag(this, nextTagID, name);
+        Tag t = new Tag(nextTagID, name);
         nextTagID++;
 
         tags.add(t);
@@ -320,5 +323,4 @@ public class Menagerie {
 
         return t;
     }
-
 }
