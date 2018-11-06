@@ -43,7 +43,7 @@ public class DatabaseVersionUpdater {
                     updateFromV0ToV1(db);
                     break;
                 case 1:
-                    System.out.println("!!! Database needs to update from 0 to 1 !!!");
+                    System.out.println("!!! Database needs to update from 1 to 2 !!!");
                     updateFromV1ToV2(db);
                 case 2:
                     System.out.println("Database is up to date");
