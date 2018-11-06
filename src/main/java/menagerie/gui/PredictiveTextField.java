@@ -99,11 +99,11 @@ public class PredictiveTextField extends TextField {
                     event.consume();
                     break;
                 case SPACE:
+                case ENTER:
                     if (event.isControlDown()) {
                         if (top) selectedIndex = vBox.getChildren().size() - 1;
                         else selectedIndex = 0;
                     }
-                case ENTER:
                     if (selectedIndex >= 0) {
                         if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
                             setText(((Label) vBox.getChildren().get(selectedIndex)).getText());
