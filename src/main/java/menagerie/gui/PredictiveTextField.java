@@ -41,7 +41,7 @@ public class PredictiveTextField extends TextField {
         selectedIndex = -1;
         popup.hide();
 
-        if (optionsListener == null) return;
+        if (optionsListener == null || !isFocused()) return;
 
         String word = getText();
         if (word == null || word.isEmpty()) {

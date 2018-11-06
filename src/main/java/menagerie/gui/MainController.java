@@ -79,6 +79,10 @@ public class MainController {
     public TextField histConfidenceSettingTextField;
     public CheckBox duplicateConsolidateTagsSettingCheckbox;
     public CheckBox backupDatabaseSettingCheckBox;
+    public TextField importFromFolderSettingTextField;
+    public CheckBox autoImportFolderSettingCheckBox;
+    public Button importFromFolderSettingBrowseButton;
+    public CheckBox autoImportFromFolderToDefaultSettingCheckBox;
 
     public BorderPane tagListPane;
     public ChoiceBox<String> tagListOrderChoiceBox;
@@ -119,6 +123,8 @@ public class MainController {
     private List<ImageInfo> currentSlideshow = null;
     private ImageInfo currentSlideshowShowing = null;
 
+    private FolderWatcherThread folderWatcherThread = null;
+
     private final Settings settings = new Settings(new File("menagerie.settings"));
 
 
@@ -152,6 +158,11 @@ public class MainController {
 
         //Init window props from settings
         Platform.runLater(this::initWindowPropertiesFromSettings);
+
+        //Init folder watcher
+        if (settings.isAutoImportFromFolder()) {
+            startWatchingFolderForImages();
+        }
     }
 
     private void initMenagerie() {
@@ -371,6 +382,7 @@ public class MainController {
     private void openSettingsScreen() {
         //Update settings fx nodes
         lastFolderSettingTextField.setText(settings.getLastFolder());
+        importFromFolderSettingTextField.setText(settings.getImportFromFolderPath());
         dbURLTextfield.setText(settings.getDbUrl());
         dbUserTextfield.setText(settings.getDbUser());
         dbPassTextfield.setText(settings.getDbPass());
@@ -383,10 +395,14 @@ public class MainController {
         duplicateComputeHistSettingCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
         duplicateConsolidateTagsSettingCheckbox.setSelected(settings.isConsolidateTags());
         backupDatabaseSettingCheckBox.setSelected(settings.isBackupDatabase());
+        autoImportFolderSettingCheckBox.setSelected(settings.isAutoImportFromFolder());
+        autoImportFromFolderToDefaultSettingCheckBox.setSelected(settings.isAutoImportFromFolderToDefault());
 
         histConfidenceSettingTextField.setText("" + settings.getSimilarityThreshold());
 
         gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
+
+        updateAutoImportFolderDisabledStatus();
 
         //Enable pane
         explorerPane.setDisable(true);
@@ -408,6 +424,7 @@ public class MainController {
             settings.setDbUrl(dbURLTextfield.getText());
             settings.setDbUser(dbUserTextfield.getText());
             settings.setDbPass(dbPassTextfield.getText());
+            settings.setImportFromFolderPath(importFromFolderSettingTextField.getText());
 
             settings.setAutoImportFromWeb(autoImportWebSettingCheckbox.isSelected());
             settings.setComputeMD5OnImport(computeMD5SettingCheckbox.isSelected());
@@ -417,12 +434,16 @@ public class MainController {
             settings.setComputeHistogramForSimilarity(duplicateComputeHistSettingCheckbox.isSelected());
             settings.setConsolidateTags(duplicateConsolidateTagsSettingCheckbox.isSelected());
             settings.setBackupDatabase(backupDatabaseSettingCheckBox.isSelected());
+            settings.setAutoImportFromFolder(autoImportFolderSettingCheckBox.isSelected());
+            settings.setAutoImportFromFolderToDefault(autoImportFromFolderToDefaultSettingCheckBox.isSelected());
 
             settings.setSimilarityThreshold(Double.parseDouble(histConfidenceSettingTextField.getText()));
 
             settings.setImageGridWidth(gridWidthChoiceBox.getValue());
 
             setImageGridWidth(gridWidthChoiceBox.getValue());
+
+            startWatchingFolderForImages();
         }
     }
 
@@ -672,6 +693,18 @@ public class MainController {
             else sizeStr = String.format("%.2f", size) + "B";
 
             label.setText("Size: " + sizeStr + " - Res: " + (int) image.getImage().getWidth() + "x" + (int) image.getImage().getHeight());
+        }
+    }
+
+    private void updateAutoImportFolderDisabledStatus() {
+        if (autoImportFolderSettingCheckBox.isSelected()) {
+            importFromFolderSettingTextField.setDisable(false);
+            importFromFolderSettingBrowseButton.setDisable(false);
+            autoImportFromFolderToDefaultSettingCheckBox.setDisable(false);
+        } else {
+            importFromFolderSettingTextField.setDisable(true);
+            importFromFolderSettingBrowseButton.setDisable(true);
+            autoImportFromFolderToDefaultSettingCheckBox.setDisable(true);
         }
     }
 
@@ -967,6 +1000,37 @@ public class MainController {
         slideshowImageView.setImage(currentSlideshowShowing.getImage());
     }
 
+    private void startWatchingFolderForImages() {
+        if (folderWatcherThread != null) {
+            folderWatcherThread.stopWatching();
+        }
+
+        File watchFolder = new File(settings.getImportFromFolderPath());
+        if (watchFolder.exists() && watchFolder.isDirectory()) {
+            folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.IMAGE_FILTER, 30000, files -> {
+                for (File file : files) {
+                    if (!menagerie.isFilePresent(file)) {
+                        if (settings.isAutoImportFromFolderToDefault()) {
+                            String folder = settings.getLastFolder();
+                            if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
+                            File dest = new File(folder + file.getName());
+
+                            if (dest.exists() || !file.renameTo(dest)) {
+                                //TODO: Come up with a better handling for this instead of just giving up
+                                continue;
+                            }
+
+                            file = dest;
+                        }
+
+                        menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                    }
+                }
+            });
+            folderWatcherThread.start();
+        }
+    }
+
     // ---------------------------------- Compute Utilities ------------------------------------
 
     private static void downloadAndSaveFile(String url, File target) throws IOException {
@@ -1107,8 +1171,10 @@ public class MainController {
     public void lastFolderSettingBrowseButtonOnAction(ActionEvent event) {
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("Choose default save folder");
-        if (lastFolderSettingTextField.getText() != null && !lastFolderSettingTextField.getText().isEmpty())
-            dc.setInitialDirectory(new File(lastFolderSettingTextField.getText()));
+        if (lastFolderSettingTextField.getText() != null && !lastFolderSettingTextField.getText().isEmpty()) {
+            File folder = new File(lastFolderSettingTextField.getText());
+            if (folder.exists() && folder.isDirectory()) dc.setInitialDirectory(folder);
+        }
         File result = dc.showDialog(settingsPane.getScene().getWindow());
 
         if (result != null) {
@@ -1338,6 +1404,27 @@ public class MainController {
 
     public void viewTagsMenuButtonOnAction(ActionEvent event) {
         openTagListScreen();
+        event.consume();
+    }
+
+    public void importFromFolderSettingBrowseButtonOnAction(ActionEvent event) {
+        DirectoryChooser dc = new DirectoryChooser();
+        dc.setTitle("Choose auto-import folder");
+        if (importFromFolderSettingTextField.getText() != null && !importFromFolderSettingTextField.getText().isEmpty()) {
+            File folder = new File(importFromFolderSettingTextField.getText());
+            if (folder.exists() && folder.isDirectory()) dc.setInitialDirectory(folder);
+        }
+        File result = dc.showDialog(settingsPane.getScene().getWindow());
+
+        if (result != null) {
+            importFromFolderSettingTextField.setText(result.getAbsolutePath());
+        }
+
+        event.consume();
+    }
+
+    public void autoImportFolderSettingCheckBoxOnAction(ActionEvent event) {
+        updateAutoImportFolderDisabledStatus();
         event.consume();
     }
 

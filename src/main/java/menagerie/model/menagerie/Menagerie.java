@@ -284,7 +284,7 @@ public class Menagerie {
         return updateQueue;
     }
 
-    private boolean isFilePresent(File file) {
+    public boolean isFilePresent(File file) {
         for (ImageInfo img : images) {
             if (img.getFile().equals(file)) return true;
         }
