@@ -992,7 +992,8 @@ public class MainController {
                     List<Runnable> queue2 = new ArrayList<>();
 
                     images.forEach(i -> {
-                        if (i.getHistogram() == null) queue2.add(() -> {
+                        String filename = i.getFile().getName().toLowerCase();
+                        if (i.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) queue2.add(() -> {
                             i.initializeHistogram();
                             i.commitHistogramToDatabase();
                         });

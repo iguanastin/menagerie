@@ -119,7 +119,8 @@ public class ImageGridView extends GridView<ImageInfo> {
                 i5.setOnAction(event1 -> {
                     List<Runnable> queue = new ArrayList<>();
                     selected.forEach(img -> {
-                        if (img.getHistogram() == null) {
+                        String filename = img.getFile().getName().toLowerCase();
+                        if (img.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
                             queue.add(() -> {
                                 img.initializeHistogram();
                                 img.commitHistogramToDatabase();
