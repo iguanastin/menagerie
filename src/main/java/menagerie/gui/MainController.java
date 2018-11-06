@@ -1027,6 +1027,7 @@ public class MainController {
                     }
                 }
             });
+            folderWatcherThread.setDaemon(true);
             folderWatcherThread.start();
         }
     }
