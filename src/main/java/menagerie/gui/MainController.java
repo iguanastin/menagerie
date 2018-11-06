@@ -58,6 +58,7 @@ public class MainController {
     public DynamicImageView previewImageView;
     public Label resultCountLabel;
     public Label imageInfoLabel;
+    public Label imageFileNameLabel;
     public ListView<Tag> tagListView;
     public PredictiveTextField editTagsTextfield;
     public MenuBar menuBar;
@@ -631,10 +632,13 @@ public class MainController {
 
             updateTagListViewContents(image);
 
+            imageFileNameLabel.setText(image.getFile().toString());
             updateImageInfoLabel(image, imageInfoLabel);
         } else {
             previewImageView.setImage(null);
             tagListView.getItems().clear();
+
+            imageFileNameLabel.setText("N/A");
             updateImageInfoLabel(null, imageInfoLabel);
         }
     }
