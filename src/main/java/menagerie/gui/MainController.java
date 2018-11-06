@@ -1084,8 +1084,11 @@ public class MainController {
     }
 
     private static List<File> getFilesRecursive(File folder, FileFilter filter) {
+        File[] files = folder.listFiles();
         List<File> results = new ArrayList<>();
-        for (File file : Objects.requireNonNull(folder.listFiles())) {
+        if (files == null) return results;
+
+        for (File file : files) {
             if (file.isDirectory()) {
                 results.addAll(getFilesRecursive(file, filter));
             } else {
