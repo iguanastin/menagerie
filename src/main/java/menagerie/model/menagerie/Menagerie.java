@@ -284,6 +284,10 @@ public class Menagerie {
         return updateQueue;
     }
 
+    public Connection getDatabase() {
+        return database;
+    }
+
     public boolean isFilePresent(File file) {
         for (ImageInfo img : images) {
             if (img.getFile().equals(file)) return true;
@@ -317,5 +321,4 @@ public class Menagerie {
 
         return t;
     }
-
 }

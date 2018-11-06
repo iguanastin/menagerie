@@ -38,9 +38,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -157,7 +155,13 @@ public class MainController {
         searchOnAction();
 
         //Init window props from settings
-        Platform.runLater(this::initWindowPropertiesFromSettings);
+        Platform.runLater(() -> {
+            initWindowPropertiesFromSettings();
+
+            rootPane.getScene().getWindow().setOnCloseRequest(event -> {
+                exit();
+            });
+        });
 
         //Init folder watcher
         startWatchingFolderForImages();
@@ -1032,6 +1036,20 @@ public class MainController {
         }
     }
 
+    private void exit() {
+        try {
+            Connection db = menagerie.getDatabase();
+
+            System.out.println("Attempting to shut down Menagerie database and compact the file");
+            db.createStatement().executeUpdate("SHUTDOWN COMPACT");
+            db.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        Platform.exit();
+    }
+
     // ---------------------------------- Compute Utilities ------------------------------------
 
     private static void downloadAndSaveFile(String url, File target) throws IOException {
@@ -1107,7 +1125,7 @@ public class MainController {
                     event.consume();
                     break;
                 case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(Platform::exit);
+                    menagerie.getUpdateQueue().enqueueUpdate(this::exit);
                     menagerie.getUpdateQueue().commit();
                     event.consume();
                     break;
