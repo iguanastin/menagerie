@@ -89,7 +89,7 @@ public class Menagerie {
             }
         }
         for (Tag t : new ArrayList<>(tags)) {
-            if (!usedTags.contains(t.getId())) {
+            if (t.getId() != 1 && !usedTags.contains(t.getId())) {
                 System.out.println("Deleting unused tag: " + t);
 
                 tags.remove(t);
@@ -102,12 +102,19 @@ public class Menagerie {
 
     private void initializeIdCounters() throws SQLException {
         ResultSet rs = PS_GET_HIGHEST_IMG_ID.executeQuery();
-        if (!rs.next()) nextImageID = 1;
-        nextImageID = rs.getInt("id") + 1;
+        if (rs.next()) {
+            nextImageID = rs.getInt("id") + 1;
+        } else {
+            nextImageID = 1;
+        }
         rs.close();
+
         rs = PS_GET_HIGHEST_TAG_ID.executeQuery();
-        if (!rs.next()) nextTagID = 1;
-        nextTagID = rs.getInt("id") + 1;
+        if (rs.next()) {
+            nextTagID = rs.getInt("id") + 1;
+        } else {
+            nextTagID = 1;
+        }
         rs.close();
     }
 

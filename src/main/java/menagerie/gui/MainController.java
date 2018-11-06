@@ -282,7 +282,7 @@ public class MainController {
                     String filename = URI.create(url).getPath().replaceAll("^.*/", "");
                     File target = resolveDuplicateFilename(new File(folder + filename));
 
-                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || !Filters.IMAGE_FILTER.accept(target)) {
+                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !Filters.IMAGE_FILTER.accept(target)) {
                         target = openSaveImageDialog(new File(settings.getLastFolder()), filename);
                         if (target == null) return;
                         if (target.exists())
