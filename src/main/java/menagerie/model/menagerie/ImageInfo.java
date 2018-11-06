@@ -240,6 +240,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
     }
 
     public boolean renameTo(File dest) {
+        if (file.equals(dest)) return true;
+
         boolean succeeded = file.renameTo(dest);
 
         if (succeeded) {

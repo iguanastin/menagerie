@@ -153,10 +153,13 @@ public class ImageGridView extends GridView<ImageInfo> {
 
                         if (result != null) {
                             selected.forEach(img -> {
-                                File dest = MainController.resolveDuplicateFilename(result.toPath().resolve(img.getFile().getName()).toFile());
+                                File f = result.toPath().resolve(img.getFile().getName()).toFile();
+                                if (!img.getFile().equals(f)) {
+                                    File dest = MainController.resolveDuplicateFilename(f);
 
-                                if (!img.renameTo(dest)) {
-                                    Main.showErrorMessage("Error", "Unable to move file: " + img.getFile(), "Destination: " + dest);
+                                    if (!img.renameTo(dest)) {
+                                        Main.showErrorMessage("Error", "Unable to move file: " + img.getFile(), "Destination: " + dest);
+                                    }
                                 }
                             });
                         }

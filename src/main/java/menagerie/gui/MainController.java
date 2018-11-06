@@ -1036,7 +1036,10 @@ public class MainController {
                         if (settings.isAutoImportFromFolderToDefault()) {
                             String folder = settings.getLastFolder();
                             if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
-                            File dest = resolveDuplicateFilename(new File(folder + file.getName()));
+                            File f = new File(folder + file.getName());
+                            if (file.equals(f)) continue; //File is being "moved" to same folder
+
+                            File dest = resolveDuplicateFilename(f);
 
                             if (!file.renameTo(dest)) {
                                 continue;
