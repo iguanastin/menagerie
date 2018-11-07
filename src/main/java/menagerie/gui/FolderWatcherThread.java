@@ -8,11 +8,11 @@ public class FolderWatcherThread extends Thread {
 
     private boolean running = false;
 
-    private long timeout;
-    private File watchFolder;
-    private FileFilter filter;
+    private final long timeout;
+    private final File watchFolder;
+    private final FileFilter filter;
 
-    private FolderWatcherListener listener;
+    private final FolderWatcherListener listener;
 
     public FolderWatcherThread(File watchFolder, FileFilter filter, long timeout, FolderWatcherListener listener) {
         this.watchFolder = watchFolder;

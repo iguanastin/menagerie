@@ -297,7 +297,7 @@ public class Menagerie {
         return database;
     }
 
-    public boolean isFilePresent(File file) {
+    private boolean isFilePresent(File file) {
         for (ImageInfo img : images) {
             if (img.getFile().equals(file)) return true;
         }

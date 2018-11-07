@@ -58,7 +58,7 @@ public class MainController {
     public Label imageInfoLabel;
     public Label imageFileNameLabel;
     public ListView<Tag> tagListView;
-    public PredictiveTextField editTagsTextfield;
+    public PredictiveTextField editTagsTextField;
     public MenuBar menuBar;
 
     public BorderPane settingsPane;
@@ -69,9 +69,9 @@ public class MainController {
     public TextField lastFolderSettingTextField;
     public Button settingsCancelButton;
     public ChoiceBox<Integer> gridWidthChoiceBox;
-    public TextField dbURLTextfield;
-    public TextField dbUserTextfield;
-    public TextField dbPassTextfield;
+    public TextField dbURLTextField;
+    public TextField dbUserTextField;
+    public TextField dbPassTextField;
     public CheckBox duplicateComputeMD5SettingCheckbox;
     public CheckBox duplicateComputeHistSettingCheckbox;
     public TextField histConfidenceSettingTextField;
@@ -106,8 +106,8 @@ public class MainController {
     public DynamicImageView duplicateRightImageView;
     public ListView<Tag> duplicateRightTagListView;
 
-    public BorderPane slideshowPane;
-    public DynamicImageView slideshowImageView;
+    public BorderPane slideShowPane;
+    public DynamicImageView slideShowImageView;
 
 
     private Menagerie menagerie;
@@ -118,8 +118,8 @@ public class MainController {
     private String lastTagString = null;
     private List<SimilarPair> currentSimilarPairs = null;
     private SimilarPair currentlyPreviewingPair = null;
-    private List<ImageInfo> currentSlideshow = null;
-    private ImageInfo currentSlideshowShowing = null;
+    private List<ImageInfo> currentSlideShow = null;
+    private ImageInfo currentSlideShowShowing = null;
 
     private final ClipboardContent clipboard = new ClipboardContent();
     private boolean imageGridViewDragging = false;
@@ -259,7 +259,8 @@ public class MainController {
             ImageGridCell c = new ImageGridCell(imageGridView);
             c.setOnDragDetected(event -> {
                 if (!imageGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
-                    if (!imageGridView.isSelected(c.getItem())) imageGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                    if (!imageGridView.isSelected(c.getItem()))
+                        imageGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
 
                     Dragboard db = c.startDragAndDrop(TransferMode.ANY);
 
@@ -384,7 +385,7 @@ public class MainController {
             return c;
         });
 
-        editTagsTextfield.setOptionsListener(prefix -> {
+        editTagsTextField.setOptionsListener(prefix -> {
             prefix = prefix.toLowerCase();
             boolean negative = prefix.startsWith("-");
             if (negative) prefix = prefix.substring(1);
@@ -406,14 +407,14 @@ public class MainController {
         });
 
         searchTextField.setTop(false);
-        searchTextField.setOptionsListener(editTagsTextfield.getOptionsListener());
+        searchTextField.setOptionsListener(editTagsTextField.getOptionsListener());
     }
 
     private void initImageGridViewCellContextMenu() {
         MenuItem si1 = new MenuItem("Selected");
-        si1.setOnAction(event1 -> openSlideshowScreen(imageGridView.getSelected()));
+        si1.setOnAction(event1 -> openSlideShowScreen(imageGridView.getSelected()));
         MenuItem si2 = new MenuItem("Searched");
-        si2.setOnAction(event1 -> openSlideshowScreen(imageGridView.getItems()));
+        si2.setOnAction(event1 -> openSlideShowScreen(imageGridView.getItems()));
         Menu i1 = new Menu("Slideshow", null, si1, si2);
 
         MenuItem i2 = new MenuItem("Open in Explorer");
@@ -521,9 +522,9 @@ public class MainController {
         //Update settings fx nodes
         lastFolderSettingTextField.setText(settings.getLastFolder());
         importFromFolderSettingTextField.setText(settings.getImportFromFolderPath());
-        dbURLTextfield.setText(settings.getDbUrl());
-        dbUserTextfield.setText(settings.getDbUser());
-        dbPassTextfield.setText(settings.getDbPass());
+        dbURLTextField.setText(settings.getDbUrl());
+        dbUserTextField.setText(settings.getDbUser());
+        dbPassTextField.setText(settings.getDbPass());
 
         autoImportWebSettingCheckbox.setSelected(settings.isAutoImportFromWeb());
         computeMD5SettingCheckbox.setSelected(settings.isComputeMD5OnImport());
@@ -559,9 +560,9 @@ public class MainController {
         if (saveChanges) {
             //Save settings to settings object
             settings.setLastFolder(lastFolderSettingTextField.getText());
-            settings.setDbUrl(dbURLTextfield.getText());
-            settings.setDbUser(dbUserTextfield.getText());
-            settings.setDbPass(dbPassTextfield.getText());
+            settings.setDbUrl(dbURLTextField.getText());
+            settings.setDbUser(dbUserTextField.getText());
+            settings.setDbPass(dbPassTextField.getText());
             settings.setImportFromFolderPath(importFromFolderSettingTextField.getText());
 
             settings.setAutoImportFromWeb(autoImportWebSettingCheckbox.isSelected());
@@ -720,23 +721,23 @@ public class MainController {
         imageGridView.requestFocus();
     }
 
-    private void openSlideshowScreen(List<ImageInfo> images) {
+    private void openSlideShowScreen(List<ImageInfo> images) {
         if (images == null || images.isEmpty()) return;
 
-        currentSlideshow = images;
-        currentSlideshowShowing = images.get(0);
-        slideshowImageView.setImage(currentSlideshowShowing.getImage());
+        currentSlideShow = images;
+        currentSlideShowShowing = images.get(0);
+        slideShowImageView.setImage(currentSlideShowShowing.getImage());
 
         explorerPane.setDisable(true);
-        slideshowPane.setDisable(false);
-        slideshowPane.setOpacity(1);
-        slideshowPane.requestFocus();
+        slideShowPane.setDisable(false);
+        slideShowPane.setOpacity(1);
+        slideShowPane.requestFocus();
     }
 
-    private void closeSlideshowScreen() {
+    private void closeSlideShowScreen() {
         explorerPane.setDisable(false);
-        slideshowPane.setDisable(true);
-        slideshowPane.setOpacity(0);
+        slideShowPane.setDisable(true);
+        slideShowPane.setOpacity(0);
         imageGridView.requestFocus();
     }
 
@@ -1145,16 +1146,16 @@ public class MainController {
         }
     }
 
-    private void slideshowShowNext() {
-        int i = currentSlideshow.indexOf(currentSlideshowShowing);
-        if (i + 1 < currentSlideshow.size()) currentSlideshowShowing = currentSlideshow.get(i + 1);
-        slideshowImageView.setImage(currentSlideshowShowing.getImage());
+    private void slideShowShowNext() {
+        int i = currentSlideShow.indexOf(currentSlideShowShowing);
+        if (i + 1 < currentSlideShow.size()) currentSlideShowShowing = currentSlideShow.get(i + 1);
+        slideShowImageView.setImage(currentSlideShowShowing.getImage());
     }
 
-    private void slideshowShowPrevious() {
-        int i = currentSlideshow.indexOf(currentSlideshowShowing);
-        if (i - 1 >= 0) currentSlideshowShowing = currentSlideshow.get(i - 1);
-        slideshowImageView.setImage(currentSlideshowShowing.getImage());
+    private void slideShowShowPrevious() {
+        int i = currentSlideShow.indexOf(currentSlideShowShowing);
+        if (i - 1 >= 0) currentSlideShowShowing = currentSlideShow.get(i - 1);
+        slideShowImageView.setImage(currentSlideShowShowing.getImage());
     }
 
     private void startWatchingFolderForImages() {
@@ -1183,7 +1184,8 @@ public class MainController {
                         }
 
                         if (menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()) == null) {
-                            if (!file.delete()) System.out.println("Failed to delete file after it was denied by the Menagerie");
+                            if (!file.delete())
+                                System.out.println("Failed to delete file after it was denied by the Menagerie");
                         }
                     }
                 });
@@ -1319,8 +1321,8 @@ public class MainController {
                     event.consume();
                     break;
                 case E:
-                    editTagsTextfield.setText(lastTagString);
-                    editTagsTextfield.requestFocus();
+                    editTagsTextField.setText(lastTagString);
+                    editTagsTextField.requestFocus();
                     event.consume();
                     break;
                 case Q:
@@ -1421,21 +1423,21 @@ public class MainController {
         }
     }
 
-    public void editTagsTextfieldOnKeyPressed(KeyEvent event) {
+    public void editTagsTextFieldOnKeyPressed(KeyEvent event) {
         switch (event.getCode()) {
             case SPACE:
-                editTagsOfSelected(editTagsTextfield.getText());
-                Platform.runLater(() -> editTagsTextfield.setText(null));
+                editTagsOfSelected(editTagsTextField.getText());
+                Platform.runLater(() -> editTagsTextField.setText(null));
                 event.consume();
                 break;
             case ENTER:
-                editTagsOfSelected(editTagsTextfield.getText());
-                editTagsTextfield.setText(null);
+                editTagsOfSelected(editTagsTextField.getText());
+                editTagsTextField.setText(null);
                 imageGridView.requestFocus();
                 event.consume();
                 break;
             case ESCAPE:
-                editTagsTextfield.setText(null);
+                editTagsTextField.setText(null);
                 imageGridView.requestFocus();
                 event.consume();
                 break;
@@ -1558,35 +1560,35 @@ public class MainController {
         event.consume();
     }
 
-    public void slideshowPaneOnKeyPressed(KeyEvent event) {
+    public void slideShowPaneOnKeyPressed(KeyEvent event) {
         switch (event.getCode()) {
             case RIGHT:
-                slideshowShowNext();
+                slideShowShowNext();
                 event.consume();
                 break;
             case LEFT:
-                slideshowShowPrevious();
+                slideShowShowPrevious();
                 event.consume();
                 break;
             case ESCAPE:
-                closeSlideshowScreen();
+                closeSlideShowScreen();
                 event.consume();
                 break;
         }
     }
 
-    public void slideshowPreviousButtonOnAction(ActionEvent event) {
-        slideshowShowPrevious();
+    public void slideShowPreviousButtonOnAction(ActionEvent event) {
+        slideShowShowPrevious();
         event.consume();
     }
 
-    public void slideshowCloseButtonOnAction(ActionEvent event) {
-        closeSlideshowScreen();
+    public void slideShowCloseButtonOnAction(ActionEvent event) {
+        closeSlideShowScreen();
         event.consume();
     }
 
-    public void slideshowNextButtonOnAction(ActionEvent event) {
-        slideshowShowNext();
+    public void slideShowNextButtonOnAction(ActionEvent event) {
+        slideShowShowNext();
         event.consume();
     }
 
@@ -1610,13 +1612,13 @@ public class MainController {
         event.consume();
     }
 
-    public void slideshowSearchedMenuButtonOnAction(ActionEvent event) {
-        openSlideshowScreen(currentSearch.getResults());
+    public void slideShowSearchedMenuButtonOnAction(ActionEvent event) {
+        openSlideShowScreen(currentSearch.getResults());
         event.consume();
     }
 
-    public void slideshowSelectedMenuButtonOnAction(ActionEvent event) {
-        openSlideshowScreen(imageGridView.getSelected());
+    public void slideShowSelectedMenuButtonOnAction(ActionEvent event) {
+        openSlideShowScreen(imageGridView.getSelected());
         event.consume();
     }
 

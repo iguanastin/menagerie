@@ -73,7 +73,7 @@
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                     </padding>
                 </ListView>
-                <PredictiveTextField fx:id="editTagsTextfield" onKeyPressed="#editTagsTextfieldOnKeyPressed"
+                <PredictiveTextField fx:id="editTagsTextField" onKeyPressed="#editTagsTextFieldOnKeyPressed"
                                      promptText="Edit tags">
                     <VBox.margin>
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
@@ -92,9 +92,9 @@
                 </Menu>
                 <Menu mnemonicParsing="false" text="View">
                     <Menu mnemonicParsing="false" text="Slideshow">
-                        <MenuItem mnemonicParsing="false" onAction="#slideshowSearchedMenuButtonOnAction"
+                        <MenuItem mnemonicParsing="false" onAction="#slideShowSearchedMenuButtonOnAction"
                                   text="Searched"/>
-                        <MenuItem mnemonicParsing="false" onAction="#slideshowSelectedMenuButtonOnAction"
+                        <MenuItem mnemonicParsing="false" onAction="#slideShowSelectedMenuButtonOnAction"
                                   text="Selected"/>
                     </Menu>
                     <MenuItem mnemonicParsing="false" onAction="#viewTagsMenuButtonOnAction" text="Tags"/>
@@ -207,10 +207,10 @@
                                 </right>
                             </BorderPane>
                             <HBox spacing="5.0">
-                                <TextField fx:id="dbURLTextfield" promptText="~/menagerie" HBox.hgrow="ALWAYS"/>
-                                <TextField fx:id="dbUserTextfield" promptText="sa"
+                                <TextField fx:id="dbURLTextField" promptText="~/menagerie" HBox.hgrow="ALWAYS"/>
+                                <TextField fx:id="dbUserTextField" promptText="sa"
                                            HBox.hgrow="ALWAYS"/>
-                                <TextField fx:id="dbPassTextfield" promptText="[Empty]"
+                                <TextField fx:id="dbPassTextField" promptText="[Empty]"
                                            HBox.hgrow="ALWAYS"/>
                             </HBox>
                             <CheckBox fx:id="backupDatabaseSettingCheckBox" mnemonicParsing="false"
@@ -531,10 +531,10 @@
             </SplitPane>
         </center>
     </BorderPane>
-    <BorderPane fx:id="slideshowPane" disable="true" onKeyPressed="#slideshowPaneOnKeyPressed" opacity="0"
+    <BorderPane fx:id="slideShowPane" disable="true" onKeyPressed="#slideShowPaneOnKeyPressed" opacity="0"
                 style="-fx-background-color: -fx-base;">
         <center>
-            <DynamicImageView fx:id="slideshowImageView" pickOnBounds="true" preserveRatio="true"
+            <DynamicImageView fx:id="slideShowImageView" pickOnBounds="true" preserveRatio="true"
                               BorderPane.alignment="CENTER"/>
         </center>
         <bottom>
@@ -542,9 +542,9 @@
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                 </padding>
-                <Button mnemonicParsing="false" onAction="#slideshowPreviousButtonOnAction" text="&lt;-"/>
-                <Button mnemonicParsing="false" onAction="#slideshowCloseButtonOnAction" text="Close"/>
-                <Button mnemonicParsing="false" onAction="#slideshowNextButtonOnAction" text="-&gt;"/>
+                <Button mnemonicParsing="false" onAction="#slideShowPreviousButtonOnAction" text="&lt;-"/>
+                <Button mnemonicParsing="false" onAction="#slideShowCloseButtonOnAction" text="Close"/>
+                <Button mnemonicParsing="false" onAction="#slideShowNextButtonOnAction" text="-&gt;"/>
             </HBox>
         </bottom>
     </BorderPane>

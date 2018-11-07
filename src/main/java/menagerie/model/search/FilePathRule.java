@@ -4,7 +4,7 @@ import menagerie.model.menagerie.ImageInfo;
 
 public class FilePathRule extends SearchRule {
 
-    private String text;
+    private final String text;
 
 
     public FilePathRule(String text) {
