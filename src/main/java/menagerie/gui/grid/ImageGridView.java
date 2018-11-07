@@ -4,10 +4,7 @@ import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.Dragboard;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.TransferMode;
+import javafx.scene.input.*;
 import javafx.stage.DirectoryChooser;
 import menagerie.gui.Main;
 import menagerie.gui.MainController;
@@ -24,71 +21,15 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     public static final int CELL_BORDER = 4;
 
-
-    private final ClipboardContent clipboard = new ClipboardContent();
-
     private final List<ImageInfo> selected = new ArrayList<>();
     private ImageInfo lastSelected = null;
 
     private SelectionListener selectionListener = null;
-    private ProgressQueueListener progressQueueListener = null;
-    private DuplicateRequestListener duplicateRequestListener = null;
-    private SlideshowRequestListener slideshowRequestListener = null;
-
-    private ContextMenu cellContextMenu;
-
-    private boolean dragging = false;
 
 
     public ImageGridView() {
         setCellWidth(ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2);
         setCellHeight(ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2);
-
-        cellContextMenu = initCellContextMenu();
-
-
-        setCellFactory(param -> {
-            ImageGridCell c = new ImageGridCell(this);
-            c.setOnDragDetected(event -> {
-                if (!selected.isEmpty() && event.isPrimaryButtonDown()) {
-                    if (!isSelected(c.getItem())) select(c.getItem(), event.isControlDown(), event.isShiftDown());
-
-                    Dragboard db = c.startDragAndDrop(TransferMode.ANY);
-
-                    for (ImageInfo img : selected) {
-                        String filename = img.getFile().getName().toLowerCase();
-                        if (filename.endsWith(".png") || filename.endsWith(".jpg")) {
-                            db.setDragView(img.getThumbnail());
-                            break;
-                        }
-                    }
-
-                    List<File> files = new ArrayList<>();
-                    selected.forEach(img -> files.add(img.getFile()));
-                    clipboard.putFiles(files);
-                    db.setContent(clipboard);
-
-                    dragging = true;
-                    event.consume();
-                }
-            });
-            c.setOnDragDone(event -> {
-                dragging = false;
-                event.consume();
-            });
-            c.setOnMouseReleased(event -> {
-                if (!dragging && event.getButton() == MouseButton.PRIMARY) {
-                    select(c.getItem(), event.isControlDown(), event.isShiftDown());
-                    event.consume();
-                }
-            });
-            c.setOnContextMenuRequested(event -> {
-                if (cellContextMenu.isShowing()) cellContextMenu.hide();
-                cellContextMenu.show(c, event.getScreenX(), event.getScreenY());
-                event.consume();
-            });
-            return c;
-        });
 
         getItems().addListener((ListChangeListener<? super ImageInfo>) c -> {
             while (c.next()) {
@@ -108,106 +49,8 @@ public class ImageGridView extends GridView<ImageInfo> {
         initOnKeyPressed();
     }
 
-    private ContextMenu initCellContextMenu() {
-        MenuItem si1 = new MenuItem("Selected");
-        si1.setOnAction(event1 -> {
-            if (slideshowRequestListener != null) slideshowRequestListener.requestSlideshow(selected);
-        });
-        MenuItem si2 = new MenuItem("Searched");
-        si2.setOnAction(event1 -> {
-            if (slideshowRequestListener != null) slideshowRequestListener.requestSlideshow(getItems());
-        });
-        Menu i1 = new Menu("Slideshow", null, si1, si2);
-
-        MenuItem i2 = new MenuItem("Open in Explorer");
-        i2.setOnAction(event1 -> {
-            if (!selected.isEmpty()) {
-                try {
-                    Runtime.getRuntime().exec("explorer.exe /select, " + getLastSelected().getFile().getAbsolutePath());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Main.showErrorMessage("Unexpected Error", "Error opening file explorer", e.getLocalizedMessage());
-                }
-            }
-        });
-
-        MenuItem i3 = new MenuItem("Build MD5 Hash");
-        i3.setOnAction(event1 -> {
-            List<Runnable> queue = new ArrayList<>();
-            selected.forEach(img -> {
-                if (img.getMD5() == null) {
-                    queue.add(() -> {
-                        img.initializeMD5();
-                        img.commitMD5ToDatabase();
-                    });
-                }
-            });
-            if (!queue.isEmpty()) {
-                if (progressQueueListener != null) {
-                    progressQueueListener.processProgressQueue("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, null, null);
-                } else {
-                    queue.forEach(Runnable::run);
-                }
-            }
-        });
-        MenuItem i4 = new MenuItem("Build Histogram");
-        i4.setOnAction(event1 -> {
-            List<Runnable> queue = new ArrayList<>();
-            selected.forEach(img -> {
-                String filename = img.getFile().getName().toLowerCase();
-                if (img.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
-                    queue.add(() -> {
-                        img.initializeHistogram();
-                        img.commitHistogramToDatabase();
-                    });
-                }
-            });
-            if (!queue.isEmpty()) {
-                if (progressQueueListener != null) {
-                    progressQueueListener.processProgressQueue("Building Histograms", "Building image histograms for " + queue.size() + " files...", queue, null, null);
-                } else {
-                    queue.forEach(Runnable::run);
-                }
-            }
-        });
-
-        MenuItem i5 = new MenuItem("Find Duplicates");
-        i5.setOnAction(event1 -> {
-            if (duplicateRequestListener != null) duplicateRequestListener.findAndShowDuplicates(selected);
-        });
-
-        MenuItem i6 = new MenuItem("Move To...");
-        i6.setOnAction(event1 -> {
-            if (!selected.isEmpty()) {
-                DirectoryChooser dc = new DirectoryChooser();
-                dc.setTitle("Move files to folder...");
-                File result = dc.showDialog(getScene().getWindow());
-
-                if (result != null) {
-                    selected.forEach(img -> {
-                        File f = result.toPath().resolve(img.getFile().getName()).toFile();
-                        if (!img.getFile().equals(f)) {
-                            File dest = MainController.resolveDuplicateFilename(f);
-
-                            if (!img.renameTo(dest)) {
-                                Main.showErrorMessage("Error", "Unable to move file: " + img.getFile(), "Destination: " + dest);
-                            }
-                        }
-                    });
-                }
-            }
-        });
-
-        MenuItem i7 = new MenuItem("Remove");
-        i7.setOnAction(event1 -> deleteEventUserInput(false));
-        MenuItem i8 = new MenuItem("Delete");
-        i8.setOnAction(event1 -> deleteEventUserInput(true));
-
-        return new ContextMenu(i1, new SeparatorMenuItem(), i2, new SeparatorMenuItem(), i3, i4, new SeparatorMenuItem(), i5, new SeparatorMenuItem(), i6, new SeparatorMenuItem(), i7, i8);
-    }
-
     private void initOnKeyPressed() {
-        setOnKeyPressed(event -> {
+        addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (getItems().isEmpty()) return;
 
             int index = getItems().indexOf(getLastSelected());
@@ -277,34 +120,8 @@ public class ImageGridView extends GridView<ImageInfo> {
                     }
                     event.consume();
                     break;
-                case DELETE:
-                    deleteEventUserInput(!event.isControlDown());
-                    event.consume();
-                    break;
             }
         });
-    }
-
-    private void deleteEventUserInput(boolean deleteFiles) {
-        if (!selected.isEmpty()) {
-            Alert d = new Alert(Alert.AlertType.CONFIRMATION);
-
-            if (deleteFiles) {
-                d.setTitle("Delete files");
-                d.setHeaderText("Permanently delete selected files? (" + selected.size() + " files)");
-                d.setContentText("This action CANNOT be undone (files will be deleted)");
-            } else {
-                d.setTitle("Forget files");
-                d.setHeaderText("Remove selected files from database? (" + selected.size() + " files)");
-                d.setContentText("This action CANNOT be undone");
-            }
-
-            Optional result = d.showAndWait();
-            if (result.isPresent() && result.get() == ButtonType.OK) {
-                new ArrayList<>(selected).forEach(img -> img.remove(deleteFiles));
-            }
-
-        }
     }
 
     private int getRowLength() {
@@ -379,7 +196,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         }
     }
 
-    private ImageInfo getLastSelected() {
+    public ImageInfo getLastSelected() {
         return lastSelected;
     }
 
@@ -392,24 +209,12 @@ public class ImageGridView extends GridView<ImageInfo> {
         updateCellSelectionCSS();
     }
 
-    boolean isSelected(ImageInfo img) {
+    public boolean isSelected(ImageInfo img) {
         return selected.contains(img);
     }
 
     public void setSelectionListener(SelectionListener selectionListener) {
         this.selectionListener = selectionListener;
-    }
-
-    public void setProgressQueueListener(ProgressQueueListener progressQueueListener) {
-        this.progressQueueListener = progressQueueListener;
-    }
-
-    public void setDuplicateRequestListener(DuplicateRequestListener duplicateRequestListener) {
-        this.duplicateRequestListener = duplicateRequestListener;
-    }
-
-    public void setSlideshowRequestListener(SlideshowRequestListener slideshowRequestListener) {
-        this.slideshowRequestListener = slideshowRequestListener;
     }
 
     private void updateCellSelectionCSS() {
