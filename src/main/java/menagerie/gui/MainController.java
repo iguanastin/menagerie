@@ -392,7 +392,9 @@ public class MainController {
 
             List<String> results = new ArrayList<>();
 
-            List<Tag> tags = new ArrayList<>(menagerie.getTags());
+            List<Tag> tags;
+            if (negative) tags = new ArrayList<>(tagListView.getItems());
+            else tags = new ArrayList<>(menagerie.getTags());
             tags.sort((o1, o2) -> o2.getFrequency() - o1.getFrequency());
             for (Tag tag : tags) {
                 if (tag.getName().toLowerCase().startsWith(prefix)) {
