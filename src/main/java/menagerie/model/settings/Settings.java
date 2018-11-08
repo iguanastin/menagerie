@@ -29,6 +29,8 @@ public class Settings {
     private static final String AUTO_IMPORT_FROM_FOLDER_TAG = "importfromfolder";
     private static final String IMPORT_FROM_FOLDER_PATH_TAG = "importfromfolderpath";
     private static final String AUTO_IMPORT_FROM_FOLDER_TO_DEFAULT = "autoimportfromfoldertodefault";
+    private static final String COMPARE_BLACK_AND_WHITE_HISTS_TAG = "compareblackandwhitehists";
+    private static final String COMPARE_BLACK_AND_WHITE_CONFIDENCE_TAG = "compareblackandwhiteconfidence";
 
     private boolean autoImportFromWeb = false;
     private boolean computeMD5OnImport = true;
@@ -41,6 +43,7 @@ public class Settings {
     private boolean backupDatabase = true;
     private boolean autoImportFromFolder = false;
     private boolean autoImportFromFolderToDefault = true;
+    private boolean compareBlackAndWhiteHists = false;
     private String lastFolder = null;
     private String importFromFolderPath = null;
     private String dbUser = "sa";
@@ -52,6 +55,7 @@ public class Settings {
     private int windowX = -1;
     private int windowY = -1;
     private double similarityThreshold = 0.95;
+    private double compareBlackAndWhiteConfidence = 0.25;
 
     public static final int MIN_IMAGE_GRID_WIDTH = 2;
     public static final int MAX_IMAGE_GRID_WIDTH = 8;
@@ -117,6 +121,10 @@ public class Settings {
         return importFromFolderPath;
     }
 
+    public double getCompareBlackAndWhiteConfidence() {
+        return compareBlackAndWhiteConfidence;
+    }
+
     public boolean isAutoImportFromWeb() {
         return autoImportFromWeb;
     }
@@ -159,6 +167,10 @@ public class Settings {
 
     public boolean isAutoImportFromFolderToDefault() {
         return autoImportFromFolderToDefault;
+    }
+
+    public boolean isCompareBlackAndWhiteHists() {
+        return compareBlackAndWhiteHists;
     }
 
     public void setAutoImportFromWeb(boolean autoImportFromWeb) {
@@ -360,6 +372,24 @@ public class Settings {
         }
     }
 
+    public void setCompareBlackAndWhiteHists(boolean compareBlackAndWhiteHists) {
+        this.compareBlackAndWhiteHists = compareBlackAndWhiteHists;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setCompareBlackAndWhiteConfidence(double compareBlackAndWhiteConfidence) {
+        this.compareBlackAndWhiteConfidence = compareBlackAndWhiteConfidence;
+        try {
+            saveToFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void saveToFile() throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(file);
 
@@ -374,6 +404,7 @@ public class Settings {
         writer.println(CONSOLIDATE_TAGS_TAG + "=" + consolidateTags);
         writer.println(AUTO_IMPORT_FROM_FOLDER_TAG + "=" + autoImportFromFolder);
         writer.println(AUTO_IMPORT_FROM_FOLDER_TO_DEFAULT + "=" + autoImportFromFolderToDefault);
+        writer.println(COMPARE_BLACK_AND_WHITE_HISTS_TAG + "=" + compareBlackAndWhiteHists);
         writer.println(IMAGE_GRID_WIDTH_TAG + "=" + imageGridWidth);
         writer.println(WINDOW_MAXIMZED_TAG + "=" + windowMaximized);
         writer.println(WINDOW_WIDTH_TAG + "=" + windowWidth);
@@ -384,6 +415,7 @@ public class Settings {
         writer.println(DB_USER_TAG + "=" + dbUser);
         writer.println(DB_PASS_TAG + "=" + dbPass);
         writer.println(SIMILARITY_THRESHOLD_TAG + "=" + similarityThreshold);
+        writer.println(COMPARE_BLACK_AND_WHITE_CONFIDENCE_TAG + "=" + compareBlackAndWhiteConfidence);
         if (lastFolder != null) writer.println(LAST_FOLDER_TAG + "=" + lastFolder);
         if (importFromFolderPath != null) writer.println(IMPORT_FROM_FOLDER_PATH_TAG + "=" + importFromFolderPath);
 
@@ -464,6 +496,12 @@ public class Settings {
                         break;
                     case AUTO_IMPORT_FROM_FOLDER_TO_DEFAULT:
                         autoImportFromFolderToDefault = Boolean.parseBoolean(val);
+                        break;
+                    case COMPARE_BLACK_AND_WHITE_HISTS_TAG:
+                        compareBlackAndWhiteHists = Boolean.parseBoolean(val);
+                        break;
+                    case COMPARE_BLACK_AND_WHITE_CONFIDENCE_TAG:
+                        compareBlackAndWhiteConfidence = Double.parseDouble(val);
                         break;
                 }
             }

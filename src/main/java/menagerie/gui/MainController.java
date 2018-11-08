@@ -81,6 +81,8 @@ public class MainController {
     public CheckBox autoImportFolderSettingCheckBox;
     public Button importFromFolderSettingBrowseButton;
     public CheckBox autoImportFromFolderToDefaultSettingCheckBox;
+    public CheckBox duplicateCompareBlackAndWhiteSettingCheckbox;
+    public TextField compareBlackAndWhiteConfidenceSettingTextField;
 
     public BorderPane tagListPane;
     public ChoiceBox<String> tagListOrderChoiceBox;
@@ -538,7 +540,9 @@ public class MainController {
         backupDatabaseSettingCheckBox.setSelected(settings.isBackupDatabase());
         autoImportFolderSettingCheckBox.setSelected(settings.isAutoImportFromFolder());
         autoImportFromFolderToDefaultSettingCheckBox.setSelected(settings.isAutoImportFromFolderToDefault());
+        duplicateCompareBlackAndWhiteSettingCheckbox.setSelected(settings.isCompareBlackAndWhiteHists());
 
+        compareBlackAndWhiteConfidenceSettingTextField.setText(settings.getCompareBlackAndWhiteConfidence() + "");
         histConfidenceSettingTextField.setText("" + settings.getSimilarityThreshold());
 
         gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
@@ -577,8 +581,10 @@ public class MainController {
             settings.setBackupDatabase(backupDatabaseSettingCheckBox.isSelected());
             settings.setAutoImportFromFolder(autoImportFolderSettingCheckBox.isSelected());
             settings.setAutoImportFromFolderToDefault(autoImportFromFolderToDefaultSettingCheckBox.isSelected());
+            settings.setCompareBlackAndWhiteHists(duplicateCompareBlackAndWhiteSettingCheckbox.isSelected());
 
             settings.setSimilarityThreshold(Double.parseDouble(histConfidenceSettingTextField.getText()));
+            settings.setCompareBlackAndWhiteConfidence(Double.parseDouble(compareBlackAndWhiteConfidenceSettingTextField.getText()));
 
             settings.setImageGridWidth(gridWidthChoiceBox.getValue());
 
@@ -680,9 +686,11 @@ public class MainController {
 
                     //Compare histograms
                     if (i1.getHistogram() != null && i2.getHistogram() != null) {
-                        double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
-                        if (similarity >= settings.getSimilarityThreshold()) {
-                            currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
+                        if (settings.isCompareBlackAndWhiteHists() || (!i1.getHistogram().isBlackAndWhite(settings.getCompareBlackAndWhiteConfidence()) && !i2.getHistogram().isBlackAndWhite(settings.getCompareBlackAndWhiteConfidence()))) {
+                            double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
+                            if (similarity >= settings.getSimilarityThreshold()) {
+                                currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
+                            }
                         }
                     }
                 }
