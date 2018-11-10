@@ -8,6 +8,12 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextField;
 import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
@@ -30,6 +36,7 @@ import menagerie.model.search.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
 
+import java.awt.*;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileOutputStream;
@@ -191,10 +198,6 @@ public class MainController {
         //Init folder watcher
         startWatchingFolderForImages();
 
-        Platform.runLater(() -> {
-            errorsListView.getItems().add(new TrackedError(null, TrackedError.Severity.NORMAL, "test", null, "dunno"));
-        });
-
     }
 
     private void initErrorsScreen() {
@@ -220,7 +223,7 @@ public class MainController {
             menagerie = new Menagerie(db);
 
             menagerie.getUpdateQueue().setErrorListener(e -> Platform.runLater(() -> {
-                errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"));
+                addErrorToList(new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"));
             }));
         } catch (SQLException e) {
             e.printStackTrace();
@@ -370,7 +373,7 @@ public class MainController {
                     try {
                         menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                     } catch (Exception e) {
-                        Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                        Platform.runLater(() -> addErrorToList(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
                     }
                 }));
 
@@ -492,7 +495,7 @@ public class MainController {
                             img.initializeMD5();
                             img.commitMD5ToDatabase();
                         } catch (Exception e) {
-                            Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for image: " + img, "Unknown")));
+                            Platform.runLater(() -> addErrorToList(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for image: " + img, "Unknown")));
                         }
                     });
                 }
@@ -512,7 +515,7 @@ public class MainController {
                             img.initializeHistogram();
                             img.commitHistogramToDatabase();
                         } catch (Exception e) {
-                            Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + img, "Unknown")));
+                            Platform.runLater(() -> addErrorToList(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + img, "Unknown")));
                         }
                     });
                 }
@@ -533,16 +536,24 @@ public class MainController {
                 File result = dc.showDialog(rootPane.getScene().getWindow());
 
                 if (result != null) {
-                    imageGridView.getSelected().forEach(img -> {
+                    List<Runnable> queue = new ArrayList<>();
+
+                    imageGridView.getSelected().forEach(img -> queue.add(() -> {
                         File f = result.toPath().resolve(img.getFile().getName()).toFile();
                         if (!img.getFile().equals(f)) {
                             File dest = MainController.resolveDuplicateFilename(f);
 
                             if (!img.renameTo(dest)) {
-                                Main.showErrorMessage("Error", "Unable to move file: " + img.getFile(), "Destination: " + dest);
+                                Platform.runLater(() -> {
+                                    addErrorToList(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving image", "An exception was thrown while trying to move an image\nFrom: " + img.getFile() + "\nTo: " + dest, "Unknown"));
+                                });
                             }
                         }
-                    });
+                    }));
+
+                    if (!queue.isEmpty()) {
+                        openProgressLockScreen("Moving files", "Moving " + queue.size() + " files...", queue, null, null);
+                    }
                 }
             }
         });
@@ -751,7 +762,7 @@ public class MainController {
                             }
                         }
                     } catch (Exception e) {
-                        Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
+                        Platform.runLater(() -> addErrorToList(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
                     }
                 }
             });
@@ -839,7 +850,7 @@ public class MainController {
                 try {
                     menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                 } catch (Exception e) {
-                    Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                    Platform.runLater(() -> addErrorToList(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
                 }
             }));
 
@@ -865,7 +876,7 @@ public class MainController {
                 try {
                     menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                 } catch (Exception e) {
-                    Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                    Platform.runLater(() -> addErrorToList(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
                 }
             }));
 
@@ -1217,7 +1228,7 @@ public class MainController {
                         i.initializeMD5();
                         i.commitMD5ToDatabase();
                     } catch (Exception e) {
-                        Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for image: " + i, "Unknown")));
+                        Platform.runLater(() -> addErrorToList(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for image: " + i, "Unknown")));
                     }
                 });
             });
@@ -1235,7 +1246,7 @@ public class MainController {
                                     i.initializeHistogram();
                                     i.commitHistogramToDatabase();
                                 } catch (Exception e) {
-                                    Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + i, "Unknown")));
+                                    Platform.runLater(() -> addErrorToList(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + i, "Unknown")));
                                 }
                             });
                     });
@@ -1346,6 +1357,11 @@ public class MainController {
 
         ft.setNode(screen);
         ft.playFromStart();
+    }
+
+    private void addErrorToList(TrackedError error) {
+        errorsListView.getItems().add(0, error);
+        Toolkit.getDefaultToolkit().beep();
     }
 
     // ---------------------------------- Compute Utilities ------------------------------------
