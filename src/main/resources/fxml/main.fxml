@@ -75,6 +75,12 @@
                         </BorderPane>
                     </VBox>
                 </top>
+            <bottom>
+                <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
+                    <Label text="Errors and Warnings:"/>
+                    <Button fx:id="showErrorsButton" mnemonicParsing="false" onAction="#showErrorsButtonOnAction" text="0"/>
+                </HBox>
+            </bottom>
             </BorderPane>
         </right>
         <left>
@@ -129,101 +135,101 @@
                     </HBox>
                 </bottom>
                 <center>
-               <ScrollPane fitToWidth="true" BorderPane.alignment="CENTER">
-                  <content>
-                          <VBox spacing="5.0">
-                              <padding>
-                                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                              </padding>
-                              <Label text="Settings:" />
-                              <Separator />
-                              <HBox alignment="CENTER_LEFT" spacing="5.0">
-                                  <Label text="Default save folder:" />
-                                  <TextField fx:id="lastFolderSettingTextField" editable="false" promptText="Folder will be asked for when saving regardless of settings" HBox.hgrow="ALWAYS" />
-                                  <Button mnemonicParsing="false" onAction="#lastFolderSettingBrowseButtonOnAction" text="Browse" />
-                                  <VBox.margin>
-                                      <Insets />
-                                  </VBox.margin>
-                              </HBox>
-                              <Separator />
-                              <HBox alignment="CENTER_LEFT" spacing="5.0">
-                                  <CheckBox fx:id="autoImportFolderSettingCheckBox" onAction="#autoImportFolderSettingCheckBoxOnAction" text="Auto-import folder" />
-                                  <CheckBox fx:id="autoImportFromFolderToDefaultSettingCheckBox" mnemonicParsing="false" text="Move from folder to default folder before importing" />
-                              </HBox>
-                              <HBox>
-                                  <padding>
-                                      <Insets left="25.0" />
-                                  </padding>
-                                  <TextField fx:id="importFromFolderSettingTextField" editable="false" promptText="Folder to auto-import images from" HBox.hgrow="ALWAYS" />
-                                  <Button fx:id="importFromFolderSettingBrowseButton" mnemonicParsing="false" onAction="#importFromFolderSettingBrowseButtonOnAction" text="Browse" />
-                              </HBox>
-                              <CheckBox fx:id="autoImportWebSettingCheckbox" text="Auto-import from web when drag-dropped" />
-                              <Separator />
-                              <Label text="On file import:" />
-                              <VBox spacing="5.0">
-                                  <padding>
-                                      <Insets left="25.0" />
-                                  </padding>
-                                  <CheckBox fx:id="computeMD5SettingCheckbox" text="Compute MD5" />
-                                  <CheckBox fx:id="computeHistSettingCheckbox" text="Compute Histogram" />
-                                  <CheckBox fx:id="buildThumbSettingCheckbox" text="Build thumbnail" />
-                              </VBox>
-                              <Separator />
-                              <Label text="Duplicate finding:" />
-                              <VBox spacing="5.0">
-                                  <padding>
-                                      <Insets left="25.0" />
-                                  </padding>
-                                  <CheckBox fx:id="duplicateComputeMD5SettingCheckbox" text="Compute MD5s before matching" />
-                                  <CheckBox fx:id="duplicateComputeHistSettingCheckbox" text="Compute Histograms before matching" />
-                                  <HBox alignment="CENTER_LEFT" spacing="5.0">
-                                      <Label text="Histogram confidence level:" />
-                                      <TextField fx:id="histConfidenceSettingTextField" promptText="0.95 suggested" />
-                                  </HBox>
-                                  <CheckBox fx:id="duplicateConsolidateTagsSettingCheckbox" text="Consolidate tags on delete" />
-                                  <HBox alignment="CENTER_LEFT" spacing="5">
-                                      <CheckBox fx:id="duplicateCompareBlackAndWhiteSettingCheckbox" text="Compare black and white histograms (poor accuracy) Margin of error:" />
-                                      <TextField fx:id="compareBlackAndWhiteConfidenceSettingTextField" promptText="0.25 suggested" />
-                                  </HBox>
-                              </VBox>
-                              <Separator />
-                              <HBox alignment="CENTER_LEFT" spacing="5.0">
-                                  <Label text="Explorer Grid row width:" />
-                                  <ChoiceBox fx:id="gridWidthChoiceBox" />
-                              </HBox>
-                              <Separator />
-                              <Label text="Database (changes will be applied on restart):" />
-                              <VBox spacing="5.0">
-                                  <padding>
-                                      <Insets left="25.0" />
-                                  </padding>
-                                  <BorderPane>
-                                      <left>
-                                          <Label text="URL:" BorderPane.alignment="CENTER" />
-                                      </left>
-                                      <center>
-                                          <Label text="Username:" BorderPane.alignment="CENTER" />
-                                      </center>
-                                      <right>
-                                          <Label text="Password:" BorderPane.alignment="CENTER" />
-                                      </right>
-                                  </BorderPane>
-                                  <HBox spacing="5.0">
-                                      <TextField fx:id="dbURLTextField" promptText="~/menagerie" HBox.hgrow="ALWAYS" />
-                                      <TextField fx:id="dbUserTextField" promptText="sa" HBox.hgrow="ALWAYS" />
-                                      <TextField fx:id="dbPassTextField" promptText="[Empty]" HBox.hgrow="ALWAYS" />
-                                  </HBox>
-                                  <CheckBox fx:id="backupDatabaseSettingCheckBox" mnemonicParsing="false" text="Back up database on startup" />
-                              </VBox>
-                          </VBox>
-                  </content>
-               </ScrollPane>
+                    <ScrollPane fitToWidth="true" BorderPane.alignment="CENTER">
+                        <content>
+                            <VBox spacing="5.0">
+                                <padding>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                </padding>
+                                <Label text="Settings:" />
+                                <Separator />
+                                <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                    <Label text="Default save folder:" />
+                                    <TextField fx:id="lastFolderSettingTextField" editable="false" promptText="Folder will be asked for when saving regardless of settings" HBox.hgrow="ALWAYS" />
+                                    <Button mnemonicParsing="false" onAction="#lastFolderSettingBrowseButtonOnAction" text="Browse" />
+                                    <VBox.margin>
+                                        <Insets />
+                                    </VBox.margin>
+                                </HBox>
+                                <Separator />
+                                <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                    <CheckBox fx:id="autoImportFolderSettingCheckBox" onAction="#autoImportFolderSettingCheckBoxOnAction" text="Auto-import folder" />
+                                    <CheckBox fx:id="autoImportFromFolderToDefaultSettingCheckBox" mnemonicParsing="false" text="Move from folder to default folder before importing" />
+                                </HBox>
+                                <HBox>
+                                    <padding>
+                                        <Insets left="25.0" />
+                                    </padding>
+                                    <TextField fx:id="importFromFolderSettingTextField" editable="false" promptText="Folder to auto-import images from" HBox.hgrow="ALWAYS" />
+                                    <Button fx:id="importFromFolderSettingBrowseButton" mnemonicParsing="false" onAction="#importFromFolderSettingBrowseButtonOnAction" text="Browse" />
+                                </HBox>
+                                <CheckBox fx:id="autoImportWebSettingCheckbox" text="Auto-import from web when drag-dropped" />
+                                <Separator />
+                                <Label text="On file import:" />
+                                <VBox spacing="5.0">
+                                    <padding>
+                                        <Insets left="25.0" />
+                                    </padding>
+                                    <CheckBox fx:id="computeMD5SettingCheckbox" text="Compute MD5" />
+                                    <CheckBox fx:id="computeHistSettingCheckbox" text="Compute Histogram" />
+                                    <CheckBox fx:id="buildThumbSettingCheckbox" text="Build thumbnail" />
+                                </VBox>
+                                <Separator />
+                                <Label text="Duplicate finding:" />
+                                <VBox spacing="5.0">
+                                    <padding>
+                                        <Insets left="25.0" />
+                                    </padding>
+                                    <CheckBox fx:id="duplicateComputeMD5SettingCheckbox" text="Compute MD5s before matching" />
+                                    <CheckBox fx:id="duplicateComputeHistSettingCheckbox" text="Compute Histograms before matching" />
+                                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                        <Label text="Histogram confidence level:" />
+                                        <TextField fx:id="histConfidenceSettingTextField" promptText="0.95 suggested" />
+                                    </HBox>
+                                    <CheckBox fx:id="duplicateConsolidateTagsSettingCheckbox" text="Consolidate tags on delete" />
+                                    <HBox alignment="CENTER_LEFT" spacing="5">
+                                        <CheckBox fx:id="duplicateCompareBlackAndWhiteSettingCheckbox" text="Compare black and white histograms (poor accuracy) Margin of error:" />
+                                        <TextField fx:id="compareBlackAndWhiteConfidenceSettingTextField" promptText="0.25 suggested" />
+                                    </HBox>
+                                </VBox>
+                                <Separator />
+                                <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                    <Label text="Explorer Grid row width:" />
+                                    <ChoiceBox fx:id="gridWidthChoiceBox" />
+                                </HBox>
+                                <Separator />
+                                <Label text="Database (changes will be applied on restart):" />
+                                <VBox spacing="5.0">
+                                    <padding>
+                                        <Insets left="25.0" />
+                                    </padding>
+                                    <BorderPane>
+                                        <left>
+                                            <Label text="URL:" BorderPane.alignment="CENTER" />
+                                        </left>
+                                        <center>
+                                            <Label text="Username:" BorderPane.alignment="CENTER" />
+                                        </center>
+                                        <right>
+                                            <Label text="Password:" BorderPane.alignment="CENTER" />
+                                        </right>
+                                    </BorderPane>
+                                    <HBox spacing="5.0">
+                                        <TextField fx:id="dbURLTextField" promptText="~/menagerie" HBox.hgrow="ALWAYS" />
+                                        <TextField fx:id="dbUserTextField" promptText="sa" HBox.hgrow="ALWAYS" />
+                                        <TextField fx:id="dbPassTextField" promptText="[Empty]" HBox.hgrow="ALWAYS" />
+                                    </HBox>
+                                    <CheckBox fx:id="backupDatabaseSettingCheckBox" mnemonicParsing="false" text="Back up database on startup" />
+                                </VBox>
+                            </VBox>
+                        </content>
+                    </ScrollPane>
                 </center>
             </BorderPane>
         </center>
-      <padding>
-         <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
-      </padding>
+        <padding>
+            <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
+        </padding>
     </BorderPane>
     <BorderPane fx:id="tagListPane" disable="true" onKeyPressed="#tagListPaneOnKeyPressed" opacity="0.0">
         <center>
@@ -531,5 +537,30 @@
                 <Button mnemonicParsing="false" onAction="#slideShowNextButtonOnAction" text="-&gt;" />
             </HBox>
         </bottom>
+    </BorderPane>
+    <BorderPane fx:id="errorsPane" disable="true" onKeyPressed="#errorsPaneKeyPressed" opacity="0.0">
+        <right>
+            <VBox prefWidth="600.0" style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
+                <effect>
+                    <DropShadow spread="0.5" />
+                </effect>
+                <BorderPane>
+                    <left>
+                        <Label text="Errors and warnings:" BorderPane.alignment="CENTER" />
+                    </left>
+                    <right>
+                        <Button mnemonicParsing="false" onAction="#errorsPaneCloseButtonOnAction" text="X" BorderPane.alignment="CENTER" />
+                    </right>
+                </BorderPane>
+                <Separator prefWidth="200.0" />
+                <ListView fx:id="errorsListView" VBox.vgrow="ALWAYS" />
+                <HBox alignment="TOP_RIGHT">
+                    <Button mnemonicParsing="false" onAction="#dismissAllErrorsButtonOnAction" text="Dismiss All" />
+                </HBox>
+            </VBox>
+        </right>
+        <padding>
+            <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
+        </padding>
     </BorderPane>
 </StackPane>

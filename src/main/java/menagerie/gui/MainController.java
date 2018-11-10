@@ -1,8 +1,12 @@
 package menagerie.gui;
 
+import javafx.animation.Animation;
+import javafx.animation.FadeTransition;
 import javafx.application.Platform;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
@@ -10,6 +14,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.image.DynamicImageView;
@@ -60,6 +65,7 @@ public class MainController {
     public ListView<Tag> tagListView;
     public PredictiveTextField editTagsTextField;
     public MenuBar menuBar;
+    public Button showErrorsButton;
 
     public BorderPane settingsPane;
     public CheckBox computeMD5SettingCheckbox;
@@ -111,6 +117,12 @@ public class MainController {
     public BorderPane slideShowPane;
     public DynamicImageView slideShowImageView;
 
+    public BorderPane errorsPane;
+    public ListView<TrackedError> errorsListView;
+
+    private FadeTransition screenOpenTransition = new FadeTransition(Duration.millis(100));
+    private FadeTransition screenCloseTransition = new FadeTransition(Duration.millis(200));
+
 
     private Menagerie menagerie;
     private Search currentSearch = null;
@@ -156,6 +168,13 @@ public class MainController {
         initSettingsScreen();
         initTagListScreen();
         initDuplicateScreen();
+        initErrorsScreen();
+
+        //Init screen transitions
+        screenOpenTransition.setFromValue(0);
+        screenOpenTransition.setToValue(1);
+        screenCloseTransition.setFromValue(1);
+        screenCloseTransition.setToValue(0);
 
         //Apply a default search
         searchOnAction();
@@ -171,6 +190,26 @@ public class MainController {
 
         //Init folder watcher
         startWatchingFolderForImages();
+
+        Platform.runLater(() -> {
+            errorsListView.getItems().add(new TrackedError(null, TrackedError.Severity.NORMAL, "test", null, "dunno"));
+        });
+
+    }
+
+    private void initErrorsScreen() {
+        errorsListView.setCellFactory(param -> new ErrorListCell(error -> errorsListView.getItems().remove(error)));
+        errorsListView.getItems().addListener((ListChangeListener<? super TrackedError>) c -> {
+            final int count = errorsListView.getItems().size();
+
+            if (count == 0) {
+                showErrorsButton.setStyle("-fx-background-color: transparent;");
+            } else {
+                showErrorsButton.setStyle("-fx-background-color: red;");
+            }
+
+            showErrorsButton.setText("" + count);
+        });
     }
 
     private void initMenagerie() {
@@ -179,6 +218,10 @@ public class MainController {
             DatabaseVersionUpdater.updateDatabase(db);
 
             menagerie = new Menagerie(db);
+
+            menagerie.getUpdateQueue().setErrorListener(e -> Platform.runLater(() -> {
+                errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"));
+            }));
         } catch (SQLException e) {
             e.printStackTrace();
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
@@ -323,7 +366,13 @@ public class MainController {
 
             if (files != null && !files.isEmpty()) {
                 List<Runnable> queue = new ArrayList<>();
-                files.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+                files.forEach(file -> queue.add(() -> {
+                    try {
+                        menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                    } catch (Exception e) {
+                        Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                    }
+                }));
 
                 if (!queue.isEmpty()) {
                     openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
@@ -439,8 +488,12 @@ public class MainController {
             imageGridView.getSelected().forEach(img -> {
                 if (img.getMD5() == null) {
                     queue.add(() -> {
-                        img.initializeMD5();
-                        img.commitMD5ToDatabase();
+                        try {
+                            img.initializeMD5();
+                            img.commitMD5ToDatabase();
+                        } catch (Exception e) {
+                            Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for image: " + img, "Unknown")));
+                        }
                     });
                 }
             });
@@ -455,8 +508,12 @@ public class MainController {
                 String filename = img.getFile().getName().toLowerCase();
                 if (img.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
                     queue.add(() -> {
-                        img.initializeHistogram();
-                        img.commitHistogramToDatabase();
+                        try {
+                            img.initializeHistogram();
+                            img.commitHistogramToDatabase();
+                        } catch (Exception e) {
+                            Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + img, "Unknown")));
+                        }
                     });
                 }
             });
@@ -552,16 +609,16 @@ public class MainController {
         //Enable pane
         explorerPane.setDisable(true);
         settingsPane.setDisable(false);
-        settingsPane.setOpacity(1);
         settingsCancelButton.requestFocus();
+        startScreenTransition(screenOpenTransition, settingsPane);
     }
 
     private void closeSettingsScreen(boolean saveChanges) {
         //Disable pane
         explorerPane.setDisable(false);
         settingsPane.setDisable(true);
-        settingsPane.setOpacity(0);
         imageGridView.requestFocus();
+        startScreenTransition(screenCloseTransition, settingsPane);
 
         if (saveChanges) {
             //Save settings to settings object
@@ -601,29 +658,29 @@ public class MainController {
 
         explorerPane.setDisable(true);
         tagListPane.setDisable(false);
-        tagListPane.setOpacity(1);
         tagListPane.requestFocus();
+        startScreenTransition(screenOpenTransition, tagListPane);
     }
 
     private void closeTagListScreen() {
         explorerPane.setDisable(false);
         tagListPane.setDisable(true);
-        tagListPane.setOpacity(0);
         imageGridView.requestFocus();
+        startScreenTransition(screenCloseTransition, tagListPane);
     }
 
     private void openHelpScreen() {
         explorerPane.setDisable(true);
         helpPane.setDisable(false);
-        helpPane.setOpacity(1);
         helpPane.requestFocus();
+        startScreenTransition(screenOpenTransition, helpPane);
     }
 
     private void closeHelpScreen() {
         explorerPane.setDisable(false);
         helpPane.setDisable(true);
-        helpPane.setOpacity(0);
         imageGridView.requestFocus();
+        startScreenTransition(screenCloseTransition, helpPane);
     }
 
     @SuppressWarnings("SameParameterValue")
@@ -653,9 +710,8 @@ public class MainController {
 
         explorerPane.setDisable(true);
         progressLockPane.setDisable(false);
-        progressLockPane.setOpacity(1);
         progressLockPane.requestFocus();
-
+        startScreenTransition(screenOpenTransition, progressLockPane);
     }
 
     private void closeProgressLockScreen() {
@@ -663,8 +719,8 @@ public class MainController {
 
         explorerPane.setDisable(false);
         progressLockPane.setDisable(true);
-        progressLockPane.setOpacity(0);
         imageGridView.requestFocus();
+        startScreenTransition(screenCloseTransition, progressLockPane);
     }
 
     private void openDuplicateScreen(List<ImageInfo> images) {
@@ -678,20 +734,24 @@ public class MainController {
                 for (int j = i + 1; j < images.size(); j++) {
                     ImageInfo i2 = images.get(j);
 
-                    //Compare md5 hashes
-                    if (i1.getMD5() != null && i1.getMD5().equals(i2.getMD5())) {
-                        currentSimilarPairs.add(new SimilarPair(i1, i2, 1.0));
-                        continue;
-                    }
+                    try {
+                        //Compare md5 hashes
+                        if (i1.getMD5() != null && i1.getMD5().equals(i2.getMD5())) {
+                            currentSimilarPairs.add(new SimilarPair(i1, i2, 1.0));
+                            continue;
+                        }
 
-                    //Compare histograms
-                    if (i1.getHistogram() != null && i2.getHistogram() != null) {
-                        if (settings.isCompareBlackAndWhiteHists() || (!i1.getHistogram().isBlackAndWhite(settings.getCompareBlackAndWhiteConfidence()) && !i2.getHistogram().isBlackAndWhite(settings.getCompareBlackAndWhiteConfidence()))) {
-                            double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
-                            if (similarity >= settings.getSimilarityThreshold()) {
-                                currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
+                        //Compare histograms
+                        if (i1.getHistogram() != null && i2.getHistogram() != null) {
+                            if (settings.isCompareBlackAndWhiteHists() || (!i1.getHistogram().isBlackAndWhite(settings.getCompareBlackAndWhiteConfidence()) && !i2.getHistogram().isBlackAndWhite(settings.getCompareBlackAndWhiteConfidence()))) {
+                                double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
+                                if (similarity >= settings.getSimilarityThreshold()) {
+                                    currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
+                                }
                             }
                         }
+                    } catch (Exception e) {
+                        Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
                     }
                 }
             });
@@ -717,8 +777,8 @@ public class MainController {
 
             explorerPane.setDisable(true);
             duplicatePane.setDisable(false);
-            duplicatePane.setOpacity(1);
             duplicatePane.requestFocus();
+            startScreenTransition(screenOpenTransition, duplicatePane);
         }
     }
 
@@ -727,8 +787,8 @@ public class MainController {
 
         explorerPane.setDisable(false);
         duplicatePane.setDisable(true);
-        duplicatePane.setOpacity(0);
         imageGridView.requestFocus();
+        startScreenTransition(screenCloseTransition, duplicatePane);
     }
 
     private void openSlideShowScreen(List<ImageInfo> images) {
@@ -740,15 +800,29 @@ public class MainController {
 
         explorerPane.setDisable(true);
         slideShowPane.setDisable(false);
-        slideShowPane.setOpacity(1);
         slideShowPane.requestFocus();
+        startScreenTransition(screenOpenTransition, slideShowPane);
     }
 
     private void closeSlideShowScreen() {
         explorerPane.setDisable(false);
         slideShowPane.setDisable(true);
-        slideShowPane.setOpacity(0);
         imageGridView.requestFocus();
+        startScreenTransition(screenCloseTransition, slideShowPane);
+    }
+
+    private void openErrorsScreen() {
+        explorerPane.setDisable(true);
+        errorsPane.setDisable(false);
+        errorsPane.requestFocus();
+        startScreenTransition(screenOpenTransition, errorsPane);
+    }
+
+    private void closeErrorsScreen() {
+        explorerPane.setDisable(false);
+        errorsPane.setDisable(true);
+        imageGridView.requestFocus();
+        startScreenTransition(screenCloseTransition, errorsPane);
     }
 
     private void requestImportFolder() {
@@ -761,7 +835,13 @@ public class MainController {
             List<Runnable> queue = new ArrayList<>();
             List<File> files = getFilesRecursive(result, Filters.IMAGE_FILTER);
             menagerie.getImages().forEach(img -> files.remove(img.getFile()));
-            files.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+            files.forEach(file -> queue.add(() -> {
+                try {
+                    menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                } catch (Exception e) {
+                    Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                }
+            }));
 
             if (!queue.isEmpty()) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
@@ -781,7 +861,13 @@ public class MainController {
             menagerie.getImages().forEach(img -> finalResults.remove(img.getFile()));
 
             List<Runnable> queue = new ArrayList<>();
-            finalResults.forEach(file -> queue.add(() -> menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport())));
+            finalResults.forEach(file -> queue.add(() -> {
+                try {
+                    menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                } catch (Exception e) {
+                    Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                }
+            }));
 
             if (!queue.isEmpty()) {
                 openProgressLockScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
@@ -1127,8 +1213,12 @@ public class MainController {
 
             images.forEach(i -> {
                 if (i.getMD5() == null) queue.add(() -> {
-                    i.initializeMD5();
-                    i.commitMD5ToDatabase();
+                    try {
+                        i.initializeMD5();
+                        i.commitMD5ToDatabase();
+                    } catch (Exception e) {
+                        Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for image: " + i, "Unknown")));
+                    }
                 });
             });
 
@@ -1141,8 +1231,12 @@ public class MainController {
                         String filename = i.getFile().getName().toLowerCase();
                         if (i.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")))
                             queue2.add(() -> {
-                                i.initializeHistogram();
-                                i.commitHistogramToDatabase();
+                                try {
+                                    i.initializeHistogram();
+                                    i.commitHistogramToDatabase();
+                                } catch (Exception e) {
+                                    Platform.runLater(() -> errorsListView.getItems().add(0, new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + i, "Unknown")));
+                                }
                             });
                     });
 
@@ -1240,6 +1334,20 @@ public class MainController {
         }
     }
 
+    private void startScreenTransition(FadeTransition ft, Node screen) {
+        boolean openRunning = screenOpenTransition.getStatus().equals(Animation.Status.RUNNING);
+        boolean closeRunning = screenCloseTransition.getStatus().equals(Animation.Status.RUNNING);
+
+        screenOpenTransition.stop();
+        screenCloseTransition.stop();
+
+        if (openRunning) screenOpenTransition.getNode().setOpacity(1);
+        if (closeRunning) screenCloseTransition.getNode().setOpacity(0);
+
+        ft.setNode(screen);
+        ft.playFromStart();
+    }
+
     // ---------------------------------- Compute Utilities ------------------------------------
 
     private static void downloadAndSaveFile(String url, File target) throws IOException {
@@ -1291,7 +1399,7 @@ public class MainController {
         }
     }
 
-    public static File resolveDuplicateFilename(File file) {
+    private static File resolveDuplicateFilename(File file) {
         while (file.exists()) {
             String name = file.getName();
             if (name.matches(".*\\s\\([0-9]+\\)\\..*")) {
@@ -1309,7 +1417,7 @@ public class MainController {
         return file;
     }
 
-    // ---------------------------------- Event Handlers ------------------------------------
+    // ---------------------------------- Action Event Handlers ------------------------------------
 
     public void searchButtonOnAction(ActionEvent event) {
         searchOnAction();
@@ -1321,71 +1429,6 @@ public class MainController {
         searchOnAction();
         imageGridView.requestFocus();
         event.consume();
-    }
-
-    public void explorerPaneOnKeyPressed(KeyEvent event) {
-        if (event.isControlDown()) {
-            switch (event.getCode()) {
-                case F:
-                    searchTextField.requestFocus();
-                    event.consume();
-                    break;
-                case E:
-                    editTagsTextField.setText(lastTagString);
-                    editTagsTextField.requestFocus();
-                    event.consume();
-                    break;
-                case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(this::exit);
-                    menagerie.getUpdateQueue().commit();
-                    event.consume();
-                    break;
-                case S:
-                    openSettingsScreen();
-                    event.consume();
-                    break;
-                case T:
-                    openTagListScreen();
-                    event.consume();
-                    break;
-                case I:
-                    if (event.isShiftDown())
-                        requestImportFolder();
-                    else
-                        requestImportFiles();
-                    event.consume();
-                    break;
-                case H:
-                    openHelpScreen();
-                    event.consume();
-                    break;
-                case D:
-                    processAndShowDuplicates(imageGridView.getSelected());
-                    event.consume();
-                    break;
-            }
-        }
-
-        switch (event.getCode()) {
-            case ESCAPE:
-                imageGridView.requestFocus();
-                event.consume();
-                break;
-            case ALT:
-                event.consume();
-                break;
-        }
-    }
-
-    public void explorerPaneOnKeyReleased(KeyEvent event) {
-        if (event.getCode() == KeyCode.ALT) {
-            if (menuBar.isFocused()) {
-                imageGridView.requestFocus();
-            } else {
-                menuBar.requestFocus();
-            }
-            event.consume();
-        }
     }
 
     public void settingsAcceptButtonOnAction(ActionEvent event) {
@@ -1414,64 +1457,9 @@ public class MainController {
         event.consume();
     }
 
-    public void settingsPaneKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                closeSettingsScreen(false);
-                event.consume();
-                break;
-            case ENTER:
-                closeSettingsScreen(true);
-                event.consume();
-                break;
-            case S:
-                if (event.isControlDown()) {
-                    closeSettingsScreen(false);
-                    event.consume();
-                }
-                break;
-        }
-    }
-
-    public void editTagsTextFieldOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case SPACE:
-                editTagsOfSelected(editTagsTextField.getText());
-                Platform.runLater(() -> editTagsTextField.setText(null));
-                event.consume();
-                break;
-            case ENTER:
-                editTagsOfSelected(editTagsTextField.getText());
-                editTagsTextField.setText(null);
-                imageGridView.requestFocus();
-                event.consume();
-                break;
-            case ESCAPE:
-                editTagsTextField.setText(null);
-                imageGridView.requestFocus();
-                event.consume();
-                break;
-        }
-    }
-
     public void tagListExitButtonOnAction(ActionEvent event) {
         closeTagListScreen();
         event.consume();
-    }
-
-    public void tagListPaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                closeTagListScreen();
-                event.consume();
-                break;
-            case T:
-                if (event.isControlDown()) {
-                    closeTagListScreen();
-                    event.consume();
-                }
-                break;
-        }
     }
 
     public void helpExitButtonOnAction(ActionEvent event) {
@@ -1479,33 +1467,9 @@ public class MainController {
         event.consume();
     }
 
-    public void helpPaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                closeHelpScreen();
-                event.consume();
-                break;
-            case H:
-                if (event.isControlDown()) {
-                    closeHelpScreen();
-                    event.consume();
-                }
-                break;
-        }
-    }
-
     public void progressLockStopButtonOnAction(ActionEvent event) {
         closeProgressLockScreen();
         event.consume();
-    }
-
-    public void progressLockPaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                closeProgressLockScreen();
-                event.consume();
-                break;
-        }
     }
 
     public void duplicateLeftDeleteButtonOnAction(ActionEvent event) {
@@ -1527,23 +1491,6 @@ public class MainController {
         event.consume();
     }
 
-    public void duplicatePaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                closeDuplicateScreen();
-                event.consume();
-                break;
-            case LEFT:
-                previewLastSimilarPair();
-                event.consume();
-                break;
-            case RIGHT:
-                previewNextSimilarPair();
-                event.consume();
-                break;
-        }
-    }
-
     public void duplicatePrevPairButtonOnAction(ActionEvent event) {
         previewLastSimilarPair();
         event.consume();
@@ -1552,39 +1499,6 @@ public class MainController {
     public void duplicateNextPairButtonOnAction(ActionEvent event) {
         previewNextSimilarPair();
         event.consume();
-    }
-
-    public void duplicateImagesPaneMouseEntered(MouseEvent event) {
-        duplicateLeftTagListView.setDisable(false);
-        duplicateRightTagListView.setDisable(false);
-        duplicateLeftTagListView.setOpacity(0.75);
-        duplicateRightTagListView.setOpacity(0.75);
-        event.consume();
-    }
-
-    public void duplicateImagesPaneMouseExited(MouseEvent event) {
-        duplicateLeftTagListView.setDisable(true);
-        duplicateRightTagListView.setDisable(true);
-        duplicateLeftTagListView.setOpacity(0);
-        duplicateRightTagListView.setOpacity(0);
-        event.consume();
-    }
-
-    public void slideShowPaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case RIGHT:
-                slideShowShowNext();
-                event.consume();
-                break;
-            case LEFT:
-                slideShowShowPrevious();
-                event.consume();
-                break;
-            case ESCAPE:
-                closeSlideShowScreen();
-                event.consume();
-                break;
-        }
     }
 
     public void slideShowPreviousButtonOnAction(ActionEvent event) {
@@ -1655,6 +1569,229 @@ public class MainController {
 
     public void autoImportFolderSettingCheckBoxOnAction(ActionEvent event) {
         updateAutoImportFolderDisabledStatus();
+        event.consume();
+    }
+
+    public void errorsPaneCloseButtonOnAction(ActionEvent event) {
+        closeErrorsScreen();
+        event.consume();
+    }
+
+    // ---------------------------------- Key Event Handlers ----------------------------------------
+
+    public void explorerPaneOnKeyPressed(KeyEvent event) {
+        if (event.isControlDown()) {
+            switch (event.getCode()) {
+                case F:
+                    searchTextField.requestFocus();
+                    event.consume();
+                    break;
+                case E:
+                    editTagsTextField.setText(lastTagString);
+                    editTagsTextField.requestFocus();
+                    event.consume();
+                    break;
+                case Q:
+                    menagerie.getUpdateQueue().enqueueUpdate(this::exit);
+                    menagerie.getUpdateQueue().commit();
+                    event.consume();
+                    break;
+                case S:
+                    openSettingsScreen();
+                    event.consume();
+                    break;
+                case T:
+                    openTagListScreen();
+                    event.consume();
+                    break;
+                case I:
+                    if (event.isShiftDown())
+                        requestImportFolder();
+                    else
+                        requestImportFiles();
+                    event.consume();
+                    break;
+                case H:
+                    openHelpScreen();
+                    event.consume();
+                    break;
+                case D:
+                    processAndShowDuplicates(imageGridView.getSelected());
+                    event.consume();
+                    break;
+            }
+        }
+
+        switch (event.getCode()) {
+            case ESCAPE:
+                imageGridView.requestFocus();
+                event.consume();
+                break;
+            case ALT:
+                event.consume();
+                break;
+        }
+    }
+
+    public void explorerPaneOnKeyReleased(KeyEvent event) {
+        if (event.getCode() == KeyCode.ALT) {
+            if (menuBar.isFocused()) {
+                imageGridView.requestFocus();
+            } else {
+                menuBar.requestFocus();
+            }
+            event.consume();
+        }
+    }
+
+    public void settingsPaneKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeSettingsScreen(false);
+                event.consume();
+                break;
+            case ENTER:
+                closeSettingsScreen(true);
+                event.consume();
+                break;
+            case S:
+                if (event.isControlDown()) {
+                    closeSettingsScreen(false);
+                    event.consume();
+                }
+                break;
+        }
+    }
+
+    public void editTagsTextFieldOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case SPACE:
+                editTagsOfSelected(editTagsTextField.getText());
+                Platform.runLater(() -> editTagsTextField.setText(null));
+                event.consume();
+                break;
+            case ENTER:
+                editTagsOfSelected(editTagsTextField.getText());
+                editTagsTextField.setText(null);
+                imageGridView.requestFocus();
+                event.consume();
+                break;
+            case ESCAPE:
+                editTagsTextField.setText(null);
+                imageGridView.requestFocus();
+                event.consume();
+                break;
+        }
+    }
+
+    public void tagListPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeTagListScreen();
+                event.consume();
+                break;
+            case T:
+                if (event.isControlDown()) {
+                    closeTagListScreen();
+                    event.consume();
+                }
+                break;
+        }
+    }
+
+    public void helpPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeHelpScreen();
+                event.consume();
+                break;
+            case H:
+                if (event.isControlDown()) {
+                    closeHelpScreen();
+                    event.consume();
+                }
+                break;
+        }
+    }
+
+    public void progressLockPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeProgressLockScreen();
+                event.consume();
+                break;
+        }
+    }
+
+    public void duplicatePaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeDuplicateScreen();
+                event.consume();
+                break;
+            case LEFT:
+                previewLastSimilarPair();
+                event.consume();
+                break;
+            case RIGHT:
+                previewNextSimilarPair();
+                event.consume();
+                break;
+        }
+    }
+
+    public void slideShowPaneOnKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case RIGHT:
+                slideShowShowNext();
+                event.consume();
+                break;
+            case LEFT:
+                slideShowShowPrevious();
+                event.consume();
+                break;
+            case ESCAPE:
+                closeSlideShowScreen();
+                event.consume();
+                break;
+        }
+    }
+
+    public void errorsPaneKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+                closeErrorsScreen();
+                event.consume();
+                break;
+        }
+    }
+
+    // --------------------------- Mouse Event Handlers -----------------------------------------------
+
+    public void duplicateImagesPaneMouseEntered(MouseEvent event) {
+        duplicateLeftTagListView.setDisable(false);
+        duplicateRightTagListView.setDisable(false);
+        duplicateLeftTagListView.setOpacity(0.75);
+        duplicateRightTagListView.setOpacity(0.75);
+        event.consume();
+    }
+
+    public void duplicateImagesPaneMouseExited(MouseEvent event) {
+        duplicateLeftTagListView.setDisable(true);
+        duplicateRightTagListView.setDisable(true);
+        duplicateLeftTagListView.setOpacity(0);
+        duplicateRightTagListView.setOpacity(0);
+        event.consume();
+    }
+
+    public void dismissAllErrorsButtonOnAction(ActionEvent event) {
+        errorsListView.getItems().clear();
+        closeErrorsScreen();
+        event.consume();
+    }
+
+    public void showErrorsButtonOnAction(ActionEvent event) {
+        openErrorsScreen();
         event.consume();
     }
 
