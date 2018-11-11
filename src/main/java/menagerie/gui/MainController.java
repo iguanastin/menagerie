@@ -310,7 +310,7 @@ public class MainController {
         //Init image grid
         imageGridView.setSelectionListener(this::previewImage);
         imageGridView.setCellFactory(param -> {
-            ImageGridCell c = new ImageGridCell(imageGridView);
+            ImageGridCell c = new ImageGridCell();
             c.setOnDragDetected(event -> {
                 if (!imageGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
                     if (!imageGridView.isSelected(c.getItem()))

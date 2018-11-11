@@ -8,21 +8,21 @@ import org.controlsfx.control.GridCell;
 
 public class ImageGridCell extends GridCell<ImageInfo> {
 
-    private static final String UNSELECTED_BG_CSS = "-fx-background-color: derive(-fx-color, 50%)";
-    private static final String SELECTED_BG_CSS = "-fx-background-color: derive(-fx-accent, 100%)";
+    private static final String UNSELECTED_BG_CSS = "-fx-background-color: -grid-cell-unselected-color";
+    private static final String SELECTED_BG_CSS = "-fx-background-color: -grid-cell-selected-color";
 
     final private ImageView view;
-    final private ImageGridView grid;
 
 
-    public ImageGridCell(ImageGridView imageGridView) {
+    public ImageGridCell() {
         super();
+        this.getStyleClass().add("image-grid-cell");
 
-        this.grid = imageGridView;
         this.view = new ImageView();
         setGraphic(view);
         setAlignment(Pos.CENTER);
         setStyle(UNSELECTED_BG_CSS);
+
     }
 
     @Override
@@ -35,10 +35,12 @@ public class ImageGridCell extends GridCell<ImageInfo> {
 
         super.updateItem(item, empty);
 
-        if (grid.isSelected(item)) {
+        if (getGridView() != null && getGridView() instanceof ImageGridView && ((ImageGridView) getGridView()).isSelected(item)) {
             setStyle(SELECTED_BG_CSS);
+            if (item != null) System.out.println("selected: " + item);
         } else {
             setStyle(UNSELECTED_BG_CSS);
+            if (item != null) System.out.println("unselected: " + item);
         }
     }
 

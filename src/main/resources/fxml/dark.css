@@ -62,5 +62,11 @@
     -fx-background-color: derive(-fx-control-inner-background, +30%);
 }
 .list-cell:odd {
-    -fx-background-color: derive(-fx-control-inner-background, +20%)
+    -fx-background-color: derive(-fx-control-inner-background, +20%);
+}
+
+.image-grid-cell {
+    -grid-cell-selected-color: derive(-fx-accent, 100%);
+    -grid-cell-unselected-color: derive(-fx-color, 50%);
+    -fx-background-color: -grid-cell-unselected-color;
 }
