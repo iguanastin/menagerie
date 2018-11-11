@@ -187,6 +187,27 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
     }
 
+    private Image buildThumbnail() {
+        String extension = file.getName().toLowerCase();
+        extension = extension.substring(extension.indexOf('.') + 1);
+
+        switch (extension) {
+            case "png":
+            case "jpg":
+            case "jpeg":
+            case "bmp":
+            case "gif":
+                return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
+            case "webm":
+            case "mp4":
+            case "avi":
+                //TODO: Load video into VLCJ player and take snapshot
+                return null;
+        }
+
+        return null;
+    }
+
     public List<Tag> getTags() {
         return tags;
     }
@@ -262,17 +283,24 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return succeeded;
     }
 
+    public double getSimilarityTo(ImageInfo other, boolean compareBlackAndWhiteHists) {
+        if (md5 != null && md5.equals(other.getMD5())) {
+            return 1.0;
+        } else if (histogram != null && other.getHistogram() != null) {
+            if (compareBlackAndWhiteHists || (!histogram.isBlackAndWhite() && !other.getHistogram().isBlackAndWhite())) {
+                return histogram.getSimilarity(other.getHistogram());
+            }
+        }
+
+        return 0;
+    }
+
     public void remove(boolean deleteFile) {
         menagerie.removeImage(this, deleteFile);
     }
 
     public void setTagListener(ImageTagUpdateListener tagListener) {
         this.tagListener = tagListener;
-    }
-
-    @Override
-    public String toString() {
-        return "Image (" + getId() + ") \"" + getFile().getAbsolutePath() + "\" - " + new Date(getDateAdded());
     }
 
     @Override
@@ -285,25 +313,9 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return getId() - o.getId();
     }
 
-    private Image buildThumbnail() {
-        String extension = file.getName().toLowerCase();
-        extension = extension.substring(extension.indexOf('.') + 1);
-
-        switch (extension) {
-            case "png":
-            case "jpg":
-            case "jpeg":
-            case "bmp":
-            case "gif":
-                return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
-            case "webm":
-            case "mp4":
-            case "avi":
-                //TODO: Load video into VLCJ player and take snapshot
-                return null;
-        }
-
-        return null;
+    @Override
+    public String toString() {
+        return "Image (" + getId() + ") \"" + getFile().getAbsolutePath() + "\" - " + new Date(getDateAdded());
     }
 
 }

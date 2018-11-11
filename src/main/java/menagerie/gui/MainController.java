@@ -752,21 +752,9 @@ public class MainController {
                     ImageInfo i2 = images.get(j);
 
                     try {
-                        //Compare md5 hashes
-                        if (i1.getMD5() != null && i1.getMD5().equals(i2.getMD5())) {
-                            currentSimilarPairs.add(new SimilarPair(i1, i2, 1.0));
-                            continue;
-                        }
+                        double similarity = i1.getSimilarityTo(i2, settings.isCompareBlackAndWhiteHists());
 
-                        //Compare histograms
-                        if (i1.getHistogram() != null && i2.getHistogram() != null) {
-                            if (settings.isCompareBlackAndWhiteHists() || (!i1.getHistogram().isBlackAndWhite() && !i2.getHistogram().isBlackAndWhite())) {
-                                double similarity = i1.getHistogram().getSimilarity(i2.getHistogram());
-                                if (similarity >= settings.getSimilarityThreshold()) {
-                                    currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
-                                }
-                            }
-                        }
+                        if (similarity >= settings.getSimilarityThreshold()) currentSimilarPairs.add(new SimilarPair(i1, i2, similarity));
                     } catch (Exception e) {
                         Platform.runLater(() -> addErrorToList(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
                     }
