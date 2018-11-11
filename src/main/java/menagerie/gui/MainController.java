@@ -148,13 +148,20 @@ public class MainController {
 
     private FolderWatcherThread folderWatcherThread = null;
 
-    private final Settings settings = new Settings(new File("menagerie.settings"));
+    private final Settings settings = new Settings(new File("menagerie.properties"));
 
 
     // ---------------------------------- Initializers ------------------------------------
 
     @FXML
     public void initialize() {
+
+        //Initialize settings
+        try {
+            settings.loadFromFile();
+        } catch (IOException e) {
+            trySaveSettings();
+        }
 
         //Backup database
         try {
@@ -382,13 +389,13 @@ public class MainController {
                 }
             } else if (url != null && !url.isEmpty()) {
                 Platform.runLater(() -> {
-                    String folder = settings.getLastFolder();
+                    String folder = settings.getDefaultFolder();
                     if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
                     String filename = URI.create(url).getPath().replaceAll("^.*/", "");
                     File target = resolveDuplicateFilename(new File(folder + filename));
 
                     while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !Filters.IMAGE_FILTER.accept(target)) {
-                        target = openSaveImageDialog(new File(settings.getLastFolder()), filename);
+                        target = openSaveImageDialog(new File(settings.getDefaultFolder()), filename);
                         if (target == null) return;
                         if (target.exists())
                             Main.showErrorMessage("Error", "File already exists, cannot be overwritten", target.getAbsolutePath());
@@ -592,7 +599,7 @@ public class MainController {
 
     private void openSettingsScreen() {
         //Update settings fx nodes
-        lastFolderSettingTextField.setText(settings.getLastFolder());
+        lastFolderSettingTextField.setText(settings.getDefaultFolder());
         importFromFolderSettingTextField.setText(settings.getImportFromFolderPath());
         dbURLTextField.setText(settings.getDbUrl());
         dbUserTextField.setText(settings.getDbUser());
@@ -633,7 +640,7 @@ public class MainController {
 
         if (saveChanges) {
             //Save settings to settings object
-            settings.setLastFolder(lastFolderSettingTextField.getText());
+            settings.setDefaultFolder(lastFolderSettingTextField.getText());
             settings.setDbUrl(dbURLTextField.getText());
             settings.setDbUser(dbUserTextField.getText());
             settings.setDbPass(dbPassTextField.getText());
@@ -660,6 +667,8 @@ public class MainController {
 
             startWatchingFolderForImages();
         }
+
+        trySaveSettings();
     }
 
     private void openTagListScreen() {
@@ -838,8 +847,8 @@ public class MainController {
 
     private void requestImportFolder() {
         DirectoryChooser dc = new DirectoryChooser();
-        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
-            dc.setInitialDirectory(new File(settings.getLastFolder()));
+        if (settings.getDefaultFolder() != null && !settings.getDefaultFolder().isEmpty())
+            dc.setInitialDirectory(new File(settings.getDefaultFolder()));
         File result = dc.showDialog(rootPane.getScene().getWindow());
 
         if (result != null) {
@@ -862,8 +871,8 @@ public class MainController {
 
     private void requestImportFiles() {
         FileChooser fc = new FileChooser();
-        if (settings.getLastFolder() != null && !settings.getLastFolder().isEmpty())
-            fc.setInitialDirectory(new File(settings.getLastFolder()));
+        if (settings.getDefaultFolder() != null && !settings.getDefaultFolder().isEmpty())
+            fc.setInitialDirectory(new File(settings.getDefaultFolder()));
         fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
         List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
 
@@ -1284,7 +1293,7 @@ public class MainController {
                 folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.IMAGE_FILTER, 30000, files -> {
                     for (File file : files) {
                         if (settings.isAutoImportFromFolderToDefault()) {
-                            String folder = settings.getLastFolder();
+                            String folder = settings.getDefaultFolder();
                             if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
                             File f = new File(folder + file.getName());
                             if (file.equals(f)) continue; //File is being "moved" to same folder
@@ -1311,6 +1320,8 @@ public class MainController {
     }
 
     private void exit() {
+        trySaveSettings();
+
         new Thread(() -> {
             try {
                 System.out.println("Attempting to shut down Menagerie database and defragment the file");
@@ -1431,6 +1442,14 @@ public class MainController {
         }
 
         return file;
+    }
+
+    private void trySaveSettings() {
+        try {
+            settings.saveToFile();
+        } catch (IOException e1) {
+            Platform.runLater(() -> addErrorToList(new TrackedError(e1, TrackedError.Severity.HIGH, "Unable to save properties", "IO Exception thrown while trying to save properties file", "1.) Application may not have write privileges\n2.) File may already be in use")));
+        }
     }
 
     // ---------------------------------- Action Event Handlers ------------------------------------
