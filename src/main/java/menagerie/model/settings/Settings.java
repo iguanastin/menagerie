@@ -28,7 +28,6 @@ public class Settings extends Properties {
     private static final String IMPORT_FROM_FOLDER_PATH_TAG = "import_from_folder_path";
     private static final String AUTO_IMPORT_FROM_FOLDER_TO_DEFAULT = "auto_import_from_folder_to_default";
     private static final String COMPARE_BLACK_AND_WHITE_HISTS_TAG = "compare_black_and_white_hists";
-    private static final String COMPARE_BLACK_AND_WHITE_CONFIDENCE_TAG = "compare_black_and_white_confidence";
 
     public static final int MIN_IMAGE_GRID_WIDTH = 2;
     public static final int MAX_IMAGE_GRID_WIDTH = 8;
@@ -92,10 +91,6 @@ public class Settings extends Properties {
 
     public String getImportFromFolderPath() {
         return getProperty(IMPORT_FROM_FOLDER_PATH_TAG, null);
-    }
-
-    public double getCompareBlackAndWhiteConfidence() {
-        return Double.parseDouble(getProperty(COMPARE_BLACK_AND_WHITE_CONFIDENCE_TAG, "0.25"));
     }
 
     public boolean isAutoImportFromWeb() {
@@ -252,10 +247,6 @@ public class Settings extends Properties {
 
     public void setBuildThumbnailOnImport(boolean buildThumbnailOnImport) {
         setProperty(BUILD_THUMBNAIL_ON_IMPORT_TAG, buildThumbnailOnImport + "");
-    }
-
-    public void setCompareBlackAndWhiteConfidence(double compareBlackAndWhiteConfidence) {
-        setProperty(COMPARE_BLACK_AND_WHITE_CONFIDENCE_TAG, compareBlackAndWhiteConfidence + "");
     }
 
     public void setSimilarityThreshold(double similarityThreshold) {
