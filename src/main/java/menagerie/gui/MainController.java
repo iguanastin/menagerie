@@ -740,6 +740,8 @@ public class MainController {
     }
 
     private void openDuplicateScreen(List<ImageInfo> images) {
+        if (images == null || images.isEmpty()) return;
+
         currentSimilarPairs = new ArrayList<>();
         List<Runnable> queue = new ArrayList<>();
 
