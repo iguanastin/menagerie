@@ -77,8 +77,8 @@
                 </top>
             <bottom>
                 <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
-                    <Label text="Errors and Warnings:"/>
-                    <Button fx:id="showErrorsButton" mnemonicParsing="false" onAction="#showErrorsButtonOnAction" text="0"/>
+                    <Label text="Errors and Warnings:" />
+                    <Button fx:id="showErrorsButton" mnemonicParsing="false" onAction="#showErrorsButtonOnAction" text="0" />
                 </HBox>
             </bottom>
             </BorderPane>
@@ -270,7 +270,7 @@
             <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
         </padding>
         <center>
-            <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="400.0" prefWidth="500.0" style="-fx-background-color: -fx-base;">
+            <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="800.0" prefWidth="600.0" style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
                 <effect>
                     <DropShadow spread="0.5" />
                 </effect>
