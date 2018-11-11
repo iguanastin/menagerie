@@ -1,5 +1,6 @@
 package menagerie.gui;
 
+import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.application.Platform;
@@ -196,9 +197,7 @@ public class MainController {
         Platform.runLater(() -> {
             initWindowPropertiesFromSettings();
 
-            rootPane.getScene().getWindow().setOnCloseRequest(event -> {
-                exit();
-            });
+            rootPane.getScene().getWindow().setOnCloseRequest(event -> exit());
         });
 
         //Init folder watcher

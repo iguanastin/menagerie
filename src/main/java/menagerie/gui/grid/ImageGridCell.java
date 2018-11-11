@@ -37,10 +37,8 @@ public class ImageGridCell extends GridCell<ImageInfo> {
 
         if (getGridView() != null && getGridView() instanceof ImageGridView && ((ImageGridView) getGridView()).isSelected(item)) {
             setStyle(SELECTED_BG_CSS);
-            if (item != null) System.out.println("selected: " + item);
         } else {
             setStyle(UNSELECTED_BG_CSS);
-            if (item != null) System.out.println("unselected: " + item);
         }
     }
 

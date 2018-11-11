@@ -3,19 +3,13 @@ package menagerie.gui.grid;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.input.*;
-import javafx.stage.DirectoryChooser;
-import menagerie.gui.Main;
-import menagerie.gui.MainController;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridView;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public class ImageGridView extends GridView<ImageInfo> {
 
