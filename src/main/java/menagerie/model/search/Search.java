@@ -4,6 +4,7 @@ import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Search {
@@ -18,6 +19,7 @@ public class Search {
 
 
     public Search(Menagerie menagerie, List<SearchRule> rules, boolean descending) {
+        if (rules == null) rules = new ArrayList<>();
         this.menagerie = menagerie;
         this.rules = rules;
         this.descending = descending;

@@ -1,6 +1,5 @@
 package menagerie.gui;
 
-import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.application.Platform;
@@ -129,23 +128,31 @@ public class MainController {
     private FadeTransition screenCloseTransition = new FadeTransition(Duration.millis(200));
 
 
+    //Menagerie vars
     private Menagerie menagerie;
     private Search currentSearch = null;
 
-    private ProgressLockThread currentProgressLockThread;
+    //Explorer screen vars
     private ImageInfo currentlyPreviewing = null;
     private String lastTagString = null;
-    private List<SimilarPair> currentSimilarPairs = null;
-    private SimilarPair currentlyPreviewingPair = null;
-    private List<ImageInfo> currentSlideShow = null;
-    private ImageInfo currentSlideShowShowing = null;
-
     private final ClipboardContent clipboard = new ClipboardContent();
     private boolean imageGridViewDragging = false;
-    private ContextMenu cellContextMenu;
+    private ContextMenu explorerCellContextMenu;
 
+    //Slideshow screen vars
+    private List<ImageInfo> currentSlideShow = null;
+    private ImageInfo currentSlideShowShowing = null;
+    private ContextMenu slideShowContextMenu;
+
+    //Duplicate screen vars
+    private List<SimilarPair> currentSimilarPairs = null;
+    private SimilarPair currentlyPreviewingPair = null;
+
+    //Threads
+    private ProgressLockThread currentProgressLockThread;
     private FolderWatcherThread folderWatcherThread = null;
 
+    //Settings var
     private final Settings settings = new Settings(new File("menagerie.properties"));
 
 
@@ -181,6 +188,7 @@ public class MainController {
         initTagListScreen();
         initDuplicateScreen();
         initErrorsScreen();
+        initSlideShowScreen();
 
         //Init screen transitions
         screenOpenTransition.setFromValue(0);
@@ -201,6 +209,21 @@ public class MainController {
         //Init folder watcher
         startWatchingFolderForImages();
 
+    }
+
+    private void initSlideShowScreen() {
+        MenuItem showInSearchMenuItem = new MenuItem("Show in search");
+        showInSearchMenuItem.setOnAction(event -> {
+            closeSlideShowScreen();
+            imageGridView.select(currentSlideShowShowing, false, false);
+        });
+        MenuItem forgetCurrentMenuItem = new MenuItem("Forget");
+        forgetCurrentMenuItem.setOnAction(event -> slideShowDeleteCurrentEvent(false));
+        MenuItem deleteCurrentMenuItem = new MenuItem("Delete");
+        deleteCurrentMenuItem.setOnAction(event -> slideShowDeleteCurrentEvent(true));
+
+        slideShowContextMenu = new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem);
+        slideShowImageView.setOnContextMenuRequested(event -> slideShowContextMenu.show(slideShowImageView, event.getScreenX(), event.getScreenY()));
     }
 
     private void initErrorsScreen() {
@@ -343,8 +366,8 @@ public class MainController {
                 }
             });
             c.setOnContextMenuRequested(event -> {
-                if (cellContextMenu.isShowing()) cellContextMenu.hide();
-                cellContextMenu.show(c, event.getScreenX(), event.getScreenY());
+                if (explorerCellContextMenu.isShowing()) explorerCellContextMenu.hide();
+                explorerCellContextMenu.show(c, event.getScreenX(), event.getScreenY());
                 event.consume();
             });
             return c;
@@ -566,7 +589,7 @@ public class MainController {
         MenuItem i8 = new MenuItem("Delete");
         i8.setOnAction(event1 -> imageGridCellDeleteEvent(imageGridView.getSelected(), true));
 
-        cellContextMenu = new ContextMenu(i1, new SeparatorMenuItem(), i2, new SeparatorMenuItem(), i3, i4, new SeparatorMenuItem(), i5, new SeparatorMenuItem(), i6, new SeparatorMenuItem(), i7, i8);
+        explorerCellContextMenu = new ContextMenu(i1, new SeparatorMenuItem(), i2, new SeparatorMenuItem(), i3, i4, new SeparatorMenuItem(), i5, new SeparatorMenuItem(), i6, new SeparatorMenuItem(), i7, i8);
     }
 
     private void initWindowListeners() {
@@ -1320,7 +1343,7 @@ public class MainController {
     }
 
     private boolean imageGridCellDeleteEvent(List<ImageInfo> images, boolean deleteFiles) {
-        if (!images.isEmpty()) {
+        if (images != null && !images.isEmpty()) {
             Alert d = new Alert(Alert.AlertType.CONFIRMATION);
 
             if (deleteFiles) {
@@ -1360,6 +1383,23 @@ public class MainController {
     private void addErrorToList(TrackedError error) {
         errorsListView.getItems().add(0, error);
         Toolkit.getDefaultToolkit().beep();
+    }
+
+    private void slideShowDeleteCurrentEvent(boolean deleteFile) {
+        if (imageGridCellDeleteEvent(Collections.singletonList(currentSlideShowShowing), deleteFile)) {
+            int i = currentSlideShow.indexOf(currentSlideShowShowing);
+            currentSlideShow.remove(currentSlideShowShowing);
+            if (currentSlideShow.isEmpty()) {
+                closeSlideShowScreen();
+            } else {
+                if (i < currentSlideShow.size()) {
+                    currentSlideShowShowing = currentSlideShow.get(i);
+                } else {
+                    currentSlideShowShowing = currentSlideShow.get(currentSlideShow.size() - 1);
+                }
+                slideShowImageView.setImage(currentSlideShowShowing.getImage());
+            }
+        }
     }
 
     // ---------------------------------- Compute Utilities ------------------------------------
@@ -1777,20 +1817,7 @@ public class MainController {
                 event.consume();
                 break;
             case DELETE:
-                if (imageGridCellDeleteEvent(Collections.singletonList(currentSlideShowShowing), !event.isControlDown())) {
-                    int i = currentSlideShow.indexOf(currentSlideShowShowing);
-                    currentSlideShow.remove(currentSlideShowShowing);
-                    if (currentSlideShow.isEmpty()) {
-                        closeSlideShowScreen();
-                    } else {
-                        if (i < currentSlideShow.size()) {
-                            currentSlideShowShowing = currentSlideShow.get(i);
-                        } else {
-                            currentSlideShowShowing = currentSlideShow.get(currentSlideShow.size() - 1);
-                        }
-                        slideShowImageView.setImage(currentSlideShowShowing.getImage());
-                    }
-                }
+                slideShowDeleteCurrentEvent(!event.isControlDown());
                 event.consume();
                 break;
         }
