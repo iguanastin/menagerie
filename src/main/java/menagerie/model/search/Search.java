@@ -5,6 +5,7 @@ import menagerie.model.menagerie.Menagerie;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class Search {
@@ -14,6 +15,8 @@ public class Search {
 
     private final List<SearchRule> rules;
     private final boolean descending;
+
+    private final Comparator<ImageInfo> comparator;
 
     private final List<ImageInfo> results = new ArrayList<>();
 
@@ -25,13 +28,19 @@ public class Search {
         this.descending = descending;
         rules.sort(null);
 
+        comparator = (o1, o2) -> {
+            if (descending) {
+                return o2.getId() - o1.getId();
+            } else {
+                return o1.getId() - o2.getId();
+            }
+        };
+
         menagerie.registerSearch(this);
 
         for (ImageInfo img : menagerie.getImages()) {
             addIfValid(img);
         }
-
-        sortResults();
     }
 
     public void setListener(SearchUpdateListener listener) {
@@ -42,15 +51,30 @@ public class Search {
         return results;
     }
 
+    public Comparator<ImageInfo> getComparator() {
+        return comparator;
+    }
+
     public void addIfValid(ImageInfo img) {
         if (rules != null) {
             for (SearchRule rule : rules) {
                 if (!rule.accept(img)) return;
             }
         }
-        results.add(img);
-        if (listener != null) listener.imageAdded(img);
 
+        boolean added = false;
+
+        for (int i = 0; i < results.size(); i++) {
+            if (comparator.compare(img, results.get(i)) < 0) {
+                results.add(i, img);
+                added = true;
+                break;
+            }
+        }
+
+        if (!added) results.add(img);
+
+        if (listener != null) listener.imageAdded(img);
     }
 
     public void removeIfInvalid(ImageInfo img) {
@@ -70,16 +94,6 @@ public class Search {
         boolean result = results.remove(img);
         if (listener != null && result) listener.imageRemoved(img);
 
-    }
-
-    public void sortResults() {
-        results.sort((o1, o2) -> {
-            if (descending) {
-                return o2.getId() - o1.getId();
-            } else {
-                return o1.getId() - o2.getId();
-            }
-        });
     }
 
     public void close() {

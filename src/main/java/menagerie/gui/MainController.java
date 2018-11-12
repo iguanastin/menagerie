@@ -999,19 +999,26 @@ public class MainController {
     }
 
     private void explorer_applySearch() {
-        explorer_previewImageView.setImage(null);
+        if (explorer_currentSearch != null) explorer_currentSearch.close();
+        explorer_previewImage(null);
 
         final boolean descending = explorer_descendingToggleButton.isSelected();
 
-        List<SearchRule> rules = explorer_constructRuleSet(explorer_searchTextField.getText());
-
-        if (explorer_currentSearch != null) explorer_currentSearch.close();
-        explorer_currentSearch = new Search(menagerie, rules, descending);
+        explorer_currentSearch = new Search(menagerie, explorer_constructRuleSet(explorer_searchTextField.getText()), descending);
         explorer_currentSearch.setListener(new SearchUpdateListener() {
             @Override
             public void imageAdded(ImageInfo img) {
-                explorer_currentSearch.sortResults();
-                Platform.runLater(() -> explorer_imageGridView.getItems().add(explorer_currentSearch.getResults().indexOf(img), img));
+                Platform.runLater(() -> {
+                    boolean added = false;
+                    for (int i = 0; i < explorer_imageGridView.getItems().size(); i++) {
+                        if (explorer_currentSearch.getComparator().compare(img, explorer_imageGridView.getItems().get(i)) < 0) {
+                            explorer_imageGridView.getItems().add(i, img);
+                            added = true;
+                            break;
+                        }
+                    }
+                    if (!added) explorer_imageGridView.getItems().add(img);
+                });
             }
 
             @Override
