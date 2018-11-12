@@ -1,10 +1,12 @@
 package menagerie.model.menagerie;
 
+import com.sun.jna.platform.FileUtils;
 import menagerie.gui.Main;
 import menagerie.model.db.DatabaseUpdateQueue;
 import menagerie.model.search.Search;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
 import java.util.*;
@@ -234,7 +236,14 @@ public class Menagerie {
     public void removeImage(ImageInfo image, boolean deleteFile) {
         if (image != null && images.remove(image)) {
             if (deleteFile) {
-                if (!image.getFile().delete()) {
+                FileUtils fu = FileUtils.getInstance();
+                if (fu.hasTrash()) {
+                    try {
+                        fu.moveToTrash(new File[]{image.getFile()});
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                } else if (!image.getFile().delete()) {
                     Main.showErrorMessage("Deletion Error", "Unable to delete file", image.getFile().toString());
                     return;
                 }
