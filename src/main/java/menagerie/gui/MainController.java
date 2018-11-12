@@ -53,10 +53,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
 
 public class MainController {
 
@@ -354,7 +352,7 @@ public class MainController {
         imageGridView.setOnKeyPressed(event -> {
             switch (event.getCode()) {
                 case DELETE:
-                    imageGridCellDeleteEvent(!event.isControlDown());
+                    imageGridCellDeleteEvent(imageGridView.getSelected(), !event.isControlDown());
                     event.consume();
                     break;
             }
@@ -564,9 +562,9 @@ public class MainController {
         });
 
         MenuItem i7 = new MenuItem("Remove");
-        i7.setOnAction(event1 -> imageGridCellDeleteEvent(false));
+        i7.setOnAction(event1 -> imageGridCellDeleteEvent(imageGridView.getSelected(), false));
         MenuItem i8 = new MenuItem("Delete");
-        i8.setOnAction(event1 -> imageGridCellDeleteEvent(true));
+        i8.setOnAction(event1 -> imageGridCellDeleteEvent(imageGridView.getSelected(), true));
 
         cellContextMenu = new ContextMenu(i1, new SeparatorMenuItem(), i2, new SeparatorMenuItem(), i3, i4, new SeparatorMenuItem(), i5, new SeparatorMenuItem(), i6, new SeparatorMenuItem(), i7, i8);
     }
@@ -1321,25 +1319,28 @@ public class MainController {
         Platform.exit();
     }
 
-    private void imageGridCellDeleteEvent(boolean deleteFiles) {
-        if (!imageGridView.getSelected().isEmpty()) {
+    private boolean imageGridCellDeleteEvent(List<ImageInfo> images, boolean deleteFiles) {
+        if (!images.isEmpty()) {
             Alert d = new Alert(Alert.AlertType.CONFIRMATION);
 
             if (deleteFiles) {
                 d.setTitle("Delete files");
-                d.setHeaderText("Permanently delete selected files? (" + imageGridView.getSelected().size() + " files)");
+                d.setHeaderText("Permanently delete selected files? (" + images.size() + " files)");
                 d.setContentText("This action CANNOT be undone (files will be deleted)");
             } else {
                 d.setTitle("Forget files");
-                d.setHeaderText("Remove selected files from database? (" + imageGridView.getSelected().size() + " files)");
+                d.setHeaderText("Remove selected files from database? (" + images.size() + " files)");
                 d.setContentText("This action CANNOT be undone");
             }
 
             Optional result = d.showAndWait();
             if (result.isPresent() && result.get() == ButtonType.OK) {
-                new ArrayList<>(imageGridView.getSelected()).forEach(img -> img.remove(deleteFiles));
+                new ArrayList<>(images).forEach(img -> img.remove(deleteFiles));
+                return true;
             }
         }
+
+        return false;
     }
 
     private void startScreenTransition(FadeTransition ft, Node screen) {
@@ -1773,6 +1774,23 @@ public class MainController {
                 break;
             case ESCAPE:
                 closeSlideShowScreen();
+                event.consume();
+                break;
+            case DELETE:
+                if (imageGridCellDeleteEvent(Collections.singletonList(currentSlideShowShowing), !event.isControlDown())) {
+                    int i = currentSlideShow.indexOf(currentSlideShowShowing);
+                    currentSlideShow.remove(currentSlideShowShowing);
+                    if (currentSlideShow.isEmpty()) {
+                        closeSlideShowScreen();
+                    } else {
+                        if (i < currentSlideShow.size()) {
+                            currentSlideShowShowing = currentSlideShow.get(i);
+                        } else {
+                            currentSlideShowShowing = currentSlideShow.get(currentSlideShow.size() - 1);
+                        }
+                        slideShowImageView.setImage(currentSlideShowShowing.getImage());
+                    }
+                }
                 event.consume();
                 break;
         }
