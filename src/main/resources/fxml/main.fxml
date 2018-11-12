@@ -545,7 +545,7 @@
                        onMouseExited="#duplicateImagesPaneMouseExited" BorderPane.alignment="CENTER">
                 <StackPane>
                     <DynamicImageView fx:id="duplicateLeftImageView" pickOnBounds="true" preserveRatio="true"/>
-                    <BorderPane>
+                    <BorderPane pickOnBounds="false">
                         <right>
                             <ListView fx:id="duplicateLeftTagListView" opacity="0.75" prefWidth="200.0"
                                       BorderPane.alignment="CENTER"/>
@@ -554,7 +554,7 @@
                 </StackPane>
                 <StackPane>
                     <DynamicImageView fx:id="duplicateRightImageView" pickOnBounds="true" preserveRatio="true"/>
-                    <BorderPane>
+                    <BorderPane pickOnBounds="false">
                         <left>
                             <ListView fx:id="duplicateRightTagListView" opacity="0.75" prefWidth="200.0"
                                       BorderPane.alignment="CENTER"/>

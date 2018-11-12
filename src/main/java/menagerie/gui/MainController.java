@@ -147,6 +147,7 @@ public class MainController {
     //Duplicate screen vars
     private List<SimilarPair> currentSimilarPairs = null;
     private SimilarPair currentlyPreviewingPair = null;
+    private ContextMenu duplicateContextMenu;
 
     //Threads
     private ProgressLockThread currentProgressLockThread;
@@ -289,6 +290,34 @@ public class MainController {
                     histConfidenceSettingTextField.setText("0.95");
                 }
             }
+        });
+
+        MenuItem showInSearchMenuItem = new MenuItem("Show in search");
+        showInSearchMenuItem.setOnAction(event -> {
+            closeDuplicateScreen();
+            imageGridView.select((ImageInfo) duplicateContextMenu.getUserData(), false, false);
+        });
+        MenuItem forgetMenuItem = new MenuItem("Forget");
+        forgetMenuItem.setOnAction(event -> {
+            ImageInfo toKeep = currentlyPreviewingPair.getImg1();
+            if (toKeep.equals(duplicateContextMenu.getUserData())) toKeep = currentlyPreviewingPair.getImg2();
+            deleteDuplicateImageEvent((ImageInfo) duplicateContextMenu.getUserData(), toKeep, false);
+        });
+        MenuItem deleteMenuItem = new MenuItem("Delete");
+        deleteMenuItem.setOnAction(event -> {
+            ImageInfo toKeep = currentlyPreviewingPair.getImg1();
+            if (toKeep.equals(duplicateContextMenu.getUserData())) toKeep = currentlyPreviewingPair.getImg2();
+            deleteDuplicateImageEvent((ImageInfo) duplicateContextMenu.getUserData(), toKeep, false);
+        });
+
+        duplicateContextMenu = new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetMenuItem, deleteMenuItem);
+        duplicateLeftImageView.setOnContextMenuRequested(event -> {
+            duplicateContextMenu.setUserData(currentlyPreviewingPair.getImg1());
+            duplicateContextMenu.show(duplicateLeftImageView, event.getScreenX(), event.getScreenY());
+        });
+        duplicateRightImageView.setOnContextMenuRequested(event -> {
+            duplicateContextMenu.setUserData(currentlyPreviewingPair.getImg2());
+            duplicateContextMenu.show(duplicateRightImageView, event.getScreenX(), event.getScreenY());
         });
     }
 
@@ -1205,9 +1234,9 @@ public class MainController {
         }
     }
 
-    private void deleteDuplicateImageEvent(ImageInfo toDelete, ImageInfo toKeep) {
+    private void deleteDuplicateImageEvent(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
         int index = currentSimilarPairs.indexOf(currentlyPreviewingPair);
-        toDelete.remove(true);
+        toDelete.remove(deleteFile);
 
         //Consolidate tags
         if (settings.isConsolidateTags()) {
@@ -1536,14 +1565,14 @@ public class MainController {
 
     public void duplicateLeftDeleteButtonOnAction(ActionEvent event) {
         if (currentlyPreviewingPair != null)
-            deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), currentlyPreviewingPair.getImg2());
+            deleteDuplicateImageEvent(currentlyPreviewingPair.getImg1(), currentlyPreviewingPair.getImg2(), true);
 
         event.consume();
     }
 
     public void duplicateRightDeleteButtonOnAction(ActionEvent event) {
         if (currentlyPreviewingPair != null)
-            deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), currentlyPreviewingPair.getImg1());
+            deleteDuplicateImageEvent(currentlyPreviewingPair.getImg2(), currentlyPreviewingPair.getImg1(), true);
 
         event.consume();
     }
