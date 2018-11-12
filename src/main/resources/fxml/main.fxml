@@ -27,20 +27,20 @@
 
 <StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="menagerie.gui.MainController">
-    <BorderPane fx:id="explorerPane" onKeyPressed="#explorerPaneOnKeyPressed" onKeyReleased="#explorerPaneOnKeyReleased"
+    <BorderPane fx:id="explorer_rootPane" onKeyPressed="#explorer_rootPaneOnKeyPressed" onKeyReleased="#explorer_rootPaneOnKeyReleased"
                 prefHeight="576.0" prefWidth="994.0">
         <center>
             <BorderPane>
                 <center>
-                    <DynamicImageView fx:id="previewImageView" pickOnBounds="true" preserveRatio="true"/>
+                    <DynamicImageView fx:id="explorer_previewImageView" pickOnBounds="true" preserveRatio="true"/>
                 </center>
                 <bottom>
                     <VBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
                         <padding>
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                         </padding>
-                        <Label fx:id="imageInfoLabel" text="Size: N/A - Res: N/A"/>
-                        <Label fx:id="imageFileNameLabel" text="N/A" textOverrun="CENTER_ELLIPSIS"/>
+                        <Label fx:id="explorer_imageInfoLabel" text="Size: N/A - Res: N/A"/>
+                        <Label fx:id="explorer_fileNameLabel" text="N/A" textOverrun="CENTER_ELLIPSIS"/>
                     </VBox>
                 </bottom>
             </BorderPane>
@@ -48,7 +48,7 @@
         <right>
             <BorderPane>
                 <center>
-                    <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
+                    <ImageGridView fx:id="explorer_imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
                                    BorderPane.alignment="CENTER"/>
                 </center>
                 <top>
@@ -57,14 +57,14 @@
                             <padding>
                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                             </padding>
-                            <PredictiveTextField fx:id="searchTextField" onAction="#searchTextFieldOnAction"
+                            <PredictiveTextField fx:id="explorer_searchTextField" onAction="#explorer_searchTextFieldOnAction"
                                                  promptText="Search" HBox.hgrow="ALWAYS"/>
                         </HBox>
                         <BorderPane>
                             <right>
                                 <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                                    <Label fx:id="resultCountLabel" text="Results: 0"/>
-                                    <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search"/>
+                                    <Label fx:id="explorer_resultCountLabel" text="Results: 0"/>
+                                    <Button mnemonicParsing="false" onAction="#explorer_searchButtonOnAction" text="Search"/>
                                 </HBox>
                             </right>
                             <VBox.margin>
@@ -74,7 +74,7 @@
                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                             </padding>
                             <left>
-                                <ToggleButton fx:id="descendingToggleButton" mnemonicParsing="false" selected="true"
+                                <ToggleButton fx:id="explorer_descendingToggleButton" mnemonicParsing="false" selected="true"
                                               text="Descending" BorderPane.alignment="CENTER"/>
                             </left>
                         </BorderPane>
@@ -83,7 +83,7 @@
                 <bottom>
                     <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
                         <Label text="Errors and Warnings:"/>
-                        <Button fx:id="showErrorsButton" mnemonicParsing="false" onAction="#showErrorsButtonOnAction"
+                        <Button fx:id="explorer_showErrorsButton" mnemonicParsing="false" onAction="#errors_showButtonOnAction"
                                 text="0"/>
                     </HBox>
                 </bottom>
@@ -91,12 +91,12 @@
         </right>
         <left>
             <VBox prefWidth="200.0" BorderPane.alignment="CENTER">
-                <ListView fx:id="tagListView" focusTraversable="false" VBox.vgrow="ALWAYS">
+                <ListView fx:id="explorer_tagListView" focusTraversable="false" VBox.vgrow="ALWAYS">
                     <padding>
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                     </padding>
                 </ListView>
-                <PredictiveTextField fx:id="editTagsTextField" onKeyPressed="#editTagsTextFieldOnKeyPressed"
+                <PredictiveTextField fx:id="explorer_editTagsTextField" onKeyPressed="#explorer_editTagsTextFieldOnKeyPressed"
                                      promptText="Edit tags">
                     <VBox.margin>
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
@@ -105,30 +105,30 @@
             </VBox>
         </left>
         <top>
-            <MenuBar fx:id="menuBar" BorderPane.alignment="CENTER">
+            <MenuBar fx:id="explorer_menuBar" BorderPane.alignment="CENTER">
                 <Menu mnemonicParsing="false" text="File">
-                    <MenuItem mnemonicParsing="false" onAction="#importFilesMenuButtonOnAction" text="Import file(s)"/>
-                    <MenuItem mnemonicParsing="false" onAction="#importFolderMenuButtonOnAction" text="Import folder"/>
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_importFilesMenuButtonOnAction" text="Import file(s)"/>
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_importFolderMenuButtonOnAction" text="Import folder"/>
                 </Menu>
                 <Menu mnemonicParsing="false" text="Edit">
-                    <MenuItem mnemonicParsing="false" onAction="#settingsMenuButtonOnAction" text="Settings"/>
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_settingsMenuButtonOnAction" text="Settings"/>
                 </Menu>
                 <Menu mnemonicParsing="false" text="View">
                     <Menu mnemonicParsing="false" text="Slideshow">
-                        <MenuItem mnemonicParsing="false" onAction="#slideShowSearchedMenuButtonOnAction"
+                        <MenuItem mnemonicParsing="false" onAction="#explorer_slideShowSearchedMenuButtonOnAction"
                                   text="Searched"/>
-                        <MenuItem mnemonicParsing="false" onAction="#slideShowSelectedMenuButtonOnAction"
+                        <MenuItem mnemonicParsing="false" onAction="#explorer_slideShowSelectedMenuButtonOnAction"
                                   text="Selected"/>
                     </Menu>
-                    <MenuItem mnemonicParsing="false" onAction="#viewTagsMenuButtonOnAction" text="Tags"/>
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_viewTagsMenuButtonOnAction" text="Tags"/>
                 </Menu>
                 <Menu mnemonicParsing="false" text="Help">
-                    <MenuItem mnemonicParsing="false" onAction="#helpMenuButtonOnAction" text="Help"/>
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_helpMenuButtonOnAction" text="Help"/>
                 </Menu>
             </MenuBar>
         </top>
     </BorderPane>
-    <BorderPane fx:id="settingsPane" disable="true" onKeyPressed="#settingsPaneKeyPressed" opacity="0.0">
+    <BorderPane fx:id="settings_rootPane" disable="true" onKeyPressed="#settings_rootPaneKeyPressed" opacity="0.0">
         <center>
             <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="600.0" prefWidth="700.0"
                         style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
@@ -140,9 +140,9 @@
                         <padding>
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                         </padding>
-                        <Button mnemonicParsing="false" onAction="#settingsAcceptButtonOnAction" text="Accept"/>
-                        <Button fx:id="settingsCancelButton" mnemonicParsing="false"
-                                onAction="#settingsCancelButtonOnAction" text="Cancel"/>
+                        <Button mnemonicParsing="false" onAction="#settings_acceptButtonOnAction" text="Accept"/>
+                        <Button fx:id="settings_cancelButton" mnemonicParsing="false"
+                                onAction="#settings_cancelButtonOnAction" text="Cancel"/>
                     </HBox>
                 </bottom>
                 <center>
@@ -156,10 +156,10 @@
                                 <Separator/>
                                 <HBox alignment="CENTER_LEFT" spacing="5.0">
                                     <Label text="Default save folder:"/>
-                                    <TextField fx:id="lastFolderSettingTextField" editable="false"
+                                    <TextField fx:id="settings_defaultFolderTextField" editable="false"
                                                promptText="Folder will be asked for when saving regardless of settings"
                                                HBox.hgrow="ALWAYS"/>
-                                    <Button mnemonicParsing="false" onAction="#lastFolderSettingBrowseButtonOnAction"
+                                    <Button mnemonicParsing="false" onAction="#settings_defaultFolderBrowseButtonOnAction"
                                             text="Browse"/>
                                     <VBox.margin>
                                         <Insets/>
@@ -167,10 +167,10 @@
                                 </HBox>
                                 <Separator/>
                                 <HBox alignment="CENTER_LEFT" spacing="5.0">
-                                    <CheckBox fx:id="autoImportFolderSettingCheckBox"
-                                              onAction="#autoImportFolderSettingCheckBoxOnAction"
+                                    <CheckBox fx:id="settings_autoImportFolderCheckBox"
+                                              onAction="#settings_autoImportFolderCheckBoxOnAction"
                                               text="Auto-import folder"/>
-                                    <CheckBox fx:id="autoImportFromFolderToDefaultSettingCheckBox"
+                                    <CheckBox fx:id="settings_autoImportFromFolderToDefaultCheckBox"
                                               mnemonicParsing="false"
                                               text="Move from folder to default folder before importing"/>
                                 </HBox>
@@ -178,12 +178,12 @@
                                     <padding>
                                         <Insets left="25.0"/>
                                     </padding>
-                                    <TextField fx:id="importFromFolderSettingTextField" editable="false"
+                                    <TextField fx:id="settings_importFromFolderTextField" editable="false"
                                                promptText="Folder to auto-import images from" HBox.hgrow="ALWAYS"/>
-                                    <Button fx:id="importFromFolderSettingBrowseButton" mnemonicParsing="false"
-                                            onAction="#importFromFolderSettingBrowseButtonOnAction" text="Browse"/>
+                                    <Button fx:id="settings_importFromFolderBrowseButton" mnemonicParsing="false"
+                                            onAction="#settings_importFromFolderBrowseButtonOnAction" text="Browse"/>
                                 </HBox>
-                                <CheckBox fx:id="autoImportWebSettingCheckbox"
+                                <CheckBox fx:id="settings_autoImportWebCheckbox"
                                           text="Auto-import from web when drag-dropped"/>
                                 <Separator/>
                                 <Label text="On file import:"/>
@@ -191,9 +191,9 @@
                                     <padding>
                                         <Insets left="25.0"/>
                                     </padding>
-                                    <CheckBox fx:id="computeMD5SettingCheckbox" text="Compute MD5"/>
-                                    <CheckBox fx:id="computeHistSettingCheckbox" text="Compute Histogram"/>
-                                    <CheckBox fx:id="buildThumbSettingCheckbox" text="Build thumbnail"/>
+                                    <CheckBox fx:id="settings_computeMDCheckbox" text="Compute MD5"/>
+                                    <CheckBox fx:id="settings_computeHistCheckbox" text="Compute Histogram"/>
+                                    <CheckBox fx:id="settings_buildThumbCheckbox" text="Build thumbnail"/>
                                 </VBox>
                                 <Separator/>
                                 <Label text="Duplicate finding:"/>
@@ -201,23 +201,23 @@
                                     <padding>
                                         <Insets left="25.0"/>
                                     </padding>
-                                    <CheckBox fx:id="duplicateComputeMD5SettingCheckbox"
+                                    <CheckBox fx:id="settings_duplicateComputeMD5Checkbox"
                                               text="Compute MD5s before matching"/>
-                                    <CheckBox fx:id="duplicateComputeHistSettingCheckbox"
+                                    <CheckBox fx:id="settings_duplicateComputeHistCheckbox"
                                               text="Compute Histograms before matching"/>
                                     <HBox alignment="CENTER_LEFT" spacing="5.0">
                                         <Label text="Histogram confidence level:"/>
-                                        <TextField fx:id="histConfidenceSettingTextField" promptText="0.95 suggested"/>
+                                        <TextField fx:id="settings_histConfidenceTextField" promptText="0.95 suggested"/>
                                     </HBox>
-                                    <CheckBox fx:id="duplicateConsolidateTagsSettingCheckbox"
+                                    <CheckBox fx:id="settings_duplicateConsolidateTagsCheckbox"
                                               text="Consolidate tags on delete"/>
-                                    <CheckBox fx:id="duplicateCompareBlackAndWhiteSettingCheckbox"
+                                    <CheckBox fx:id="settings_duplicateCompareBlackAndWhiteCheckbox"
                                               text="Compare black and white histograms (poor accuracy)"/>
                                 </VBox>
                                 <Separator/>
                                 <HBox alignment="CENTER_LEFT" spacing="5.0">
                                     <Label text="Explorer Grid row width:"/>
-                                    <ChoiceBox fx:id="gridWidthChoiceBox"/>
+                                    <ChoiceBox fx:id="settings_gridWidthChoiceBox"/>
                                 </HBox>
                                 <Separator/>
                                 <Label text="Database (changes will be applied on restart):"/>
@@ -237,11 +237,11 @@
                                         </right>
                                     </BorderPane>
                                     <HBox spacing="5.0">
-                                        <TextField fx:id="dbURLTextField" promptText="~/menagerie" HBox.hgrow="ALWAYS"/>
-                                        <TextField fx:id="dbUserTextField" promptText="sa" HBox.hgrow="ALWAYS"/>
-                                        <TextField fx:id="dbPassTextField" promptText="[Empty]" HBox.hgrow="ALWAYS"/>
+                                        <TextField fx:id="settings_dbURLTextField" promptText="~/menagerie" HBox.hgrow="ALWAYS"/>
+                                        <TextField fx:id="settings_dbUserTextField" promptText="sa" HBox.hgrow="ALWAYS"/>
+                                        <TextField fx:id="settings_dbPassTextField" promptText="[Empty]" HBox.hgrow="ALWAYS"/>
                                     </HBox>
-                                    <CheckBox fx:id="backupDatabaseSettingCheckBox" mnemonicParsing="false"
+                                    <CheckBox fx:id="settings_backupDatabaseCheckBox" mnemonicParsing="false"
                                               text="Back up database on startup"/>
                                 </VBox>
                             </VBox>
@@ -254,7 +254,7 @@
             <Insets bottom="25.0" left="25.0" right="25.0" top="25.0"/>
         </padding>
     </BorderPane>
-    <BorderPane fx:id="tagListPane" disable="true" onKeyPressed="#tagListPaneOnKeyPressed" opacity="0.0">
+    <BorderPane fx:id="tagList_rootPane" disable="true" onKeyPressed="#tagList_rootPaneOnKeyPressed" opacity="0.0">
         <center>
             <VBox maxWidth="-Infinity" prefWidth="300.0" spacing="5.0" style="-fx-background-color: -fx-base;">
                 <BorderPane.margin>
@@ -267,19 +267,19 @@
                                 <Label text="Order by:"/>
                                 <BorderPane>
                                     <center>
-                                        <ChoiceBox fx:id="tagListOrderChoiceBox"/>
+                                        <ChoiceBox fx:id="tagList_orderChoiceBox"/>
                                     </center>
                                 </BorderPane>
                             </HBox>
                         </center>
                         <right>
-                            <Button mnemonicParsing="false" onAction="#tagListExitButtonOnAction" text="X"
+                            <Button mnemonicParsing="false" onAction="#tagList_exitButtonOnAction" text="X"
                                     BorderPane.alignment="CENTER"/>
                         </right>
                     </BorderPane>
-                    <TextField fx:id="searchTagsScreenTextField" promptText="Search tags by name"/>
+                    <TextField fx:id="tagList_searchTextField" promptText="Search tags by name"/>
                 </VBox>
-                <ListView fx:id="tagListListView" VBox.vgrow="ALWAYS"/>
+                <ListView fx:id="tagList_listView" VBox.vgrow="ALWAYS"/>
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                 </padding>
@@ -289,7 +289,7 @@
             </VBox>
         </center>
     </BorderPane>
-    <BorderPane fx:id="helpPane" disable="true" onKeyPressed="#helpPaneOnKeyPressed" opacity="0.0">
+    <BorderPane fx:id="help_rootPane" disable="true" onKeyPressed="#help_rootPaneOnKeyPressed" opacity="0.0">
         <padding>
             <Insets bottom="25.0" left="25.0" right="25.0" top="25.0"/>
         </padding>
@@ -309,7 +309,7 @@
                             </Label>
                         </left>
                         <right>
-                            <Button mnemonicParsing="false" onAction="#helpExitButtonOnAction" text="X"
+                            <Button mnemonicParsing="false" onAction="#help_exitButtonOnAction" text="X"
                                     BorderPane.alignment="CENTER"/>
                         </right>
                     </BorderPane>
@@ -456,7 +456,7 @@
             </BorderPane>
         </center>
     </BorderPane>
-    <BorderPane fx:id="progressLockPane" disable="true" onKeyPressed="#progressLockPaneOnKeyPressed" opacity="0.0">
+    <BorderPane fx:id="progress_rootPane" disable="true" onKeyPressed="#progress_rootPaneOnKeyPressed" opacity="0.0">
         <center>
             <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefWidth="400.0"
                         style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
@@ -468,8 +468,8 @@
                         <padding>
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                         </padding>
-                        <Label fx:id="progressLockMessageLabel" text="Message"/>
-                        <ProgressBar fx:id="progressLockProgressBar" prefWidth="400.0" progress="0.0"/>
+                        <Label fx:id="progress_messageLabel" text="Message"/>
+                        <ProgressBar fx:id="progress_progressBar" prefWidth="400.0" progress="0.0"/>
                     </VBox>
                 </center>
                 <bottom>
@@ -478,11 +478,11 @@
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                         </BorderPane.margin>
                         <right>
-                            <Button mnemonicParsing="false" onAction="#progressLockStopButtonOnAction" text="Stop"
+                            <Button mnemonicParsing="false" onAction="#progress_stopButtonOnAction" text="Stop"
                                     BorderPane.alignment="CENTER"/>
                         </right>
                         <left>
-                            <Label fx:id="progressLockCountLabel" text="0/0" BorderPane.alignment="CENTER">
+                            <Label fx:id="progress_countLabel" text="0/0" BorderPane.alignment="CENTER">
                                 <padding>
                                     <Insets left="5.0"/>
                                 </padding>
@@ -491,7 +491,7 @@
                     </BorderPane>
                 </bottom>
                 <top>
-                    <Label fx:id="progressLockTitleLabel" text="Title" BorderPane.alignment="CENTER_LEFT"/>
+                    <Label fx:id="progress_titleLabel" text="Title" BorderPane.alignment="CENTER_LEFT"/>
                 </top>
                 <effect>
                     <DropShadow spread="0.5"/>
@@ -499,7 +499,7 @@
             </BorderPane>
         </center>
     </BorderPane>
-    <BorderPane fx:id="duplicatePane" disable="true" onKeyPressed="#duplicatePaneOnKeyPressed" opacity="0.0"
+    <BorderPane fx:id="duplicate_rootPane" disable="true" onKeyPressed="#duplicate_rootPaneOnKeyPressed" opacity="0.0"
                 style="-fx-background-color: -fx-base;">
         <bottom>
             <VBox spacing="5.0" BorderPane.alignment="CENTER">
@@ -508,19 +508,19 @@
                 </padding>
                 <BorderPane>
                     <center>
-                        <Label fx:id="duplicateSimilarityLabel" text="0% Match" BorderPane.alignment="CENTER"/>
+                        <Label fx:id="duplicate_similarityLabel" text="0% Match" BorderPane.alignment="CENTER"/>
                     </center>
                     <left>
                         <HBox alignment="CENTER_LEFT" spacing="5.0" BorderPane.alignment="CENTER">
-                            <Button mnemonicParsing="false" onAction="#duplicateLeftDeleteButtonOnAction"
+                            <Button mnemonicParsing="false" onAction="#duplicate_leftDeleteButtonOnAction"
                                     text="Delete"/>
-                            <Label fx:id="duplicateLeftInfoLabel" text="Size: N/A - Res: N/A"/>
+                            <Label fx:id="duplicate_leftInfoLabel" text="Size: N/A - Res: N/A"/>
                         </HBox>
                     </left>
                     <right>
                         <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
-                            <Label fx:id="duplicateRightInfoLabel" text="Size: N/A - Res: N/A"/>
-                            <Button mnemonicParsing="false" onAction="#duplicateRightDeleteButtonOnAction"
+                            <Label fx:id="duplicate_rightInfoLabel" text="Size: N/A - Res: N/A"/>
+                            <Button mnemonicParsing="false" onAction="#duplicate_rightDeleteButtonOnAction"
                                     text="Delete"/>
                         </HBox>
                     </right>
@@ -528,12 +528,12 @@
                 <BorderPane>
                     <center>
                         <HBox alignment="CENTER" spacing="5.0">
-                            <TextField fx:id="duplicateLeftPathTextField" editable="false" text="Path 1"
+                            <TextField fx:id="duplicate_leftPathTextField" editable="false" text="Path 1"
                                        HBox.hgrow="ALWAYS"/>
-                            <Button mnemonicParsing="false" onAction="#duplicatePrevPairButtonOnAction" text="&lt;-"/>
-                            <Button mnemonicParsing="false" onAction="#duplicateCloseButtonOnAction" text="Close"/>
-                            <Button mnemonicParsing="false" onAction="#duplicateNextPairButtonOnAction" text="-&gt;"/>
-                            <TextField fx:id="duplicateRightPathTextField" editable="false" text="Path 2"
+                            <Button mnemonicParsing="false" onAction="#duplicate_prevPairButtonOnAction" text="&lt;-"/>
+                            <Button mnemonicParsing="false" onAction="#duplicate_closeButtonOnAction" text="Close"/>
+                            <Button mnemonicParsing="false" onAction="#duplicate_nextPairButtonOnAction" text="-&gt;"/>
+                            <TextField fx:id="duplicate_rightPathTextField" editable="false" text="Path 2"
                                        HBox.hgrow="ALWAYS"/>
                         </HBox>
                     </center>
@@ -541,22 +541,22 @@
             </VBox>
         </bottom>
         <center>
-            <SplitPane dividerPositions="0.5" onMouseEntered="#duplicateImagesPaneMouseEntered"
-                       onMouseExited="#duplicateImagesPaneMouseExited" BorderPane.alignment="CENTER">
+            <SplitPane dividerPositions="0.5" onMouseEntered="#duplicate_imagesPaneMouseEntered"
+                       onMouseExited="#duplicate_imagesPaneMouseExited" BorderPane.alignment="CENTER">
                 <StackPane>
-                    <DynamicImageView fx:id="duplicateLeftImageView" pickOnBounds="true" preserveRatio="true"/>
+                    <DynamicImageView fx:id="duplicate_leftImageView" pickOnBounds="true" preserveRatio="true"/>
                     <BorderPane pickOnBounds="false">
                         <right>
-                            <ListView fx:id="duplicateLeftTagListView" opacity="0.75" prefWidth="200.0"
+                            <ListView fx:id="duplicate_leftTagListView" opacity="0.75" prefWidth="200.0"
                                       BorderPane.alignment="CENTER"/>
                         </right>
                     </BorderPane>
                 </StackPane>
                 <StackPane>
-                    <DynamicImageView fx:id="duplicateRightImageView" pickOnBounds="true" preserveRatio="true"/>
+                    <DynamicImageView fx:id="duplicate_rightImageView" pickOnBounds="true" preserveRatio="true"/>
                     <BorderPane pickOnBounds="false">
                         <left>
-                            <ListView fx:id="duplicateRightTagListView" opacity="0.75" prefWidth="200.0"
+                            <ListView fx:id="duplicate_rightTagListView" opacity="0.75" prefWidth="200.0"
                                       BorderPane.alignment="CENTER"/>
                         </left>
                     </BorderPane>
@@ -564,10 +564,10 @@
             </SplitPane>
         </center>
     </BorderPane>
-    <BorderPane fx:id="slideShowPane" disable="true" onKeyPressed="#slideShowPaneOnKeyPressed" opacity="0"
+    <BorderPane fx:id="slideShow_rootPane" disable="true" onKeyPressed="#slideShow_rootPaneOnKeyPressed" opacity="0"
                 style="-fx-background-color: -fx-base;">
         <center>
-            <DynamicImageView fx:id="slideShowImageView" pickOnBounds="true" preserveRatio="true"
+            <DynamicImageView fx:id="slideShow_imageView" pickOnBounds="true" preserveRatio="true"
                               BorderPane.alignment="CENTER"/>
         </center>
         <bottom>
@@ -575,13 +575,13 @@
                 <padding>
                     <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                 </padding>
-                <Button mnemonicParsing="false" onAction="#slideShowPreviousButtonOnAction" text="&lt;-"/>
-                <Button mnemonicParsing="false" onAction="#slideShowCloseButtonOnAction" text="Close"/>
-                <Button mnemonicParsing="false" onAction="#slideShowNextButtonOnAction" text="-&gt;"/>
+                <Button mnemonicParsing="false" onAction="#slideShow_previousButtonOnAction" text="&lt;-"/>
+                <Button mnemonicParsing="false" onAction="#slideShow_closeButtonOnAction" text="Close"/>
+                <Button mnemonicParsing="false" onAction="#slideShow_nextButtonOnAction" text="-&gt;"/>
             </HBox>
         </bottom>
     </BorderPane>
-    <BorderPane fx:id="errorsPane" disable="true" onKeyPressed="#errorsPaneKeyPressed" opacity="0.0">
+    <BorderPane fx:id="errors_rootPane" disable="true" onKeyPressed="#errorsPane_rootKeyPressed" opacity="0.0">
         <right>
             <VBox prefWidth="600.0" style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
                 <effect>
@@ -592,14 +592,14 @@
                         <Label text="Errors and warnings:" BorderPane.alignment="CENTER"/>
                     </left>
                     <right>
-                        <Button mnemonicParsing="false" onAction="#errorsPaneCloseButtonOnAction" text="X"
+                        <Button mnemonicParsing="false" onAction="#errors_closeButtonOnAction" text="X"
                                 BorderPane.alignment="CENTER"/>
                     </right>
                 </BorderPane>
                 <Separator prefWidth="200.0"/>
-                <ListView fx:id="errorsListView" VBox.vgrow="ALWAYS"/>
+                <ListView fx:id="errors_listView" VBox.vgrow="ALWAYS"/>
                 <HBox alignment="TOP_RIGHT">
-                    <Button mnemonicParsing="false" onAction="#dismissAllErrorsButtonOnAction" text="Dismiss All"/>
+                    <Button mnemonicParsing="false" onAction="#errors_dismissAllButtonOnAction" text="Dismiss All"/>
                 </HBox>
             </VBox>
         </right>
