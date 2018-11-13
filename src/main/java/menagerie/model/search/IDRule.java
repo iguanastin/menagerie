@@ -14,7 +14,8 @@ public class IDRule extends SearchRule {
     private final Type type;
 
 
-    public IDRule(Type type, int value) {
+    public IDRule(Type type, int value, boolean inverted) {
+        super(inverted);
         priority = 1;
 
         this.type = type;
@@ -23,20 +24,29 @@ public class IDRule extends SearchRule {
 
     @Override
     public boolean accept(ImageInfo img) {
-        if (type == Type.LESS_THAN) {
-            return img.getId() < id;
-        } else if (type == Type.GREATER_THAN) {
-            return img.getId() > id;
-        } else if (type == Type.EQUAL_TO) {
-            return img.getId() == id;
+        boolean result = false;
+        switch (type) {
+            case LESS_THAN:
+                result = img.getId() < id;
+                break;
+            case GREATER_THAN:
+                result = img.getId() > id;
+                break;
+            case EQUAL_TO:
+                result = img.getId() == id;
+                break;
         }
 
-        return false;
+        if (isInverted()) result = !result;
+
+        return result;
     }
 
     @Override
     public String toString() {
-        return "ID Rule: " + type + " " + id;
+        String result = "ID Rule: " + type + " " + id;
+        if (isInverted()) result += " [inverted]";
+        return result;
     }
 
 }

@@ -13,27 +13,36 @@ public class MissingRule extends SearchRule {
     private final Type type;
 
 
-    public MissingRule(Type type) {
+    public MissingRule(Type type, boolean inverted) {
+        super(inverted);
         this.type = type;
     }
 
     @Override
     public boolean accept(ImageInfo img) {
+        boolean result = false;
         switch (type) {
             case MD5:
-                return img.getMD5() == null;
+                result = img.getMD5() == null;
+                break;
             case FILE:
-                return img.getFile() == null || !img.getFile().exists();
+                result = img.getFile() == null || !img.getFile().exists();
+                break;
             case HISTOGRAM:
-                return img.getHistogram() == null;
+                result = img.getHistogram() == null;
+                break;
         }
 
-        return false;
+        if (isInverted()) result = !result;
+
+        return result;
     }
 
     @Override
     public String toString() {
-        return "Missing Rule: " + type;
+        String result = "Missing Rule: " + type;
+        if (isInverted()) result += " [inverted]";
+        return result;
     }
 
 }

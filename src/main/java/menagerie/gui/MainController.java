@@ -1052,6 +1052,12 @@ public class MainController {
         for (String arg : str.split("\\s+")) {
             if (arg == null || arg.isEmpty()) continue;
 
+            boolean inverted = false;
+            if (arg.charAt(0) == '-') {
+                inverted = true;
+                arg = arg.substring(1);
+            }
+
             if (arg.startsWith("id:")) {
                 String temp = arg.substring(arg.indexOf(':') + 1);
                 IDRule.Type type = IDRule.Type.EQUAL_TO;
@@ -1063,7 +1069,7 @@ public class MainController {
                     temp = temp.substring(1);
                 }
                 try {
-                    rules.add(new IDRule(type, Integer.parseInt(temp)));
+                    rules.add(new IDRule(type, Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
                     e.printStackTrace();
                     Main.showErrorMessage("Error", "Error converting int value for ID rule", e.getLocalizedMessage());
@@ -1079,27 +1085,27 @@ public class MainController {
                     temp = temp.substring(1);
                 }
                 try {
-                    rules.add(new DateAddedRule(type, Long.parseLong(temp)));
+                    rules.add(new DateAddedRule(type, Long.parseLong(temp), inverted));
                 } catch (NumberFormatException e) {
                     e.printStackTrace();
                     Main.showErrorMessage("Error", "Error converting long value for date added rule", e.getLocalizedMessage());
                 }
             } else if (arg.startsWith("md5:")) {
-                rules.add(new MD5Rule(arg.substring(arg.indexOf(':') + 1)));
+                rules.add(new MD5Rule(arg.substring(arg.indexOf(':') + 1), inverted));
             } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
-                rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1)));
+                rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1), inverted));
             } else if (arg.startsWith("missing:")) {
                 String type = arg.substring(arg.indexOf(':') + 1);
                 switch (type.toLowerCase()) {
                     case "md5":
-                        rules.add(new MissingRule(MissingRule.Type.MD5));
+                        rules.add(new MissingRule(MissingRule.Type.MD5, inverted));
                         break;
                     case "file":
-                        rules.add(new MissingRule(MissingRule.Type.FILE));
+                        rules.add(new MissingRule(MissingRule.Type.FILE, inverted));
                         break;
                     case "histogram":
                     case "hist":
-                        rules.add(new MissingRule(MissingRule.Type.HISTOGRAM));
+                        rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
                         break;
                 }
             } else if (arg.startsWith("tags:")) {
@@ -1113,21 +1119,15 @@ public class MainController {
                     temp = temp.substring(1);
                 }
                 try {
-                    rules.add(new TagCountRule(type, Integer.parseInt(temp)));
+                    rules.add(new TagCountRule(type, Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
                     e.printStackTrace();
                     Main.showErrorMessage("Error", "Error converting int value for tag count rule", e.getLocalizedMessage());
                 }
             } else {
-                boolean exclude = false;
-                if (arg.startsWith("-")) {
-                    arg = arg.substring(1);
-                    exclude = true;
-                }
-
                 Tag tag = menagerie.getTagByName(arg);
                 if (tag == null) tag = new Tag(-1, arg);
-                rules.add(new TagRule(tag, exclude));
+                rules.add(new TagRule(tag, inverted));
             }
         }
         return rules;

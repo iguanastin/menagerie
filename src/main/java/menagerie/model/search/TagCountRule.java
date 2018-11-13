@@ -14,28 +14,37 @@ public class TagCountRule extends SearchRule {
     private final int value;
 
 
-    public TagCountRule(Type type, int value) {
+    public TagCountRule(Type type, int value, boolean invert) {
+        super(invert);
         this.type = type;
         this.value = value;
     }
 
     @Override
     public boolean accept(ImageInfo img) {
+        boolean result = false;
         switch (type) {
             case EQUAL_TO:
-                return img.getTags().size() == value;
+                result = img.getTags().size() == value;
+                break;
             case LESS_THAN:
-                return img.getTags().size() < value;
+                result = img.getTags().size() < value;
+                break;
             case GREATER_THAN:
-                return img.getTags().size() > value;
+                result = img.getTags().size() > value;
+                break;
         }
 
-        return false;
+        if (isInverted()) result = !result;
+
+        return result;
     }
 
     @Override
     public String toString() {
-        return "Tag Count Rule: " + type + " " + value;
+        String result = "Tag Count Rule: " + type + " " + value;
+        if (isInverted()) result += " [inverted]";
+        return result;
     }
 
 }
