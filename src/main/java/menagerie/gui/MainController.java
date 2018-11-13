@@ -411,10 +411,10 @@ public class MainController {
                     final boolean deleteFiles = !event.isControlDown();
                     final Runnable onFinish = () -> explorer_imageGridView.getSelected().forEach(img -> img.remove(deleteFiles));
                     if (deleteFiles) {
-                        confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n" +
+                        confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                                 "This action CANNOT be undone (files will be deleted)", onFinish);
                     } else {
-                        confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n" +
+                        confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                                 "This action CANNOT be undone", onFinish);
                     }
                     event.consume();
@@ -624,10 +624,10 @@ public class MainController {
         });
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
-        removeImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n" +
+        removeImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                 "This action CANNOT be undone", () -> explorer_imageGridView.getSelected().forEach(img -> img.remove(false))));
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
-        deleteImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n" +
+        deleteImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                 "This action CANNOT be undone (files will be deleted)", () -> explorer_imageGridView.getSelected().forEach(img -> img.remove(true))));
 
         explorer_cellContextMenu = new ContextMenu(slideShowMenu, new SeparatorMenuItem(), openInExplorerMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), findDuplicatesMenuItem, new SeparatorMenuItem(), moveToFolderMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
@@ -1418,20 +1418,6 @@ public class MainController {
         Platform.exit();
     }
 
-    private void deleteImages(List<ImageInfo> images, boolean deleteFiles) {
-        if (images != null && !images.isEmpty()) {
-            Runnable onFinish = () -> new ArrayList<>(images).forEach(img -> img.remove(deleteFiles));
-
-            if (deleteFiles) {
-                confirmation_openScreen("Delete files", "Permanently delete selected files? (" + images.size() + " files)\n" +
-                        "This action CANNOT be undone (files will be deleted)", onFinish);
-            } else {
-                confirmation_openScreen("Forget files", "Remove selected files from database? (" + images.size() + " files)\n" +
-                        "This action CANNOT be undone", onFinish);
-            }
-        }
-    }
-
     private void startScreenTransition(FadeTransition ft, Node screen) {
         boolean openRunning = screenOpenTransition.getStatus().equals(Animation.Status.RUNNING);
         boolean closeRunning = screenCloseTransition.getStatus().equals(Animation.Status.RUNNING);
@@ -1469,10 +1455,10 @@ public class MainController {
         };
 
         if (deleteFile) {
-            confirmation_openScreen("Delete files", "Permanently delete selected files? (1 file)\n" +
+            confirmation_openScreen("Delete files", "Permanently delete selected files? (1 file)\n\n" +
                     "This action CANNOT be undone (files will be deleted)", onFinish);
         } else {
-            confirmation_openScreen("Forget files", "Remove selected files from database? (1 file)\n" +
+            confirmation_openScreen("Forget files", "Remove selected files from database? (1 file)\n\n" +
                     "This action CANNOT be undone", onFinish);
         }
     }
