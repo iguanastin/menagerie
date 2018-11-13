@@ -59,6 +59,7 @@ import java.util.List;
 public class MainController {
 
     public StackPane rootPane;
+    public StackPane screensStackPane;
 
     public BorderPane explorer_rootPane;
     public ToggleButton explorer_descendingToggleButton;
@@ -125,8 +126,13 @@ public class MainController {
     public BorderPane errors_rootPane;
     public ListView<TrackedError> errors_listView;
 
-    private FadeTransition screenOpenTransition = new FadeTransition(Duration.millis(100));
-    private FadeTransition screenCloseTransition = new FadeTransition(Duration.millis(200));
+    public BorderPane confirmation_rootPane;
+    public Label confirmation_titleLabel;
+    public Label confirmation_messageLabel;
+    public Button confirmation_okButton;
+
+    private FadeTransition screenOpenTransition = new FadeTransition(Duration.millis(50));
+    private FadeTransition screenCloseTransition = new FadeTransition(Duration.millis(100));
 
 
     //Menagerie vars
@@ -152,6 +158,10 @@ public class MainController {
 
     //Progress lock screen vars
     private ProgressLockThread progress_progressThread;
+
+    //Confirmation dialog vars
+    private Node confirmation_lastFocus = null;
+    private Runnable confirmation_finishedCallback = null;
 
     //Threads
     private FolderWatcherThread folderWatcherThread = null;
@@ -238,9 +248,9 @@ public class MainController {
             explorer_imageGridView.select(slideShow_currentlyShowing, false, false);
         });
         MenuItem forgetCurrentMenuItem = new MenuItem("Forget");
-        forgetCurrentMenuItem.setOnAction(event -> slideShow_deleteCurrent(false));
+        forgetCurrentMenuItem.setOnAction(event -> slideShow_tryDeleteCurrent(false));
         MenuItem deleteCurrentMenuItem = new MenuItem("Delete");
-        deleteCurrentMenuItem.setOnAction(event -> slideShow_deleteCurrent(true));
+        deleteCurrentMenuItem.setOnAction(event -> slideShow_tryDeleteCurrent(true));
 
         slideShow_contextMenu = new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem);
         slideShow_imageView.setOnContextMenuRequested(event -> slideShow_contextMenu.show(slideShow_imageView, event.getScreenX(), event.getScreenY()));
@@ -398,7 +408,15 @@ public class MainController {
         explorer_imageGridView.setOnKeyPressed(event -> {
             switch (event.getCode()) {
                 case DELETE:
-                    tryDeleteImages(explorer_imageGridView.getSelected(), !event.isControlDown());
+                    final boolean deleteFiles = !event.isControlDown();
+                    final Runnable onFinish = () -> explorer_imageGridView.getSelected().forEach(img -> img.remove(deleteFiles));
+                    if (deleteFiles) {
+                        confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n" +
+                                "This action CANNOT be undone (files will be deleted)", onFinish);
+                    } else {
+                        confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n" +
+                                "This action CANNOT be undone", onFinish);
+                    }
                     event.consume();
                     break;
             }
@@ -606,9 +624,11 @@ public class MainController {
         });
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
-        removeImagesMenuItem.setOnAction(event1 -> tryDeleteImages(explorer_imageGridView.getSelected(), false));
+        removeImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n" +
+                "This action CANNOT be undone", () -> explorer_imageGridView.getSelected().forEach(img -> img.remove(false))));
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
-        deleteImagesMenuItem.setOnAction(event1 -> tryDeleteImages(explorer_imageGridView.getSelected(), true));
+        deleteImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n" +
+                "This action CANNOT be undone (files will be deleted)", () -> explorer_imageGridView.getSelected().forEach(img -> img.remove(true))));
 
         explorer_cellContextMenu = new ContextMenu(slideShowMenu, new SeparatorMenuItem(), openInExplorerMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), findDuplicatesMenuItem, new SeparatorMenuItem(), moveToFolderMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
     }
@@ -866,6 +886,26 @@ public class MainController {
         errors_rootPane.setDisable(true);
         explorer_imageGridView.requestFocus();
         startScreenTransition(screenCloseTransition, errors_rootPane);
+    }
+
+    private void confirmation_openScreen(String title, String message, Runnable onFinishedCallback) {
+        confirmation_titleLabel.setText(title);
+        confirmation_messageLabel.setText(message);
+
+        confirmation_finishedCallback = onFinishedCallback;
+        confirmation_lastFocus = rootPane.getScene().getFocusOwner();
+
+        screensStackPane.setDisable(true);
+        confirmation_rootPane.setDisable(false);
+        confirmation_rootPane.requestFocus();
+        startScreenTransition(screenOpenTransition, confirmation_rootPane);
+    }
+
+    private void confirmation_closeScreen() {
+        screensStackPane.setDisable(false);
+        confirmation_rootPane.setDisable(true);
+        if (confirmation_lastFocus != null) confirmation_lastFocus.requestFocus();
+        startScreenTransition(screenCloseTransition, confirmation_rootPane);
     }
 
     // -------------------------------- Dialog Openers ---------------------------------------
@@ -1378,28 +1418,18 @@ public class MainController {
         Platform.exit();
     }
 
-    private static boolean tryDeleteImages(List<ImageInfo> images, boolean deleteFiles) {
+    private void deleteImages(List<ImageInfo> images, boolean deleteFiles) {
         if (images != null && !images.isEmpty()) {
-            Alert d = new Alert(Alert.AlertType.CONFIRMATION);
+            Runnable onFinish = () -> new ArrayList<>(images).forEach(img -> img.remove(deleteFiles));
 
             if (deleteFiles) {
-                d.setTitle("Delete files");
-                d.setHeaderText("Permanently delete selected files? (" + images.size() + " files)");
-                d.setContentText("This action CANNOT be undone (files will be deleted)");
+                confirmation_openScreen("Delete files", "Permanently delete selected files? (" + images.size() + " files)\n" +
+                        "This action CANNOT be undone (files will be deleted)", onFinish);
             } else {
-                d.setTitle("Forget files");
-                d.setHeaderText("Remove selected files from database? (" + images.size() + " files)");
-                d.setContentText("This action CANNOT be undone");
-            }
-
-            Optional result = d.showAndWait();
-            if (result.isPresent() && result.get() == ButtonType.OK) {
-                new ArrayList<>(images).forEach(img -> img.remove(deleteFiles));
-                return true;
+                confirmation_openScreen("Forget files", "Remove selected files from database? (" + images.size() + " files)\n" +
+                        "This action CANNOT be undone", onFinish);
             }
         }
-
-        return false;
     }
 
     private void startScreenTransition(FadeTransition ft, Node screen) {
@@ -1421,8 +1451,9 @@ public class MainController {
         Toolkit.getDefaultToolkit().beep();
     }
 
-    private void slideShow_deleteCurrent(boolean deleteFile) {
-        if (tryDeleteImages(Collections.singletonList(slideShow_currentlyShowing), deleteFile)) {
+    private void slideShow_tryDeleteCurrent(boolean deleteFile) {
+        Runnable onFinish = () -> {
+            slideShow_currentlyShowing.remove(deleteFile);
             int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
             slideShow_currentImages.remove(slideShow_currentlyShowing);
             if (slideShow_currentImages.isEmpty()) {
@@ -1435,6 +1466,14 @@ public class MainController {
                 }
                 slideShow_imageView.setImage(slideShow_currentlyShowing.getImage());
             }
+        };
+
+        if (deleteFile) {
+            confirmation_openScreen("Delete files", "Permanently delete selected files? (1 file)\n" +
+                    "This action CANNOT be undone (files will be deleted)", onFinish);
+        } else {
+            confirmation_openScreen("Forget files", "Remove selected files from database? (1 file)\n" +
+                    "This action CANNOT be undone", onFinish);
         }
     }
 
@@ -1684,6 +1723,17 @@ public class MainController {
         event.consume();
     }
 
+    public void confirmation_cancelButtonOnAction(ActionEvent event) {
+        confirmation_closeScreen();
+        event.consume();
+    }
+
+    public void confirmation_okButtonOnAction(ActionEvent event) {
+        confirmation_closeScreen();
+        if (confirmation_finishedCallback != null) confirmation_finishedCallback.run();
+        event.consume();
+    }
+
     // ---------------------------------- Key Event Handlers ----------------------------------------
 
     public void explorer_rootPaneOnKeyPressed(KeyEvent event) {
@@ -1862,7 +1912,7 @@ public class MainController {
                 event.consume();
                 break;
             case DELETE:
-                slideShow_deleteCurrent(!event.isControlDown());
+                slideShow_tryDeleteCurrent(!event.isControlDown());
                 event.consume();
                 break;
         }
@@ -1872,6 +1922,22 @@ public class MainController {
         switch (event.getCode()) {
             case ESCAPE:
                 errors_closeScreen();
+                event.consume();
+                break;
+        }
+    }
+
+    public void confirmation_rootPaneKeyPressed(KeyEvent event) {
+        switch (event.getCode()) {
+            case ESCAPE:
+            case BACK_SPACE:
+                confirmation_closeScreen();
+                event.consume();
+                break;
+            case ENTER:
+            case SPACE:
+                confirmation_closeScreen();
+                if (confirmation_finishedCallback != null) confirmation_finishedCallback.run();
                 event.consume();
                 break;
         }
