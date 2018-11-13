@@ -1,7 +1,9 @@
 package menagerie.gui.grid;
 
 import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -15,7 +17,7 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     public static final int CELL_BORDER = 4;
 
-    private final List<ImageInfo> selected = new ArrayList<>();
+    private final ObservableList<ImageInfo> selected = FXCollections.observableArrayList();
     private ImageInfo lastSelected = null;
 
     private SelectionListener selectionListener = null;
@@ -194,7 +196,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         return lastSelected;
     }
 
-    public List<ImageInfo> getSelected() {
+    public ObservableList<ImageInfo> getSelected() {
         return selected;
     }
 

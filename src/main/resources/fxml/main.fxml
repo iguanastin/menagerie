@@ -60,7 +60,7 @@
                             <BorderPane>
                                 <right>
                                     <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                                        <Label fx:id="explorer_resultCountLabel" text="Results: 0" />
+                                        <Label fx:id="explorer_resultsAndSelectedLabel" text="Results: 0" />
                                         <Button mnemonicParsing="false" onAction="#explorer_searchButtonOnAction" text="Search" />
                                     </HBox>
                                 </right>

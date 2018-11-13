@@ -66,7 +66,7 @@ public class MainController {
     public PredictiveTextField explorer_searchTextField;
     public ImageGridView explorer_imageGridView;
     public DynamicImageView explorer_previewImageView;
-    public Label explorer_resultCountLabel;
+    public Label explorer_resultsAndSelectedLabel;
     public Label explorer_imageInfoLabel;
     public Label explorer_fileNameLabel;
     public ListView<Tag> explorer_tagListView;
@@ -421,6 +421,7 @@ public class MainController {
                     break;
             }
         });
+        explorer_imageGridView.getSelected().addListener((ListChangeListener<? super ImageInfo>) c -> explorer_resultsAndSelectedLabel.setText(explorer_imageGridView.getSelected().size() + " / " + explorer_currentSearch.getResults().size()));
         explorer_initGridCellContextMenu();
 
         //Init drag/drop handlers
@@ -1078,7 +1079,6 @@ public class MainController {
             }
         });
 
-        explorer_resultCountLabel.setText("Results: " + explorer_currentSearch.getResults().size());
         explorer_imageGridView.clearSelection();
         explorer_imageGridView.getItems().clear();
         explorer_imageGridView.getItems().addAll(explorer_currentSearch.getResults());
