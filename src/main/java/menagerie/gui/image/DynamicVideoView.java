@@ -92,7 +92,12 @@ public class DynamicVideoView extends ImageView {
 
     @Override
     public void resize(double width, double height) {
-        Dimension d = getMediaPlayer().getVideoDimension();
+        Dimension d = null;
+        try {
+            d = getMediaPlayer().getVideoDimension();
+        } catch (Error ignore) {
+            // Error is thrown when closing application, because mediaplayer is released before this method is called
+        }
         if (d == null) {
             setFitWidth(width);
             setFitHeight(height);

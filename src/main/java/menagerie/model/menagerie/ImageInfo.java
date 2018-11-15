@@ -1,11 +1,19 @@
 package menagerie.model.menagerie;
 
+import com.sun.jna.NativeLibrary;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import menagerie.util.Filters;
 import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
+import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
+import uk.co.caprica.vlcj.player.MediaPlayer;
+import uk.co.caprica.vlcj.player.MediaPlayerEventAdapter;
+import uk.co.caprica.vlcj.player.MediaPlayerEventListener;
+import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,12 +23,16 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 public class ImageInfo implements Comparable<ImageInfo> {
 
     // ---------------------------- Constants ----------------------------------------
 
     public static final int THUMBNAIL_SIZE = 150;
+
+    private static final String[] VLC_THUMBNAILER_ARGS = {"--intf", "dummy", "--vout", "dummy", "--no-audio", "--no-osd", "--no-spu", "--no-stats", "--no-sub-autodetect-file", "--no-disable-screensaver", "--no-snapshot-preview"};
+    private static MediaPlayer THUMBNAIL_MEDIA_PLAYER = null;
 
     // -------------------------------- Variables ------------------------------------
 
@@ -85,20 +97,26 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
             if (img != null) {
                 final Image finalBullshit = img;
-                img.progressProperty().addListener((observable, oldValue, newValue) -> {
-                    if (!finalBullshit.isError() && newValue.doubleValue() == 1.0) {
-                        menagerie.getUpdateQueue().enqueueUpdate(() -> {
-                            try {
-                                menagerie.PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(finalBullshit));
-                                menagerie.PS_SET_IMG_THUMBNAIL.setInt(2, id);
-                                menagerie.PS_SET_IMG_THUMBNAIL.executeUpdate();
-                            } catch (SQLException | IOException e) {
-                                e.printStackTrace();
-                            }
-                        });
-                        menagerie.getUpdateQueue().commit();
+                Runnable update = () -> {
+                    try {
+                        menagerie.PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(finalBullshit));
+                        menagerie.PS_SET_IMG_THUMBNAIL.setInt(2, id);
+                        menagerie.PS_SET_IMG_THUMBNAIL.executeUpdate();
+                    } catch (SQLException | IOException e) {
+                        e.printStackTrace();
                     }
-                });
+                };
+                if (img.isBackgroundLoading() && img.getProgress() != 1.0) {
+                    img.progressProperty().addListener((observable, oldValue, newValue) -> {
+                        if (!finalBullshit.isError() && newValue.doubleValue() == 1.0) {
+                            menagerie.getUpdateQueue().enqueueUpdate(update);
+                            menagerie.getUpdateQueue().commit();
+                        }
+                    });
+                } else {
+                    menagerie.getUpdateQueue().enqueueUpdate(update);
+                    menagerie.getUpdateQueue().commit();
+                }
             }
         }
         return img;
@@ -197,21 +215,42 @@ public class ImageInfo implements Comparable<ImageInfo> {
     }
 
     private Image buildThumbnail() {
-        String extension = file.getName().toLowerCase();
-        extension = extension.substring(extension.indexOf('.') + 1);
+        if (isImage()) {
+            return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
+        } else if (isVideo()) {
+            System.out.println("building video thumbnail: " + this);
+            MediaPlayer mp = getThumbnailMediaPlayer();
 
-        switch (extension) {
-            case "png":
-            case "jpg":
-            case "jpeg":
-            case "bmp":
-            case "gif":
-                return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
-            case "webm":
-            case "mp4":
-            case "avi":
-                //TODO: Load video into VLCJ player and take snapshot
-                return null;
+            final CountDownLatch inPositionLatch = new CountDownLatch(1);
+
+            MediaPlayerEventListener eventListener = new MediaPlayerEventAdapter() {
+                @Override
+                public void positionChanged(MediaPlayer mediaPlayer, float newPosition) {
+                    inPositionLatch.countDown();
+                }
+            };
+            mp.addMediaPlayerEventListener(eventListener);
+
+            if (mp.startMedia(getFile().getAbsolutePath())) {
+                mp.setPosition(0.1f);
+                try {
+                    inPositionLatch.await();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                mp.removeMediaPlayerEventListener(eventListener);
+
+                float vidWidth = (float) mp.getVideoDimension().getWidth();
+                float vidHeight = (float) mp.getVideoDimension().getHeight();
+                float scale = THUMBNAIL_SIZE / vidWidth;
+                if (scale * vidHeight > THUMBNAIL_SIZE) scale = THUMBNAIL_SIZE / vidHeight;
+                int width = (int) (scale * vidWidth);
+                int height = (int) (scale * vidHeight);
+                BufferedImage img = mp.getSnapshot(width, height);
+
+                mp.stop();
+                return SwingFXUtils.toFXImage(img, null);
+            }
         }
 
         return null;
@@ -325,6 +364,22 @@ public class ImageInfo implements Comparable<ImageInfo> {
     @Override
     public String toString() {
         return "Image (" + getId() + ") \"" + getFile().getAbsolutePath() + "\" - " + new Date(getDateAdded());
+    }
+
+    private static MediaPlayer getThumbnailMediaPlayer() {
+        if (THUMBNAIL_MEDIA_PLAYER == null) {
+            MediaPlayerFactory factory = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS);
+            THUMBNAIL_MEDIA_PLAYER = factory.newHeadlessMediaPlayer();
+        }
+
+        return THUMBNAIL_MEDIA_PLAYER;
+    }
+
+    public static void releaseThumbnailMediaPlayer() {
+        if (THUMBNAIL_MEDIA_PLAYER != null) {
+            THUMBNAIL_MEDIA_PLAYER.release();
+            THUMBNAIL_MEDIA_PLAYER = null;
+        }
     }
 
 }

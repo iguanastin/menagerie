@@ -1,7 +1,11 @@
 package menagerie.gui.grid;
 
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Label;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Font;
 import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridCell;
 
@@ -11,15 +15,19 @@ public class ImageGridCell extends GridCell<ImageInfo> {
     private static final String UNSELECTED_BG_CSS = "-fx-background-color: -grid-cell-unselected-color";
     private static final String SELECTED_BG_CSS = "-fx-background-color: -grid-cell-selected-color";
 
-    final private ImageView view;
+    private final ImageView view;
+    private final Label label;
 
 
     public ImageGridCell() {
         super();
         this.getStyleClass().add("image-grid-cell");
 
-        this.view = new ImageView();
-        setGraphic(view);
+        view = new ImageView();
+        label = new Label();
+        label.setPadding(new Insets(5));
+        label.setFont(new Font(Font.getDefault().getName(), 28));
+        setGraphic(new StackPane(view, label));
         setAlignment(Pos.CENTER);
         setStyle(UNSELECTED_BG_CSS);
 
@@ -29,8 +37,10 @@ public class ImageGridCell extends GridCell<ImageInfo> {
     protected void updateItem(ImageInfo item, boolean empty) {
         if (empty) {
             view.setImage(null);
+            label.setText(null);
         } else {
             view.setImage(item.getThumbnail());
+            if (item.isVideo()) label.setText("Video");
         }
 
         super.updateItem(item, empty);

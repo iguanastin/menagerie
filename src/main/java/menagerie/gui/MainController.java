@@ -176,6 +176,8 @@ public class MainController {
 
     private static final FileFilter FILE_FILTER = Filters.IMG_VID_FILTER;
 
+    private boolean playVideoAfterFocusGain = false;
+
 
     // ---------------------------------- Initializers ------------------------------------
 
@@ -222,7 +224,7 @@ public class MainController {
             window_initPropertiesAndListeners();
 
             //Init closeRequest handling on window
-            rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit());
+            rootPane.getScene().getWindow().setOnCloseRequest(event -> onCleanExit());
         });
 
         //Apply a default search
@@ -660,6 +662,18 @@ public class MainController {
         stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setWindowHeight(newValue.intValue()));
         stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setWindowX(newValue.intValue()));
         stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
+
+        stage.iconifiedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                if (explorer_previewVideoView.getMediaPlayer().isPlaying()) {
+                    explorer_previewVideoView.getMediaPlayer().pause();
+                    playVideoAfterFocusGain = true;
+                }
+            } else if (playVideoAfterFocusGain) {
+                explorer_previewVideoView.getMediaPlayer().play();
+                playVideoAfterFocusGain = false;
+            }
+        });
     }
 
     // ---------------------------------- Screen openers ------------------------------------
@@ -1444,8 +1458,9 @@ public class MainController {
         }
     }
 
-    private void cleanExit() {
+    private void onCleanExit() {
         explorer_previewVideoView.getMediaPlayer().release();
+        ImageInfo.releaseThumbnailMediaPlayer();
 
         trySaveSettings();
 
@@ -1779,7 +1794,7 @@ public class MainController {
                     event.consume();
                     break;
                 case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(this::cleanExit);
+                    menagerie.getUpdateQueue().enqueueUpdate(this::onCleanExit);
                     menagerie.getUpdateQueue().commit();
                     event.consume();
                     break;
