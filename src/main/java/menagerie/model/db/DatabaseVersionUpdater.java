@@ -108,9 +108,6 @@ public class DatabaseVersionUpdater {
         s.executeUpdate("INSERT INTO version(version) VALUES (1);");
         System.out.println("  Initialized version table and inserted current version");
 
-        s.executeUpdate("INSERT INTO tags(name) VALUES ('tagme');");
-        System.out.println("  Created 'tagme' tag");
-
         s.close();
 
         System.out.println("Finished initializing v1 tables");

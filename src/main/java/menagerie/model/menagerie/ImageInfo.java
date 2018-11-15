@@ -4,6 +4,7 @@ import com.sun.jna.NativeLibrary;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import menagerie.util.Filters;
 import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
@@ -218,7 +219,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
         if (isImage()) {
             return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
         } else if (isVideo()) {
-            System.out.println("building video thumbnail: " + this);
             MediaPlayer mp = getThumbnailMediaPlayer();
 
             final CountDownLatch inPositionLatch = new CountDownLatch(1);

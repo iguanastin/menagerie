@@ -91,7 +91,7 @@ public class Menagerie {
             }
         }
         for (Tag t : new ArrayList<>(tags)) {
-            if (t.getId() != 1 && !usedTags.contains(t.getId())) {
+            if (!usedTags.contains(t.getId())) {
                 System.out.println("Deleting unused tag: " + t);
 
                 tags.remove(t);
@@ -220,7 +220,15 @@ public class Menagerie {
         }
 
         //Tag with tagme
-        img.addTag(getTagByName("tagme"));
+        Tag tagme = getTagByName("tagme");
+        if (tagme == null) tagme = createTag("tagme");
+        img.addTag(tagme);
+
+        if (img.isVideo()) {
+            Tag video = getTagByName("video");
+            if (video == null) video = createTag("video");
+            img.addTag(video);
+        }
 
         //Build thumbnail if flagged
         if (buildThumbnail) {
