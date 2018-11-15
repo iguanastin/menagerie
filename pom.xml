@@ -69,6 +69,12 @@
             <artifactId>jna-platform</artifactId>
             <version>5.0.0</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/uk.co.caprica/vlcj -->
+        <dependency>
+            <groupId>uk.co.caprica</groupId>
+            <artifactId>vlcj</artifactId>
+            <version>3.10.1</version>
+        </dependency>
     </dependencies>
 
 </project>
