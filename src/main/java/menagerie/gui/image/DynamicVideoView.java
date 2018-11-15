@@ -8,6 +8,7 @@ import javafx.beans.property.SimpleFloatProperty;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.*;
 import javafx.scene.image.Image;
+import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import uk.co.caprica.vlcj.component.DirectMediaPlayerComponent;
 import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
@@ -30,11 +31,20 @@ public class DynamicVideoView extends ImageView {
 
     public DynamicVideoView() {
         super();
-        NativeLibrary.addSearchPath("vlclib", new DefaultWindowsNativeDiscoveryStrategy().discover());
+//        NativeLibrary.addSearchPath("vlclib", new DefaultWindowsNativeDiscoveryStrategy().discover());
 
         Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
         writableImage = new WritableImage((int) visualBounds.getWidth(), (int) visualBounds.getHeight());
         setImage(writableImage);
+
+        addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
+            if (getMediaPlayer().isPlaying()) {
+                getMediaPlayer().pause();
+            } else {
+                getMediaPlayer().play();
+            }
+            event.consume();
+        });
     }
 
     public DirectMediaPlayer getMediaPlayer() {

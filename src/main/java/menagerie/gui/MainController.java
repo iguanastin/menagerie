@@ -98,6 +98,8 @@ public class MainController {
     public Button settings_cancelButton;
     public Button settings_importFromFolderBrowseButton;
     public ChoiceBox<Integer> settings_gridWidthChoiceBox;
+    public CheckBox settings_muteVideoCheckBox;
+    public CheckBox settings_repeatVideoCheckBox;
 
     public BorderPane tagList_rootPane;
     public ChoiceBox<String> tagList_orderChoiceBox;
@@ -368,7 +370,7 @@ public class MainController {
         explorer_setGridWidth(settings.getImageGridWidth());
 
         //Init image grid
-        explorer_imageGridView.setSelectionListener(this::explorer_previewImage);
+        explorer_imageGridView.setSelectionListener(image -> Platform.runLater(() -> explorer_previewImage(image)));
         explorer_imageGridView.setCellFactory(param -> {
             ImageGridCell c = new ImageGridCell();
             c.setOnDragDetected(event -> {
@@ -540,7 +542,8 @@ public class MainController {
         explorer_searchTextField.setTop(false);
         explorer_searchTextField.setOptionsListener(explorer_editTagsTextField.getOptionsListener());
 
-        explorer_previewVideoView.getMediaPlayer().setRepeat(true);
+        explorer_previewVideoView.getMediaPlayer().mute(settings.isMuteVideoPreview());
+        explorer_previewVideoView.getMediaPlayer().setRepeat(settings.isRepeatVideoPreview());
     }
 
     private void explorer_initGridCellContextMenu() {
@@ -680,6 +683,8 @@ public class MainController {
         settings_autoImportFolderCheckBox.setSelected(settings.isAutoImportFromFolder());
         settings_autoImportFromFolderToDefaultCheckBox.setSelected(settings.isAutoImportFromFolderToDefault());
         settings_duplicateCompareBlackAndWhiteCheckbox.setSelected(settings.isCompareBlackAndWhiteHists());
+        settings_repeatVideoCheckBox.setSelected(settings.isRepeatVideoPreview());
+        settings_muteVideoCheckBox.setSelected(settings.isMuteVideoPreview());
 
         settings_histConfidenceTextField.setText("" + settings.getSimilarityThreshold());
 
@@ -720,6 +725,8 @@ public class MainController {
             settings.setAutoImportFromFolder(settings_autoImportFolderCheckBox.isSelected());
             settings.setAutoImportFromFolderToDefault(settings_autoImportFromFolderToDefaultCheckBox.isSelected());
             settings.setCompareBlackAndWhiteHists(settings_duplicateCompareBlackAndWhiteCheckbox.isSelected());
+            settings.setMuteVideoPreview(settings_muteVideoCheckBox.isSelected());
+            settings.setRepeatVideoPreview(settings_repeatVideoCheckBox.isSelected());
 
             settings.setSimilarityThreshold(Double.parseDouble(settings_histConfidenceTextField.getText()));
 
@@ -728,6 +735,9 @@ public class MainController {
             explorer_setGridWidth(settings_gridWidthChoiceBox.getValue());
 
             startWatchingFolderForImages();
+
+            explorer_previewVideoView.getMediaPlayer().mute(settings.isMuteVideoPreview());
+            explorer_previewVideoView.getMediaPlayer().setRepeat(settings.isRepeatVideoPreview());
         }
 
         trySaveSettings();
@@ -986,13 +996,11 @@ public class MainController {
         if (explorer_previewing != null) explorer_previewing.setTagListener(null);
         explorer_previewing = image;
 
-        explorer_previewImageView.setImage(null);
-        if (explorer_previewVideoView.getMediaPlayer().isPlaying()) explorer_previewVideoView.getMediaPlayer().stop();
-
         if (image != null) {
             image.setTagListener(() -> tagList_updateTags(image));
 
             if (image.isImage()) {
+                if (explorer_previewVideoView.getMediaPlayer().isPlaying()) explorer_previewVideoView.getMediaPlayer().stop();
                 explorer_previewImageView.setImage(image.getImage());
 
                 explorer_previewImageView.setDisable(false);
@@ -1000,7 +1008,8 @@ public class MainController {
                 explorer_previewVideoView.setDisable(true);
                 explorer_previewVideoView.setOpacity(0);
             } else if (image.isVideo()) {
-                explorer_previewVideoView.getMediaPlayer().playMedia(image.getFile().getAbsolutePath());
+                explorer_previewImageView.setImage(null);
+                explorer_previewVideoView.getMediaPlayer().startMedia(image.getFile().getAbsolutePath());
 
                 explorer_previewImageView.setDisable(true);
                 explorer_previewImageView.setOpacity(0);
@@ -1015,6 +1024,8 @@ public class MainController {
             explorer_fileNameLabel.setText(image.getFile().toString());
             updateImageInfoLabel(image, explorer_imageInfoLabel);
         } else {
+            explorer_previewImageView.setImage(null);
+            if (explorer_previewVideoView.getMediaPlayer().isPlaying()) explorer_previewVideoView.getMediaPlayer().stop();
             explorer_previewImageView.setDisable(true);
             explorer_previewImageView.setOpacity(0);
             explorer_previewVideoView.setDisable(true);
