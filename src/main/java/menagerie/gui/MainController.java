@@ -7,8 +7,8 @@ import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
-import javafx.scene.control.*;
 import javafx.scene.control.Button;
+import javafx.scene.control.*;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -25,6 +25,7 @@ import javafx.util.Duration;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.image.DynamicImageView;
+import menagerie.gui.image.DynamicVideoView;
 import menagerie.gui.progress.ProgressLockThread;
 import menagerie.gui.progress.ProgressLockThreadCancelListener;
 import menagerie.gui.progress.ProgressLockThreadFinishListener;
@@ -53,7 +54,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class MainController {
@@ -66,6 +68,7 @@ public class MainController {
     public PredictiveTextField explorer_searchTextField;
     public ImageGridView explorer_imageGridView;
     public DynamicImageView explorer_previewImageView;
+    public DynamicVideoView explorer_previewVideoView;
     public Label explorer_resultsAndSelectedLabel;
     public Label explorer_imageInfoLabel;
     public Label explorer_fileNameLabel;
@@ -169,6 +172,8 @@ public class MainController {
     //Settings var
     private final Settings settings = new Settings(new File("menagerie.properties"));
 
+    private static final FileFilter FILE_FILTER = Filters.IMG_VID_FILTER;
+
 
     // ---------------------------------- Initializers ------------------------------------
 
@@ -209,15 +214,17 @@ public class MainController {
         screenCloseTransition.setFromValue(1);
         screenCloseTransition.setToValue(0);
 
-        //Apply a default search
-        explorer_applySearch();
-
-        //Init window props from settings
+        //Things to run on first "tick"
         Platform.runLater(() -> {
+            //Apply window props and listeners
             window_initPropertiesAndListeners();
 
+            //Init closeRequest handling on window
             rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit());
         });
+
+        //Apply a default search
+        explorer_applySearch();
 
         //Init folder watcher
         startWatchingFolderForImages();
@@ -455,7 +462,7 @@ public class MainController {
                     String filename = URI.create(url).getPath().replaceAll("^.*/", "");
                     File target = resolveDuplicateFilename(new File(folder + filename));
 
-                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !Filters.IMAGE_FILTER.accept(target)) {
+                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !FILE_FILTER.accept(target)) {
                         target = openSaveImageDialog(explorer_rootPane.getScene().getWindow(), new File(settings.getDefaultFolder()), filename);
                         if (target == null) return;
                         if (target.exists())
@@ -532,6 +539,8 @@ public class MainController {
 
         explorer_searchTextField.setTop(false);
         explorer_searchTextField.setOptionsListener(explorer_editTagsTextField.getOptionsListener());
+
+        explorer_previewVideoView.getMediaPlayer().setRepeat(true);
     }
 
     private void explorer_initGridCellContextMenu() {
@@ -919,7 +928,7 @@ public class MainController {
 
         if (result != null) {
             List<Runnable> queue = new ArrayList<>();
-            List<File> files = getFilesRecursive(result, Filters.IMAGE_FILTER);
+            List<File> files = getFilesRecursive(result, FILE_FILTER);
             menagerie.getImages().forEach(img -> files.remove(img.getFile()));
             files.forEach(file -> queue.add(() -> {
                 try {
@@ -977,17 +986,39 @@ public class MainController {
         if (explorer_previewing != null) explorer_previewing.setTagListener(null);
         explorer_previewing = image;
 
+        explorer_previewImageView.setImage(null);
+        if (explorer_previewVideoView.getMediaPlayer().isPlaying()) explorer_previewVideoView.getMediaPlayer().stop();
+
         if (image != null) {
             image.setTagListener(() -> tagList_updateTags(image));
 
-            explorer_previewImageView.setImage(image.getImage());
+            if (image.isImage()) {
+                explorer_previewImageView.setImage(image.getImage());
+
+                explorer_previewImageView.setDisable(false);
+                explorer_previewImageView.setOpacity(1);
+                explorer_previewVideoView.setDisable(true);
+                explorer_previewVideoView.setOpacity(0);
+            } else if (image.isVideo()) {
+                explorer_previewVideoView.getMediaPlayer().playMedia(image.getFile().getAbsolutePath());
+
+                explorer_previewImageView.setDisable(true);
+                explorer_previewImageView.setOpacity(0);
+                explorer_previewVideoView.setDisable(false);
+                explorer_previewVideoView.setOpacity(1);
+            } else {
+                errors_addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
+            }
 
             tagList_updateTags(image);
 
             explorer_fileNameLabel.setText(image.getFile().toString());
             updateImageInfoLabel(image, explorer_imageInfoLabel);
         } else {
-            explorer_previewImageView.setImage(null);
+            explorer_previewImageView.setDisable(true);
+            explorer_previewImageView.setOpacity(0);
+            explorer_previewVideoView.setDisable(true);
+            explorer_previewVideoView.setOpacity(0);
             explorer_tagListView.getItems().clear();
 
             explorer_fileNameLabel.setText("N/A");
@@ -1373,7 +1404,7 @@ public class MainController {
         if (settings.isAutoImportFromFolder()) {
             File watchFolder = new File(settings.getImportFromFolderPath());
             if (watchFolder.exists() && watchFolder.isDirectory()) {
-                folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.IMAGE_FILTER, 30000, files -> {
+                folderWatcherThread = new FolderWatcherThread(watchFolder, FILE_FILTER, 30000, files -> {
                     for (File file : files) {
                         if (settings.isAutoImportFromFolderToDefault()) {
                             String folder = settings.getDefaultFolder();
@@ -1403,6 +1434,8 @@ public class MainController {
     }
 
     private void cleanExit() {
+        explorer_previewVideoView.getMediaPlayer().release();
+
         trySaveSettings();
 
         new Thread(() -> {

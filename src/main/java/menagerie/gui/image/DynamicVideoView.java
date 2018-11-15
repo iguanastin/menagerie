@@ -1,70 +1,104 @@
 package menagerie.gui.image;
 
 import com.sun.jna.Memory;
+import com.sun.jna.NativeLibrary;
 import javafx.application.Platform;
 import javafx.beans.property.FloatProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.*;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.image.Image;
 import javafx.stage.Screen;
 import uk.co.caprica.vlcj.component.DirectMediaPlayerComponent;
+import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.player.direct.BufferFormat;
 import uk.co.caprica.vlcj.player.direct.BufferFormatCallback;
 import uk.co.caprica.vlcj.player.direct.DirectMediaPlayer;
 import uk.co.caprica.vlcj.player.direct.format.RV32BufferFormat;
 
+import java.awt.*;
 import java.nio.ByteBuffer;
 
-public class DynamicVLCJView extends BorderPane {
+public class DynamicVideoView extends ImageView {
 
 
-    private WritablePixelFormat<ByteBuffer> pixelFormat;
-    private FloatProperty videoSourceRatioProperty;
+    private DirectMediaPlayerComponent mediaPlayerComponent = new CanvasPlayerComponent();
+    private WritablePixelFormat<ByteBuffer> pixelFormat = PixelFormat.getByteBgraPreInstance();
+    private FloatProperty videoSourceRatioProperty = new SimpleFloatProperty(0.4f);
     private WritableImage writableImage;
-    private ImageView imageView;
-    private DirectMediaPlayerComponent mediaPlayerComponent;
 
 
-    public DynamicVLCJView() {
+    public DynamicVideoView() {
         super();
+        NativeLibrary.addSearchPath("vlclib", new DefaultWindowsNativeDiscoveryStrategy().discover());
 
-        videoSourceRatioProperty = new SimpleFloatProperty(0.4f);
-        pixelFormat = PixelFormat.getByteBgraPreInstance();
-        mediaPlayerComponent = new CanvasPlayerComponent();
         Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
         writableImage = new WritableImage((int) visualBounds.getWidth(), (int) visualBounds.getHeight());
-        imageView = new ImageView(writableImage);
-        setCenter(imageView);
-
-        widthProperty().addListener((observable, oldValue, newValue) -> fitImageViewSize(newValue.floatValue(), (float) getHeight()));
-        heightProperty().addListener((observable, oldValue, newValue) -> fitImageViewSize((float) getWidth(), newValue.floatValue()));
-        videoSourceRatioProperty.addListener((observable, oldValue, newValue) -> fitImageViewSize((float) getWidth(), (float) getHeight()));
+        setImage(writableImage);
     }
 
     public DirectMediaPlayer getMediaPlayer() {
         return mediaPlayerComponent.getMediaPlayer();
     }
 
-    private void fitImageViewSize(float width, float height) {
-        float fitHeight = videoSourceRatioProperty.get() * width;
-        if (fitHeight > height) {
-            imageView.setFitHeight(height);
-            double fitWidth = height / videoSourceRatioProperty.get();
-            imageView.setFitWidth(fitWidth);
-            imageView.setX((width - fitWidth) / 2);
-            imageView.setY(0);
+    @Override
+    public double minWidth(double height) {
+        return 40;
+    }
+
+    @Override
+    public double prefWidth(double height) {
+        Dimension d = getMediaPlayer().getVideoDimension();
+        if (d == null) return minWidth(height);
+        return d.getWidth();
+    }
+
+    @Override
+    public double maxWidth(double height) {
+        return 16384;
+    }
+
+    @Override
+    public double minHeight(double width) {
+        return 40;
+    }
+
+    @Override
+    public double prefHeight(double width) {
+        Dimension d = getMediaPlayer().getVideoDimension();
+        if (d == null) return minHeight(width);
+        return d.getHeight();
+    }
+
+    @Override
+    public double maxHeight(double width) {
+        return 16384;
+    }
+
+    @Override
+    public boolean isResizable() {
+        return true;
+    }
+
+    @Override
+    public void resize(double width, double height) {
+        Dimension d = getMediaPlayer().getVideoDimension();
+        if (d == null) {
+            setFitWidth(width);
+            setFitHeight(height);
         } else {
-            imageView.setFitWidth(width);
-            imageView.setFitHeight(fitHeight);
-            imageView.setY((height - fitHeight) / 2);
-            imageView.setX(0);
+            double scale = 1;
+            if (scale * d.getWidth() > width) scale = width / d.getWidth();
+            if (scale * d.getHeight() > height) scale = height / d.getHeight();
+
+            setFitWidth(d.getWidth() * scale);
+            setFitHeight(d.getHeight() * scale);
         }
     }
 
     private class CanvasPlayerComponent extends DirectMediaPlayerComponent {
 
-        public CanvasPlayerComponent() {
+        CanvasPlayerComponent() {
             super(new CanvasBufferFormatCallback());
         }
 

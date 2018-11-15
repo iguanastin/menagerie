@@ -2,6 +2,7 @@ package menagerie.model.menagerie;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
+import menagerie.util.Filters;
 import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
 
@@ -131,6 +132,14 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
     public ImageHistogram getHistogram() {
         return histogram;
+    }
+
+    public boolean isImage() {
+        return Filters.IMAGE_FILTER.accept(file);
+    }
+
+    public boolean isVideo() {
+        return Filters.VIDEO_FILTER.accept(file);
     }
 
     public void initializeMD5() {

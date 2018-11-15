@@ -1,37 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.CheckBox?>
-<?import javafx.scene.control.ChoiceBox?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ListView?>
-<?import javafx.scene.control.Menu?>
-<?import javafx.scene.control.MenuBar?>
-<?import javafx.scene.control.MenuItem?>
-<?import javafx.scene.control.ProgressBar?>
-<?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.Separator?>
-<?import javafx.scene.control.SplitPane?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.control.ToggleButton?>
-<?import javafx.scene.effect.DropShadow?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.StackPane?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
-<?import menagerie.gui.PredictiveTextField?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.effect.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
 <?import menagerie.gui.grid.ImageGridView?>
-<?import menagerie.gui.image.DynamicImageView?>
-
+<?import menagerie.gui.image.*?>
+<?import menagerie.gui.PredictiveTextField?>
 <StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
     <StackPane fx:id="screensStackPane">
         <BorderPane fx:id="explorer_rootPane" onKeyPressed="#explorer_rootPaneOnKeyPressed" onKeyReleased="#explorer_rootPaneOnKeyReleased" prefHeight="576.0" prefWidth="994.0">
             <center>
                 <BorderPane>
                     <center>
-                        <DynamicImageView fx:id="explorer_previewImageView" pickOnBounds="true" preserveRatio="true" />
+                        <StackPane>
+                            <DynamicImageView fx:id="explorer_previewImageView" pickOnBounds="true" preserveRatio="true" />
+                            <DynamicVideoView fx:id="explorer_previewVideoView" />
+                        </StackPane>
                     </center>
                     <bottom>
                         <VBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
