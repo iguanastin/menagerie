@@ -343,7 +343,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return 0;
     }
 
-    public void remove(boolean deleteFile) {
+    public void remove(boolean deleteFile) throws IOException {
         menagerie.removeImage(this, deleteFile);
     }
 

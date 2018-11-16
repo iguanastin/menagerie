@@ -74,7 +74,7 @@
                         <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
                             <Label text="Errors and Warnings:"/>
                             <Button fx:id="explorer_showErrorsButton" mnemonicParsing="false"
-                                    onAction="#errors_showButtonOnAction" text="0"/>
+                                    onAction="#explorer_showErrorsButtonOnAction" text="0"/>
                         </HBox>
                     </bottom>
                 </BorderPane>

@@ -241,16 +241,12 @@ public class Menagerie {
         return img;
     }
 
-    public void removeImage(ImageInfo image, boolean deleteFile) {
+    public void removeImage(ImageInfo image, boolean deleteFile) throws IOException {
         if (image != null && images.remove(image)) {
             if (deleteFile) {
                 FileUtils fu = FileUtils.getInstance();
                 if (fu.hasTrash()) {
-                    try {
-                        fu.moveToTrash(new File[]{image.getFile()});
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    fu.moveToTrash(new File[]{image.getFile()});
                 } else if (!image.getFile().delete()) {
                     Main.showErrorMessage("Deletion Error", "Unable to delete file", image.getFile().toString());
                     return;

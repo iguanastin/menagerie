@@ -420,7 +420,16 @@ public class MainController {
             switch (event.getCode()) {
                 case DELETE:
                     final boolean deleteFiles = !event.isControlDown();
-                    final Runnable onFinish = () -> explorer_imageGridView.getSelected().forEach(img -> img.remove(deleteFiles));
+                    final Runnable onFinish = () -> {
+                        explorer_previewImage(null);
+                        explorer_imageGridView.getSelected().forEach(img -> {
+                            try {
+                                img.remove(deleteFiles);
+                            } catch (IOException e) {
+                                errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + img.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
+                            }
+                        });
+                    };
                     if (deleteFiles) {
                         confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                                 "This action CANNOT be undone (files will be deleted)", onFinish);
@@ -640,10 +649,28 @@ public class MainController {
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
         removeImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                "This action CANNOT be undone", () -> explorer_imageGridView.getSelected().forEach(img -> img.remove(false))));
+                "This action CANNOT be undone", () -> {
+            explorer_previewImage(null);
+            explorer_imageGridView.getSelected().forEach(img -> {
+                try {
+                    img.remove(false);
+                } catch (IOException e) {
+                    errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + img.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
+                }
+            });
+        }));
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
         deleteImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                "This action CANNOT be undone (files will be deleted)", () -> explorer_imageGridView.getSelected().forEach(img -> img.remove(true))));
+                "This action CANNOT be undone (files will be deleted)", () -> {
+            explorer_previewImage(null);
+            explorer_imageGridView.getSelected().forEach(img -> {
+                try {
+                    img.remove(true);
+                } catch (IOException e) {
+                    errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + img.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
+                }
+            });
+        }));
 
         explorer_cellContextMenu = new ContextMenu(slideShowMenu, new SeparatorMenuItem(), openInExplorerMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), findDuplicatesMenuItem, new SeparatorMenuItem(), moveToFolderMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
     }
@@ -1014,7 +1041,8 @@ public class MainController {
             image.setTagListener(() -> tagList_updateTags(image));
 
             if (image.isImage()) {
-                if (explorer_previewVideoView.getMediaPlayer().isPlaying()) explorer_previewVideoView.getMediaPlayer().stop();
+                if (explorer_previewVideoView.getMediaPlayer().isPlaying())
+                    explorer_previewVideoView.getMediaPlayer().stop();
                 explorer_previewImageView.setImage(image.getImage());
 
                 explorer_previewImageView.setDisable(false);
@@ -1039,7 +1067,8 @@ public class MainController {
             updateImageInfoLabel(image, explorer_imageInfoLabel);
         } else {
             explorer_previewImageView.setImage(null);
-            if (explorer_previewVideoView.getMediaPlayer().isPlaying()) explorer_previewVideoView.getMediaPlayer().stop();
+            if (explorer_previewVideoView.getMediaPlayer().isPlaying())
+                explorer_previewVideoView.getMediaPlayer().stop();
             explorer_previewImageView.setDisable(true);
             explorer_previewImageView.setOpacity(0);
             explorer_previewVideoView.setDisable(true);
@@ -1339,7 +1368,11 @@ public class MainController {
 
     private void duplicate_deleteImage(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
         int index = duplicate_pairs.indexOf(duplicate_previewingPair);
-        toDelete.remove(deleteFile);
+        try {
+            toDelete.remove(deleteFile);
+        } catch (IOException e) {
+            errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + toDelete.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
+        }
 
         //Consolidate tags
         if (settings.isConsolidateTags()) {
@@ -1498,7 +1531,11 @@ public class MainController {
 
     private void slideShow_tryDeleteCurrent(boolean deleteFile) {
         Runnable onFinish = () -> {
-            slideShow_currentlyShowing.remove(deleteFile);
+            try {
+                slideShow_currentlyShowing.remove(deleteFile);
+            } catch (IOException e) {
+                errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + slideShow_currentlyShowing.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
+            }
             int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
             slideShow_currentImages.remove(slideShow_currentlyShowing);
             if (slideShow_currentImages.isEmpty()) {
@@ -1763,7 +1800,7 @@ public class MainController {
         event.consume();
     }
 
-    public void errors_showButtonOnAction(ActionEvent event) {
+    public void explorer_showErrorsButtonOnAction(ActionEvent event) {
         errors_openScreen();
         event.consume();
     }
