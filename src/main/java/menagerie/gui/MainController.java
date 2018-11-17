@@ -25,7 +25,7 @@ import javafx.util.Duration;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.image.DynamicImageView;
-import menagerie.gui.image.DynamicVideoView;
+import menagerie.gui.image.DynamicMediaView;
 import menagerie.gui.progress.ProgressLockThread;
 import menagerie.gui.progress.ProgressLockThreadCancelListener;
 import menagerie.gui.progress.ProgressLockThreadFinishListener;
@@ -70,8 +70,7 @@ public class MainController {
     public ToggleButton explorer_descendingToggleButton;
     public PredictiveTextField explorer_searchTextField;
     public ImageGridView explorer_imageGridView;
-    public DynamicImageView explorer_previewImageView;
-    public DynamicVideoView explorer_previewVideoView;
+    public DynamicMediaView explorer_previewMediaView;
     public Label explorer_resultsAndSelectedLabel;
     public Label explorer_imageInfoLabel;
     public Label explorer_fileNameLabel;
@@ -129,7 +128,7 @@ public class MainController {
     public ListView<Tag> duplicate_rightTagListView;
 
     public BorderPane slideShow_rootPane;
-    public DynamicImageView slideShow_imageView;
+    public DynamicMediaView slideShow_previewMediaView;
 
     public BorderPane errors_rootPane;
     public ListView<TrackedError> errors_listView;
@@ -180,6 +179,7 @@ public class MainController {
     private static final FileFilter FILE_FILTER = Filters.IMG_VID_FILTER;
 
     private boolean playVideoAfterFocusGain = false;
+    private boolean playVideoAfterExplorerEnabled = false;
 
 
     // ---------------------------------- Initializers ------------------------------------
@@ -227,7 +227,7 @@ public class MainController {
             window_initPropertiesAndListeners();
 
             //Init closeRequest handling on window
-            rootPane.getScene().getWindow().setOnCloseRequest(event -> onCleanExit());
+            rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit());
         });
 
         //Apply a default search
@@ -267,7 +267,10 @@ public class MainController {
         deleteCurrentMenuItem.setOnAction(event -> slideShow_tryDeleteCurrent(true));
 
         slideShow_contextMenu = new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem);
-        slideShow_imageView.setOnContextMenuRequested(event -> slideShow_contextMenu.show(slideShow_imageView, event.getScreenX(), event.getScreenY()));
+        slideShow_previewMediaView.setOnContextMenuRequested(event -> slideShow_contextMenu.show(slideShow_previewMediaView, event.getScreenX(), event.getScreenY()));
+
+        slideShow_previewMediaView.setRepeat(true);
+        slideShow_previewMediaView.setMute(false);
     }
 
     private void errors_initScreen() {
@@ -444,6 +447,17 @@ public class MainController {
         explorer_initGridCellContextMenu();
 
         //Init drag/drop handlers
+        explorer_rootPane.disabledProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                if (explorer_previewMediaView.isPlaying()) {
+                    explorer_previewMediaView.pause();
+                    playVideoAfterExplorerEnabled = true;
+                }
+            } else if (playVideoAfterExplorerEnabled) {
+                explorer_previewMediaView.play();
+                playVideoAfterExplorerEnabled = false;
+            }
+        });
         explorer_rootPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
                 event.acceptTransferModes(TransferMode.ANY);
@@ -552,8 +566,8 @@ public class MainController {
         explorer_searchTextField.setTop(false);
         explorer_searchTextField.setOptionsListener(explorer_editTagsTextField.getOptionsListener());
 
-        explorer_previewVideoView.getMediaPlayer().mute(settings.isMuteVideoPreview());
-        explorer_previewVideoView.getMediaPlayer().setRepeat(settings.isRepeatVideoPreview());
+        explorer_previewMediaView.setMute(settings.isMuteVideoPreview());
+        explorer_previewMediaView.setRepeat(settings.isRepeatVideoPreview());
     }
 
     private void explorer_initGridCellContextMenu() {
@@ -678,12 +692,12 @@ public class MainController {
 
         stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
-                if (explorer_previewVideoView.getMediaPlayer().isPlaying()) {
-                    explorer_previewVideoView.getMediaPlayer().pause();
+                if (explorer_previewMediaView.isPlaying()) {
+                    explorer_previewMediaView.pause();
                     playVideoAfterFocusGain = true;
                 }
             } else if (playVideoAfterFocusGain) {
-                explorer_previewVideoView.getMediaPlayer().play();
+                explorer_previewMediaView.play();
                 playVideoAfterFocusGain = false;
             }
         });
@@ -763,8 +777,8 @@ public class MainController {
 
             startWatchingFolderForImages();
 
-            explorer_previewVideoView.getMediaPlayer().mute(settings.isMuteVideoPreview());
-            explorer_previewVideoView.getMediaPlayer().setRepeat(settings.isRepeatVideoPreview());
+            explorer_previewMediaView.setMute(settings.isMuteVideoPreview());
+            explorer_previewMediaView.setRepeat(settings.isRepeatVideoPreview());
         }
 
         trySaveSettings();
@@ -906,7 +920,7 @@ public class MainController {
 
         slideShow_currentImages = images;
         slideShow_currentlyShowing = images.get(0);
-        slideShow_imageView.setImage(slideShow_currentlyShowing.getImage());
+        slideShow_previewMediaView.preview(slideShow_currentlyShowing);
 
         explorer_rootPane.setDisable(true);
         slideShow_rootPane.setDisable(false);
@@ -915,6 +929,8 @@ public class MainController {
     }
 
     private void slideShow_closeScreen() {
+        slideShow_previewMediaView.preview(null);
+
         explorer_rootPane.setDisable(false);
         slideShow_rootPane.setDisable(true);
         explorer_imageGridView.requestFocus();
@@ -1023,53 +1039,29 @@ public class MainController {
         if (explorer_previewing != null) explorer_previewing.setTagListener(null);
         explorer_previewing = image;
 
+        if (!explorer_previewMediaView.preview(image)) {
+            errors_addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
+        }
+
+        tagList_updateTags(image);
+
+        updateImageInfoLabel(image, explorer_imageInfoLabel);
+
         if (image != null) {
             image.setTagListener(() -> tagList_updateTags(image));
 
-            if (image.isImage()) {
-                if (explorer_previewVideoView.getMediaPlayer().isPlaying())
-                    explorer_previewVideoView.getMediaPlayer().stop();
-                explorer_previewImageView.setImage(image.getImage());
-
-                explorer_previewImageView.setDisable(false);
-                explorer_previewImageView.setOpacity(1);
-                explorer_previewVideoView.setDisable(true);
-                explorer_previewVideoView.setOpacity(0);
-            } else if (image.isVideo()) {
-                explorer_previewImageView.setImage(null);
-                explorer_previewVideoView.getMediaPlayer().startMedia(image.getFile().getAbsolutePath());
-
-                explorer_previewImageView.setDisable(true);
-                explorer_previewImageView.setOpacity(0);
-                explorer_previewVideoView.setDisable(false);
-                explorer_previewVideoView.setOpacity(1);
-            } else {
-                errors_addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
-            }
-
-            tagList_updateTags(image);
-
             explorer_fileNameLabel.setText(image.getFile().toString());
-            updateImageInfoLabel(image, explorer_imageInfoLabel);
         } else {
-            explorer_previewImageView.setImage(null);
-            if (explorer_previewVideoView.getMediaPlayer().isPlaying())
-                explorer_previewVideoView.getMediaPlayer().stop();
-            explorer_previewImageView.setDisable(true);
-            explorer_previewImageView.setOpacity(0);
-            explorer_previewVideoView.setDisable(true);
-            explorer_previewVideoView.setOpacity(0);
-            explorer_tagListView.getItems().clear();
-
             explorer_fileNameLabel.setText("N/A");
-            updateImageInfoLabel(null, explorer_imageInfoLabel);
         }
     }
 
     private void tagList_updateTags(ImageInfo image) {
         explorer_tagListView.getItems().clear();
-        explorer_tagListView.getItems().addAll(image.getTags());
-        explorer_tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+        if (image != null) {
+            explorer_tagListView.getItems().addAll(image.getTags());
+            explorer_tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+        }
     }
 
     private static void updateImageInfoLabel(ImageInfo image, Label label) {
@@ -1439,13 +1431,13 @@ public class MainController {
     private void slideShow_showNext() {
         int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
         if (i + 1 < slideShow_currentImages.size()) slideShow_currentlyShowing = slideShow_currentImages.get(i + 1);
-        slideShow_imageView.setImage(slideShow_currentlyShowing.getImage());
+        slideShow_previewMediaView.preview(slideShow_currentlyShowing);
     }
 
     private void slideShow_showPrevious() {
         int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
         if (i - 1 >= 0) slideShow_currentlyShowing = slideShow_currentImages.get(i - 1);
-        slideShow_imageView.setImage(slideShow_currentlyShowing.getImage());
+        slideShow_previewMediaView.preview(slideShow_currentlyShowing);
     }
 
     private void startWatchingFolderForImages() {
@@ -1485,8 +1477,9 @@ public class MainController {
         }
     }
 
-    private void onCleanExit() {
-        explorer_previewVideoView.getMediaPlayer().release();
+    private void cleanExit() {
+        explorer_previewMediaView.releaseMediaPlayer();
+        slideShow_previewMediaView.releaseMediaPlayer();
         VideoThumbnailThread.releaseThumbnailMediaPlayer();
 
         trySaveSettings();
@@ -1537,7 +1530,7 @@ public class MainController {
                 } else {
                     slideShow_currentlyShowing = slideShow_currentImages.get(slideShow_currentImages.size() - 1);
                 }
-                slideShow_imageView.setImage(slideShow_currentlyShowing.getImage());
+                slideShow_previewMediaView.preview(slideShow_currentlyShowing);
             }
         };
 
@@ -1822,7 +1815,7 @@ public class MainController {
                     event.consume();
                     break;
                 case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(this::onCleanExit);
+                    menagerie.getUpdateQueue().enqueueUpdate(this::cleanExit);
                     menagerie.getUpdateQueue().commit();
                     event.consume();
                     break;

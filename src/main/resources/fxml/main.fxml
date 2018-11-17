@@ -6,7 +6,8 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 <?import menagerie.gui.grid.ImageGridView?>
-<?import menagerie.gui.image.*?>
+<?import menagerie.gui.image.DynamicImageView?>
+<?import menagerie.gui.image.DynamicMediaView?>
 <?import menagerie.gui.PredictiveTextField?>
 <StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="menagerie.gui.MainController">
@@ -17,9 +18,7 @@
                 <BorderPane>
                     <center>
                         <StackPane>
-                            <DynamicImageView fx:id="explorer_previewImageView" pickOnBounds="true"
-                                              preserveRatio="true"/>
-                            <DynamicVideoView fx:id="explorer_previewVideoView"/>
+                            <DynamicMediaView fx:id="explorer_previewMediaView"/>
                         </StackPane>
                     </center>
                     <bottom>
@@ -575,8 +574,7 @@
         <BorderPane fx:id="slideShow_rootPane" disable="true" onKeyPressed="#slideShow_rootPaneOnKeyPressed" opacity="0"
                     style="-fx-background-color: -fx-base;">
             <center>
-                <DynamicImageView fx:id="slideShow_imageView" pickOnBounds="true" preserveRatio="true"
-                                  BorderPane.alignment="CENTER"/>
+                <DynamicMediaView fx:id="slideShow_previewMediaView" BorderPane.alignment="CENTER"/>
             </center>
             <bottom>
                 <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
