@@ -122,8 +122,8 @@ public class MainController {
     public Label duplicate_rightInfoLabel;
     public TextField duplicate_leftPathTextField;
     public TextField duplicate_rightPathTextField;
-    public DynamicImageView duplicate_leftImageView;
-    public DynamicImageView duplicate_rightImageView;
+    public DynamicMediaView duplicate_leftMediaView;
+    public DynamicMediaView duplicate_rightMediaView;
     public ListView<Tag> duplicate_leftTagListView;
     public ListView<Tag> duplicate_rightTagListView;
 
@@ -331,13 +331,13 @@ public class MainController {
         });
 
         duplicate_contextMenu = new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetMenuItem, deleteMenuItem);
-        duplicate_leftImageView.setOnContextMenuRequested(event -> {
+        duplicate_leftMediaView.setOnContextMenuRequested(event -> {
             duplicate_contextMenu.setUserData(duplicate_previewingPair.getImg1());
-            duplicate_contextMenu.show(duplicate_leftImageView, event.getScreenX(), event.getScreenY());
+            duplicate_contextMenu.show(duplicate_leftMediaView, event.getScreenX(), event.getScreenY());
         });
-        duplicate_rightImageView.setOnContextMenuRequested(event -> {
+        duplicate_rightMediaView.setOnContextMenuRequested(event -> {
             duplicate_contextMenu.setUserData(duplicate_previewingPair.getImg2());
-            duplicate_contextMenu.show(duplicate_rightImageView, event.getScreenX(), event.getScreenY());
+            duplicate_contextMenu.show(duplicate_rightMediaView, event.getScreenX(), event.getScreenY());
         });
     }
 
@@ -1250,12 +1250,12 @@ public class MainController {
         if (pair == null) {
             duplicate_previewingPair = null;
 
-            duplicate_leftImageView.setImage(null);
+            duplicate_leftMediaView.preview(null);
             duplicate_leftTagListView.getItems().clear();
             duplicate_leftPathTextField.setText("N/A");
             updateImageInfoLabel(null, duplicate_leftInfoLabel);
 
-            duplicate_rightImageView.setImage(null);
+            duplicate_rightMediaView.preview(null);
             duplicate_rightTagListView.getItems().clear();
             duplicate_rightPathTextField.setText("N/A");
             updateImageInfoLabel(null, duplicate_rightInfoLabel);
@@ -1264,14 +1264,14 @@ public class MainController {
         } else {
             duplicate_previewingPair = pair;
 
-            duplicate_leftImageView.setImage(pair.getImg1().getImage());
+            duplicate_leftMediaView.preview(pair.getImg1());
             duplicate_leftPathTextField.setText(pair.getImg1().getFile().toString());
             duplicate_leftTagListView.getItems().clear();
             duplicate_leftTagListView.getItems().addAll(pair.getImg1().getTags());
             duplicate_leftTagListView.getItems().sort(Comparator.comparing(Tag::getName));
             updateImageInfoLabel(pair.getImg1(), duplicate_leftInfoLabel);
 
-            duplicate_rightImageView.setImage(pair.getImg2().getImage());
+            duplicate_rightMediaView.preview(pair.getImg2());
             duplicate_rightPathTextField.setText(pair.getImg2().getFile().toString());
             duplicate_rightTagListView.getItems().clear();
             duplicate_rightTagListView.getItems().addAll(pair.getImg2().getTags());
@@ -1480,6 +1480,8 @@ public class MainController {
     private void cleanExit() {
         explorer_previewMediaView.releaseMediaPlayer();
         slideShow_previewMediaView.releaseMediaPlayer();
+        duplicate_leftMediaView.releaseMediaPlayer();
+        duplicate_rightMediaView.releaseMediaPlayer();
         VideoThumbnailThread.releaseThumbnailMediaPlayer();
 
         trySaveSettings();

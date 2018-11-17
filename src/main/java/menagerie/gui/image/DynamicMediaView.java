@@ -73,7 +73,7 @@ public class DynamicMediaView extends StackPane {
     }
 
     public void releaseMediaPlayer() {
-        getVideoView().getMediaPlayer().release();
+        if (videoView != null) videoView.getMediaPlayer().release();
     }
 
     public void setMute(boolean mute) {

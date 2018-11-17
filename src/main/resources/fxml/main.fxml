@@ -551,7 +551,7 @@
                 <SplitPane dividerPositions="0.5" onMouseEntered="#duplicate_imagesPaneMouseEntered"
                            onMouseExited="#duplicate_imagesPaneMouseExited" BorderPane.alignment="CENTER">
                     <StackPane>
-                        <DynamicImageView fx:id="duplicate_leftImageView" pickOnBounds="true" preserveRatio="true"/>
+                        <DynamicMediaView fx:id="duplicate_leftMediaView"/>
                         <BorderPane pickOnBounds="false">
                             <right>
                                 <ListView fx:id="duplicate_leftTagListView" opacity="0.75" prefWidth="200.0"
@@ -560,7 +560,7 @@
                         </BorderPane>
                     </StackPane>
                     <StackPane>
-                        <DynamicImageView fx:id="duplicate_rightImageView" pickOnBounds="true" preserveRatio="true"/>
+                        <DynamicMediaView fx:id="duplicate_rightMediaView"/>
                         <BorderPane pickOnBounds="false">
                             <left>
                                 <ListView fx:id="duplicate_rightTagListView" opacity="0.75" prefWidth="200.0"
