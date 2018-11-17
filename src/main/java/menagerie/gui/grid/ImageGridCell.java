@@ -39,7 +39,14 @@ public class ImageGridCell extends GridCell<ImageInfo> {
             view.setImage(null);
             label.setText(null);
         } else {
-            view.setImage(item.getThumbnail());
+            if (item.getThumbnail() != null) {
+                if (item.getThumbnail().getImage() != null) {
+                    view.setImage(item.getThumbnail().getImage());
+                } else {
+                    view.setImage(null);
+                    item.getThumbnail().setImageReadyListener(view::setImage);
+                }
+            }
             if (item.isVideo()) label.setText("Video");
         }
 

@@ -29,6 +29,8 @@ import menagerie.gui.image.DynamicVideoView;
 import menagerie.gui.progress.ProgressLockThread;
 import menagerie.gui.progress.ProgressLockThreadCancelListener;
 import menagerie.gui.progress.ProgressLockThreadFinishListener;
+import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.gui.thumbnail.VideoThumbnailThread;
 import menagerie.model.SimilarPair;
 import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.ImageInfo;
@@ -386,8 +388,10 @@ public class MainController {
                     for (ImageInfo img : explorer_imageGridView.getSelected()) {
                         String filename = img.getFile().getName().toLowerCase();
                         if (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")) {
-                            db.setDragView(img.getThumbnail());
-                            break;
+                            if (img.getThumbnail().isLoaded()) {
+                                db.setDragView(img.getThumbnail().getImage());
+                                break;
+                            }
                         }
                     }
 
@@ -672,8 +676,8 @@ public class MainController {
         stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setWindowX(newValue.intValue()));
         stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
 
-        stage.iconifiedProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
+        stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
                 if (explorer_previewVideoView.getMediaPlayer().isPlaying()) {
                     explorer_previewVideoView.getMediaPlayer().pause();
                     playVideoAfterFocusGain = true;
@@ -1244,7 +1248,7 @@ public class MainController {
     }
 
     private void explorer_setGridWidth(int n) {
-        final double width = 18 + (ImageInfo.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + explorer_imageGridView.getHorizontalCellSpacing() * 2) * n;
+        final double width = 18 + (Thumbnail.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + explorer_imageGridView.getHorizontalCellSpacing() * 2) * n;
         explorer_imageGridView.setMinWidth(width);
         explorer_imageGridView.setMaxWidth(width);
         explorer_imageGridView.setPrefWidth(width);
@@ -1483,7 +1487,7 @@ public class MainController {
 
     private void onCleanExit() {
         explorer_previewVideoView.getMediaPlayer().release();
-        ImageInfo.releaseThumbnailMediaPlayer();
+        VideoThumbnailThread.releaseThumbnailMediaPlayer();
 
         trySaveSettings();
 

@@ -7,10 +7,12 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
+import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridView;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class ImageGridView extends GridView<ImageInfo> {
@@ -24,13 +26,13 @@ public class ImageGridView extends GridView<ImageInfo> {
 
 
     public ImageGridView() {
-        setCellWidth(ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2);
-        setCellHeight(ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2);
+        setCellWidth(Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2);
+        setCellHeight(Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2);
 
         getItems().addListener((ListChangeListener<? super ImageInfo>) c -> {
             boolean changed = false;
             while (c.next()) {
-                c.getRemoved().forEach(selected::remove);
+                selected.removeAll(c.getRemoved());
 
                 changed = true;
             }
@@ -125,11 +127,11 @@ public class ImageGridView extends GridView<ImageInfo> {
     }
 
     private int getRowLength() {
-        return (int) Math.floor((getWidth() - 18) / (ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
+        return (int) Math.floor((getWidth() - 18) / (Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
     }
 
     private int getPageLength() {
-        return (int) Math.floor(getHeight() / (ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
+        return (int) Math.floor(getHeight() / (Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
     }
 
     public void select(ImageInfo item, boolean ctrlDown, boolean shiftDown) {
@@ -228,11 +230,6 @@ public class ImageGridView extends GridView<ImageInfo> {
 
     public void setLastSelected(ImageInfo img) {
         lastSelected = img;
-    }
-
-    public void deselect(ImageInfo img) {
-        selected.remove(img);
-        updateCellSelectionCSS();
     }
 
 }

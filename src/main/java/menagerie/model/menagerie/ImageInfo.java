@@ -1,20 +1,12 @@
 package menagerie.model.menagerie;
 
-import com.sun.jna.NativeLibrary;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
-import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
-import javafx.scene.image.WritableImage;
+import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.util.Filters;
 import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
-import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
-import uk.co.caprica.vlcj.player.MediaPlayer;
-import uk.co.caprica.vlcj.player.MediaPlayerEventAdapter;
-import uk.co.caprica.vlcj.player.MediaPlayerEventListener;
-import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,16 +16,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 
 public class ImageInfo implements Comparable<ImageInfo> {
-
-    // ---------------------------- Constants ----------------------------------------
-
-    public static final int THUMBNAIL_SIZE = 150;
-
-    private static final String[] VLC_THUMBNAILER_ARGS = {"--intf", "dummy", "--vout", "dummy", "--no-audio", "--no-osd", "--no-spu", "--no-stats", "--no-sub-autodetect-file", "--no-disable-screensaver", "--no-snapshot-preview"};
-    private static MediaPlayer THUMBNAIL_MEDIA_PLAYER = null;
 
     // -------------------------------- Variables ------------------------------------
 
@@ -47,7 +31,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private String md5;
     private ImageHistogram histogram;
 
-    private SoftReference<Image> thumbnail;
+    private SoftReference<Thumbnail> thumbnail;
     private SoftReference<Image> image;
 
     private ImageTagUpdateListener tagListener = null;
@@ -74,53 +58,57 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return id;
     }
 
-    public Image getThumbnail() {
-        Image img = null;
-        if (thumbnail != null) img = thumbnail.get();
-        if (img == null) {
+    public Thumbnail getThumbnail() {
+        Thumbnail thumb = null;
+        if (thumbnail != null) thumb = thumbnail.get();
+        if (thumb == null) {
             try {
                 menagerie.PS_GET_IMG_THUMBNAIL.setInt(1, id);
                 ResultSet rs = menagerie.PS_GET_IMG_THUMBNAIL.executeQuery();
                 if (rs.next()) {
                     InputStream binaryStream = rs.getBinaryStream("thumbnail");
                     if (binaryStream != null) {
-                        img = ImageInputStreamConverter.imageFromInputStream(binaryStream);
-                        thumbnail = new SoftReference<>(img);
+                        thumb = new Thumbnail(ImageInputStreamConverter.imageFromInputStream(binaryStream));
+                        thumbnail = new SoftReference<>(thumb);
                     }
                 }
             } catch (SQLException | IOException e) {
                 e.printStackTrace();
             }
         }
-        if (img == null) {
-            img = buildThumbnail();
-            thumbnail = new SoftReference<>(img);
+        if (thumb == null) {
+            try {
+                thumb = new Thumbnail(file);
+            } catch (IOException ignore) {
+            }
 
-            if (img != null) {
-                final Image finalBullshit = img;
+            thumbnail = new SoftReference<>(thumb);
+
+            if (thumb != null) {
+                final Thumbnail finalThumb = thumb;
                 Runnable update = () -> {
                     try {
-                        menagerie.PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(finalBullshit));
+                        menagerie.PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(finalThumb.getImage()));
                         menagerie.PS_SET_IMG_THUMBNAIL.setInt(2, id);
                         menagerie.PS_SET_IMG_THUMBNAIL.executeUpdate();
                     } catch (SQLException | IOException e) {
                         e.printStackTrace();
                     }
                 };
-                if (img.isBackgroundLoading() && img.getProgress() != 1.0) {
-                    img.progressProperty().addListener((observable, oldValue, newValue) -> {
-                        if (!finalBullshit.isError() && newValue.doubleValue() == 1.0) {
-                            menagerie.getUpdateQueue().enqueueUpdate(update);
-                            menagerie.getUpdateQueue().commit();
-                        }
-                    });
-                } else {
+
+                if (thumb.isLoaded()) {
                     menagerie.getUpdateQueue().enqueueUpdate(update);
                     menagerie.getUpdateQueue().commit();
+                } else {
+                    thumb.setImageLoadedListener(image1 -> {
+                        menagerie.getUpdateQueue().enqueueUpdate(update);
+                        menagerie.getUpdateQueue().commit();
+                    });
                 }
             }
         }
-        return img;
+
+        return thumb;
     }
 
     public Image getImage() {
@@ -213,47 +201,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
             }
         });
 
-    }
-
-    private Image buildThumbnail() {
-        if (isImage()) {
-            return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
-        } else if (isVideo()) {
-            MediaPlayer mp = getThumbnailMediaPlayer();
-
-            final CountDownLatch inPositionLatch = new CountDownLatch(1);
-
-            MediaPlayerEventListener eventListener = new MediaPlayerEventAdapter() {
-                @Override
-                public void positionChanged(MediaPlayer mediaPlayer, float newPosition) {
-                    inPositionLatch.countDown();
-                }
-            };
-            mp.addMediaPlayerEventListener(eventListener);
-
-            if (mp.startMedia(getFile().getAbsolutePath())) {
-                mp.setPosition(0.1f);
-                try {
-                    inPositionLatch.await();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                mp.removeMediaPlayerEventListener(eventListener);
-
-                float vidWidth = (float) mp.getVideoDimension().getWidth();
-                float vidHeight = (float) mp.getVideoDimension().getHeight();
-                float scale = THUMBNAIL_SIZE / vidWidth;
-                if (scale * vidHeight > THUMBNAIL_SIZE) scale = THUMBNAIL_SIZE / vidHeight;
-                int width = (int) (scale * vidWidth);
-                int height = (int) (scale * vidHeight);
-                BufferedImage img = mp.getSnapshot(width, height);
-
-                mp.stop();
-                return SwingFXUtils.toFXImage(img, null);
-            }
-        }
-
-        return null;
     }
 
     public List<Tag> getTags() {
@@ -356,22 +303,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
     @Override
     public String toString() {
         return "Image (" + getId() + ") \"" + getFile().getAbsolutePath() + "\" - " + new Date(getDateAdded());
-    }
-
-    private static MediaPlayer getThumbnailMediaPlayer() {
-        if (THUMBNAIL_MEDIA_PLAYER == null) {
-            MediaPlayerFactory factory = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS);
-            THUMBNAIL_MEDIA_PLAYER = factory.newHeadlessMediaPlayer();
-        }
-
-        return THUMBNAIL_MEDIA_PLAYER;
-    }
-
-    public static void releaseThumbnailMediaPlayer() {
-        if (THUMBNAIL_MEDIA_PLAYER != null) {
-            THUMBNAIL_MEDIA_PLAYER.release();
-            THUMBNAIL_MEDIA_PLAYER = null;
-        }
     }
 
 }
