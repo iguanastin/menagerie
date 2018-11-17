@@ -4,21 +4,26 @@ import menagerie.model.menagerie.ImageInfo;
 
 public class FilePathRule extends SearchRule {
 
-    private String text;
+    private final String text;
 
 
-    public FilePathRule(String text) {
+    public FilePathRule(String text, boolean inverted) {
+        super(inverted);
         this.text = text;
     }
 
     @Override
     public boolean accept(ImageInfo img) {
-        return img.getFile().getAbsolutePath().contains(text);
+        boolean result = img.getFile().getAbsolutePath().contains(text);
+        if (isInverted()) result = !result;
+        return result;
     }
 
     @Override
     public String toString() {
-        return "File Path Rule: \"" + text + "\"";
+        String result = "File Path Rule: \"" + text + "\"";
+        if (isInverted()) result += " [inverted]";
+        return result;
     }
 
 }

@@ -2,6 +2,8 @@ package menagerie.model.menagerie;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
+import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.util.Filters;
 import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
 
@@ -17,10 +19,6 @@ import java.util.List;
 
 public class ImageInfo implements Comparable<ImageInfo> {
 
-    // ---------------------------- Constants ----------------------------------------
-
-    public static final int THUMBNAIL_SIZE = 150;
-
     // -------------------------------- Variables ------------------------------------
 
     private final Menagerie menagerie;
@@ -33,7 +31,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private String md5;
     private ImageHistogram histogram;
 
-    private SoftReference<Image> thumbnail;
+    private SoftReference<Thumbnail> thumbnail;
     private SoftReference<Image> image;
 
     private ImageTagUpdateListener tagListener = null;
@@ -60,47 +58,57 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return id;
     }
 
-    public Image getThumbnail() {
-        Image img = null;
-        if (thumbnail != null) img = thumbnail.get();
-        if (img == null) {
+    public Thumbnail getThumbnail() {
+        Thumbnail thumb = null;
+        if (thumbnail != null) thumb = thumbnail.get();
+        if (thumb == null) {
             try {
                 menagerie.PS_GET_IMG_THUMBNAIL.setInt(1, id);
                 ResultSet rs = menagerie.PS_GET_IMG_THUMBNAIL.executeQuery();
                 if (rs.next()) {
                     InputStream binaryStream = rs.getBinaryStream("thumbnail");
                     if (binaryStream != null) {
-                        img = ImageInputStreamConverter.imageFromInputStream(binaryStream);
-                        thumbnail = new SoftReference<>(img);
+                        thumb = new Thumbnail(ImageInputStreamConverter.imageFromInputStream(binaryStream));
+                        thumbnail = new SoftReference<>(thumb);
                     }
                 }
             } catch (SQLException | IOException e) {
                 e.printStackTrace();
             }
         }
-        if (img == null) {
-            img = buildThumbnail();
-            thumbnail = new SoftReference<>(img);
+        if (thumb == null) {
+            try {
+                thumb = new Thumbnail(file);
+            } catch (IOException ignore) {
+            }
 
-            if (img != null) {
-                final Image finalBullshit = img;
-                img.progressProperty().addListener((observable, oldValue, newValue) -> {
-                    if (!finalBullshit.isError() && newValue.doubleValue() == 1.0) {
-                        menagerie.getUpdateQueue().enqueueUpdate(() -> {
-                            try {
-                                menagerie.PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(finalBullshit));
-                                menagerie.PS_SET_IMG_THUMBNAIL.setInt(2, id);
-                                menagerie.PS_SET_IMG_THUMBNAIL.executeUpdate();
-                            } catch (SQLException | IOException e) {
-                                e.printStackTrace();
-                            }
-                        });
-                        menagerie.getUpdateQueue().commit();
+            thumbnail = new SoftReference<>(thumb);
+
+            if (thumb != null) {
+                final Thumbnail finalThumb = thumb;
+                Runnable update = () -> {
+                    try {
+                        menagerie.PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(finalThumb.getImage()));
+                        menagerie.PS_SET_IMG_THUMBNAIL.setInt(2, id);
+                        menagerie.PS_SET_IMG_THUMBNAIL.executeUpdate();
+                    } catch (SQLException | IOException e) {
+                        e.printStackTrace();
                     }
-                });
+                };
+
+                if (thumb.isLoaded()) {
+                    menagerie.getUpdateQueue().enqueueUpdate(update);
+                    menagerie.getUpdateQueue().commit();
+                } else {
+                    thumb.setImageLoadedListener(image1 -> {
+                        menagerie.getUpdateQueue().enqueueUpdate(update);
+                        menagerie.getUpdateQueue().commit();
+                    });
+                }
             }
         }
-        return img;
+
+        return thumb;
     }
 
     public Image getImage() {
@@ -131,6 +139,14 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
     public ImageHistogram getHistogram() {
         return histogram;
+    }
+
+    public boolean isImage() {
+        return Filters.IMAGE_FILTER.accept(file);
+    }
+
+    public boolean isVideo() {
+        return Filters.VIDEO_FILTER.accept(file);
     }
 
     public void initializeMD5() {
@@ -211,8 +227,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
         });
         menagerie.getUpdateQueue().commit();
 
-        menagerie.imageTagsUpdated(this);
-
         if (tagListener != null) tagListener.tagsChanged();
 
     }
@@ -233,13 +247,13 @@ public class ImageInfo implements Comparable<ImageInfo> {
         });
         menagerie.getUpdateQueue().commit();
 
-        menagerie.imageTagsUpdated(this);
-
         if (tagListener != null) tagListener.tagsChanged();
 
     }
 
     public boolean renameTo(File dest) {
+        if (file.equals(dest)) return true;
+
         boolean succeeded = file.renameTo(dest);
 
         if (succeeded) {
@@ -260,17 +274,20 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return succeeded;
     }
 
-    public void remove(boolean deleteFile) {
-        menagerie.removeImage(this, deleteFile);
+    public double getSimilarityTo(ImageInfo other, boolean compareBlackAndWhiteHists) {
+        if (md5 != null && md5.equals(other.getMD5())) {
+            return 1.0;
+        } else if (histogram != null && other.getHistogram() != null) {
+            if (compareBlackAndWhiteHists || (!histogram.isBlackAndWhite() && !other.getHistogram().isBlackAndWhite())) {
+                return histogram.getSimilarity(other.getHistogram());
+            }
+        }
+
+        return 0;
     }
 
     public void setTagListener(ImageTagUpdateListener tagListener) {
         this.tagListener = tagListener;
-    }
-
-    @Override
-    public String toString() {
-        return "Image (" + getId() + ") \"" + getFile().getAbsolutePath() + "\" - " + new Date(getDateAdded());
     }
 
     @Override
@@ -283,25 +300,9 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return getId() - o.getId();
     }
 
-    private Image buildThumbnail() {
-        String extension = file.getName().toLowerCase();
-        extension = extension.substring(extension.indexOf('.') + 1);
-
-        switch (extension) {
-            case "png":
-            case "jpg":
-            case "jpeg":
-            case "bmp":
-            case "gif":
-                return new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
-            case "webm":
-            case "mp4":
-            case "avi":
-                //TODO: Load video into VLCJ player and take snapshot
-                return null;
-        }
-
-        return null;
+    @Override
+    public String toString() {
+        return "Image (" + getId() + ") \"" + getFile().getAbsolutePath() + "\" - " + new Date(getDateAdded());
     }
 
 }

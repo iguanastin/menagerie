@@ -18,7 +18,7 @@
 
     /* text colors depending on background's brightness */
     -fx-light-text-color: rgb(220, 220, 220);
-    -fx-mid-text-color: rgb(100, 100, 100);
+    -fx-mid-text-color: rgb(150, 150, 150);
     -fx-dark-text-color: rgb(20, 20, 20);
 
     /* A bright blue for highlighting/accenting objects.  For example: selected
@@ -59,8 +59,14 @@
     -fx-background-color: derive(-fx-control-inner-background, +25%);
 }
 .list-cell {
-    -fx-background-color: derive(-fx-control-inner-background, +40%);
+    -fx-background-color: derive(-fx-control-inner-background, +30%);
 }
 .list-cell:odd {
-    -fx-background-color: derive(-fx-control-inner-background, +20%)
+    -fx-background-color: derive(-fx-control-inner-background, +20%);
+}
+
+.image-grid-cell {
+    -grid-cell-selected-color: derive(-fx-accent, 100%);
+    -grid-cell-unselected-color: derive(-fx-color, 50%);
+    -fx-background-color: -grid-cell-unselected-color;
 }

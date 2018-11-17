@@ -15,8 +15,8 @@ public class PredictiveTextField extends TextField {
 
     private PredictiveTextFieldOptionsListener optionsListener;
 
-    private Popup popup = new Popup();
-    private VBox vBox = new VBox(5);
+    private final Popup popup = new Popup();
+    private final VBox vBox = new VBox(5);
 
     private int selectedIndex = -1;
 

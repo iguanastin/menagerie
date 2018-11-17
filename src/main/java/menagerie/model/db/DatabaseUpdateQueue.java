@@ -12,6 +12,8 @@ public class DatabaseUpdateQueue implements Runnable {
     private long lastPrintTime = System.currentTimeMillis();
     private int jobsSinceLastPrint = 0;
 
+    private DatabaseUpdateQueueErrorListener errorListener;
+
 
     public synchronized void enqueueUpdate(Runnable runnable) {
         waitingQueue.add(runnable);
@@ -37,6 +39,14 @@ public class DatabaseUpdateQueue implements Runnable {
         }
     }
 
+    public synchronized void setErrorListener(DatabaseUpdateQueueErrorListener errorListener) {
+        this.errorListener = errorListener;
+    }
+
+    public synchronized DatabaseUpdateQueueErrorListener getErrorListener() {
+        return errorListener;
+    }
+
     @Override
     public void run() {
         while (true) {
@@ -45,7 +55,11 @@ public class DatabaseUpdateQueue implements Runnable {
                 try {
                     r.run();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    if (getErrorListener() != null) {
+                        getErrorListener().exceptionThrown(e);
+                    } else {
+                        e.printStackTrace();
+                    }
                 }
                 jobsSinceLastPrint++;
             }

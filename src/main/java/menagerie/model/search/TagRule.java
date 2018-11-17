@@ -5,20 +5,19 @@ import menagerie.model.menagerie.Tag;
 
 public class TagRule extends SearchRule {
 
-    private final boolean exclude;
     private final Tag tag;
 
 
     public TagRule(Tag tag, boolean exclude) {
+        super(exclude);
         priority = 25;
 
         this.tag = tag;
-        this.exclude = exclude;
     }
 
     @Override
     public boolean accept(ImageInfo img) {
-        if (exclude) {
+        if (isInverted()) {
             return !img.hasTag(tag);
         } else {
             return img.hasTag(tag);
@@ -27,11 +26,9 @@ public class TagRule extends SearchRule {
 
     @Override
     public String toString() {
-        if (exclude) {
-            return "Tag Rule: exclude \"" + tag.getName() + "\"";
-        } else {
-            return "Tag Rule: \"" + tag.getName() + "\"";
-        }
+        String result = "Tag Rule: \"" + tag.getName() + "\"";
+        if (isInverted()) result += " [inverted]";
+        return result;
     }
 
 }

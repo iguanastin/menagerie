@@ -1,10 +1,12 @@
 package menagerie.model.menagerie;
 
+import com.sun.jna.platform.FileUtils;
 import menagerie.gui.Main;
 import menagerie.model.db.DatabaseUpdateQueue;
 import menagerie.model.search.Search;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
 import java.util.*;
@@ -89,7 +91,7 @@ public class Menagerie {
             }
         }
         for (Tag t : new ArrayList<>(tags)) {
-            if (t.getId() != 1 && !usedTags.contains(t.getId())) {
+            if (!usedTags.contains(t.getId())) {
                 System.out.println("Deleting unused tag: " + t);
 
                 tags.remove(t);
@@ -218,7 +220,15 @@ public class Menagerie {
         }
 
         //Tag with tagme
-        img.addTag(getTagByName("tagme"));
+        Tag tagme = getTagByName("tagme");
+        if (tagme == null) tagme = createTag("tagme");
+        img.addTag(tagme);
+
+        if (img.isVideo()) {
+            Tag video = getTagByName("video");
+            if (video == null) video = createTag("video");
+            img.addTag(video);
+        }
 
         //Build thumbnail if flagged
         if (buildThumbnail) {
@@ -226,37 +236,59 @@ public class Menagerie {
         }
 
         //Update active searches
-        activeSearches.forEach(search -> search.addIfValid(img));
+        activeSearches.forEach(search -> search.addIfValid(Collections.singletonList(img)));
 
         return img;
     }
 
-    public void removeImage(ImageInfo image, boolean deleteFile) {
-        if (image != null && images.remove(image)) {
-            if (deleteFile) {
-                if (!image.getFile().delete()) {
-                    Main.showErrorMessage("Deletion Error", "Unable to delete file", image.getFile().toString());
-                    return;
+    public void removeImages(List<ImageInfo> images, boolean deleteFiles) {
+        List<ImageInfo> toRemove = new ArrayList<>();
+
+        for (ImageInfo image : images) {
+            if (getImages().remove(image)) {
+                if (image.getMD5() != null) {
+                    hashes.remove(image.getMD5());
                 }
+
+                image.getTags().forEach(Tag::decrementFrequency);
+
+                toRemove.add(image);
+
+                updateQueue.enqueueUpdate(() -> {
+                    try {
+                        PS_DELETE_IMG.setInt(1, image.getId());
+                        PS_DELETE_IMG.executeUpdate();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                });
+                updateQueue.commit();
             }
-
-            if (image.getMD5() != null) {
-                hashes.remove(image.getMD5());
-            }
-
-            image.getTags().forEach(Tag::decrementFrequency);
-
-            activeSearches.forEach(search -> search.remove(image));
-            updateQueue.enqueueUpdate(() -> {
-                try {
-                    PS_DELETE_IMG.setInt(1, image.getId());
-                    PS_DELETE_IMG.executeUpdate();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            });
-            updateQueue.commit();
         }
+
+        if (deleteFiles) {
+            FileUtils fu = FileUtils.getInstance();
+            if (fu.hasTrash()) {
+                try {
+                    File[] fa = new File[toRemove.size()];
+                    for (int i = 0; i < fa.length; i++) fa[i] = toRemove.get(i).getFile();
+                    fu.moveToTrash(fa);
+                } catch (IOException e) {
+                    //TODO: better error handling, preferably send to error list in gui
+                    Main.showErrorMessage("Recycle bin Error", "Unable to send files to recycle bin", toRemove.size() + "");
+                }
+            } else {
+                toRemove.forEach(image -> {
+                    if (image.getFile().delete()) {
+                        //TODO: better error handling, preferably send to error list in gui
+                        Main.showErrorMessage("Deletion Error", "Unable to delete file", image.getFile().toString());
+                    }
+                });
+                return;
+            }
+        }
+
+        activeSearches.forEach(search -> search.remove(toRemove));
     }
 
     public List<Tag> getTags() {
@@ -277,8 +309,8 @@ public class Menagerie {
         return null;
     }
 
-    void imageTagsUpdated(ImageInfo img) {
-        activeSearches.forEach(search -> search.removeIfInvalid(img));
+    public void recheckRemovalOfImagesInSearches(List<ImageInfo> images) {
+        activeSearches.forEach(search -> search.removeIfInvalid(images));
     }
 
     void imageMD5Updated(ImageInfo img) {
@@ -297,7 +329,7 @@ public class Menagerie {
         return database;
     }
 
-    public boolean isFilePresent(File file) {
+    private boolean isFilePresent(File file) {
         for (ImageInfo img : images) {
             if (img.getFile().equals(file)) return true;
         }
