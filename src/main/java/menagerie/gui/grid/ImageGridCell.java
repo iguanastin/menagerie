@@ -3,9 +3,11 @@ package menagerie.gui.grid;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridCell;
 
@@ -26,7 +28,8 @@ public class ImageGridCell extends GridCell<ImageInfo> {
         view = new ImageView();
         label = new Label();
         label.setPadding(new Insets(5));
-        label.setFont(new Font(Font.getDefault().getName(), 28));
+        label.setFont(Font.font(Font.getDefault().getName(), FontWeight.BOLD, 28));
+        label.setEffect(new DropShadow());
         setGraphic(new StackPane(view, label));
         setAlignment(Pos.CENTER);
         setStyle(UNSELECTED_BG_CSS);
