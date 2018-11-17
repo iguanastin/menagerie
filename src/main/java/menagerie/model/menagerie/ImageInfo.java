@@ -280,8 +280,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
         });
         menagerie.getUpdateQueue().commit();
 
-        menagerie.imageTagsUpdated(this);
-
         if (tagListener != null) tagListener.tagsChanged();
 
     }
@@ -301,8 +299,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
             }
         });
         menagerie.getUpdateQueue().commit();
-
-        menagerie.imageTagsUpdated(this);
 
         if (tagListener != null) tagListener.tagsChanged();
 
@@ -341,10 +337,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
         }
 
         return 0;
-    }
-
-    public void remove(boolean deleteFile) throws IOException {
-        menagerie.removeImage(this, deleteFile);
     }
 
     public void setTagListener(ImageTagUpdateListener tagListener) {

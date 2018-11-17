@@ -55,6 +55,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -422,13 +423,7 @@ public class MainController {
                     final boolean deleteFiles = !event.isControlDown();
                     final Runnable onFinish = () -> {
                         explorer_previewImage(null);
-                        explorer_imageGridView.getSelected().forEach(img -> {
-                            try {
-                                img.remove(deleteFiles);
-                            } catch (IOException e) {
-                                errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + img.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
-                            }
-                        });
+                        menagerie.removeImages(explorer_imageGridView.getSelected(), deleteFiles);
                     };
                     if (deleteFiles) {
                         confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
@@ -650,26 +645,13 @@ public class MainController {
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
         removeImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                 "This action CANNOT be undone", () -> {
-            explorer_previewImage(null);
-            explorer_imageGridView.getSelected().forEach(img -> {
-                try {
-                    img.remove(false);
-                } catch (IOException e) {
-                    errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + img.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
-                }
-            });
+            menagerie.removeImages(explorer_imageGridView.getSelected(), false);
         }));
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
         deleteImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                 "This action CANNOT be undone (files will be deleted)", () -> {
             explorer_previewImage(null);
-            explorer_imageGridView.getSelected().forEach(img -> {
-                try {
-                    img.remove(true);
-                } catch (IOException e) {
-                    errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + img.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
-                }
-            });
+            menagerie.removeImages(explorer_imageGridView.getSelected(), true);
         }));
 
         explorer_cellContextMenu = new ContextMenu(slideShowMenu, new SeparatorMenuItem(), openInExplorerMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), findDuplicatesMenuItem, new SeparatorMenuItem(), moveToFolderMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
@@ -1133,33 +1115,36 @@ public class MainController {
         explorer_currentSearch = new Search(menagerie, explorer_constructRuleSet(explorer_searchTextField.getText()), descending);
         explorer_currentSearch.setListener(new SearchUpdateListener() {
             @Override
-            public void imageAdded(ImageInfo img) {
+            public void imagesAdded(List<ImageInfo> images) {
                 Platform.runLater(() -> {
-                    boolean added = false;
-                    for (int i = 0; i < explorer_imageGridView.getItems().size(); i++) {
-                        if (explorer_currentSearch.getComparator().compare(img, explorer_imageGridView.getItems().get(i)) < 0) {
-                            explorer_imageGridView.getItems().add(i, img);
-                            added = true;
-                            break;
-                        }
-                    }
-                    if (!added) explorer_imageGridView.getItems().add(img);
+                    explorer_imageGridView.getItems().addAll(0, images);
+
+//                    explorer_imageGridView.getItems().sort(explorer_currentSearch.getComparator()); // This causes some gridcells to glitch out and get stuck visually
                 });
             }
 
             @Override
-            public void imageRemoved(ImageInfo img) {
+            public void imagesRemoved(List<ImageInfo> images) {
                 Platform.runLater(() -> {
-                    int index = explorer_imageGridView.getItems().indexOf(img) + 1;
-                    if (index < explorer_imageGridView.getItems().size())
-                        explorer_imageGridView.setLastSelected(explorer_imageGridView.getItems().get(index));
-                    else if (index - 1 >= 0)
-                        explorer_imageGridView.setLastSelected(explorer_imageGridView.getItems().get(index - 1));
+                    final int oldLastIndex = explorer_imageGridView.getItems().indexOf(explorer_imageGridView.getLastSelected()) + 1;
+                    int newIndex = oldLastIndex;
+                    for (ImageInfo image : images) {
+                        final int i = explorer_imageGridView.getItems().indexOf(image);
+                        if (i < 0) continue;
 
-                    if (img.equals(explorer_previewing)) explorer_previewImage(null);
+                        if (i < oldLastIndex) {
+                            newIndex--;
+                        }
+                    }
 
-                    explorer_imageGridView.deselect(img);
-                    explorer_imageGridView.getItems().remove(img);
+                    explorer_imageGridView.getItems().removeAll(images);
+                    if (images.contains(explorer_previewing)) explorer_previewImage(null);
+
+                    if (!explorer_imageGridView.getItems().isEmpty()) {
+                        if (newIndex >= explorer_imageGridView.getItems().size())
+                            newIndex = explorer_imageGridView.getItems().size() - 1;
+                        explorer_imageGridView.setLastSelected(explorer_imageGridView.getItems().get(newIndex));
+                    }
                 });
             }
         });
@@ -1350,29 +1335,34 @@ public class MainController {
         if (input == null || input.isEmpty() || explorer_imageGridView.getSelected().isEmpty()) return;
         explorer_lastTagString = input.trim();
 
+        List<ImageInfo> changed = new ArrayList<>();
+
         for (String text : input.split("\\s+")) {
             if (text.startsWith("-")) {
                 Tag t = menagerie.getTagByName(text.substring(1));
                 if (t != null) {
-                    new ArrayList<>(explorer_imageGridView.getSelected()).forEach(img -> img.removeTag(t)); // New arraylist to avoid concurrent modification
+                    explorer_imageGridView.getSelected().forEach(img -> {
+                        img.removeTag(t);
+                        changed.add(img);
+                    });
                 }
             } else {
                 Tag t = menagerie.getTagByName(text);
                 if (t == null) t = menagerie.createTag(text);
-                for (ImageInfo img : new ArrayList<>(explorer_imageGridView.getSelected())) { // New arraylist to avoid concurrent modification
+                for (ImageInfo img : explorer_imageGridView.getSelected()) {
                     img.addTag(t);
+                    changed.add(img);
                 }
             }
         }
+
+        if (!changed.isEmpty()) menagerie.recheckRemovalOfImagesInSearches(changed);
     }
 
     private void duplicate_deleteImage(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
         int index = duplicate_pairs.indexOf(duplicate_previewingPair);
-        try {
-            toDelete.remove(deleteFile);
-        } catch (IOException e) {
-            errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + toDelete.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
-        }
+
+        menagerie.removeImages(Collections.singletonList(toDelete), deleteFile);
 
         //Consolidate tags
         if (settings.isConsolidateTags()) {
@@ -1531,11 +1521,8 @@ public class MainController {
 
     private void slideShow_tryDeleteCurrent(boolean deleteFile) {
         Runnable onFinish = () -> {
-            try {
-                slideShow_currentlyShowing.remove(deleteFile);
-            } catch (IOException e) {
-                errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Unable to delete file", "\"" + slideShow_currentlyShowing.getFile() + "\" was unable to be deleted", "File is a video and is currently open in preview"));
-            }
+            menagerie.removeImages(Collections.singletonList(slideShow_currentlyShowing), deleteFile);
+
             int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
             slideShow_currentImages.remove(slideShow_currentlyShowing);
             if (slideShow_currentImages.isEmpty()) {

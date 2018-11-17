@@ -4,7 +4,6 @@ import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -38,9 +37,7 @@ public class Search {
 
         menagerie.registerSearch(this);
 
-        for (ImageInfo img : menagerie.getImages()) {
-            addIfValid(img);
-        }
+        addIfValid(menagerie.getImages());
     }
 
     public void setListener(SearchUpdateListener listener) {
@@ -55,45 +52,45 @@ public class Search {
         return comparator;
     }
 
-    public void addIfValid(ImageInfo img) {
-        if (rules != null) {
-            for (SearchRule rule : rules) {
-                if (!rule.accept(img)) return;
-            }
-        }
+    public void addIfValid(List<ImageInfo> images) {
+        if (rules == null) return;
 
-        boolean added = false;
+        List<ImageInfo> toAdd = new ArrayList<>(images);
 
-        for (int i = 0; i < results.size(); i++) {
-            if (comparator.compare(img, results.get(i)) < 0) {
-                results.add(i, img);
-                added = true;
-                break;
-            }
-        }
-
-        if (!added) results.add(img);
-
-        if (listener != null) listener.imageAdded(img);
-    }
-
-    public void removeIfInvalid(ImageInfo img) {
-        if (rules != null) {
+        for (ImageInfo img : images) {
             for (SearchRule rule : rules) {
                 if (!rule.accept(img)) {
-                    boolean result = results.remove(img);
-                    if (listener != null && result) listener.imageRemoved(img);
-                    return;
+                    toAdd.remove(img);
+                    break;
                 }
             }
         }
 
+        boolean changed = results.addAll(toAdd);
+        results.sort(getComparator());
+
+        if (changed && listener != null) listener.imagesAdded(toAdd);
     }
 
-    public void remove(ImageInfo img) {
-        boolean result = results.remove(img);
-        if (listener != null && result) listener.imageRemoved(img);
+    public void removeIfInvalid(List<ImageInfo> images) {
+        if (rules == null) return;
 
+        List<ImageInfo> toRemove = new ArrayList<>();
+
+        for (ImageInfo img : images) {
+            for (SearchRule rule : rules) {
+                if (!rule.accept(img)) {
+                    toRemove.add(img);
+                    break;
+                }
+            }
+        }
+
+        if (results.removeAll(toRemove) && listener != null) listener.imagesRemoved(toRemove);
+    }
+
+    public void remove(List<ImageInfo> images) {
+        if (results.removeAll(images) && listener != null) listener.imagesRemoved(images);
     }
 
     public void close() {

@@ -28,10 +28,14 @@ public class ImageGridView extends GridView<ImageInfo> {
         setCellHeight(ImageInfo.THUMBNAIL_SIZE + CELL_BORDER * 2);
 
         getItems().addListener((ListChangeListener<? super ImageInfo>) c -> {
+            boolean changed = false;
             while (c.next()) {
                 c.getRemoved().forEach(selected::remove);
+
+                changed = true;
             }
-            updateCellSelectionCSS();
+
+            if (changed) updateCellSelectionCSS();
         });
 
         setOnMouseReleased(event -> {
