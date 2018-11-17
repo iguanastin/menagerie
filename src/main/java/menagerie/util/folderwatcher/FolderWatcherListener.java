@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.util.folderwatcher;
 
 import java.io.File;
 

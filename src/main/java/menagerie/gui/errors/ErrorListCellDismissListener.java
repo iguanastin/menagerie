@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.errors;
 
 public interface ErrorListCellDismissListener {
 

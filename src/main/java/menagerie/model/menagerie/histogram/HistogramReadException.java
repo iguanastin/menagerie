@@ -1,4 +1,4 @@
-package menagerie.model.menagerie;
+package menagerie.model.menagerie.histogram;
 
 public class HistogramReadException extends Exception {
 

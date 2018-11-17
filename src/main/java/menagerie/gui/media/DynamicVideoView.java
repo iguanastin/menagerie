@@ -1,17 +1,14 @@
-package menagerie.gui.image;
+package menagerie.gui.media;
 
 import com.sun.jna.Memory;
-import com.sun.jna.NativeLibrary;
 import javafx.application.Platform;
 import javafx.beans.property.FloatProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.*;
-import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
 import javafx.stage.Screen;
 import uk.co.caprica.vlcj.component.DirectMediaPlayerComponent;
-import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.player.direct.BufferFormat;
 import uk.co.caprica.vlcj.player.direct.BufferFormatCallback;
 import uk.co.caprica.vlcj.player.direct.DirectMediaPlayer;

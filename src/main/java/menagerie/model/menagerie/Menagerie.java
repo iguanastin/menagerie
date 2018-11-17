@@ -3,6 +3,8 @@ package menagerie.model.menagerie;
 import com.sun.jna.platform.FileUtils;
 import menagerie.gui.Main;
 import menagerie.model.db.DatabaseUpdateQueue;
+import menagerie.model.menagerie.histogram.HistogramReadException;
+import menagerie.model.menagerie.histogram.ImageHistogram;
 import menagerie.model.search.Search;
 
 import java.io.File;

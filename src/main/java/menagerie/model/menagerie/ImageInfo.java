@@ -3,6 +3,8 @@ package menagerie.model.menagerie;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
 import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.model.menagerie.histogram.HistogramReadException;
+import menagerie.model.menagerie.histogram.ImageHistogram;
 import menagerie.util.Filters;
 import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;

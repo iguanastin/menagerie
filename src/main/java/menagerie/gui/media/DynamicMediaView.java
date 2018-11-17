@@ -1,4 +1,4 @@
-package menagerie.gui.image;
+package menagerie.gui.media;
 
 import javafx.scene.layout.StackPane;
 import menagerie.model.menagerie.ImageInfo;

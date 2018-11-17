@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.errors;
 
 import java.util.Date;
 
@@ -17,7 +17,7 @@ public class TrackedError {
     private boolean showExpanded = false;
 
 
-    TrackedError(Exception exception, Severity severity, String title, String whatHappened, String likelyCause) {
+    public TrackedError(Exception exception, Severity severity, String title, String whatHappened, String likelyCause) {
         this.exception = exception;
         this.severity = severity;
         this.title = title;

@@ -1,4 +1,4 @@
-package menagerie.model.search;
+package menagerie.model.search.rules;
 
 import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Tag;

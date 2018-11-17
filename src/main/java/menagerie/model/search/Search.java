@@ -2,6 +2,7 @@ package menagerie.model.search;
 
 import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
+import menagerie.model.search.rules.SearchRule;
 
 import java.util.ArrayList;
 import java.util.Comparator;

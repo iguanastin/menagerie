@@ -22,10 +22,12 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Duration;
+import menagerie.gui.errors.ErrorListCell;
+import menagerie.gui.errors.TrackedError;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
-import menagerie.gui.image.DynamicImageView;
-import menagerie.gui.image.DynamicMediaView;
+import menagerie.gui.media.DynamicMediaView;
+import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.progress.ProgressLockThread;
 import menagerie.gui.progress.ProgressLockThreadCancelListener;
 import menagerie.gui.progress.ProgressLockThreadFinishListener;
@@ -37,8 +39,10 @@ import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.search.*;
+import menagerie.model.search.rules.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
+import menagerie.util.folderwatcher.FolderWatcherThread;
 
 import java.awt.*;
 import java.io.File;
@@ -474,7 +478,7 @@ public class MainController {
                     try {
                         menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                     } catch (Exception e) {
-                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import a file: " + file, "Unknown")));
                     }
                 }));
 
@@ -508,7 +512,7 @@ public class MainController {
                             });
                         } catch (IOException e) {
                             e.printStackTrace();
-                            Platform.runLater(() -> Main.showErrorMessage("Unexpected error", "Error while trying to download image", e.getLocalizedMessage()));
+                            Platform.runLater(() -> Main.showErrorMessage("Unexpected error", "Error while trying to download file", e.getLocalizedMessage()));
                         }
                     }).start();
                 });
@@ -599,7 +603,7 @@ public class MainController {
                             img.initializeMD5();
                             img.commitMD5ToDatabase();
                         } catch (Exception e) {
-                            Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for image: " + img, "Unknown")));
+                            Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for file: " + img, "Unknown")));
                         }
                     });
                 }
@@ -648,7 +652,7 @@ public class MainController {
                             File dest = MainController.resolveDuplicateFilename(f);
 
                             if (!img.renameTo(dest)) {
-                                Platform.runLater(() -> errors_addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving image", "An exception was thrown while trying to move an image\nFrom: " + img.getFile() + "\nTo: " + dest, "Unknown")));
+                                Platform.runLater(() -> errors_addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving file", "An exception was thrown while trying to move a file\nFrom: " + img.getFile() + "\nTo: " + dest, "Unknown")));
                             }
                         }
                     }));
@@ -987,7 +991,7 @@ public class MainController {
                 try {
                     menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                 } catch (Exception e) {
-                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
                 }
             }));
 
@@ -1013,7 +1017,7 @@ public class MainController {
                 try {
                     menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                 } catch (Exception e) {
-                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
                 }
             }));
 
@@ -1395,7 +1399,7 @@ public class MainController {
                         i.initializeMD5();
                         i.commitMD5ToDatabase();
                     } catch (Exception e) {
-                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for image: " + i, "Unknown")));
+                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for file: " + i, "Unknown")));
                     }
                 });
             });
@@ -1413,7 +1417,7 @@ public class MainController {
                                     i.initializeHistogram();
                                     i.commitHistogramToDatabase();
                                 } catch (Exception e) {
-                                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + i, "Unknown")));
+                                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for file: " + i, "Unknown")));
                                 }
                             });
                     });

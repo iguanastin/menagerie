@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.predictive;
 
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
@@ -131,7 +131,7 @@ public class PredictiveTextField extends TextField {
         }
     }
 
-    void setOptionsListener(PredictiveTextFieldOptionsListener optionsListener) {
+    public void setOptionsListener(PredictiveTextFieldOptionsListener optionsListener) {
         this.optionsListener = optionsListener;
     }
 
