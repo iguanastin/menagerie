@@ -99,6 +99,9 @@
                                   text="Import file(s)"/>
                         <MenuItem mnemonicParsing="false" onAction="#explorer_importFolderMenuButtonOnAction"
                                   text="Import folder"/>
+                        <SeparatorMenuItem/>
+                        <MenuItem mnemonicParsing="false" onAction="#explorer_revertDatabaseMenuButtonOnAction"
+                                  text="Revert to backup"/>
                     </Menu>
                     <Menu mnemonicParsing="false" text="Edit">
                         <MenuItem mnemonicParsing="false" onAction="#explorer_settingsMenuButtonOnAction"

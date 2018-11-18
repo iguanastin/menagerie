@@ -60,9 +60,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
 
 public class MainController {
@@ -231,7 +229,7 @@ public class MainController {
             window_initPropertiesAndListeners();
 
             //Init closeRequest handling on window
-            rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit());
+            rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
         });
 
         //Apply a default search
@@ -1481,7 +1479,7 @@ public class MainController {
         }
     }
 
-    private void cleanExit() {
+    private void cleanExit(boolean revertDatabase) {
         explorer_previewMediaView.releaseMediaPlayer();
         slideShow_previewMediaView.releaseMediaPlayer();
         duplicate_leftMediaView.releaseMediaPlayer();
@@ -1495,6 +1493,16 @@ public class MainController {
                 System.out.println("Attempting to shut down Menagerie database and defragment the file");
                 menagerie.getDatabase().createStatement().executeUpdate("SHUTDOWN DEFRAG;");
                 System.out.println("Done defragging database file");
+
+                if (revertDatabase) {
+                    File database = getDatabaseFile(settings.getDbUrl());
+                    File backup = new File(database + ".bak");
+                    try {
+                        Files.move(backup.toPath(), database.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -1578,6 +1586,17 @@ public class MainController {
     }
 
     private static void backupDatabase(String databaseURL) throws IOException {
+        File dbFile = getDatabaseFile(databaseURL);
+
+        if (dbFile.exists()) {
+            System.out.println("Backing up database at: " + dbFile);
+            File backupFile = new File(dbFile.getAbsolutePath() + ".bak");
+            Files.copy(dbFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("Successfully backed up database to: " + backupFile);
+        }
+    }
+
+    private static File getDatabaseFile(String databaseURL) {
         String path = databaseURL + ".mv.db";
         if (path.startsWith("~")) {
             String temp = System.getProperty("user.home");
@@ -1588,14 +1607,7 @@ public class MainController {
             path = temp + path;
         }
 
-        File currentDatabaseFile = new File(path);
-
-        if (currentDatabaseFile.exists()) {
-            System.out.println("Backing up database at: " + currentDatabaseFile);
-            File backupFile = new File(path + ".bak");
-            Files.copy(currentDatabaseFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("Successfully backed up database to: " + backupFile);
-        }
+        return new File(path);
     }
 
     private static File resolveDuplicateFilename(File file) {
@@ -1806,6 +1818,17 @@ public class MainController {
         event.consume();
     }
 
+    public void explorer_revertDatabaseMenuButtonOnAction(ActionEvent event) {
+        File database = getDatabaseFile(settings.getDbUrl());
+        File backup = new File(database + ".bak");
+        if (backup.exists()) {
+            confirmation_openScreen("Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> {
+                cleanExit(true);
+            });
+        }
+        event.consume();
+    }
+
     // ---------------------------------- Key Event Handlers ----------------------------------------
 
     public void explorer_rootPaneOnKeyPressed(KeyEvent event) {
@@ -1821,7 +1844,7 @@ public class MainController {
                     event.consume();
                     break;
                 case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(this::cleanExit);
+                    menagerie.getUpdateQueue().enqueueUpdate(() -> cleanExit(false));
                     menagerie.getUpdateQueue().commit();
                     event.consume();
                     break;
