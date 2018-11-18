@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.layout.BorderPane?>
+<?import menagerie.gui.media.PanZoomImageView?>
+<BorderPane prefHeight="800.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/8.0.121"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.TestController">
+    <center>
+        <PanZoomImageView>
+            <image>
+                <Image url="file:C:\Users\Austin\Wallpapers\1504030907072.jpg"/>
+            </image>
+        </PanZoomImageView>
+    </center>
+
+</BorderPane>

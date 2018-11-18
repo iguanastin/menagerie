@@ -6,14 +6,14 @@ import menagerie.model.menagerie.ImageInfo;
 public class DynamicMediaView extends StackPane {
 
     private DynamicVideoView videoView;
-    private DynamicImageView imageView;
+    private PanZoomImageView imageView;
 
 
     public DynamicMediaView() {
         super();
 
 //        videoView = new DynamicVideoView();
-        imageView = new DynamicImageView();
+        imageView = new PanZoomImageView();
 
         getChildren().addAll(imageView);
     }
@@ -68,7 +68,7 @@ public class DynamicMediaView extends StackPane {
         return videoView;
     }
 
-    private DynamicImageView getImageView() {
+    private PanZoomImageView getImageView() {
         return imageView;
     }
 
