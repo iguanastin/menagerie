@@ -1,14 +1,13 @@
 package menagerie.gui.media;
 
 import javafx.application.Platform;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.input.*;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 
-public class PanZoomImageView extends ImageView {
+public class PanZoomImageView extends DynamicImageView {
 
     private static final double MIN_SCALE = 0.05;
     private static final double MAX_SCALE = 8;
@@ -26,11 +25,13 @@ public class PanZoomImageView extends ImageView {
         setPickOnBounds(true);
 
         addEventHandler(MouseEvent.MOUSE_DRAGGED, event -> {
-            deltaX = clickImageX + (clickX - event.getX()) * scale;
-            deltaY = clickImageY + (clickY - event.getY()) * scale;
-            updateViewPort();
+            if (event.getButton().equals(MouseButton.PRIMARY)) {
+                deltaX = clickImageX + (clickX - event.getX()) * scale;
+                deltaY = clickImageY + (clickY - event.getY()) * scale;
+                updateViewPort();
 
-            event.consume();
+                event.consume();
+            }
         });
         addEventHandler(MouseEvent.MOUSE_PRESSED, event -> {
             if (event.getButton().equals(MouseButton.PRIMARY)) {
@@ -38,7 +39,7 @@ public class PanZoomImageView extends ImageView {
                 clickY = event.getY();
                 clickImageX = deltaX;
                 clickImageY = deltaY;
-            } else if (event.getButton() == MouseButton.SECONDARY) {
+            } else if (event.getButton().equals(MouseButton.SECONDARY)) {
                 fitImageToView();
             }
         });
@@ -82,45 +83,6 @@ public class PanZoomImageView extends ImageView {
         if (scale < 1) scale = 1;
 
         updateViewPort();
-    }
-
-    @Override
-    public double minWidth(double height) {
-        return 40;
-    }
-
-    @Override
-    public double prefWidth(double height) {
-        Image I = getImage();
-        if (I == null) return minWidth(height);
-        return I.getWidth();
-    }
-
-    @Override
-    public double maxWidth(double height) {
-        return 16384;
-    }
-
-    @Override
-    public double minHeight(double width) {
-        return 40;
-    }
-
-    @Override
-    public double prefHeight(double width) {
-        Image I = getImage();
-        if (I == null) return minHeight(width);
-        return I.getHeight();
-    }
-
-    @Override
-    public double maxHeight(double width) {
-        return 16384;
-    }
-
-    @Override
-    public boolean isResizable() {
-        return true;
     }
 
     @Override
