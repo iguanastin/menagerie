@@ -1484,7 +1484,7 @@ public class MainController {
         slideShow_previewMediaView.releaseMediaPlayer();
         duplicate_leftMediaView.releaseMediaPlayer();
         duplicate_rightMediaView.releaseMediaPlayer();
-        VideoThumbnailThread.releaseThumbnailMediaPlayer();
+        VideoThumbnailThread.releaseThreads();
 
         trySaveSettings();
 

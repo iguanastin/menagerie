@@ -16,10 +16,10 @@ public class VideoThumbnailThread extends Thread {
 
     private static final String[] VLC_THUMBNAILER_ARGS = {"--intf", "dummy", "--vout", "dummy", "--no-audio", "--no-osd", "--no-spu", "--no-stats", "--no-sub-autodetect-file", "--no-disable-screensaver", "--no-snapshot-preview"};
     private static MediaPlayer THUMBNAIL_MEDIA_PLAYER = null;
+    private static ExecutorService executor = Executors.newCachedThreadPool();
 
     private boolean running = false;
     private Queue<VideoThumbnailJob> jobs = new ArrayDeque<>();
-    private ExecutorService executor = Executors.newCachedThreadPool();
 
 
     public synchronized void enqueueJob(VideoThumbnailJob job) {
@@ -110,10 +110,13 @@ public class VideoThumbnailThread extends Thread {
         return THUMBNAIL_MEDIA_PLAYER;
     }
 
-    public static void releaseThumbnailMediaPlayer() {
+    public static void releaseThreads() {
         if (THUMBNAIL_MEDIA_PLAYER != null) {
             THUMBNAIL_MEDIA_PLAYER.release();
             THUMBNAIL_MEDIA_PLAYER = null;
+        }
+        if (executor != null) {
+            executor.shutdownNow();
         }
     }
 
