@@ -1,6 +1,7 @@
 package menagerie.gui.thumbnail;
 
 import javafx.embed.swing.SwingFXUtils;
+import javafx.scene.image.Image;
 import uk.co.caprica.vlcj.player.MediaPlayer;
 import uk.co.caprica.vlcj.player.MediaPlayerEventAdapter;
 import uk.co.caprica.vlcj.player.MediaPlayerEventListener;
@@ -9,7 +10,7 @@ import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 import java.awt.image.BufferedImage;
 import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.*;
 
 public class VideoThumbnailThread extends Thread {
 
@@ -18,6 +19,7 @@ public class VideoThumbnailThread extends Thread {
 
     private boolean running = false;
     private Queue<VideoThumbnailJob> jobs = new ArrayDeque<>();
+    private ExecutorService executor = Executors.newCachedThreadPool();
 
 
     public synchronized void enqueueJob(VideoThumbnailJob job) {
@@ -72,13 +74,19 @@ public class VideoThumbnailThread extends Thread {
                         if (scale * vidHeight > Thumbnail.THUMBNAIL_SIZE) scale = Thumbnail.THUMBNAIL_SIZE / vidHeight;
                         int width = (int) (scale * vidWidth);
                         int height = (int) (scale * vidHeight);
-                        BufferedImage img = mp.getSnapshot(width, height);
+
+                        Future<Image> future = executor.submit(() -> SwingFXUtils.toFXImage(mp.getSnapshot(width, height), null));
+                        try {
+                            job.imageReady(future.get(1, TimeUnit.SECONDS));
+                        } catch (Exception ignored) {
+                        } finally {
+                            future.cancel(true);
+                        }
 
                         mp.stop();
-                        job.imageReady(SwingFXUtils.toFXImage(img, null));
                     }
                 } catch (Exception e) {
-                    System.out.println(e);
+                    e.printStackTrace();
                 }
 
                 job = dequeuJob();
