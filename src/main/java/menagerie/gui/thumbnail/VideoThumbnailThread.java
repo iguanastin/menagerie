@@ -46,35 +46,39 @@ public class VideoThumbnailThread extends Thread {
             VideoThumbnailJob job = dequeuJob();
 
             while (job != null) {
-                final CountDownLatch inPositionLatch = new CountDownLatch(1);
+                try {
+                    final CountDownLatch inPositionLatch = new CountDownLatch(1);
 
-                MediaPlayerEventListener eventListener = new MediaPlayerEventAdapter() {
-                    @Override
-                    public void positionChanged(MediaPlayer mediaPlayer, float newPosition) {
-                        inPositionLatch.countDown();
+                    MediaPlayerEventListener eventListener = new MediaPlayerEventAdapter() {
+                        @Override
+                        public void positionChanged(MediaPlayer mediaPlayer, float newPosition) {
+                            inPositionLatch.countDown();
+                        }
+                    };
+                    mp.addMediaPlayerEventListener(eventListener);
+
+                    if (mp.startMedia(job.getFile().getAbsolutePath())) {
+                        mp.setPosition(0.1f);
+                        try {
+                            inPositionLatch.await();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        mp.removeMediaPlayerEventListener(eventListener);
+
+                        float vidWidth = (float) mp.getVideoDimension().getWidth();
+                        float vidHeight = (float) mp.getVideoDimension().getHeight();
+                        float scale = Thumbnail.THUMBNAIL_SIZE / vidWidth;
+                        if (scale * vidHeight > Thumbnail.THUMBNAIL_SIZE) scale = Thumbnail.THUMBNAIL_SIZE / vidHeight;
+                        int width = (int) (scale * vidWidth);
+                        int height = (int) (scale * vidHeight);
+                        BufferedImage img = mp.getSnapshot(width, height);
+
+                        mp.stop();
+                        job.imageReady(SwingFXUtils.toFXImage(img, null));
                     }
-                };
-                mp.addMediaPlayerEventListener(eventListener);
-
-                if (mp.startMedia(job.getFile().getAbsolutePath())) {
-                    mp.setPosition(0.1f);
-                    try {
-                        inPositionLatch.await();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    mp.removeMediaPlayerEventListener(eventListener);
-
-                    float vidWidth = (float) mp.getVideoDimension().getWidth();
-                    float vidHeight = (float) mp.getVideoDimension().getHeight();
-                    float scale = Thumbnail.THUMBNAIL_SIZE / vidWidth;
-                    if (scale * vidHeight > Thumbnail.THUMBNAIL_SIZE) scale = Thumbnail.THUMBNAIL_SIZE / vidHeight;
-                    int width = (int) (scale * vidWidth);
-                    int height = (int) (scale * vidHeight);
-                    BufferedImage img = mp.getSnapshot(width, height);
-
-                    mp.stop();
-                    job.imageReady(SwingFXUtils.toFXImage(img, null));
+                } catch (Exception e) {
+                    System.out.println(e);
                 }
 
                 job = dequeuJob();
