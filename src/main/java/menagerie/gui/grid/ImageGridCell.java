@@ -20,6 +20,8 @@ public class ImageGridCell extends GridCell<ImageInfo> {
     private final ImageView view;
     private final Label label;
 
+    private ImageInfo lastItem = null;
+
 
     public ImageGridCell() {
         super();
@@ -38,6 +40,9 @@ public class ImageGridCell extends GridCell<ImageInfo> {
 
     @Override
     protected void updateItem(ImageInfo item, boolean empty) {
+        if (lastItem != null) lastItem.getThumbnail().setImageReadyListener(null);
+        lastItem = item;
+
         if (empty) {
             view.setImage(null);
             label.setText(null);
