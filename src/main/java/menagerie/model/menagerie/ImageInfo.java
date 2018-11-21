@@ -75,7 +75,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
                         thumbnail = new SoftReference<>(thumb);
                     }
                 }
-            } catch (SQLException | IOException e) {
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
