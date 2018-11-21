@@ -23,8 +23,10 @@ public abstract class ImageInputStreamConverter {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         if (bi == null) return null;
         ImageIO.write(bi, "png", baos);
+        byte[] byteArray = baos.toByteArray();
+        baos.close();
 
-        return new ByteArrayInputStream(baos.toByteArray());
+        return new ByteArrayInputStream(byteArray);
     }
 
 }
