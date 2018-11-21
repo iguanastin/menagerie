@@ -3,6 +3,8 @@ package menagerie.model.menagerie;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
 import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.model.menagerie.histogram.HistogramReadException;
+import menagerie.model.menagerie.histogram.ImageHistogram;
 import menagerie.util.Filters;
 import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
@@ -11,6 +13,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.SoftReference;
+import java.lang.ref.WeakReference;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -32,7 +35,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private ImageHistogram histogram;
 
     private SoftReference<Thumbnail> thumbnail;
-    private SoftReference<Image> image;
+    private WeakReference<Image> image;
 
     private ImageTagUpdateListener tagListener = null;
 
@@ -72,7 +75,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
                         thumbnail = new SoftReference<>(thumb);
                     }
                 }
-            } catch (SQLException | IOException e) {
+            } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
@@ -116,7 +119,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
         if (image != null) img = image.get();
         if (img == null) {
             img = new Image(file.toURI().toString(), true);
-            image = new SoftReference<>(img);
+            image = new WeakReference<>(img);
         }
         return img;
     }
@@ -126,7 +129,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
         if (image != null) img = image.get();
         if (img == null) {
             img = new Image(file.toURI().toString());
-            image = new SoftReference<>(img);
+            image = new WeakReference<>(img);
         } else if (img.isBackgroundLoading() && img.getProgress() != 1) {
             img = new Image(file.toURI().toString());
         }

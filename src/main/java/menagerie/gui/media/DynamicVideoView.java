@@ -1,17 +1,15 @@
-package menagerie.gui.image;
+package menagerie.gui.media;
 
 import com.sun.jna.Memory;
-import com.sun.jna.NativeLibrary;
 import javafx.application.Platform;
 import javafx.beans.property.FloatProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.*;
-import javafx.scene.image.Image;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.stage.Screen;
 import uk.co.caprica.vlcj.component.DirectMediaPlayerComponent;
-import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.player.direct.BufferFormat;
 import uk.co.caprica.vlcj.player.direct.BufferFormatCallback;
 import uk.co.caprica.vlcj.player.direct.DirectMediaPlayer;
@@ -44,6 +42,11 @@ public class DynamicVideoView extends ImageView {
                 getMediaPlayer().play();
             }
             event.consume();
+        });
+        addEventHandler(ScrollEvent.SCROLL, event -> {
+            float delta = 10000.0f / getMediaPlayer().getLength();
+            if (event.getDeltaY() < 0) delta = -delta;
+            getMediaPlayer().setPosition(Math.min(0.9999f, Math.max(getMediaPlayer().getPosition() + delta, 0)));
         });
     }
 

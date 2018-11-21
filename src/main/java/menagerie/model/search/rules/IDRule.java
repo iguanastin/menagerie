@@ -1,10 +1,8 @@
-package menagerie.model.search;
+package menagerie.model.search.rules;
 
 import menagerie.model.menagerie.ImageInfo;
 
-import java.util.Date;
-
-public class DateAddedRule extends SearchRule {
+public class IDRule extends SearchRule {
 
     public enum Type {
         LESS_THAN,
@@ -12,16 +10,16 @@ public class DateAddedRule extends SearchRule {
         EQUAL_TO
     }
 
-    private final long time;
+    private final int id;
     private final Type type;
 
 
-    public DateAddedRule(Type type, long time, boolean inverted) {
+    public IDRule(Type type, int value, boolean inverted) {
         super(inverted);
-        priority = 10;
+        priority = 1;
 
-        this.time = time;
         this.type = type;
+        this.id = value;
     }
 
     @Override
@@ -29,13 +27,13 @@ public class DateAddedRule extends SearchRule {
         boolean result = false;
         switch (type) {
             case LESS_THAN:
-                result = img.getDateAdded() < time;
+                result = img.getId() < id;
                 break;
             case GREATER_THAN:
-                result = img.getDateAdded() > time;
+                result = img.getId() > id;
                 break;
             case EQUAL_TO:
-                result = img.getDateAdded() == time;
+                result = img.getId() == id;
                 break;
         }
 
@@ -46,7 +44,7 @@ public class DateAddedRule extends SearchRule {
 
     @Override
     public String toString() {
-        String result = "Added Date Rule: " + type + " " + time + " (" + new Date(time) + ")";
+        String result = "ID Rule: " + type + " " + id;
         if (isInverted()) result += " [inverted]";
         return result;
     }

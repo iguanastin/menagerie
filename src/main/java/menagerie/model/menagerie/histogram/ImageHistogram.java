@@ -1,4 +1,4 @@
-package menagerie.model.menagerie;
+package menagerie.model.menagerie.histogram;
 
 
 import javafx.scene.image.Image;
@@ -22,7 +22,7 @@ public final class ImageHistogram {
     private Boolean blackAndWhite = null;
 
 
-    ImageHistogram(InputStream a, InputStream r, InputStream g, InputStream b) throws HistogramReadException {
+    public ImageHistogram(InputStream a, InputStream r, InputStream g, InputStream b) throws HistogramReadException {
         try {
             this.alpha = inputStreamAsArray(a);
             this.red = inputStreamAsArray(r);
@@ -33,14 +33,14 @@ public final class ImageHistogram {
         }
     }
 
-    ImageHistogram(Image image) throws HistogramReadException {
+    public ImageHistogram(Image image) throws HistogramReadException {
         alpha = new double[BIN_SIZE];
         red = new double[BIN_SIZE];
         green = new double[BIN_SIZE];
         blue = new double[BIN_SIZE];
 
         if (image.isBackgroundLoading() && image.getProgress() != 1)
-            throw new HistogramReadException("Given image is not loaded yet");
+            throw new HistogramReadException("Given media is not loaded yet");
         PixelReader pixelReader = image.getPixelReader();
         if (pixelReader == null) throw new HistogramReadException("Unable to get PixelReader");
 
@@ -68,19 +68,19 @@ public final class ImageHistogram {
         }
     }
 
-    ByteArrayInputStream getAlphaAsInputStream() {
+    public ByteArrayInputStream getAlphaAsInputStream() {
         return arrayAsInputStream(alpha);
     }
 
-    ByteArrayInputStream getRedAsInputStream() {
+    public ByteArrayInputStream getRedAsInputStream() {
         return arrayAsInputStream(red);
     }
 
-    ByteArrayInputStream getGreenAsInputStream() {
+    public ByteArrayInputStream getGreenAsInputStream() {
         return arrayAsInputStream(green);
     }
 
-    ByteArrayInputStream getBlueAsInputStream() {
+    public ByteArrayInputStream getBlueAsInputStream() {
         return arrayAsInputStream(blue);
     }
 

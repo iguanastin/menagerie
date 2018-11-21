@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.errors;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -26,7 +26,7 @@ public class ErrorListCell extends ListCell<TrackedError> {
     private final Button expandButton;
 
 
-    ErrorListCell(ErrorListCellDismissListener dismissListener) {
+    public ErrorListCell(ErrorListCellDismissListener dismissListener) {
         titleLabel = new Label("N/A");
 
         whatHappenedLabel = new Label("N/A");

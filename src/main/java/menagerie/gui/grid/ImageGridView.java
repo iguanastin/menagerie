@@ -11,10 +11,6 @@ import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.menagerie.ImageInfo;
 import org.controlsfx.control.GridView;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-
 public class ImageGridView extends GridView<ImageInfo> {
 
     public static final int CELL_BORDER = 4;
@@ -22,7 +18,7 @@ public class ImageGridView extends GridView<ImageInfo> {
     private final ObservableList<ImageInfo> selected = FXCollections.observableArrayList();
     private ImageInfo lastSelected = null;
 
-    private SelectionListener selectionListener = null;
+    private GridSelectionListener selectionListener = null;
 
 
     public ImageGridView() {
@@ -215,7 +211,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         return selected.contains(img);
     }
 
-    public void setSelectionListener(SelectionListener selectionListener) {
+    public void setSelectionListener(GridSelectionListener selectionListener) {
         this.selectionListener = selectionListener;
     }
 

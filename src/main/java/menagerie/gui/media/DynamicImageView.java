@@ -1,4 +1,4 @@
-package menagerie.gui.image;
+package menagerie.gui.media;
 
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;

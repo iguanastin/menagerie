@@ -13,13 +13,9 @@ import java.io.InputStream;
 
 public abstract class ImageInputStreamConverter {
 
-//    private static final String[] VLC_ARGS = {"--intf", "dummy", "--vout", "dummy", "--no-audio", "--no-osd", "--no-spu", "--no-stats", "--no-sub-autodetect-file", "--no-disable-screensaver", "--no-snapshot-preview"};
-//    private static final MediaPlayer thumbnailMediaPlayer = new MediaPlayerFactory(VLC_ARGS).newHeadlessMediaPlayer();
 
-
-    public static Image imageFromInputStream(InputStream is) throws IOException {
-        BufferedImage bImage = ImageIO.read(is);
-        return SwingFXUtils.toFXImage(bImage, null);
+    public static Image imageFromInputStream(InputStream is) {
+        return new Image(is);
     }
 
     public static InputStream imageToInputStream(Image image) throws IOException {
@@ -27,8 +23,10 @@ public abstract class ImageInputStreamConverter {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         if (bi == null) return null;
         ImageIO.write(bi, "png", baos);
+        byte[] byteArray = baos.toByteArray();
+        baos.close();
 
-        return new ByteArrayInputStream(baos.toByteArray());
+        return new ByteArrayInputStream(byteArray);
     }
 
 }

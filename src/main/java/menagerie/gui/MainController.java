@@ -22,10 +22,12 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import javafx.util.Duration;
+import menagerie.gui.errors.ErrorListCell;
+import menagerie.gui.errors.TrackedError;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
-import menagerie.gui.image.DynamicImageView;
-import menagerie.gui.image.DynamicVideoView;
+import menagerie.gui.media.DynamicMediaView;
+import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.progress.ProgressLockThread;
 import menagerie.gui.progress.ProgressLockThreadCancelListener;
 import menagerie.gui.progress.ProgressLockThreadFinishListener;
@@ -37,8 +39,10 @@ import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.search.*;
+import menagerie.model.search.rules.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
+import menagerie.util.folderwatcher.FolderWatcherThread;
 
 import java.awt.*;
 import java.io.File;
@@ -56,9 +60,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
 
 public class MainController {
@@ -70,8 +72,7 @@ public class MainController {
     public ToggleButton explorer_descendingToggleButton;
     public PredictiveTextField explorer_searchTextField;
     public ImageGridView explorer_imageGridView;
-    public DynamicImageView explorer_previewImageView;
-    public DynamicVideoView explorer_previewVideoView;
+    public DynamicMediaView explorer_previewMediaView;
     public Label explorer_resultsAndSelectedLabel;
     public Label explorer_imageInfoLabel;
     public Label explorer_fileNameLabel;
@@ -123,13 +124,13 @@ public class MainController {
     public Label duplicate_rightInfoLabel;
     public TextField duplicate_leftPathTextField;
     public TextField duplicate_rightPathTextField;
-    public DynamicImageView duplicate_leftImageView;
-    public DynamicImageView duplicate_rightImageView;
+    public DynamicMediaView duplicate_leftMediaView;
+    public DynamicMediaView duplicate_rightMediaView;
     public ListView<Tag> duplicate_leftTagListView;
     public ListView<Tag> duplicate_rightTagListView;
 
     public BorderPane slideShow_rootPane;
-    public DynamicImageView slideShow_imageView;
+    public DynamicMediaView slideShow_previewMediaView;
 
     public BorderPane errors_rootPane;
     public ListView<TrackedError> errors_listView;
@@ -180,6 +181,7 @@ public class MainController {
     private static final FileFilter FILE_FILTER = Filters.IMG_VID_FILTER;
 
     private boolean playVideoAfterFocusGain = false;
+    private boolean playVideoAfterExplorerEnabled = false;
 
 
     // ---------------------------------- Initializers ------------------------------------
@@ -227,7 +229,7 @@ public class MainController {
             window_initPropertiesAndListeners();
 
             //Init closeRequest handling on window
-            rootPane.getScene().getWindow().setOnCloseRequest(event -> onCleanExit());
+            rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
         });
 
         //Apply a default search
@@ -267,7 +269,10 @@ public class MainController {
         deleteCurrentMenuItem.setOnAction(event -> slideShow_tryDeleteCurrent(true));
 
         slideShow_contextMenu = new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem);
-        slideShow_imageView.setOnContextMenuRequested(event -> slideShow_contextMenu.show(slideShow_imageView, event.getScreenX(), event.getScreenY()));
+        slideShow_previewMediaView.setOnContextMenuRequested(event -> slideShow_contextMenu.show(slideShow_previewMediaView, event.getScreenX(), event.getScreenY()));
+
+        slideShow_previewMediaView.setRepeat(true);
+        slideShow_previewMediaView.setMute(false);
     }
 
     private void errors_initScreen() {
@@ -328,13 +333,13 @@ public class MainController {
         });
 
         duplicate_contextMenu = new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetMenuItem, deleteMenuItem);
-        duplicate_leftImageView.setOnContextMenuRequested(event -> {
+        duplicate_leftMediaView.setOnContextMenuRequested(event -> {
             duplicate_contextMenu.setUserData(duplicate_previewingPair.getImg1());
-            duplicate_contextMenu.show(duplicate_leftImageView, event.getScreenX(), event.getScreenY());
+            duplicate_contextMenu.show(duplicate_leftMediaView, event.getScreenX(), event.getScreenY());
         });
-        duplicate_rightImageView.setOnContextMenuRequested(event -> {
+        duplicate_rightMediaView.setOnContextMenuRequested(event -> {
             duplicate_contextMenu.setUserData(duplicate_previewingPair.getImg2());
-            duplicate_contextMenu.show(duplicate_rightImageView, event.getScreenX(), event.getScreenY());
+            duplicate_contextMenu.show(duplicate_rightMediaView, event.getScreenX(), event.getScreenY());
         });
     }
 
@@ -444,6 +449,17 @@ public class MainController {
         explorer_initGridCellContextMenu();
 
         //Init drag/drop handlers
+        explorer_rootPane.disabledProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                if (explorer_previewMediaView.isPlaying()) {
+                    explorer_previewMediaView.pause();
+                    playVideoAfterExplorerEnabled = true;
+                }
+            } else if (playVideoAfterExplorerEnabled) {
+                explorer_previewMediaView.play();
+                playVideoAfterExplorerEnabled = false;
+            }
+        });
         explorer_rootPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
                 event.acceptTransferModes(TransferMode.ANY);
@@ -460,7 +476,7 @@ public class MainController {
                     try {
                         menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                     } catch (Exception e) {
-                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import a file: " + file, "Unknown")));
                     }
                 }));
 
@@ -494,7 +510,7 @@ public class MainController {
                             });
                         } catch (IOException e) {
                             e.printStackTrace();
-                            Platform.runLater(() -> Main.showErrorMessage("Unexpected error", "Error while trying to download image", e.getLocalizedMessage()));
+                            Platform.runLater(() -> Main.showErrorMessage("Unexpected error", "Error while trying to download file", e.getLocalizedMessage()));
                         }
                     }).start();
                 });
@@ -552,8 +568,8 @@ public class MainController {
         explorer_searchTextField.setTop(false);
         explorer_searchTextField.setOptionsListener(explorer_editTagsTextField.getOptionsListener());
 
-        explorer_previewVideoView.getMediaPlayer().mute(settings.isMuteVideoPreview());
-        explorer_previewVideoView.getMediaPlayer().setRepeat(settings.isRepeatVideoPreview());
+        explorer_previewMediaView.setMute(settings.isMuteVideoPreview());
+        explorer_previewMediaView.setRepeat(settings.isRepeatVideoPreview());
     }
 
     private void explorer_initGridCellContextMenu() {
@@ -585,7 +601,7 @@ public class MainController {
                             img.initializeMD5();
                             img.commitMD5ToDatabase();
                         } catch (Exception e) {
-                            Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for image: " + img, "Unknown")));
+                            Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for file: " + img, "Unknown")));
                         }
                     });
                 }
@@ -634,7 +650,7 @@ public class MainController {
                             File dest = MainController.resolveDuplicateFilename(f);
 
                             if (!img.renameTo(dest)) {
-                                Platform.runLater(() -> errors_addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving image", "An exception was thrown while trying to move an image\nFrom: " + img.getFile() + "\nTo: " + dest, "Unknown")));
+                                Platform.runLater(() -> errors_addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving file", "An exception was thrown while trying to move a file\nFrom: " + img.getFile() + "\nTo: " + dest, "Unknown")));
                             }
                         }
                     }));
@@ -678,12 +694,12 @@ public class MainController {
 
         stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
-                if (explorer_previewVideoView.getMediaPlayer().isPlaying()) {
-                    explorer_previewVideoView.getMediaPlayer().pause();
+                if (explorer_previewMediaView.isPlaying()) {
+                    explorer_previewMediaView.pause();
                     playVideoAfterFocusGain = true;
                 }
             } else if (playVideoAfterFocusGain) {
-                explorer_previewVideoView.getMediaPlayer().play();
+                explorer_previewMediaView.play();
                 playVideoAfterFocusGain = false;
             }
         });
@@ -763,8 +779,8 @@ public class MainController {
 
             startWatchingFolderForImages();
 
-            explorer_previewVideoView.getMediaPlayer().mute(settings.isMuteVideoPreview());
-            explorer_previewVideoView.getMediaPlayer().setRepeat(settings.isRepeatVideoPreview());
+            explorer_previewMediaView.setMute(settings.isMuteVideoPreview());
+            explorer_previewMediaView.setRepeat(settings.isRepeatVideoPreview());
         }
 
         trySaveSettings();
@@ -906,7 +922,7 @@ public class MainController {
 
         slideShow_currentImages = images;
         slideShow_currentlyShowing = images.get(0);
-        slideShow_imageView.setImage(slideShow_currentlyShowing.getImage());
+        slideShow_previewMediaView.preview(slideShow_currentlyShowing);
 
         explorer_rootPane.setDisable(true);
         slideShow_rootPane.setDisable(false);
@@ -915,6 +931,8 @@ public class MainController {
     }
 
     private void slideShow_closeScreen() {
+        slideShow_previewMediaView.preview(null);
+
         explorer_rootPane.setDisable(false);
         slideShow_rootPane.setDisable(true);
         explorer_imageGridView.requestFocus();
@@ -971,7 +989,7 @@ public class MainController {
                 try {
                     menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                 } catch (Exception e) {
-                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
                 }
             }));
 
@@ -997,7 +1015,7 @@ public class MainController {
                 try {
                     menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
                 } catch (Exception e) {
-                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import image", "Exception was thrown while trying to import an image: " + file, "Unknown")));
+                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
                 }
             }));
 
@@ -1023,53 +1041,29 @@ public class MainController {
         if (explorer_previewing != null) explorer_previewing.setTagListener(null);
         explorer_previewing = image;
 
+        if (!explorer_previewMediaView.preview(image)) {
+            errors_addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
+        }
+
+        tagList_updateTags(image);
+
+        updateImageInfoLabel(image, explorer_imageInfoLabel);
+
         if (image != null) {
             image.setTagListener(() -> tagList_updateTags(image));
 
-            if (image.isImage()) {
-                if (explorer_previewVideoView.getMediaPlayer().isPlaying())
-                    explorer_previewVideoView.getMediaPlayer().stop();
-                explorer_previewImageView.setImage(image.getImage());
-
-                explorer_previewImageView.setDisable(false);
-                explorer_previewImageView.setOpacity(1);
-                explorer_previewVideoView.setDisable(true);
-                explorer_previewVideoView.setOpacity(0);
-            } else if (image.isVideo()) {
-                explorer_previewImageView.setImage(null);
-                explorer_previewVideoView.getMediaPlayer().startMedia(image.getFile().getAbsolutePath());
-
-                explorer_previewImageView.setDisable(true);
-                explorer_previewImageView.setOpacity(0);
-                explorer_previewVideoView.setDisable(false);
-                explorer_previewVideoView.setOpacity(1);
-            } else {
-                errors_addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
-            }
-
-            tagList_updateTags(image);
-
             explorer_fileNameLabel.setText(image.getFile().toString());
-            updateImageInfoLabel(image, explorer_imageInfoLabel);
         } else {
-            explorer_previewImageView.setImage(null);
-            if (explorer_previewVideoView.getMediaPlayer().isPlaying())
-                explorer_previewVideoView.getMediaPlayer().stop();
-            explorer_previewImageView.setDisable(true);
-            explorer_previewImageView.setOpacity(0);
-            explorer_previewVideoView.setDisable(true);
-            explorer_previewVideoView.setOpacity(0);
-            explorer_tagListView.getItems().clear();
-
             explorer_fileNameLabel.setText("N/A");
-            updateImageInfoLabel(null, explorer_imageInfoLabel);
         }
     }
 
     private void tagList_updateTags(ImageInfo image) {
         explorer_tagListView.getItems().clear();
-        explorer_tagListView.getItems().addAll(image.getTags());
-        explorer_tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+        if (image != null) {
+            explorer_tagListView.getItems().addAll(image.getTags());
+            explorer_tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+        }
     }
 
     private static void updateImageInfoLabel(ImageInfo image, Label label) {
@@ -1258,12 +1252,12 @@ public class MainController {
         if (pair == null) {
             duplicate_previewingPair = null;
 
-            duplicate_leftImageView.setImage(null);
+            duplicate_leftMediaView.preview(null);
             duplicate_leftTagListView.getItems().clear();
             duplicate_leftPathTextField.setText("N/A");
             updateImageInfoLabel(null, duplicate_leftInfoLabel);
 
-            duplicate_rightImageView.setImage(null);
+            duplicate_rightMediaView.preview(null);
             duplicate_rightTagListView.getItems().clear();
             duplicate_rightPathTextField.setText("N/A");
             updateImageInfoLabel(null, duplicate_rightInfoLabel);
@@ -1272,14 +1266,14 @@ public class MainController {
         } else {
             duplicate_previewingPair = pair;
 
-            duplicate_leftImageView.setImage(pair.getImg1().getImage());
+            duplicate_leftMediaView.preview(pair.getImg1());
             duplicate_leftPathTextField.setText(pair.getImg1().getFile().toString());
             duplicate_leftTagListView.getItems().clear();
             duplicate_leftTagListView.getItems().addAll(pair.getImg1().getTags());
             duplicate_leftTagListView.getItems().sort(Comparator.comparing(Tag::getName));
             updateImageInfoLabel(pair.getImg1(), duplicate_leftInfoLabel);
 
-            duplicate_rightImageView.setImage(pair.getImg2().getImage());
+            duplicate_rightMediaView.preview(pair.getImg2());
             duplicate_rightPathTextField.setText(pair.getImg2().getFile().toString());
             duplicate_rightTagListView.getItems().clear();
             duplicate_rightTagListView.getItems().addAll(pair.getImg2().getTags());
@@ -1403,7 +1397,7 @@ public class MainController {
                         i.initializeMD5();
                         i.commitMD5ToDatabase();
                     } catch (Exception e) {
-                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for image: " + i, "Unknown")));
+                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for file: " + i, "Unknown")));
                     }
                 });
             });
@@ -1421,7 +1415,7 @@ public class MainController {
                                     i.initializeHistogram();
                                     i.commitHistogramToDatabase();
                                 } catch (Exception e) {
-                                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + i, "Unknown")));
+                                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for file: " + i, "Unknown")));
                                 }
                             });
                     });
@@ -1439,13 +1433,13 @@ public class MainController {
     private void slideShow_showNext() {
         int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
         if (i + 1 < slideShow_currentImages.size()) slideShow_currentlyShowing = slideShow_currentImages.get(i + 1);
-        slideShow_imageView.setImage(slideShow_currentlyShowing.getImage());
+        slideShow_previewMediaView.preview(slideShow_currentlyShowing);
     }
 
     private void slideShow_showPrevious() {
         int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
         if (i - 1 >= 0) slideShow_currentlyShowing = slideShow_currentImages.get(i - 1);
-        slideShow_imageView.setImage(slideShow_currentlyShowing.getImage());
+        slideShow_previewMediaView.preview(slideShow_currentlyShowing);
     }
 
     private void startWatchingFolderForImages() {
@@ -1485,9 +1479,12 @@ public class MainController {
         }
     }
 
-    private void onCleanExit() {
-        explorer_previewVideoView.getMediaPlayer().release();
-        VideoThumbnailThread.releaseThumbnailMediaPlayer();
+    private void cleanExit(boolean revertDatabase) {
+        explorer_previewMediaView.releaseMediaPlayer();
+        slideShow_previewMediaView.releaseMediaPlayer();
+        duplicate_leftMediaView.releaseMediaPlayer();
+        duplicate_rightMediaView.releaseMediaPlayer();
+        VideoThumbnailThread.releaseThreads();
 
         trySaveSettings();
 
@@ -1496,6 +1493,16 @@ public class MainController {
                 System.out.println("Attempting to shut down Menagerie database and defragment the file");
                 menagerie.getDatabase().createStatement().executeUpdate("SHUTDOWN DEFRAG;");
                 System.out.println("Done defragging database file");
+
+                if (revertDatabase) {
+                    File database = getDatabaseFile(settings.getDbUrl());
+                    File backup = new File(database + ".bak");
+                    try {
+                        Files.move(backup.toPath(), database.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -1537,7 +1544,7 @@ public class MainController {
                 } else {
                     slideShow_currentlyShowing = slideShow_currentImages.get(slideShow_currentImages.size() - 1);
                 }
-                slideShow_imageView.setImage(slideShow_currentlyShowing.getImage());
+                slideShow_previewMediaView.preview(slideShow_currentlyShowing);
             }
         };
 
@@ -1579,6 +1586,17 @@ public class MainController {
     }
 
     private static void backupDatabase(String databaseURL) throws IOException {
+        File dbFile = getDatabaseFile(databaseURL);
+
+        if (dbFile.exists()) {
+            System.out.println("Backing up database at: " + dbFile);
+            File backupFile = new File(dbFile.getAbsolutePath() + ".bak");
+            Files.copy(dbFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            System.out.println("Successfully backed up database to: " + backupFile);
+        }
+    }
+
+    private static File getDatabaseFile(String databaseURL) {
         String path = databaseURL + ".mv.db";
         if (path.startsWith("~")) {
             String temp = System.getProperty("user.home");
@@ -1589,14 +1607,7 @@ public class MainController {
             path = temp + path;
         }
 
-        File currentDatabaseFile = new File(path);
-
-        if (currentDatabaseFile.exists()) {
-            System.out.println("Backing up database at: " + currentDatabaseFile);
-            File backupFile = new File(path + ".bak");
-            Files.copy(currentDatabaseFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("Successfully backed up database to: " + backupFile);
-        }
+        return new File(path);
     }
 
     private static File resolveDuplicateFilename(File file) {
@@ -1807,6 +1818,17 @@ public class MainController {
         event.consume();
     }
 
+    public void explorer_revertDatabaseMenuButtonOnAction(ActionEvent event) {
+        File database = getDatabaseFile(settings.getDbUrl());
+        File backup = new File(database + ".bak");
+        if (backup.exists()) {
+            confirmation_openScreen("Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> {
+                cleanExit(true);
+            });
+        }
+        event.consume();
+    }
+
     // ---------------------------------- Key Event Handlers ----------------------------------------
 
     public void explorer_rootPaneOnKeyPressed(KeyEvent event) {
@@ -1822,7 +1844,7 @@ public class MainController {
                     event.consume();
                     break;
                 case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(this::onCleanExit);
+                    menagerie.getUpdateQueue().enqueueUpdate(() -> cleanExit(false));
                     menagerie.getUpdateQueue().commit();
                     event.consume();
                     break;
