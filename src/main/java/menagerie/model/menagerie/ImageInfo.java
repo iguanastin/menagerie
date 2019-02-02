@@ -145,11 +145,11 @@ public class ImageInfo implements Comparable<ImageInfo> {
     }
 
     public boolean isImage() {
-        return Filters.IMAGE_FILTER.accept(file);
+        return Filters.IMAGE_NAME_FILTER.accept(file);
     }
 
     public boolean isVideo() {
-        return Filters.VIDEO_FILTER.accept(file);
+        return Filters.VIDEO_NAME_FILTER.accept(file);
     }
 
     public void initializeMD5() {

@@ -178,7 +178,7 @@ public class MainController {
     //Settings var
     private final Settings settings = new Settings(new File("menagerie.properties"));
 
-    private static final FileFilter FILE_FILTER = Filters.IMG_VID_FILTER;
+    private static final FileFilter FILE_FILTER = Filters.FILE_NAME_FILTER;
 
     private boolean playVideoAfterFocusGain = false;
     private boolean playVideoAfterExplorerEnabled = false;
@@ -1003,7 +1003,7 @@ public class MainController {
         FileChooser fc = new FileChooser();
         if (settings.getDefaultFolder() != null && !settings.getDefaultFolder().isEmpty())
             fc.setInitialDirectory(new File(settings.getDefaultFolder()));
-        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
         List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
 
         if (results != null && !results.isEmpty()) {
@@ -1030,7 +1030,7 @@ public class MainController {
         fc.setTitle("Save file from web");
         if (filename != null) fc.setInitialFileName(filename);
         if (folder != null) fc.setInitialDirectory(folder);
-        fc.setSelectedExtensionFilter(Filters.IMAGE_EXTENSION_FILTER);
+        fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
         return fc.showSaveDialog(window);
     }
 

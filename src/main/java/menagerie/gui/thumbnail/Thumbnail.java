@@ -30,10 +30,10 @@ public class Thumbnail {
             videoThumbnailThread.start();
         }
 
-        if (Filters.IMAGE_FILTER.accept(file)) {
+        if (Filters.IMAGE_NAME_FILTER.accept(file)) {
             image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
             registerListenersToImage();
-        } else if (Filters.VIDEO_FILTER.accept(file)) {
+        } else if (Filters.VIDEO_NAME_FILTER.accept(file)) {
             videoThumbnailThread.enqueueJob(new VideoThumbnailJob() {
                 @Override
                 void imageReady(Image image) {
