@@ -12,7 +12,7 @@ public class TagListCell extends ListCell<Tag> {
     private final Label nameLabel;
 
 
-    TagListCell() {
+    public TagListCell() {
         countLabel = new Label();
         nameLabel = new Label();
         setGraphic(new BorderPane(null, null, countLabel, null, nameLabel));

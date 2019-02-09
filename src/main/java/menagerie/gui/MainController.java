@@ -31,6 +31,8 @@ import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.progress.ProgressLockThread;
 import menagerie.gui.progress.ProgressLockThreadCancelListener;
 import menagerie.gui.progress.ProgressLockThreadFinishListener;
+import menagerie.gui.screens.HelpScreen;
+import menagerie.gui.screens.TagListScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
 import menagerie.model.SimilarPair;
@@ -105,13 +107,6 @@ public class MainController {
     public CheckBox settings_muteVideoCheckBox;
     public CheckBox settings_repeatVideoCheckBox;
 
-    public BorderPane tagList_rootPane;
-    public ChoiceBox<String> tagList_orderChoiceBox;
-    public ListView<Tag> tagList_listView;
-    public TextField tagList_searchTextField;
-
-    public BorderPane help_rootPane;
-
     public BorderPane progress_rootPane;
     public ProgressBar progress_progressBar;
     public Label progress_titleLabel;
@@ -140,8 +135,12 @@ public class MainController {
     public Label confirmation_messageLabel;
     public Button confirmation_okButton;
 
-    private FadeTransition screenOpenTransition = new FadeTransition(Duration.millis(50));
-    private FadeTransition screenCloseTransition = new FadeTransition(Duration.millis(100));
+    // ----------------------------------- Screens ---------------------------------------------------------------------
+
+    private TagListScreen tagListScreen;
+    private HelpScreen helpScreen;
+
+    private FadeTransition screenOpenTransition = new FadeTransition(Duration.millis(100));
 
 
     //Menagerie vars
@@ -216,12 +215,11 @@ public class MainController {
         duplicate_initScreen();
         errors_initScreen();
         slideShow_initScreen();
+        help_initScreen();
 
-        //Init screen transitions
+        //Init screen transition
         screenOpenTransition.setFromValue(0);
         screenOpenTransition.setToValue(1);
-        screenCloseTransition.setFromValue(1);
-        screenCloseTransition.setToValue(0);
 
         //Things to run on first "tick"
         Platform.runLater(() -> {
@@ -344,12 +342,8 @@ public class MainController {
     }
 
     private void tagList_initScreen() {
-        //Initialize tagList order choicebox
-        tagList_orderChoiceBox.getItems().addAll("Name", "ID", "Frequency");
-        tagList_orderChoiceBox.getSelectionModel().clearAndSelect(0);
-        tagList_orderChoiceBox.setOnAction(event -> tagList_applyTagOrder());
-
-        tagList_listView.setCellFactory(param -> {
+        tagListScreen = new TagListScreen(explorer_rootPane);
+        tagListScreen.setCellFactory(param -> {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
                 MenuItem i1 = new MenuItem("Search this tag");
@@ -365,14 +359,12 @@ public class MainController {
             return c;
         });
 
-        tagList_searchTextField.textProperty().addListener((observable, oldValue, newValue) -> {
-            tagList_listView.getItems().clear();
-            menagerie.getTags().forEach(tag -> {
-                if (tag.getName().toLowerCase().startsWith(newValue.toLowerCase()))
-                    tagList_listView.getItems().add(tag);
-            });
-            tagList_applyTagOrder();
-        });
+        screensStackPane.getChildren().add(tagListScreen);
+    }
+
+    private void help_initScreen() {
+        helpScreen = new HelpScreen(explorer_rootPane);
+        screensStackPane.getChildren().add(helpScreen);
     }
 
     private void explorer_initScreen() {
@@ -739,15 +731,15 @@ public class MainController {
         explorer_rootPane.setDisable(true);
         settings_rootPane.setDisable(false);
         settings_cancelButton.requestFocus();
-        startScreenTransition(screenOpenTransition, settings_rootPane);
+        startScreenTransition(settings_rootPane);
     }
 
     private void settings_closeScreen(boolean saveChanges) {
         //Disable pane
         explorer_rootPane.setDisable(false);
         settings_rootPane.setDisable(true);
+        settings_rootPane.setOpacity(0);
         explorer_imageGridView.requestFocus();
-        startScreenTransition(screenCloseTransition, settings_rootPane);
 
         if (saveChanges) {
             //Save settings to settings object
@@ -787,35 +779,20 @@ public class MainController {
     }
 
     private void tagList_openScreen() {
-        tagList_listView.getItems().clear();
-        tagList_listView.getItems().addAll(menagerie.getTags());
-        tagList_applyTagOrder();
+        tagListScreen.getTags().clear();
+        tagListScreen.getTags().addAll(menagerie.getTags());
 
-        explorer_rootPane.setDisable(true);
-        tagList_rootPane.setDisable(false);
-        tagList_rootPane.requestFocus();
-        startScreenTransition(screenOpenTransition, tagList_rootPane);
+        tagListScreen.show();
+        startScreenTransition(tagListScreen);
     }
 
     private void tagList_closeScreen() {
-        explorer_rootPane.setDisable(false);
-        tagList_rootPane.setDisable(true);
-        explorer_imageGridView.requestFocus();
-        startScreenTransition(screenCloseTransition, tagList_rootPane);
+        tagListScreen.hide();
     }
 
     private void help_openScreen() {
-        explorer_rootPane.setDisable(true);
-        help_rootPane.setDisable(false);
-        help_rootPane.requestFocus();
-        startScreenTransition(screenOpenTransition, help_rootPane);
-    }
-
-    private void help_closeScreen() {
-        explorer_rootPane.setDisable(false);
-        help_rootPane.setDisable(true);
-        explorer_imageGridView.requestFocus();
-        startScreenTransition(screenCloseTransition, help_rootPane);
+        helpScreen.show();
+        startScreenTransition(helpScreen);
     }
 
     @SuppressWarnings("SameParameterValue")
@@ -846,7 +823,7 @@ public class MainController {
         explorer_rootPane.setDisable(true);
         progress_rootPane.setDisable(false);
         progress_rootPane.requestFocus();
-        startScreenTransition(screenOpenTransition, progress_rootPane);
+        startScreenTransition(progress_rootPane);
     }
 
     private void progress_closeScreen() {
@@ -855,7 +832,7 @@ public class MainController {
         explorer_rootPane.setDisable(false);
         progress_rootPane.setDisable(true);
         explorer_imageGridView.requestFocus();
-        startScreenTransition(screenCloseTransition, progress_rootPane);
+        progress_rootPane.setOpacity(0);
     }
 
     private void duplicate_openScreen(List<ImageInfo> images) {
@@ -904,7 +881,7 @@ public class MainController {
             explorer_rootPane.setDisable(true);
             duplicate_rootPane.setDisable(false);
             duplicate_rootPane.requestFocus();
-            startScreenTransition(screenOpenTransition, duplicate_rootPane);
+            startScreenTransition(duplicate_rootPane);
         }
     }
 
@@ -914,7 +891,7 @@ public class MainController {
         explorer_rootPane.setDisable(false);
         duplicate_rootPane.setDisable(true);
         explorer_imageGridView.requestFocus();
-        startScreenTransition(screenCloseTransition, duplicate_rootPane);
+        duplicate_rootPane.setOpacity(0);
     }
 
     private void slideShow_openScreen(List<ImageInfo> images) {
@@ -927,7 +904,7 @@ public class MainController {
         explorer_rootPane.setDisable(true);
         slideShow_rootPane.setDisable(false);
         slideShow_rootPane.requestFocus();
-        startScreenTransition(screenOpenTransition, slideShow_rootPane);
+        startScreenTransition(slideShow_rootPane);
     }
 
     private void slideShow_closeScreen() {
@@ -936,21 +913,21 @@ public class MainController {
         explorer_rootPane.setDisable(false);
         slideShow_rootPane.setDisable(true);
         explorer_imageGridView.requestFocus();
-        startScreenTransition(screenCloseTransition, slideShow_rootPane);
+        slideShow_rootPane.setOpacity(0);
     }
 
     private void errors_openScreen() {
         explorer_rootPane.setDisable(true);
         errors_rootPane.setDisable(false);
         errors_rootPane.requestFocus();
-        startScreenTransition(screenOpenTransition, errors_rootPane);
+        startScreenTransition(errors_rootPane);
     }
 
     private void errors_closeScreen() {
         explorer_rootPane.setDisable(false);
         errors_rootPane.setDisable(true);
         explorer_imageGridView.requestFocus();
-        startScreenTransition(screenCloseTransition, errors_rootPane);
+        errors_rootPane.setOpacity(0);
     }
 
     private void confirmation_openScreen(String title, String message, Runnable onFinishedCallback) {
@@ -963,14 +940,14 @@ public class MainController {
         screensStackPane.setDisable(true);
         confirmation_rootPane.setDisable(false);
         confirmation_rootPane.requestFocus();
-        startScreenTransition(screenOpenTransition, confirmation_rootPane);
+        startScreenTransition(confirmation_rootPane);
     }
 
     private void confirmation_closeScreen() {
         screensStackPane.setDisable(false);
         confirmation_rootPane.setDisable(true);
         if (confirmation_lastFocus != null) confirmation_lastFocus.requestFocus();
-        startScreenTransition(screenCloseTransition, confirmation_rootPane);
+        confirmation_rootPane.setOpacity(0);
     }
 
     // -------------------------------- Dialog Openers ---------------------------------------
@@ -1315,20 +1292,6 @@ public class MainController {
         }
     }
 
-    private void tagList_applyTagOrder() {
-        switch (tagList_orderChoiceBox.getValue()) {
-            case "ID":
-                tagList_listView.getItems().sort(Comparator.comparingInt(Tag::getId));
-                break;
-            case "Frequency":
-                tagList_listView.getItems().sort(Comparator.comparingInt(Tag::getFrequency).reversed());
-                break;
-            case "Name":
-                tagList_listView.getItems().sort(Comparator.comparing(Tag::getName));
-                break;
-        }
-    }
-
     private void explorer_editTagsOfSelected(String input) {
         if (input == null || input.isEmpty() || explorer_imageGridView.getSelected().isEmpty()) return;
         explorer_lastTagString = input.trim();
@@ -1511,18 +1474,13 @@ public class MainController {
         Platform.exit();
     }
 
-    private void startScreenTransition(FadeTransition ft, Node screen) {
-        boolean openRunning = screenOpenTransition.getStatus().equals(Animation.Status.RUNNING);
-        boolean closeRunning = screenCloseTransition.getStatus().equals(Animation.Status.RUNNING);
-
+    private void startScreenTransition(Node screen) {
         screenOpenTransition.stop();
-        screenCloseTransition.stop();
 
-        if (openRunning) screenOpenTransition.getNode().setOpacity(1);
-        if (closeRunning) screenCloseTransition.getNode().setOpacity(0);
+        if (screenOpenTransition.getStatus().equals(Animation.Status.RUNNING)) screenOpenTransition.getNode().setOpacity(1);
 
-        ft.setNode(screen);
-        ft.playFromStart();
+        screenOpenTransition.setNode(screen);
+        screenOpenTransition.playFromStart();
     }
 
     private void errors_addError(TrackedError error) {
@@ -1732,16 +1690,6 @@ public class MainController {
         event.consume();
     }
 
-    public void tagList_exitButtonOnAction(ActionEvent event) {
-        tagList_closeScreen();
-        event.consume();
-    }
-
-    public void help_exitButtonOnAction(ActionEvent event) {
-        help_closeScreen();
-        event.consume();
-    }
-
     public void progress_stopButtonOnAction(ActionEvent event) {
         progress_closeScreen();
         event.consume();
@@ -1930,36 +1878,6 @@ public class MainController {
             case S:
                 if (event.isControlDown()) {
                     settings_closeScreen(false);
-                    event.consume();
-                }
-                break;
-        }
-    }
-
-    public void tagList_rootPaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                tagList_closeScreen();
-                event.consume();
-                break;
-            case T:
-                if (event.isControlDown()) {
-                    tagList_closeScreen();
-                    event.consume();
-                }
-                break;
-        }
-    }
-
-    public void help_rootPaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                help_closeScreen();
-                event.consume();
-                break;
-            case H:
-                if (event.isControlDown()) {
-                    help_closeScreen();
                     event.consume();
                 }
                 break;
