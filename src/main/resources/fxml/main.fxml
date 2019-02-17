@@ -370,22 +370,6 @@
                 </SplitPane>
             </center>
         </BorderPane>
-        <BorderPane fx:id="slideShow_rootPane" disable="true" onKeyPressed="#slideShow_rootPaneOnKeyPressed" opacity="0"
-                    style="-fx-background-color: -fx-base;">
-            <center>
-                <DynamicMediaView fx:id="slideShow_previewMediaView" BorderPane.alignment="CENTER"/>
-            </center>
-            <bottom>
-                <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                    <padding>
-                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                    </padding>
-                    <Button mnemonicParsing="false" onAction="#slideShow_previousButtonOnAction" text="&lt;-"/>
-                    <Button mnemonicParsing="false" onAction="#slideShow_closeButtonOnAction" text="Close"/>
-                    <Button mnemonicParsing="false" onAction="#slideShow_nextButtonOnAction" text="-&gt;"/>
-                </HBox>
-            </bottom>
-        </BorderPane>
         <BorderPane fx:id="errors_rootPane" disable="true" onKeyPressed="#errorsPane_rootKeyPressed" opacity="0.0">
             <right>
                 <VBox prefWidth="600.0" style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
@@ -413,27 +397,4 @@
             </padding>
         </BorderPane>
     </StackPane>
-    <BorderPane fx:id="confirmation_rootPane" disable="true" onKeyPressed="#confirmation_rootPaneKeyPressed"
-                opacity="0.0">
-        <center>
-            <VBox maxHeight="-Infinity" maxWidth="-Infinity" prefWidth="500.0" spacing="5.0"
-                  style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
-                <padding>
-                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                </padding>
-                <effect>
-                    <DropShadow spread="0.5"/>
-                </effect>
-                <Label fx:id="confirmation_titleLabel" text="Title"/>
-                <Separator prefWidth="200.0"/>
-                <Label fx:id="confirmation_messageLabel" text="Message" wrapText="true"/>
-                <HBox alignment="CENTER_RIGHT" spacing="5.0">
-                    <Button fx:id="confirmation_okButton" focusTraversable="false" mnemonicParsing="false"
-                            onAction="#confirmation_okButtonOnAction" text="Ok"/>
-                    <Button focusTraversable="false" mnemonicParsing="false"
-                            onAction="#confirmation_cancelButtonOnAction" text="Cancel"/>
-                </HBox>
-            </VBox>
-        </center>
-    </BorderPane>
 </StackPane>

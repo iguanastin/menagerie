@@ -9,6 +9,7 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -21,29 +22,17 @@ import java.util.Comparator;
 
 public class TagListScreen extends Screen {
 
-    private ListView<Tag> listView;
-    private TextField searchField;
-    private ChoiceBox<String> orderBox;
+    private final ListView<Tag> listView;
+    private final TextField searchField;
+    private final ChoiceBox<String> orderBox;
 
-    private ObservableList<Tag> tags = FXCollections.observableArrayList();
+    private final ObservableList<Tag> tags = FXCollections.observableArrayList();
 
 
     public TagListScreen(Node onShowDisable) {
         super(onShowDisable);
 
-        tags.addListener((ListChangeListener<? super Tag>) c -> {
-            while (c.next()) {
-                listView.getItems().removeAll(c.getRemoved());
-                for (Tag t : c.getAddedSubList()) {
-                    if (!listView.getItems().contains(t) && t.getName().toLowerCase().startsWith(searchField.getText().toLowerCase())) {
-                        listView.getItems().add(t);
-                    }
-                }
-                updateListOrder();
-            }
-        });
-
-        setOnKeyPressed(event -> {
+        addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 hide();
             }
@@ -73,6 +62,16 @@ public class TagListScreen extends Screen {
         header.setRight(exitButton);
         setAlignment(exitButton, Pos.CENTER);
 
+        //Init listView
+        listView = new ListView<>();
+        VBox.setVgrow(listView, Priority.ALWAYS);
+        setCellFactory(param -> new TagListCell());
+        listView.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ESCAPE) {
+                hide();
+            }
+        });
+
         //Init textfield
         searchField = new TextField();
         searchField.setPromptText("Search tags by name");
@@ -85,13 +84,21 @@ public class TagListScreen extends Screen {
             }
         });
 
-        //Init listView
-        listView = new ListView<>();
-        VBox.setVgrow(listView, Priority.ALWAYS);
-        setCellFactory(param -> new TagListCell());
-
         //Add children
         v.getChildren().addAll(header, searchField, listView);
+
+
+        tags.addListener((ListChangeListener<? super Tag>) c -> {
+            while (c.next()) {
+                listView.getItems().removeAll(c.getRemoved());
+                for (Tag t : c.getAddedSubList()) {
+                    if (!listView.getItems().contains(t) && t.getName().toLowerCase().startsWith(searchField.getText().toLowerCase())) {
+                        listView.getItems().add(t);
+                    }
+                }
+                updateListOrder();
+            }
+        });
 
         onShowFocus = v;
     }

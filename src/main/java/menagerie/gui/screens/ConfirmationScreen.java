@@ -8,13 +8,14 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 public class ConfirmationScreen extends Screen {
 
-    private Label titleLabel;
-    private Label messageLabel;
+    private final Label titleLabel;
+    private final Label messageLabel;
 
     private ConfirmationScreenOkListener okListener = null;
     private ConfirmationScreenCancelListener cancelListener = null;
@@ -23,8 +24,12 @@ public class ConfirmationScreen extends Screen {
     public ConfirmationScreen(Node onShowDisable) {
         super(onShowDisable);
 
-        setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.ESCAPE) {
+        addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ESCAPE || event.getCode() == KeyCode.BACK_SPACE) {
+                hide();
+                event.consume();
+            } else if (event.getCode() == KeyCode.ENTER) {
+                if (okListener != null) okListener.okayed();
                 hide();
                 event.consume();
             }
@@ -38,24 +43,10 @@ public class ConfirmationScreen extends Screen {
             if (okListener != null) okListener.okayed();
             hide();
         });
-        ok.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.ENTER) {
-                if (okListener != null) okListener.okayed();
-                hide();
-                event.consume();
-            }
-        });
         Button cancel = new Button("Cancel");
         cancel.setOnAction(event -> {
             if (cancelListener != null) cancelListener.canceled();
             hide();
-        });
-        cancel.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.ENTER) {
-                if (cancelListener != null) cancelListener.canceled();
-                hide();
-                event.consume();
-            }
         });
 
         HBox h = new HBox(5, ok, cancel);

@@ -123,22 +123,15 @@ public class MainController {
     public ListView<Tag> duplicate_leftTagListView;
     public ListView<Tag> duplicate_rightTagListView;
 
-    public BorderPane slideShow_rootPane;
-    public DynamicMediaView slideShow_previewMediaView;
-
     public BorderPane errors_rootPane;
     public ListView<TrackedError> errors_listView;
-
-//    public BorderPane confirmation_rootPane;
-//    public Label confirmation_titleLabel;
-//    public Label confirmation_messageLabel;
-//    public Button confirmation_okButton;
 
     // ----------------------------------- Screens ---------------------------------------------------------------------
 
     private TagListScreen tagListScreen;
     private HelpScreen helpScreen;
     private ConfirmationScreen confirmationScreen;
+    private SlideshowScreen slideshowScreen;
 
     private FadeTransition screenOpenTransition = new FadeTransition(Duration.millis(100));
 
@@ -154,11 +147,6 @@ public class MainController {
     private boolean explorer_imageGridViewDragging = false;
     private ContextMenu explorer_cellContextMenu;
 
-    //Slideshow screen vars
-    private List<ImageInfo> slideShow_currentImages = null;
-    private ImageInfo slideShow_currentlyShowing = null;
-    private ContextMenu slideShow_contextMenu;
-
     //Duplicate screen vars
     private List<SimilarPair> duplicate_pairs = null;
     private SimilarPair duplicate_previewingPair = null;
@@ -166,10 +154,6 @@ public class MainController {
 
     //Progress lock screen vars
     private ProgressLockThread progress_progressThread;
-
-    //Confirmation dialog vars
-    private Node confirmation_lastFocus = null;
-    private Runnable confirmation_finishedCallback = null;
 
     //Threads
     private FolderWatcherThread folderWatcherThread = null;
@@ -213,10 +197,10 @@ public class MainController {
         settings_initScreen();
         duplicate_initScreen();
         errors_initScreen();
-        slideShow_initScreen();
 
         initTagListScreen();
         initHelpScreen();
+        initSlideshowScreen();
         initConfirmationScreen();
 
         //Init screen transition
@@ -257,22 +241,27 @@ public class MainController {
         }
     }
 
-    private void slideShow_initScreen() {
+    private void initSlideshowScreen() {
         MenuItem showInSearchMenuItem = new MenuItem("Show in search");
         showInSearchMenuItem.setOnAction(event -> {
             slideShow_closeScreen();
-            explorer_imageGridView.select(slideShow_currentlyShowing, false, false);
+            explorer_imageGridView.select(slideshowScreen.getShowing(), false, false);
         });
         MenuItem forgetCurrentMenuItem = new MenuItem("Forget");
         forgetCurrentMenuItem.setOnAction(event -> slideShow_tryDeleteCurrent(false));
         MenuItem deleteCurrentMenuItem = new MenuItem("Delete");
         deleteCurrentMenuItem.setOnAction(event -> slideShow_tryDeleteCurrent(true));
 
-        slideShow_contextMenu = new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem);
-        slideShow_previewMediaView.setOnContextMenuRequested(event -> slideShow_contextMenu.show(slideShow_previewMediaView, event.getScreenX(), event.getScreenY()));
+        slideshowScreen = new SlideshowScreen(explorer_rootPane);
+        slideshowScreen.setItemContextMenu(new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem));
+        slideshowScreen.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.DELETE) {
+                slideShow_tryDeleteCurrent(!event.isControlDown());
+                event.consume();
+            }
+        });
 
-        slideShow_previewMediaView.setRepeat(true);
-        slideShow_previewMediaView.setMute(false);
+        screensStackPane.getChildren().add(slideshowScreen);
     }
 
     private void errors_initScreen() {
@@ -901,26 +890,13 @@ public class MainController {
         duplicate_rootPane.setOpacity(0);
     }
 
-    private void slideShow_openScreen(List<ImageInfo> images) {
-        if (images == null || images.isEmpty()) return;
-
-        slideShow_currentImages = images;
-        slideShow_currentlyShowing = images.get(0);
-        slideShow_previewMediaView.preview(slideShow_currentlyShowing);
-
-        explorer_rootPane.setDisable(true);
-        slideShow_rootPane.setDisable(false);
-        slideShow_rootPane.requestFocus();
-        startScreenTransition(slideShow_rootPane);
+    private void slideShow_openScreen(List<ImageInfo> items) {
+        slideshowScreen.show(items);
+        startScreenTransition(slideshowScreen);
     }
 
     private void slideShow_closeScreen() {
-        slideShow_previewMediaView.preview(null);
-
-        explorer_rootPane.setDisable(false);
-        slideShow_rootPane.setDisable(true);
-        explorer_imageGridView.requestFocus();
-        slideShow_rootPane.setOpacity(0);
+        slideshowScreen.hide();
     }
 
     private void errors_openScreen() {
@@ -940,10 +916,6 @@ public class MainController {
     private void confirmation_openScreen(String title, String message, ConfirmationScreenOkListener okListener, ConfirmationScreenCancelListener cancelListener) {
         confirmationScreen.show(title, message, okListener, cancelListener);
         startScreenTransition(confirmationScreen);
-    }
-
-    private void confirmation_closeScreen() {
-        confirmationScreen.hide();
     }
 
     // -------------------------------- Dialog Openers ---------------------------------------
@@ -1389,18 +1361,6 @@ public class MainController {
         }
     }
 
-    private void slideShow_showNext() {
-        int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
-        if (i + 1 < slideShow_currentImages.size()) slideShow_currentlyShowing = slideShow_currentImages.get(i + 1);
-        slideShow_previewMediaView.preview(slideShow_currentlyShowing);
-    }
-
-    private void slideShow_showPrevious() {
-        int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
-        if (i - 1 >= 0) slideShow_currentlyShowing = slideShow_currentImages.get(i - 1);
-        slideShow_previewMediaView.preview(slideShow_currentlyShowing);
-    }
-
     private void startWatchingFolderForImages() {
         if (folderWatcherThread != null) {
             folderWatcherThread.stopWatching();
@@ -1440,7 +1400,7 @@ public class MainController {
 
     private void cleanExit(boolean revertDatabase) {
         explorer_previewMediaView.releaseMediaPlayer();
-        slideShow_previewMediaView.releaseMediaPlayer();
+        slideshowScreen.releaseMediaPlayer();
         duplicate_leftMediaView.releaseMediaPlayer();
         duplicate_rightMediaView.releaseMediaPlayer();
         VideoThumbnailThread.releaseThreads();
@@ -1486,20 +1446,8 @@ public class MainController {
 
     private void slideShow_tryDeleteCurrent(boolean deleteFile) {
         ConfirmationScreenOkListener onFinish = () -> {
-            menagerie.removeImages(Collections.singletonList(slideShow_currentlyShowing), deleteFile);
-
-            int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
-            slideShow_currentImages.remove(slideShow_currentlyShowing);
-            if (slideShow_currentImages.isEmpty()) {
-                slideShow_closeScreen();
-            } else {
-                if (i < slideShow_currentImages.size()) {
-                    slideShow_currentlyShowing = slideShow_currentImages.get(i);
-                } else {
-                    slideShow_currentlyShowing = slideShow_currentImages.get(slideShow_currentImages.size() - 1);
-                }
-                slideShow_previewMediaView.preview(slideShow_currentlyShowing);
-            }
+            menagerie.removeImages(Collections.singletonList(slideshowScreen.getShowing()), deleteFile);
+            slideshowScreen.removeCurrent();
         };
 
         if (deleteFile) {
@@ -1720,21 +1668,6 @@ public class MainController {
         event.consume();
     }
 
-    public void slideShow_previousButtonOnAction(ActionEvent event) {
-        slideShow_showPrevious();
-        event.consume();
-    }
-
-    public void slideShow_closeButtonOnAction(ActionEvent event) {
-        slideShow_closeScreen();
-        event.consume();
-    }
-
-    public void slideShow_nextButtonOnAction(ActionEvent event) {
-        slideShow_showNext();
-        event.consume();
-    }
-
     public void errors_closeButtonOnAction(ActionEvent event) {
         errors_closeScreen();
         event.consume();
@@ -1748,17 +1681,6 @@ public class MainController {
 
     public void explorer_showErrorsButtonOnAction(ActionEvent event) {
         errors_openScreen();
-        event.consume();
-    }
-
-    public void confirmation_cancelButtonOnAction(ActionEvent event) {
-        confirmation_closeScreen();
-        event.consume();
-    }
-
-    public void confirmation_okButtonOnAction(ActionEvent event) {
-        confirmation_closeScreen();
-        if (confirmation_finishedCallback != null) confirmation_finishedCallback.run();
         event.consume();
     }
 
@@ -1904,47 +1826,10 @@ public class MainController {
         }
     }
 
-    public void slideShow_rootPaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case RIGHT:
-                slideShow_showNext();
-                event.consume();
-                break;
-            case LEFT:
-                slideShow_showPrevious();
-                event.consume();
-                break;
-            case ESCAPE:
-                slideShow_closeScreen();
-                event.consume();
-                break;
-            case DELETE:
-                slideShow_tryDeleteCurrent(!event.isControlDown());
-                event.consume();
-                break;
-        }
-    }
-
     public void errorsPane_rootKeyPressed(KeyEvent event) {
         switch (event.getCode()) {
             case ESCAPE:
                 errors_closeScreen();
-                event.consume();
-                break;
-        }
-    }
-
-    public void confirmation_rootPaneKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-            case BACK_SPACE:
-                confirmation_closeScreen();
-                event.consume();
-                break;
-            case ENTER:
-            case SPACE:
-                confirmation_closeScreen();
-                if (confirmation_finishedCallback != null) confirmation_finishedCallback.run();
                 event.consume();
                 break;
         }
