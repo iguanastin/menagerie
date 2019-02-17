@@ -25,7 +25,7 @@ public class HelpScreen extends Screen {
         setPadding(new Insets(25));
         BorderPane root = new BorderPane();
         root.setPrefSize(600, 800);
-        root.setMaxSize(600, 800);
+        root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
         root.setStyle("-fx-background-color: -fx-base;");
         DropShadow effect = new DropShadow();
         effect.setSpread(0.5);

@@ -52,7 +52,7 @@ public class TagListScreen extends Screen {
         //Init "Window"
         VBox v = new VBox(5);
         v.setPrefWidth(300);
-        v.setMaxWidth(300);
+        v.setMaxWidth(USE_PREF_SIZE);
         v.setStyle("-fx-background-color: -fx-base;");
         v.setPadding(new Insets(5));
         DropShadow dropShadow = new DropShadow();

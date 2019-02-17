@@ -31,8 +31,7 @@ import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.progress.ProgressLockThread;
 import menagerie.gui.progress.ProgressLockThreadCancelListener;
 import menagerie.gui.progress.ProgressLockThreadFinishListener;
-import menagerie.gui.screens.HelpScreen;
-import menagerie.gui.screens.TagListScreen;
+import menagerie.gui.screens.*;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
 import menagerie.model.SimilarPair;
@@ -130,15 +129,16 @@ public class MainController {
     public BorderPane errors_rootPane;
     public ListView<TrackedError> errors_listView;
 
-    public BorderPane confirmation_rootPane;
-    public Label confirmation_titleLabel;
-    public Label confirmation_messageLabel;
-    public Button confirmation_okButton;
+//    public BorderPane confirmation_rootPane;
+//    public Label confirmation_titleLabel;
+//    public Label confirmation_messageLabel;
+//    public Button confirmation_okButton;
 
     // ----------------------------------- Screens ---------------------------------------------------------------------
 
     private TagListScreen tagListScreen;
     private HelpScreen helpScreen;
+    private ConfirmationScreen confirmationScreen;
 
     private FadeTransition screenOpenTransition = new FadeTransition(Duration.millis(100));
 
@@ -211,11 +211,13 @@ public class MainController {
         //Init screens
         explorer_initScreen();
         settings_initScreen();
-        tagList_initScreen();
         duplicate_initScreen();
         errors_initScreen();
         slideShow_initScreen();
-        help_initScreen();
+
+        initTagListScreen();
+        initHelpScreen();
+        initConfirmationScreen();
 
         //Init screen transition
         screenOpenTransition.setFromValue(0);
@@ -341,7 +343,7 @@ public class MainController {
         });
     }
 
-    private void tagList_initScreen() {
+    private void initTagListScreen() {
         tagListScreen = new TagListScreen(explorer_rootPane);
         tagListScreen.setCellFactory(param -> {
             TagListCell c = new TagListCell();
@@ -362,9 +364,14 @@ public class MainController {
         screensStackPane.getChildren().add(tagListScreen);
     }
 
-    private void help_initScreen() {
+    private void initHelpScreen() {
         helpScreen = new HelpScreen(explorer_rootPane);
         screensStackPane.getChildren().add(helpScreen);
+    }
+
+    private void initConfirmationScreen() {
+        confirmationScreen = new ConfirmationScreen(explorer_rootPane);
+        screensStackPane.getChildren().add(confirmationScreen);
     }
 
     private void explorer_initScreen() {
@@ -422,16 +429,16 @@ public class MainController {
             switch (event.getCode()) {
                 case DELETE:
                     final boolean deleteFiles = !event.isControlDown();
-                    final Runnable onFinish = () -> {
+                    final ConfirmationScreenOkListener onFinish = () -> {
                         explorer_previewImage(null);
                         menagerie.removeImages(explorer_imageGridView.getSelected(), deleteFiles);
                     };
                     if (deleteFiles) {
                         confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                                "This action CANNOT be undone (files will be deleted)", onFinish);
+                                "This action CANNOT be undone (files will be deleted)", onFinish, null);
                     } else {
                         confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                                "This action CANNOT be undone", onFinish);
+                                "This action CANNOT be undone", onFinish, null);
                     }
                     event.consume();
                     break;
@@ -655,16 +662,16 @@ public class MainController {
         });
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
-        removeImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                "This action CANNOT be undone", () -> {
-            menagerie.removeImages(explorer_imageGridView.getSelected(), false);
-        }));
+        removeImagesMenuItem.setOnAction(event1 -> {
+            confirmation_openScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
+                    "This action CANNOT be undone", () -> menagerie.removeImages(explorer_imageGridView.getSelected(), false), null);
+        });
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
         deleteImagesMenuItem.setOnAction(event1 -> confirmation_openScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                 "This action CANNOT be undone (files will be deleted)", () -> {
             explorer_previewImage(null);
             menagerie.removeImages(explorer_imageGridView.getSelected(), true);
-        }));
+        }, null));
 
         explorer_cellContextMenu = new ContextMenu(slideShowMenu, new SeparatorMenuItem(), openInExplorerMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), findDuplicatesMenuItem, new SeparatorMenuItem(), moveToFolderMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
     }
@@ -930,24 +937,13 @@ public class MainController {
         errors_rootPane.setOpacity(0);
     }
 
-    private void confirmation_openScreen(String title, String message, Runnable onFinishedCallback) {
-        confirmation_titleLabel.setText(title);
-        confirmation_messageLabel.setText(message);
-
-        confirmation_finishedCallback = onFinishedCallback;
-        confirmation_lastFocus = rootPane.getScene().getFocusOwner();
-
-        screensStackPane.setDisable(true);
-        confirmation_rootPane.setDisable(false);
-        confirmation_rootPane.requestFocus();
-        startScreenTransition(confirmation_rootPane);
+    private void confirmation_openScreen(String title, String message, ConfirmationScreenOkListener okListener, ConfirmationScreenCancelListener cancelListener) {
+        confirmationScreen.show(title, message, okListener, cancelListener);
+        startScreenTransition(confirmationScreen);
     }
 
     private void confirmation_closeScreen() {
-        screensStackPane.setDisable(false);
-        confirmation_rootPane.setDisable(true);
-        if (confirmation_lastFocus != null) confirmation_lastFocus.requestFocus();
-        confirmation_rootPane.setOpacity(0);
+        confirmationScreen.hide();
     }
 
     // -------------------------------- Dialog Openers ---------------------------------------
@@ -1489,7 +1485,7 @@ public class MainController {
     }
 
     private void slideShow_tryDeleteCurrent(boolean deleteFile) {
-        Runnable onFinish = () -> {
+        ConfirmationScreenOkListener onFinish = () -> {
             menagerie.removeImages(Collections.singletonList(slideShow_currentlyShowing), deleteFile);
 
             int i = slideShow_currentImages.indexOf(slideShow_currentlyShowing);
@@ -1508,10 +1504,10 @@ public class MainController {
 
         if (deleteFile) {
             confirmation_openScreen("Delete files", "Permanently delete selected files? (1 file)\n\n" +
-                    "This action CANNOT be undone (files will be deleted)", onFinish);
+                    "This action CANNOT be undone (files will be deleted)", onFinish, null);
         } else {
             confirmation_openScreen("Forget files", "Remove selected files from database? (1 file)\n\n" +
-                    "This action CANNOT be undone", onFinish);
+                    "This action CANNOT be undone", onFinish, null);
         }
     }
 
@@ -1770,9 +1766,7 @@ public class MainController {
         File database = getDatabaseFile(settings.getDbUrl());
         File backup = new File(database + ".bak");
         if (backup.exists()) {
-            confirmation_openScreen("Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> {
-                cleanExit(true);
-            });
+            confirmation_openScreen("Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> cleanExit(true), null);
         }
         event.consume();
     }
