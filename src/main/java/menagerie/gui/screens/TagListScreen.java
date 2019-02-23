@@ -5,7 +5,6 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
@@ -19,6 +18,7 @@ import menagerie.gui.TagListCell;
 import menagerie.model.menagerie.Tag;
 
 import java.util.Comparator;
+import java.util.List;
 
 public class TagListScreen extends Screen {
 
@@ -29,12 +29,10 @@ public class TagListScreen extends Screen {
     private final ObservableList<Tag> tags = FXCollections.observableArrayList();
 
 
-    public TagListScreen(Node onShowDisable) {
-        super(onShowDisable);
-
+    public TagListScreen() {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
-                hide();
+                close();
             }
         });
 
@@ -58,7 +56,7 @@ public class TagListScreen extends Screen {
         orderBox.setOnAction(event -> updateListOrder());
         header.setCenter(new HBox(5, new Label("Order by:"), new BorderPane(orderBox)));
         Button exitButton = new Button("X");
-        exitButton.setOnAction(event -> hide());
+        exitButton.setOnAction(event -> close());
         header.setRight(exitButton);
         setAlignment(exitButton, Pos.CENTER);
 
@@ -68,7 +66,7 @@ public class TagListScreen extends Screen {
         setCellFactory(param -> new TagListCell());
         listView.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
-                hide();
+                close();
             }
         });
 
@@ -100,7 +98,14 @@ public class TagListScreen extends Screen {
             }
         });
 
-        onShowFocus = v;
+        setDefaultFocusNode(v);
+    }
+
+    public void open(ScreenPane manager, List<Tag> tags) {
+        manager.open(this);
+
+        this.tags.clear();
+        this.tags.addAll(tags);
     }
 
     private void updateListOrder() {

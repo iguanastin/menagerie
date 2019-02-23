@@ -7,120 +7,121 @@
 <?import menagerie.gui.grid.ImageGridView?>
 <?import menagerie.gui.media.DynamicMediaView?>
 <?import menagerie.gui.predictive.PredictiveTextField?>
+<?import menagerie.gui.screens.ScreenPane?>
 <StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="menagerie.gui.MainController">
-    <StackPane fx:id="screensStackPane">
-        <BorderPane fx:id="explorerRootPane" onKeyPressed="#explorer_rootPaneOnKeyPressed"
-                    onKeyReleased="#explorer_rootPaneOnKeyReleased" prefHeight="576.0" prefWidth="994.0">
-            <center>
-                <BorderPane>
-                    <center>
-                        <StackPane>
-                            <DynamicMediaView fx:id="explorer_previewMediaView"/>
-                        </StackPane>
-                    </center>
-                    <bottom>
-                        <VBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                            <padding>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                            </padding>
-                            <Label fx:id="explorer_imageInfoLabel" text="Size: N/A - Res: N/A"/>
-                            <Label fx:id="explorer_fileNameLabel" text="N/A" textOverrun="CENTER_ELLIPSIS"/>
-                        </VBox>
-                    </bottom>
-                </BorderPane>
-            </center>
-            <right>
-                <BorderPane>
-                    <center>
-                        <ImageGridView fx:id="explorer_imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
-                                       BorderPane.alignment="CENTER"/>
-                    </center>
-                    <top>
-                        <VBox BorderPane.alignment="CENTER">
-                            <HBox spacing="5.0">
-                                <padding>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                                </padding>
-                                <PredictiveTextField fx:id="explorer_searchTextField"
-                                                     onAction="#explorer_searchTextFieldOnAction" promptText="Search"
-                                                     HBox.hgrow="ALWAYS"/>
-                            </HBox>
-                            <BorderPane>
-                                <right>
-                                    <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                                        <Label fx:id="explorer_resultsAndSelectedLabel" text="Results: 0"/>
-                                        <Button mnemonicParsing="false" onAction="#explorer_searchButtonOnAction"
-                                                text="Search"/>
-                                    </HBox>
-                                </right>
-                                <VBox.margin>
-                                    <Insets/>
-                                </VBox.margin>
-                                <padding>
-                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                                </padding>
-                                <left>
-                                    <ToggleButton fx:id="explorer_descendingToggleButton" mnemonicParsing="false"
-                                                  selected="true" text="Descending" BorderPane.alignment="CENTER"/>
-                                </left>
-                            </BorderPane>
-                        </VBox>
-                    </top>
-                    <bottom>
-                        <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
-                            <Label text="Errors and Warnings:"/>
-                            <Button fx:id="explorer_showErrorsButton" mnemonicParsing="false"
-                                    onAction="#explorer_showErrorsButtonOnAction" text="0"/>
-                        </HBox>
-                    </bottom>
-                </BorderPane>
-            </right>
-            <left>
-                <VBox prefWidth="200.0" BorderPane.alignment="CENTER">
-                    <ListView fx:id="explorer_tagListView" focusTraversable="false" VBox.vgrow="ALWAYS">
+    <BorderPane fx:id="explorerRootPane" onKeyPressed="#explorer_rootPaneOnKeyPressed"
+                onKeyReleased="#explorer_rootPaneOnKeyReleased" prefHeight="576.0" prefWidth="994.0">
+        <center>
+            <BorderPane>
+                <center>
+                    <StackPane>
+                        <DynamicMediaView fx:id="explorer_previewMediaView"/>
+                    </StackPane>
+                </center>
+                <bottom>
+                    <VBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
                         <padding>
                             <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                         </padding>
-                    </ListView>
-                    <PredictiveTextField fx:id="explorer_editTagsTextField"
-                                         onKeyPressed="#explorer_editTagsTextFieldOnKeyPressed" promptText="Edit tags">
-                        <VBox.margin>
-                            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                        </VBox.margin>
-                    </PredictiveTextField>
-                </VBox>
-            </left>
-            <top>
-                <MenuBar fx:id="explorer_menuBar" BorderPane.alignment="CENTER">
-                    <Menu mnemonicParsing="false" text="File">
-                        <MenuItem mnemonicParsing="false" onAction="#explorer_importFilesMenuButtonOnAction"
-                                  text="Import file(s)"/>
-                        <MenuItem mnemonicParsing="false" onAction="#explorer_importFolderMenuButtonOnAction"
-                                  text="Import folder"/>
-                        <SeparatorMenuItem/>
-                        <MenuItem mnemonicParsing="false" onAction="#explorer_revertDatabaseMenuButtonOnAction"
-                                  text="Revert to backup"/>
+                        <Label fx:id="explorer_imageInfoLabel" text="Size: N/A - Res: N/A"/>
+                        <Label fx:id="explorer_fileNameLabel" text="N/A" textOverrun="CENTER_ELLIPSIS"/>
+                    </VBox>
+                </bottom>
+            </BorderPane>
+        </center>
+        <right>
+            <BorderPane>
+                <center>
+                    <ImageGridView fx:id="explorer_imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
+                                   BorderPane.alignment="CENTER"/>
+                </center>
+                <top>
+                    <VBox BorderPane.alignment="CENTER">
+                        <HBox spacing="5.0">
+                            <padding>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                            </padding>
+                            <PredictiveTextField fx:id="searchTextField"
+                                                 onAction="#explorer_searchTextFieldOnAction" promptText="Search"
+                                                 HBox.hgrow="ALWAYS"/>
+                        </HBox>
+                        <BorderPane>
+                            <right>
+                                <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
+                                    <Label fx:id="explorer_resultsAndSelectedLabel" text="Results: 0"/>
+                                    <Button mnemonicParsing="false" onAction="#explorer_searchButtonOnAction"
+                                            text="Search"/>
+                                </HBox>
+                            </right>
+                            <VBox.margin>
+                                <Insets/>
+                            </VBox.margin>
+                            <padding>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                            </padding>
+                            <left>
+                                <ToggleButton fx:id="explorer_descendingToggleButton" mnemonicParsing="false"
+                                              selected="true" text="Descending" BorderPane.alignment="CENTER"/>
+                            </left>
+                        </BorderPane>
+                    </VBox>
+                </top>
+                <bottom>
+                    <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
+                        <Label text="Errors and Warnings:"/>
+                        <Button fx:id="explorer_showErrorsButton" mnemonicParsing="false"
+                                onAction="#explorer_showErrorsButtonOnAction" text="0"/>
+                    </HBox>
+                </bottom>
+            </BorderPane>
+        </right>
+        <left>
+            <VBox prefWidth="200.0" BorderPane.alignment="CENTER">
+                <ListView fx:id="explorer_tagListView" focusTraversable="false" VBox.vgrow="ALWAYS">
+                    <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                    </padding>
+                </ListView>
+                <PredictiveTextField fx:id="explorer_editTagsTextField"
+                                     onKeyPressed="#explorer_editTagsTextFieldOnKeyPressed" promptText="Edit tags">
+                    <VBox.margin>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                    </VBox.margin>
+                </PredictiveTextField>
+            </VBox>
+        </left>
+        <top>
+            <MenuBar fx:id="explorer_menuBar" BorderPane.alignment="CENTER">
+                <Menu mnemonicParsing="false" text="File">
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_importFilesMenuButtonOnAction"
+                              text="Import file(s)"/>
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_importFolderMenuButtonOnAction"
+                              text="Import folder"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_revertDatabaseMenuButtonOnAction"
+                              text="Revert to backup"/>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Edit">
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_settingsMenuButtonOnAction"
+                              text="Settings"/>
+                </Menu>
+                <Menu mnemonicParsing="false" text="View">
+                    <Menu mnemonicParsing="false" text="Slideshow">
+                        <MenuItem mnemonicParsing="false" onAction="#explorer_slideShowSearchedMenuButtonOnAction"
+                                  text="Searched"/>
+                        <MenuItem mnemonicParsing="false" onAction="#explorer_slideShowSelectedMenuButtonOnAction"
+                                  text="Selected"/>
                     </Menu>
-                    <Menu mnemonicParsing="false" text="Edit">
-                        <MenuItem mnemonicParsing="false" onAction="#explorer_settingsMenuButtonOnAction"
-                                  text="Settings"/>
-                    </Menu>
-                    <Menu mnemonicParsing="false" text="View">
-                        <Menu mnemonicParsing="false" text="Slideshow">
-                            <MenuItem mnemonicParsing="false" onAction="#explorer_slideShowSearchedMenuButtonOnAction"
-                                      text="Searched"/>
-                            <MenuItem mnemonicParsing="false" onAction="#explorer_slideShowSelectedMenuButtonOnAction"
-                                      text="Selected"/>
-                        </Menu>
-                        <MenuItem mnemonicParsing="false" onAction="#explorer_viewTagsMenuButtonOnAction" text="Tags"/>
-                    </Menu>
-                    <Menu mnemonicParsing="false" text="Help">
-                        <MenuItem mnemonicParsing="false" onAction="#explorer_helpMenuButtonOnAction" text="Help"/>
-                    </Menu>
-                </MenuBar>
-            </top>
-        </BorderPane>
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_viewTagsMenuButtonOnAction" text="Tags"/>
+                </Menu>
+                <Menu mnemonicParsing="false" text="Help">
+                    <MenuItem mnemonicParsing="false" onAction="#explorer_helpMenuButtonOnAction" text="Help"/>
+                </Menu>
+            </MenuBar>
+        </top>
+    </BorderPane>
+    <StackPane fx:id="screensStackPane" pickOnBounds="false">
         <BorderPane fx:id="settings_rootPane" disable="true" onKeyPressed="#settings_rootPaneKeyPressed" opacity="0.0">
             <center>
                 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefHeight="600.0" prefWidth="700.0"
@@ -353,4 +354,5 @@
             </padding>
         </BorderPane>
     </StackPane>
+    <ScreenPane fx:id="screenPane" />
 </StackPane>

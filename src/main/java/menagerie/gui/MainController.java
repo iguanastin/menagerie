@@ -1,7 +1,5 @@
 package menagerie.gui;
 
-import javafx.animation.Animation;
-import javafx.animation.FadeTransition;
 import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
@@ -21,15 +19,12 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import javafx.util.Duration;
 import menagerie.gui.errors.ErrorListCell;
 import menagerie.gui.errors.TrackedError;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.predictive.PredictiveTextField;
-import menagerie.gui.progress.ProgressLockThreadCancelListener;
-import menagerie.gui.progress.ProgressLockThreadFinishListener;
 import menagerie.gui.screens.*;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
@@ -70,7 +65,7 @@ public class MainController {
 
     public BorderPane explorerRootPane;
     public ToggleButton explorer_descendingToggleButton;
-    public PredictiveTextField explorer_searchTextField;
+    public PredictiveTextField searchTextField;
     public ImageGridView explorer_imageGridView;
     public DynamicMediaView explorer_previewMediaView;
     public Label explorer_resultsAndSelectedLabel;
@@ -121,13 +116,12 @@ public class MainController {
 
     // ----------------------------------- Screens ---------------------------------------------------------------------
 
+    public ScreenPane screenPane;
     private TagListScreen tagListScreen;
     private HelpScreen helpScreen;
     private ConfirmationScreen confirmationScreen;
     private SlideshowScreen slideshowScreen;
     private ProgressScreen progressScreen;
-
-    private FadeTransition screenOpenTransition = new FadeTransition(Duration.millis(100));
 
 
     //Menagerie vars
@@ -185,19 +179,18 @@ public class MainController {
 
         //Init screens
         initExplorerScreen();
+
         initSettingsScreen();
         initDuplicateScreen();
         initErrorsScreen();
 
         initTagListScreen();
-        initHelpScreen();
         initSlideShowScreen();
-        initConfirmationScreen();
-        initProgressScreen();
-
-        //Init screen transition
-        screenOpenTransition.setFromValue(0);
-        screenOpenTransition.setToValue(1);
+        helpScreen = new HelpScreen();
+        confirmationScreen = new ConfirmationScreen();
+        progressScreen = new ProgressScreen();
+        //Init disable listener for explorer screen
+        screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty()));
 
         //Things to run on first "tick"
         Platform.runLater(() -> {
@@ -236,7 +229,7 @@ public class MainController {
     private void initSlideShowScreen() {
         MenuItem showInSearchMenuItem = new MenuItem("Show in search");
         showInSearchMenuItem.setOnAction(event -> {
-            closeSlideShowScreen();
+            slideshowScreen.close();
             explorer_imageGridView.select(slideshowScreen.getShowing(), false, false);
         });
         MenuItem forgetCurrentMenuItem = new MenuItem("Forget");
@@ -244,7 +237,7 @@ public class MainController {
         MenuItem deleteCurrentMenuItem = new MenuItem("Delete");
         deleteCurrentMenuItem.setOnAction(event -> slideShow_tryDeleteCurrent(true));
 
-        slideshowScreen = new SlideshowScreen(explorerRootPane);
+        slideshowScreen = new SlideshowScreen();
         slideshowScreen.setItemContextMenu(new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem));
         slideshowScreen.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.DELETE) {
@@ -252,8 +245,6 @@ public class MainController {
                 event.consume();
             }
         });
-
-        screensStackPane.getChildren().add(slideshowScreen);
     }
 
     private void initErrorsScreen() {
@@ -325,15 +316,15 @@ public class MainController {
     }
 
     private void initTagListScreen() {
-        tagListScreen = new TagListScreen(explorerRootPane);
+        tagListScreen = new TagListScreen();
         tagListScreen.setCellFactory(param -> {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
                 MenuItem i1 = new MenuItem("Search this tag");
                 i1.setOnAction(event1 -> {
-                    explorer_searchTextField.setText(c.getItem().getName());
-                    explorer_searchTextField.positionCaret(explorer_searchTextField.getText().length());
-                    closeTagListScreen();
+                    searchTextField.setText(c.getItem().getName());
+                    searchTextField.positionCaret(searchTextField.getText().length());
+                    tagListScreen.close();
                     explorer_applySearch();
                 });
                 ContextMenu m = new ContextMenu(i1);
@@ -341,23 +332,6 @@ public class MainController {
             });
             return c;
         });
-
-        screensStackPane.getChildren().add(tagListScreen);
-    }
-
-    private void initHelpScreen() {
-        helpScreen = new HelpScreen(explorerRootPane);
-        screensStackPane.getChildren().add(helpScreen);
-    }
-
-    private void initConfirmationScreen() {
-        confirmationScreen = new ConfirmationScreen(explorerRootPane);
-        screensStackPane.getChildren().add(confirmationScreen);
-    }
-
-    private void initProgressScreen() {
-        progressScreen = new ProgressScreen(explorerRootPane);
-        screensStackPane.getChildren().add(progressScreen);
     }
 
     private void initExplorerScreen() {
@@ -420,18 +394,18 @@ public class MainController {
                         menagerie.removeImages(explorer_imageGridView.getSelected(), deleteFiles);
                     };
                     if (deleteFiles) {
-                        openConfirmationScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                                "This action CANNOT be undone (files will be deleted)", onFinish, null);
+                        confirmationScreen.open(screenPane, "Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
+                                                "This action CANNOT be undone (files will be deleted)", onFinish, null);
                     } else {
-                        openConfirmationScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                                "This action CANNOT be undone", onFinish, null);
+                        confirmationScreen.open(screenPane, "Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
+                                                "This action CANNOT be undone", onFinish, null);
                     }
                     event.consume();
                     break;
             }
         });
         explorer_imageGridView.getSelected().addListener((ListChangeListener<? super ImageInfo>) c -> explorer_resultsAndSelectedLabel.setText(explorer_imageGridView.getSelected().size() + " / " + explorer_currentSearch.getResults().size()));
-        explorer_initGridCellContextMenu();
+        initExplorerGridCellContextMenu();
 
         //Init drag/drop handlers
         explorerRootPane.disabledProperty().addListener((observable, oldValue, newValue) -> {
@@ -466,7 +440,7 @@ public class MainController {
                 }));
 
                 if (!queue.isEmpty()) {
-                    openProgressScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+                    progressScreen.open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
                 }
             } else if (url != null && !url.isEmpty()) {
                 Platform.runLater(() -> {
@@ -510,12 +484,12 @@ public class MainController {
                 if (c.getItem() != null) {
                     MenuItem i1 = new MenuItem("Add to search");
                     i1.setOnAction(event1 -> {
-                        explorer_searchTextField.setText(explorer_searchTextField.getText().trim() + " " + c.getItem().getName());
+                        searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
                         explorer_applySearch();
                     });
                     MenuItem i2 = new MenuItem("Exclude from search");
                     i2.setOnAction(event1 -> {
-                        explorer_searchTextField.setText(explorer_searchTextField.getText().trim() + " -" + c.getItem().getName());
+                        searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
                         explorer_applySearch();
                     });
                     MenuItem i3 = new MenuItem("Remove from selected");
@@ -550,18 +524,18 @@ public class MainController {
             return results;
         });
 
-        explorer_searchTextField.setTop(false);
-        explorer_searchTextField.setOptionsListener(explorer_editTagsTextField.getOptionsListener());
+        searchTextField.setTop(false);
+        searchTextField.setOptionsListener(explorer_editTagsTextField.getOptionsListener());
 
         explorer_previewMediaView.setMute(settings.isMuteVideoPreview());
         explorer_previewMediaView.setRepeat(settings.isRepeatVideoPreview());
     }
 
-    private void explorer_initGridCellContextMenu() {
+    private void initExplorerGridCellContextMenu() {
         MenuItem slideShowSelectedMenuItem = new MenuItem("Selected");
-        slideShowSelectedMenuItem.setOnAction(event1 -> openSlideShowScreen(explorer_imageGridView.getSelected()));
+        slideShowSelectedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, explorer_imageGridView.getSelected()));
         MenuItem slideShowSearchedMenuItem = new MenuItem("Searched");
-        slideShowSearchedMenuItem.setOnAction(event1 -> openSlideShowScreen(explorer_imageGridView.getItems()));
+        slideShowSearchedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, explorer_imageGridView.getItems()));
         Menu slideShowMenu = new Menu("Slideshow", null, slideShowSelectedMenuItem, slideShowSearchedMenuItem);
 
         MenuItem openInExplorerMenuItem = new MenuItem("Open in Explorer");
@@ -592,7 +566,7 @@ public class MainController {
                 }
             });
             if (!queue.isEmpty()) {
-                openProgressScreen("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, null, null);
+                progressScreen.open(screenPane, "Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, null, null);
             }
         });
         MenuItem buildHistogramMenuItem = new MenuItem("Build Histogram");
@@ -612,7 +586,7 @@ public class MainController {
                 }
             });
             if (!queue.isEmpty()) {
-                openProgressScreen("Building Histograms", "Building image histograms for " + queue.size() + " files...", queue, null, null);
+                progressScreen.open(screenPane, "Building Histograms", "Building image histograms for " + queue.size() + " files...", queue, null, null);
             }
         });
 
@@ -641,7 +615,7 @@ public class MainController {
                     }));
 
                     if (!queue.isEmpty()) {
-                        openProgressScreen("Moving files", "Moving " + queue.size() + " files...", queue, null, null);
+                        progressScreen.open(screenPane, "Moving files", "Moving " + queue.size() + " files...", queue, null, null);
                     }
                 }
             }
@@ -649,15 +623,15 @@ public class MainController {
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
         removeImagesMenuItem.setOnAction(event1 -> {
-            openConfirmationScreen("Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                    "This action CANNOT be undone", () -> menagerie.removeImages(explorer_imageGridView.getSelected(), false), null);
+            confirmationScreen.open(screenPane, "Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
+                        "This action CANNOT be undone", () -> menagerie.removeImages(explorer_imageGridView.getSelected(), false), null);
         });
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
-        deleteImagesMenuItem.setOnAction(event1 -> openConfirmationScreen("Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                "This action CANNOT be undone (files will be deleted)", () -> {
-            explorer_previewImage(null);
-            menagerie.removeImages(explorer_imageGridView.getSelected(), true);
-        }, null));
+        deleteImagesMenuItem.setOnAction(event1 -> confirmationScreen.open(screenPane, "Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
+                        "This action CANNOT be undone (files will be deleted)", () -> {
+                    explorer_previewImage(null);
+                    menagerie.removeImages(explorer_imageGridView.getSelected(), true);
+                }, null));
 
         explorer_cellContextMenu = new ContextMenu(slideShowMenu, new SeparatorMenuItem(), openInExplorerMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), findDuplicatesMenuItem, new SeparatorMenuItem(), moveToFolderMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
     }
@@ -723,8 +697,8 @@ public class MainController {
         //Enable pane
         explorerRootPane.setDisable(true);
         settings_rootPane.setDisable(false);
+        settings_rootPane.setOpacity(1);
         settings_cancelButton.requestFocus();
-        startScreenTransition(settings_rootPane);
     }
 
     private void closeSettingsScreen(boolean saveChanges) {
@@ -771,32 +745,6 @@ public class MainController {
         trySaveSettings();
     }
 
-    private void openTagListScreen() {
-        tagListScreen.getTags().clear();
-        tagListScreen.getTags().addAll(menagerie.getTags());
-
-        tagListScreen.show();
-        startScreenTransition(tagListScreen);
-    }
-
-    private void closeTagListScreen() {
-        tagListScreen.hide();
-    }
-
-    private void openHelpScreen() {
-        helpScreen.show();
-        startScreenTransition(helpScreen);
-    }
-
-    private void openProgressScreen(String title, String message, List<Runnable> queue, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
-        progressScreen.show(title, message, queue, finishListener, cancelListener);
-        startScreenTransition(progressScreen);
-    }
-
-    private void closeProgressScreen() {
-        progressScreen.hide();
-    }
-
     private void openDuplicateScreen(List<ImageInfo> images) {
         if (images == null || images.isEmpty()) return;
 
@@ -823,7 +771,7 @@ public class MainController {
         }
 
         if (queue.size() > 5000) {
-            openProgressScreen("Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, total -> Platform.runLater(() -> {
+            progressScreen.open(screenPane, "Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, total -> Platform.runLater(() -> {
                 if (duplicate_pairs.isEmpty()) return;
 
                 duplicate_previewPair(duplicate_pairs.get(0));
@@ -843,7 +791,7 @@ public class MainController {
             explorerRootPane.setDisable(true);
             duplicate_rootPane.setDisable(false);
             duplicate_rootPane.requestFocus();
-            startScreenTransition(duplicate_rootPane);
+            duplicate_rootPane.setOpacity(1);
         }
     }
 
@@ -856,20 +804,11 @@ public class MainController {
         duplicate_rootPane.setOpacity(0);
     }
 
-    private void openSlideShowScreen(List<ImageInfo> items) {
-        slideshowScreen.show(items);
-        startScreenTransition(slideshowScreen);
-    }
-
-    private void closeSlideShowScreen() {
-        slideshowScreen.hide();
-    }
-
     private void openErrorsScreen() {
         explorerRootPane.setDisable(true);
         errors_rootPane.setDisable(false);
         errors_rootPane.requestFocus();
-        startScreenTransition(errors_rootPane);
+        errors_rootPane.setOpacity(0);
     }
 
     private void closeErrorsScreen() {
@@ -877,11 +816,6 @@ public class MainController {
         errors_rootPane.setDisable(true);
         explorer_imageGridView.requestFocus();
         errors_rootPane.setOpacity(0);
-    }
-
-    private void openConfirmationScreen(String title, String message, ConfirmationScreenOkListener okListener, ConfirmationScreenCancelListener cancelListener) {
-        confirmationScreen.show(title, message, okListener, cancelListener);
-        startScreenTransition(confirmationScreen);
     }
 
     // -------------------------------- Dialog Openers ---------------------------------------
@@ -905,7 +839,7 @@ public class MainController {
             }));
 
             if (!queue.isEmpty()) {
-                openProgressScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+                progressScreen.open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
             }
         }
     }
@@ -931,7 +865,7 @@ public class MainController {
             }));
 
             if (!queue.isEmpty()) {
-                openProgressScreen("Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+                progressScreen.open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
             }
         }
     }
@@ -1021,7 +955,7 @@ public class MainController {
 
         final boolean descending = explorer_descendingToggleButton.isSelected();
 
-        explorer_currentSearch = new Search(menagerie, explorer_constructRuleSet(explorer_searchTextField.getText()), descending);
+        explorer_currentSearch = new Search(menagerie, explorer_constructRuleSet(searchTextField.getText()), descending);
         explorer_currentSearch.setListener(new SearchUpdateListener() {
             @Override
             public void imagesAdded(List<ImageInfo> images) {
@@ -1299,7 +1233,7 @@ public class MainController {
                 });
             });
 
-            openProgressScreen("Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, total -> {
+            progressScreen.open(screenPane, "Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, total -> {
                 //TODO: Fix this. If md5 computing is disabled, histogram building won't happen
                 if (settings.isComputeHistogramForSimilarity()) {
                     List<Runnable> queue2 = new ArrayList<>();
@@ -1317,7 +1251,7 @@ public class MainController {
                             });
                     });
 
-                    Platform.runLater(() -> openProgressScreen("Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
+                    Platform.runLater(() -> progressScreen.open(screenPane, "Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
                 } else {
                     Platform.runLater(() -> openDuplicateScreen(images));
                 }
@@ -1396,32 +1330,25 @@ public class MainController {
         Platform.exit();
     }
 
-    private void startScreenTransition(Node screen) {
-        screenOpenTransition.stop();
-
-        if (screenOpenTransition.getStatus().equals(Animation.Status.RUNNING)) screenOpenTransition.getNode().setOpacity(1);
-
-        screenOpenTransition.setNode(screen);
-        screenOpenTransition.playFromStart();
-    }
-
     private void errors_addError(TrackedError error) {
         errors_listView.getItems().add(0, error);
         Toolkit.getDefaultToolkit().beep();
     }
 
     private void slideShow_tryDeleteCurrent(boolean deleteFile) {
+        //TODO: Extract this functionality to the slideshow screen
+
         ConfirmationScreenOkListener onFinish = () -> {
             menagerie.removeImages(Collections.singletonList(slideshowScreen.getShowing()), deleteFile);
             slideshowScreen.removeCurrent();
         };
 
         if (deleteFile) {
-            openConfirmationScreen("Delete files", "Permanently delete selected files? (1 file)\n\n" +
-                    "This action CANNOT be undone (files will be deleted)", onFinish, null);
+            confirmationScreen.open(screenPane, "Delete files", "Permanently delete selected files? (1 file)\n\n" +
+                        "This action CANNOT be undone (files will be deleted)", onFinish, null);
         } else {
-            openConfirmationScreen("Forget files", "Remove selected files from database? (1 file)\n\n" +
-                    "This action CANNOT be undone", onFinish, null);
+            confirmationScreen.open(screenPane, "Forget files", "Remove selected files from database? (1 file)\n\n" +
+                        "This action CANNOT be undone", onFinish, null);
         }
     }
 
@@ -1534,22 +1461,22 @@ public class MainController {
     }
 
     public void explorer_helpMenuButtonOnAction(ActionEvent event) {
-        openHelpScreen();
+        screenPane.open(helpScreen);
         event.consume();
     }
 
     public void explorer_slideShowSearchedMenuButtonOnAction(ActionEvent event) {
-        openSlideShowScreen(explorer_currentSearch.getResults());
+        slideshowScreen.open(screenPane, explorer_currentSearch.getResults());
         event.consume();
     }
 
     public void explorer_slideShowSelectedMenuButtonOnAction(ActionEvent event) {
-        openSlideShowScreen(explorer_imageGridView.getSelected());
+        slideshowScreen.open(screenPane, explorer_imageGridView.getSelected());
         event.consume();
     }
 
     public void explorer_viewTagsMenuButtonOnAction(ActionEvent event) {
-        openTagListScreen();
+        tagListScreen.open(screenPane, menagerie.getTags());
         event.consume();
     }
 
@@ -1597,11 +1524,6 @@ public class MainController {
 
     public void settings_autoImportFolderCheckBoxOnAction(ActionEvent event) {
         settings_updateAutoImportFolderDisabledStatus();
-        event.consume();
-    }
-
-    public void progress_stopButtonOnAction(ActionEvent event) {
-        closeProgressScreen();
         event.consume();
     }
 
@@ -1654,7 +1576,7 @@ public class MainController {
         File database = getDatabaseFile(settings.getDbUrl());
         File backup = new File(database + ".bak");
         if (backup.exists()) {
-            openConfirmationScreen("Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> cleanExit(true), null);
+            confirmationScreen.open(screenPane, "Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> cleanExit(true), null);
         }
         event.consume();
     }
@@ -1665,7 +1587,7 @@ public class MainController {
         if (event.isControlDown()) {
             switch (event.getCode()) {
                 case F:
-                    explorer_searchTextField.requestFocus();
+                    searchTextField.requestFocus();
                     event.consume();
                     break;
                 case E:
@@ -1683,7 +1605,7 @@ public class MainController {
                     event.consume();
                     break;
                 case T:
-                    openTagListScreen();
+                    tagListScreen.open(screenPane, menagerie.getTags());
                     event.consume();
                     break;
                 case I:
@@ -1694,7 +1616,7 @@ public class MainController {
                     event.consume();
                     break;
                 case H:
-                    openHelpScreen();
+                    screenPane.open(helpScreen);
                     event.consume();
                     break;
                 case D:
@@ -1762,15 +1684,6 @@ public class MainController {
                     closeSettingsScreen(false);
                     event.consume();
                 }
-                break;
-        }
-    }
-
-    public void progress_rootPaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                closeProgressScreen();
-                event.consume();
                 break;
         }
     }

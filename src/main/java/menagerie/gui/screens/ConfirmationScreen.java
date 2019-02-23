@@ -2,7 +2,6 @@ package menagerie.gui.screens;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
@@ -21,16 +20,14 @@ public class ConfirmationScreen extends Screen {
     private ConfirmationScreenCancelListener cancelListener = null;
 
 
-    public ConfirmationScreen(Node onShowDisable) {
-        super(onShowDisable);
-
+    public ConfirmationScreen() {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE || event.getCode() == KeyCode.BACK_SPACE) {
-                hide();
+                close();
                 event.consume();
             } else if (event.getCode() == KeyCode.ENTER) {
                 if (okListener != null) okListener.okayed();
-                hide();
+                close();
                 event.consume();
             }
         });
@@ -41,12 +38,12 @@ public class ConfirmationScreen extends Screen {
         Button ok = new Button("Ok");
         ok.setOnAction(event -> {
             if (okListener != null) okListener.okayed();
-            hide();
+            close();
         });
         Button cancel = new Button("Cancel");
         cancel.setOnAction(event -> {
             if (cancelListener != null) cancelListener.canceled();
-            hide();
+            close();
         });
 
         HBox h = new HBox(5, ok, cancel);
@@ -61,15 +58,16 @@ public class ConfirmationScreen extends Screen {
         v.setStyle("-fx-background-color: -fx-base;");
         setCenter(v);
 
-        onShowFocus = ok;
+        setDefaultFocusNode(ok);
     }
 
-    public void show(String title, String message, ConfirmationScreenOkListener okListener, ConfirmationScreenCancelListener cancelListener) {
+    public void open(ScreenPane manager, String title, String message, ConfirmationScreenOkListener okListener, ConfirmationScreenCancelListener cancelListener) {
+        manager.open(this);
+
         titleLabel.setText(title);
         messageLabel.setText(message);
         this.okListener = okListener;
         this.cancelListener = cancelListener;
-        show();
     }
 
 }

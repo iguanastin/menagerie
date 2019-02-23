@@ -5,31 +5,35 @@ import javafx.scene.layout.BorderPane;
 
 public class Screen extends BorderPane {
 
-    protected Node lastFocusOwner = null;
-    protected Node onShowFocus = this;
-    protected Node onShowDisable;
+    private ScreenPane manager = null;
+
+    private Node defaultFocusNode = this;
 
 
-    public Screen(Node onShowDisable) {
-        this.onShowDisable = onShowDisable;
-        setDisable(true);
-        setOpacity(0);
+    public void close() {
+        if (manager == null) return;
+
+        manager.close(this);
     }
 
-
-    public void show() {
-        lastFocusOwner = getScene().getFocusOwner();
-        setDisable(false);
-        setOpacity(1);
-        if (onShowDisable != null) onShowDisable.setDisable(true);
-        if (onShowFocus != null) onShowFocus.requestFocus();
+    public void setManager(ScreenPane manager) {
+        this.manager = manager;
     }
 
-    public void hide() {
-        setDisable(true);
-        setOpacity(0);
-        if (onShowDisable != null) onShowDisable.setDisable(false);
-        if (lastFocusOwner != null) lastFocusOwner.requestFocus();
+    public ScreenPane getManager() {
+        return manager;
     }
+
+    public void setDefaultFocusNode(Node defaultFocusNode) {
+        this.defaultFocusNode = defaultFocusNode;
+    }
+
+    public void focusDefaultNode() {
+        defaultFocusNode.requestFocus();
+    }
+
+    protected void onShow() {}
+
+    protected void onHide() {}
 
 }

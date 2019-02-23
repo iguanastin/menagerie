@@ -2,7 +2,6 @@ package menagerie.gui.screens;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.input.KeyCode;
@@ -22,9 +21,7 @@ public class SlideshowScreen extends Screen {
     private ImageInfo showing = null;
 
 
-    public SlideshowScreen(Node onShowDisable) {
-        super(onShowDisable);
-
+    public SlideshowScreen() {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.LEFT) {
                 previewLast();
@@ -33,7 +30,7 @@ public class SlideshowScreen extends Screen {
                 previewNext();
                 event.consume();
             } else if (event.getCode() == KeyCode.ESCAPE) {
-                hide();
+                close();
                 event.consume();
             }
         });
@@ -48,7 +45,7 @@ public class SlideshowScreen extends Screen {
         left.setOnAction(event -> previewLast());
 
         Button close = new Button("Close");
-        close.setOnAction(event -> hide());
+        close.setOnAction(event -> close());
 
         Button right = new Button("->");
         right.setOnAction(event -> previewNext());
@@ -57,12 +54,10 @@ public class SlideshowScreen extends Screen {
         h.setAlignment(Pos.CENTER);
         h.setPadding(new Insets(5));
         setBottom(h);
-
-        onShowFocus = this;
     }
 
-    public void show(List<ImageInfo> items) {
-        super.show();
+    public void open(ScreenPane manager, List<ImageInfo> items) {
+        manager.open(this);
 
         this.items.clear();
         this.items.addAll(items);
@@ -71,6 +66,12 @@ public class SlideshowScreen extends Screen {
         } else {
             preview(null);
         }
+    }
+
+    @Override
+    protected void onHide() {
+        items.clear();
+        preview(null);
     }
 
     public ImageInfo getShowing() {
@@ -95,7 +96,7 @@ public class SlideshowScreen extends Screen {
             preview(items.get(Math.max(0, Math.min(index, items.size() - 1))));
         } else {
             preview(null);
-            hide();
+            close();
         }
     }
 
@@ -135,4 +136,5 @@ public class SlideshowScreen extends Screen {
             }
         }
     }
+
 }

@@ -1,7 +1,6 @@
 package menagerie.gui.screens;
 
 import javafx.geometry.Insets;
-import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
@@ -14,12 +13,10 @@ import javafx.scene.text.Font;
 public class HelpScreen extends Screen {
 
 
-    public HelpScreen(Node onShowDisable) {
-        super(onShowDisable);
-
+    public HelpScreen() {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
-                hide();
+                close();
             }
         });
 
@@ -42,7 +39,7 @@ public class HelpScreen extends Screen {
 
         Button exit = new Button("X");
         header.setRight(exit);
-        exit.setOnAction(event -> hide());
+        exit.setOnAction(event -> close());
 
         Font boldItalic = new Font("System Bold Italic", 12);
 

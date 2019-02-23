@@ -3,7 +3,6 @@ package menagerie.gui.screens;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -28,12 +27,10 @@ public class ProgressScreen extends Screen {
     private final ProgressBar progress;
 
 
-    public ProgressScreen(Node onShowDisable) {
-        super(onShowDisable);
-
+    public ProgressScreen() {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
-                hide();
+                close();
                 event.consume();
             }
         });
@@ -59,7 +56,7 @@ public class ProgressScreen extends Screen {
         setMargin(bottom, new Insets(5));
         Button cancel = new Button("Cancel");
         cancel.setOnAction(event -> {
-            hide();
+            close();
             event.consume();
         });
         bottom.setRight(cancel);
@@ -72,13 +69,11 @@ public class ProgressScreen extends Screen {
         effect.setSpread(0.5);
         root.setEffect(effect);
 
-        onShowFocus = cancel;
+        setDefaultFocusNode(cancel);
     }
 
-    public void show(String titleText, String messageText, List<Runnable> tasks, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
-        show();
-
-        //TODO: Use screen manager to manage fade transition to avoid leaving a visible screen after hiding it
+    public void open(ScreenPane manager, String titleText, String messageText, List<Runnable> tasks, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
+        manager.open(this);
 
         title.setText(titleText);
         message.setText(messageText);
@@ -88,11 +83,11 @@ public class ProgressScreen extends Screen {
         if (progressThread != null) progressThread.stopRunning();
         progressThread = new ProgressLockThread(tasks);
         progressThread.setCancelListener((num, total) -> {
-            Platform.runLater(this::hide);
+            Platform.runLater(this::close);
             if (cancelListener != null) cancelListener.progressCanceled(num, total);
         });
         progressThread.setFinishListener(total -> {
-            Platform.runLater(this::hide);
+            Platform.runLater(this::close);
             if (finishListener != null) finishListener.progressFinished(total);
         });
         progressThread.setUpdateListener((num, total) -> Platform.runLater(() -> {
@@ -108,9 +103,7 @@ public class ProgressScreen extends Screen {
     }
 
     @Override
-    public void hide() {
-        super.hide();
-
+    public void onHide() {
         if (progressThread != null) progressThread.stopRunning();
     }
 
