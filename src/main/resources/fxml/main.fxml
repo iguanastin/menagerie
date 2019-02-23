@@ -10,7 +10,7 @@
 <StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="menagerie.gui.MainController">
     <StackPane fx:id="screensStackPane">
-        <BorderPane fx:id="explorer_rootPane" onKeyPressed="#explorer_rootPaneOnKeyPressed"
+        <BorderPane fx:id="explorerRootPane" onKeyPressed="#explorer_rootPaneOnKeyPressed"
                     onKeyReleased="#explorer_rootPaneOnKeyReleased" prefHeight="576.0" prefWidth="994.0">
             <center>
                 <BorderPane>
@@ -258,50 +258,6 @@
             <padding>
                 <Insets bottom="25.0" left="25.0" right="25.0" top="25.0"/>
             </padding>
-        </BorderPane>
-        <BorderPane fx:id="progress_rootPane" disable="true" onKeyPressed="#progress_rootPaneOnKeyPressed"
-                    opacity="0.0">
-            <center>
-                <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" prefWidth="400.0"
-                            style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
-                    <center>
-                        <VBox spacing="5.0" BorderPane.alignment="CENTER">
-                            <BorderPane.margin>
-                                <Insets/>
-                            </BorderPane.margin>
-                            <padding>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                            </padding>
-                            <Label fx:id="progress_messageLabel" text="Message"/>
-                            <ProgressBar fx:id="progress_progressBar" prefWidth="400.0" progress="0.0"/>
-                        </VBox>
-                    </center>
-                    <bottom>
-                        <BorderPane BorderPane.alignment="CENTER_RIGHT">
-                            <BorderPane.margin>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
-                            </BorderPane.margin>
-                            <right>
-                                <Button mnemonicParsing="false" onAction="#progress_stopButtonOnAction" text="Stop"
-                                        BorderPane.alignment="CENTER"/>
-                            </right>
-                            <left>
-                                <Label fx:id="progress_countLabel" text="0/0" BorderPane.alignment="CENTER">
-                                    <padding>
-                                        <Insets left="5.0"/>
-                                    </padding>
-                                </Label>
-                            </left>
-                        </BorderPane>
-                    </bottom>
-                    <top>
-                        <Label fx:id="progress_titleLabel" text="Title" BorderPane.alignment="CENTER_LEFT"/>
-                    </top>
-                    <effect>
-                        <DropShadow spread="0.5"/>
-                    </effect>
-                </BorderPane>
-            </center>
         </BorderPane>
         <BorderPane fx:id="duplicate_rootPane" disable="true" onKeyPressed="#duplicate_rootPaneOnKeyPressed"
                     opacity="0.0" style="-fx-background-color: -fx-base;">
