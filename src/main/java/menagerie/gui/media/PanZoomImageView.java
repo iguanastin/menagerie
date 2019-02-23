@@ -40,7 +40,14 @@ public class PanZoomImageView extends DynamicImageView {
                 clickImageX = deltaX;
                 clickImageY = deltaY;
             } else if (event.getButton().equals(MouseButton.SECONDARY)) {
-                fitImageToView();
+                if (getImage() != null) {
+                    if (deltaX == 0 && deltaY == 0 && getImage().getWidth() / scale == getFitWidth()) {
+                        scale = 1;
+                        updateViewPort();
+                    } else {
+                        fitImageToView();
+                    }
+                }
             }
         });
         addEventHandler(ScrollEvent.SCROLL, event -> {
