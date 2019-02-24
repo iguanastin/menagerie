@@ -51,11 +51,11 @@ public class Main extends Application {
                 Scene scene = new Scene(root);
                 scene.getStylesheets().add(css);
 
-                stage.close();
                 Stage newStage = new Stage();
                 newStage.setScene(scene);
                 newStage.setTitle(title);
                 newStage.show();
+                stage.close();
             } catch (IOException e) {
                 e.printStackTrace();
                 showErrorMessage("Fatal error", "Unable to load FXML: " + fxml, e.getLocalizedMessage());
