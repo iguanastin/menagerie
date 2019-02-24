@@ -10,14 +10,15 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import menagerie.util.SimplePokeListener;
 
 public class ConfirmationScreen extends Screen {
 
     private final Label titleLabel;
     private final Label messageLabel;
 
-    private ConfirmationScreenOkListener okListener = null;
-    private ConfirmationScreenCancelListener cancelListener = null;
+    private SimplePokeListener okListener = null;
+    private SimplePokeListener cancelListener = null;
 
 
     public ConfirmationScreen() {
@@ -26,7 +27,7 @@ public class ConfirmationScreen extends Screen {
                 close();
                 event.consume();
             } else if (event.getCode() == KeyCode.ENTER) {
-                if (okListener != null) okListener.okayed();
+                if (okListener != null) okListener.poke();
                 close();
                 event.consume();
             }
@@ -37,12 +38,12 @@ public class ConfirmationScreen extends Screen {
 
         Button ok = new Button("Ok");
         ok.setOnAction(event -> {
-            if (okListener != null) okListener.okayed();
+            if (okListener != null) okListener.poke();
             close();
         });
         Button cancel = new Button("Cancel");
         cancel.setOnAction(event -> {
-            if (cancelListener != null) cancelListener.canceled();
+            if (cancelListener != null) cancelListener.poke();
             close();
         });
 
@@ -61,7 +62,7 @@ public class ConfirmationScreen extends Screen {
         setDefaultFocusNode(ok);
     }
 
-    public void open(ScreenPane manager, String title, String message, ConfirmationScreenOkListener okListener, ConfirmationScreenCancelListener cancelListener) {
+    public void open(ScreenPane manager, String title, String message, SimplePokeListener okListener, SimplePokeListener cancelListener) {
         manager.open(this);
 
         titleLabel.setText(title);

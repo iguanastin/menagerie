@@ -38,6 +38,7 @@ import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
+import menagerie.util.SimplePokeListener;
 import menagerie.util.folderwatcher.FolderWatcherThread;
 
 import java.awt.*;
@@ -69,13 +70,13 @@ public class MainController {
     public PredictiveTextField searchTextField;
     public ImageGridView imageGridView;
     public DynamicMediaView previewMediaView;
-    public Label explorer_resultsAndSelectedLabel;
+    public Label resultCountLabel;
     public Label imageInfoLabel;
     public Label fileNameLabel;
-    public ListView<Tag> explorer_tagListView;
-    public PredictiveTextField explorer_editTagsTextField;
-    public MenuBar explorer_menuBar;
-    public Button explorer_showErrorsButton;
+    public ListView<Tag> tagListView;
+    public PredictiveTextField editTagsTextField;
+    public MenuBar menuBar;
+    public Button showErrorsButton;
 
     public BorderPane settings_rootPane;
     public CheckBox settings_computeMDCheckbox;
@@ -252,12 +253,12 @@ public class MainController {
             final int count = errors_listView.getItems().size();
 
             if (count == 0) {
-                explorer_showErrorsButton.setStyle("-fx-background-color: transparent;");
+                showErrorsButton.setStyle("-fx-background-color: transparent;");
             } else {
-                explorer_showErrorsButton.setStyle("-fx-background-color: red;");
+                showErrorsButton.setStyle("-fx-background-color: red;");
             }
 
-            explorer_showErrorsButton.setText("" + count);
+            showErrorsButton.setText("" + count);
         });
     }
 
@@ -388,7 +389,7 @@ public class MainController {
             switch (event.getCode()) {
                 case DELETE:
                     final boolean deleteFiles = !event.isControlDown();
-                    final ConfirmationScreenOkListener onFinish = () -> {
+                    final SimplePokeListener onFinish = () -> {
                         previewImage(null);
                         menagerie.removeImages(imageGridView.getSelected(), deleteFiles);
                     };
@@ -403,7 +404,7 @@ public class MainController {
                     break;
             }
         });
-        imageGridView.getSelected().addListener((ListChangeListener<? super ImageInfo>) c -> explorer_resultsAndSelectedLabel.setText(imageGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
+        imageGridView.getSelected().addListener((ListChangeListener<? super ImageInfo>) c -> resultCountLabel.setText(imageGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
         initExplorerGridCellContextMenu();
 
         //Init drag/drop handlers
@@ -477,7 +478,7 @@ public class MainController {
         });
 
         //Init tag list cell factory
-        explorer_tagListView.setCellFactory(param -> {
+        tagListView.setCellFactory(param -> {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
                 if (c.getItem() != null) {
@@ -500,7 +501,7 @@ public class MainController {
             return c;
         });
 
-        explorer_editTagsTextField.setOptionsListener(prefix -> {
+        editTagsTextField.setOptionsListener(prefix -> {
             prefix = prefix.toLowerCase();
             boolean negative = prefix.startsWith("-");
             if (negative) prefix = prefix.substring(1);
@@ -508,7 +509,7 @@ public class MainController {
             List<String> results = new ArrayList<>();
 
             List<Tag> tags;
-            if (negative) tags = new ArrayList<>(explorer_tagListView.getItems());
+            if (negative) tags = new ArrayList<>(tagListView.getItems());
             else tags = new ArrayList<>(menagerie.getTags());
             tags.sort((o1, o2) -> o2.getFrequency() - o1.getFrequency());
             for (Tag tag : tags) {
@@ -524,7 +525,7 @@ public class MainController {
         });
 
         searchTextField.setTop(false);
-        searchTextField.setOptionsListener(explorer_editTagsTextField.getOptionsListener());
+        searchTextField.setOptionsListener(editTagsTextField.getOptionsListener());
 
         previewMediaView.setMute(settings.isMuteVideoPreview());
         previewMediaView.setRepeat(settings.isRepeatVideoPreview());
@@ -805,7 +806,7 @@ public class MainController {
         explorerRootPane.setDisable(true);
         errors_rootPane.setDisable(false);
         errors_rootPane.requestFocus();
-        errors_rootPane.setOpacity(0);
+        errors_rootPane.setOpacity(1);
     }
 
     private void closeErrorsScreen() {
@@ -901,10 +902,10 @@ public class MainController {
     }
 
     private void updateTagList(ImageInfo image) {
-        explorer_tagListView.getItems().clear();
+        tagListView.getItems().clear();
         if (image != null) {
-            explorer_tagListView.getItems().addAll(image.getTags());
-            explorer_tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+            tagListView.getItems().addAll(image.getTags());
+            tagListView.getItems().sort(Comparator.comparing(Tag::getName));
         }
     }
 
@@ -1334,7 +1335,7 @@ public class MainController {
     private void tryDeleteCurrentSlideShowImage(boolean deleteFile) {
         //TODO: Extract this functionality to the slideshow screen
 
-        ConfirmationScreenOkListener onFinish = () -> {
+        SimplePokeListener onFinish = () -> {
             menagerie.removeImages(Collections.singletonList(slideshowScreen.getShowing()), deleteFile);
             slideshowScreen.removeCurrent();
         };
@@ -1587,8 +1588,8 @@ public class MainController {
                     event.consume();
                     break;
                 case E:
-                    explorer_editTagsTextField.setText(lastEditTagString);
-                    explorer_editTagsTextField.requestFocus();
+                    editTagsTextField.setText(lastEditTagString);
+                    editTagsTextField.requestFocus();
                     event.consume();
                     break;
                 case Q:
@@ -1635,10 +1636,10 @@ public class MainController {
 
     public void explorerRootPaneOnKeyReleased(KeyEvent event) {
         if (event.getCode() == KeyCode.ALT) {
-            if (explorer_menuBar.isFocused()) {
+            if (menuBar.isFocused()) {
                 imageGridView.requestFocus();
             } else {
-                explorer_menuBar.requestFocus();
+                menuBar.requestFocus();
             }
             event.consume();
         }
@@ -1647,18 +1648,18 @@ public class MainController {
     public void editTagsTextFieldOnKeyPressed(KeyEvent event) {
         switch (event.getCode()) {
             case SPACE:
-                editTagsOfSelected(explorer_editTagsTextField.getText());
-                Platform.runLater(() -> explorer_editTagsTextField.setText(null));
+                editTagsOfSelected(editTagsTextField.getText());
+                Platform.runLater(() -> editTagsTextField.setText(null));
                 event.consume();
                 break;
             case ENTER:
-                editTagsOfSelected(explorer_editTagsTextField.getText());
-                explorer_editTagsTextField.setText(null);
+                editTagsOfSelected(editTagsTextField.getText());
+                editTagsTextField.setText(null);
                 imageGridView.requestFocus();
                 event.consume();
                 break;
             case ESCAPE:
-                explorer_editTagsTextField.setText(null);
+                editTagsTextField.setText(null);
                 imageGridView.requestFocus();
                 event.consume();
                 break;
