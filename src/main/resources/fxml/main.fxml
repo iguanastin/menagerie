@@ -326,32 +326,6 @@
                 </SplitPane>
             </center>
         </BorderPane>
-        <BorderPane fx:id="errors_rootPane" disable="true" onKeyPressed="#errorsPane_rootKeyPressed" opacity="0.0">
-            <right>
-                <VBox prefWidth="600.0" style="-fx-background-color: -fx-base;" BorderPane.alignment="CENTER">
-                    <effect>
-                        <DropShadow spread="0.5"/>
-                    </effect>
-                    <BorderPane>
-                        <left>
-                            <Label text="Errors and warnings:" BorderPane.alignment="CENTER"/>
-                        </left>
-                        <right>
-                            <Button mnemonicParsing="false" onAction="#errors_closeButtonOnAction" text="X"
-                                    BorderPane.alignment="CENTER"/>
-                        </right>
-                    </BorderPane>
-                    <Separator prefWidth="200.0"/>
-                    <ListView fx:id="errors_listView" VBox.vgrow="ALWAYS"/>
-                    <HBox alignment="TOP_RIGHT">
-                        <Button mnemonicParsing="false" onAction="#errors_dismissAllButtonOnAction" text="Dismiss All"/>
-                    </HBox>
-                </VBox>
-            </right>
-            <padding>
-                <Insets bottom="25.0" left="25.0" right="25.0" top="25.0"/>
-            </padding>
-        </BorderPane>
     </StackPane>
     <ScreenPane fx:id="screenPane" />
 </StackPane>

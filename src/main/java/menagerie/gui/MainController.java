@@ -112,15 +112,13 @@ public class MainController {
     public ListView<Tag> duplicate_leftTagListView;
     public ListView<Tag> duplicate_rightTagListView;
 
-    public BorderPane errors_rootPane;
-    public ListView<TrackedError> errors_listView;
-
     // ----------------------------------- Screens ---------------------------------------------------------------------
 
     public ScreenPane screenPane;
     private TagListScreen tagListScreen;
     private HelpScreen helpScreen;
     private SlideshowScreen slideshowScreen;
+    private ErrorsScreen errorsScreen;
 
 
     //Menagerie vars
@@ -217,7 +215,7 @@ public class MainController {
             menagerie = new Menagerie(db);
 
             menagerie.getUpdateQueue().setErrorListener(e -> Platform.runLater(() -> {
-                errors_addError(new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"));
+                errorsScreen.addError(new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"));
             }));
         } catch (SQLException e) {
             e.printStackTrace();
@@ -248,9 +246,9 @@ public class MainController {
     }
 
     private void initErrorsScreen() {
-        errors_listView.setCellFactory(param -> new ErrorListCell(error -> errors_listView.getItems().remove(error)));
-        errors_listView.getItems().addListener((ListChangeListener<? super TrackedError>) c -> {
-            final int count = errors_listView.getItems().size();
+        errorsScreen = new ErrorsScreen();
+        errorsScreen.getErrors().addListener((ListChangeListener<? super TrackedError>) c -> {
+            final int count = c.getList().size();
 
             if (count == 0) {
                 showErrorsButton.setStyle("-fx-background-color: transparent;");
@@ -435,7 +433,7 @@ public class MainController {
                     try {
                         menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
                     } catch (Exception e) {
-                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import a file: " + file, "Unknown")));
+                        Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import a file: " + file, "Unknown")));
                     }
                 }));
 
@@ -560,7 +558,7 @@ public class MainController {
                             img.initializeMD5();
                             img.commitMD5ToDatabase();
                         } catch (Exception e) {
-                            Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for file: " + img, "Unknown")));
+                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for file: " + img, "Unknown")));
                         }
                     });
                 }
@@ -580,7 +578,7 @@ public class MainController {
                             img.initializeHistogram();
                             img.commitHistogramToDatabase();
                         } catch (Exception e) {
-                            Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + img, "Unknown")));
+                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + img, "Unknown")));
                         }
                     });
                 }
@@ -609,7 +607,7 @@ public class MainController {
                             File dest = MainController.resolveDuplicateFilename(f);
 
                             if (!img.renameTo(dest)) {
-                                Platform.runLater(() -> errors_addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving file", "An exception was thrown while trying to move a file\nFrom: " + img.getFile() + "\nTo: " + dest, "Unknown")));
+                                Platform.runLater(() -> errorsScreen.addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving file", "An exception was thrown while trying to move a file\nFrom: " + img.getFile() + "\nTo: " + dest, "Unknown")));
                             }
                         }
                     }));
@@ -762,7 +760,7 @@ public class MainController {
                         if (similarity >= settings.getSimilarityThreshold())
                             duplicate_pairs.add(new SimilarPair(i1, i2, similarity));
                     } catch (Exception e) {
-                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
+                        Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
                     }
                 }
             });
@@ -802,20 +800,6 @@ public class MainController {
         duplicate_rootPane.setOpacity(0);
     }
 
-    private void openErrorsScreen() {
-        explorerRootPane.setDisable(true);
-        errors_rootPane.setDisable(false);
-        errors_rootPane.requestFocus();
-        errors_rootPane.setOpacity(1);
-    }
-
-    private void closeErrorsScreen() {
-        explorerRootPane.setDisable(false);
-        errors_rootPane.setDisable(true);
-        imageGridView.requestFocus();
-        errors_rootPane.setOpacity(0);
-    }
-
     // -------------------------------- Dialog Openers ---------------------------------------
 
     private void openImportFolderDialog() {
@@ -832,7 +816,7 @@ public class MainController {
                 try {
                     menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
                 } catch (Exception e) {
-                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
+                    Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
                 }
             }));
 
@@ -858,7 +842,7 @@ public class MainController {
                 try {
                     menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
                 } catch (Exception e) {
-                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
+                    Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
                 }
             }));
 
@@ -885,7 +869,7 @@ public class MainController {
         currentlyPreviewing = image;
 
         if (!previewMediaView.preview(image)) {
-            errors_addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
+            errorsScreen.addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
         }
 
         updateTagList(image);
@@ -1225,7 +1209,7 @@ public class MainController {
                         i.initializeMD5();
                         i.commitMD5ToDatabase();
                     } catch (Exception e) {
-                        Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for file: " + i, "Unknown")));
+                        Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for file: " + i, "Unknown")));
                     }
                 });
             });
@@ -1243,7 +1227,7 @@ public class MainController {
                                     i.initializeHistogram();
                                     i.commitHistogramToDatabase();
                                 } catch (Exception e) {
-                                    Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for file: " + i, "Unknown")));
+                                    Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for file: " + i, "Unknown")));
                                 }
                             });
                     });
@@ -1256,11 +1240,6 @@ public class MainController {
         } else {
             openDuplicateScreen(images);
         }
-    }
-
-    private void errors_addError(TrackedError error) {
-        errors_listView.getItems().add(0, error);
-        Toolkit.getDefaultToolkit().beep();
     }
 
     private void startWatchingFolderForImages() {
@@ -1424,7 +1403,7 @@ public class MainController {
         try {
             settings.saveToFile();
         } catch (IOException e1) {
-            Platform.runLater(() -> errors_addError(new TrackedError(e1, TrackedError.Severity.HIGH, "Unable to save properties", "IO Exception thrown while trying to save properties file", "1.) Application may not have write privileges\n2.) File may already be in use")));
+            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e1, TrackedError.Severity.HIGH, "Unable to save properties", "IO Exception thrown while trying to save properties file", "1.) Application may not have write privileges\n2.) File may already be in use")));
         }
     }
 
@@ -1553,19 +1532,8 @@ public class MainController {
         event.consume();
     }
 
-    public void errors_closeButtonOnAction(ActionEvent event) {
-        closeErrorsScreen();
-        event.consume();
-    }
-
-    public void errors_dismissAllButtonOnAction(ActionEvent event) {
-        errors_listView.getItems().clear();
-        closeErrorsScreen();
-        event.consume();
-    }
-
     public void showErrorsButtonOnAction(ActionEvent event) {
-        openErrorsScreen();
+        screenPane.open(errorsScreen);
         event.consume();
     }
 
@@ -1697,15 +1665,6 @@ public class MainController {
                 break;
             case RIGHT:
                 duplicate_previewNextPair();
-                event.consume();
-                break;
-        }
-    }
-
-    public void errorsPane_rootKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                closeErrorsScreen();
                 event.consume();
                 break;
         }
