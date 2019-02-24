@@ -507,13 +507,25 @@ public class MainController {
             List<String> results = new ArrayList<>();
 
             List<Tag> tags;
-            if (negative) tags = new ArrayList<>(tagListView.getItems());
-            else tags = new ArrayList<>(menagerie.getTags());
+            if (negative) {
+                tags = new ArrayList<>();
+                for (ImageInfo item : imageGridView.getSelected()) {
+                    item.getTags().forEach(tag -> {
+                        if (!tags.contains(tag)) tags.add(tag);
+                    });
+                }
+            } else {
+                tags = new ArrayList<>(menagerie.getTags());
+            }
+
             tags.sort((o1, o2) -> o2.getFrequency() - o1.getFrequency());
             for (Tag tag : tags) {
                 if (tag.getName().toLowerCase().startsWith(prefix)) {
-                    if (negative) results.add("-" + tag.getName());
-                    else results.add(tag.getName());
+                    if (negative) {
+                        results.add("-" + tag.getName());
+                    } else {
+                        results.add(tag.getName());
+                    }
                 }
 
                 if (results.size() >= 8) break;
@@ -523,7 +535,30 @@ public class MainController {
         });
 
         searchTextField.setTop(false);
-        searchTextField.setOptionsListener(editTagsTextField.getOptionsListener());
+        searchTextField.setOptionsListener(prefix -> {
+            prefix = prefix.toLowerCase();
+            boolean negative = prefix.startsWith("-");
+            if (negative) prefix = prefix.substring(1);
+
+            List<String> results = new ArrayList<>();
+
+            List<Tag> tags = new ArrayList<>(menagerie.getTags());
+
+            tags.sort((o1, o2) -> o2.getFrequency() - o1.getFrequency());
+            for (Tag tag : tags) {
+                if (tag.getName().toLowerCase().startsWith(prefix)) {
+                    if (negative) {
+                        results.add("-" + tag.getName());
+                    } else {
+                        results.add(tag.getName());
+                    }
+                }
+
+                if (results.size() >= 8) break;
+            }
+
+            return results;
+        });
 
         previewMediaView.setMute(settings.isMuteVideoPreview());
         previewMediaView.setRepeat(settings.isRepeatVideoPreview());
