@@ -215,8 +215,8 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return tags.contains(t);
     }
 
-    public void addTag(Tag t) {
-        if (hasTag(t)) return;
+    public boolean addTag(Tag t) {
+        if (hasTag(t)) return false;
         tags.add(t);
         t.incrementFrequency();
 
@@ -233,10 +233,11 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
         if (tagListener != null) tagListener.poke();
 
+        return true;
     }
 
-    public void removeTag(Tag t) {
-        if (!hasTag(t)) return;
+    public boolean removeTag(Tag t) {
+        if (!hasTag(t)) return false;
         tags.remove(t);
         t.decrementFrequency();
 
@@ -253,6 +254,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
         if (tagListener != null) tagListener.poke();
 
+        return true;
     }
 
     public boolean renameTo(File dest) {

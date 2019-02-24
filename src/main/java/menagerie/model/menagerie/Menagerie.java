@@ -307,7 +307,7 @@ public class Menagerie {
     }
 
     public void checkImagesStillValidInSearches(List<ImageInfo> images) {
-        activeSearches.forEach(search -> search.removeIfInvalid(images));
+        activeSearches.forEach(search -> search.recheckWithSearch(images));
     }
 
     void imageMD5Updated(ImageInfo img) {

@@ -19,7 +19,6 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import menagerie.gui.errors.ErrorListCell;
 import menagerie.gui.errors.TrackedError;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
@@ -33,6 +32,7 @@ import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
+import menagerie.model.menagerie.history.TagEditEvent;
 import menagerie.model.search.Search;
 import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
@@ -131,6 +131,7 @@ public class MainController {
     private final ClipboardContent explorer_clipboard = new ClipboardContent();
     private boolean explorer_imageGridViewDragging = false;
     private ContextMenu explorer_cellContextMenu;
+    private Stack<TagEditEvent> tagEditHistory = new Stack<>();
 
     //Duplicate screen vars
     private List<SimilarPair> duplicate_pairs = null;
@@ -491,7 +492,16 @@ public class MainController {
                         applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
                     });
                     MenuItem i3 = new MenuItem("Remove from selected");
-                    i3.setOnAction(event1 -> imageGridView.getSelected().forEach(img -> img.removeTag(c.getItem())));
+                    i3.setOnAction(event1 -> {
+                        Map<ImageInfo, List<Tag>> removed = new HashMap<>();
+                        imageGridView.getSelected().forEach(item -> {
+                            if (item.removeTag(c.getItem())) {
+                                removed.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
+                            }
+                        });
+
+                        tagEditHistory.push(new TagEditEvent(null, removed));
+                    });
                     ContextMenu m = new ContextMenu(i1, i2, new SeparatorMenuItem(), i3);
                     m.show(c, event.getScreenX(), event.getScreenY());
                 }
@@ -1114,27 +1124,39 @@ public class MainController {
         lastEditTagString = input.trim();
 
         List<ImageInfo> changed = new ArrayList<>();
+        Map<ImageInfo, List<Tag>> added = new HashMap<>();
+        Map<ImageInfo, List<Tag>> removed = new HashMap<>();
 
         for (String text : input.split("\\s+")) {
             if (text.startsWith("-")) {
                 Tag t = menagerie.getTagByName(text.substring(1));
                 if (t != null) {
-                    imageGridView.getSelected().forEach(img -> {
-                        img.removeTag(t);
-                        changed.add(img);
-                    });
+                    for (ImageInfo item : imageGridView.getSelected()) {
+                        if (item.removeTag(t)) {
+                            changed.add(item);
+
+                            removed.computeIfAbsent(item, k -> new ArrayList<>()).add(t);
+                        }
+                    }
                 }
             } else {
                 Tag t = menagerie.getTagByName(text);
                 if (t == null) t = menagerie.createTag(text);
-                for (ImageInfo img : imageGridView.getSelected()) {
-                    img.addTag(t);
-                    changed.add(img);
+                for (ImageInfo item : imageGridView.getSelected()) {
+                    if (item.addTag(t)) {
+                        changed.add(item);
+
+                        added.computeIfAbsent(item, k -> new ArrayList<>()).add(t);
+                    }
                 }
             }
         }
 
-        if (!changed.isEmpty()) menagerie.checkImagesStillValidInSearches(changed);
+        if (!changed.isEmpty()) {
+            menagerie.checkImagesStillValidInSearches(changed);
+
+            tagEditHistory.push(new TagEditEvent(added, removed));
+        }
     }
 
     private void duplicate_previewPair(SimilarPair pair) {
@@ -1621,6 +1643,27 @@ public class MainController {
                     break;
                 case D:
                     duplicate_compareAndShow(imageGridView.getSelected());
+                    event.consume();
+                    break;
+                case Z:
+                    if (tagEditHistory.empty()) {
+                        Toolkit.getDefaultToolkit().beep();
+                    } else {
+                        TagEditEvent peek = tagEditHistory.peek();
+                        new ConfirmationScreen().open(screenPane, "Undo last tag edit?", "Tags were added to " + peek.getAdded().keySet().size() + " images and removed from " + peek.getRemoved().keySet().size() + " others.", () -> {
+                            TagEditEvent pop = tagEditHistory.pop();
+                            pop.reverseAction();
+
+                            List<ImageInfo> list = new ArrayList<>();
+                            pop.getAdded().keySet().forEach(item -> {
+                                if (!list.contains(item)) list.add(item);
+                            });
+                            pop.getRemoved().keySet().forEach(item -> {
+                                if (!list.contains(item)) list.add(item);
+                            });
+                            menagerie.checkImagesStillValidInSearches(list);
+                        }, null);
+                    }
                     event.consume();
                     break;
             }

@@ -73,21 +73,25 @@ public class Search {
         if (changed && listener != null) listener.imagesAdded(toAdd);
     }
 
-    public void removeIfInvalid(List<ImageInfo> images) {
+    public void recheckWithSearch(List<ImageInfo> items) {
         if (rules == null) return;
 
         List<ImageInfo> toRemove = new ArrayList<>();
-
-        for (ImageInfo img : images) {
+        List<ImageInfo> toAdd = new ArrayList<>();
+        for (ImageInfo item : items) {
             for (SearchRule rule : rules) {
-                if (!rule.accept(img)) {
-                    toRemove.add(img);
+                if (!rule.accept(item)) {
+                    toRemove.add(item);
                     break;
                 }
             }
-        }
 
+            if (!results.contains(item) && !toRemove.contains(item)) {
+                toAdd.add(item);
+            }
+        }
         if (results.removeAll(toRemove) && listener != null) listener.imagesRemoved(toRemove);
+        if (results.addAll(toAdd) && listener != null) listener.imagesAdded(toAdd);
     }
 
     public void remove(List<ImageInfo> images) {
