@@ -186,7 +186,6 @@
                                     </padding>
                                     <CheckBox fx:id="settings_computeMDCheckbox" text="Compute MD5"/>
                                     <CheckBox fx:id="settings_computeHistCheckbox" text="Compute Histogram"/>
-                                    <CheckBox fx:id="settings_buildThumbCheckbox" text="Build thumbnail"/>
                                 </VBox>
                                 <Separator/>
                                 <Label text="Duplicate finding:"/>

@@ -8,7 +8,6 @@ public class Settings extends Properties {
     private static final String AUTO_IMPORT_FROM_WEB_TAG = "auto_import_from_web";
     private static final String COMPUTE_MD5_ON_IMPORT_TAG = "compute_md5_on_import";
     private static final String COMPUTE_HIST_ON_IMPORT_TAG = "compute_histogram_on_import";
-    private static final String BUILD_THUMBNAIL_ON_IMPORT_TAG = "build_thumbnail_on_import";
     private static final String COMPUTE_MD5_FOR_SIMILARITY_TAG = "compute_md5_for_similarity";
     private static final String COMPUTE_HIST_FOR_SIMILARITY_TAG = "compute_hist_for_similarity";
     private static final String BACKUP_DATABASE_TAG = "backup_database";
@@ -105,10 +104,6 @@ public class Settings extends Properties {
 
     public boolean isComputeMD5OnImport() {
         return Boolean.parseBoolean(getProperty(COMPUTE_MD5_ON_IMPORT_TAG, "true"));
-    }
-
-    public boolean isBuildThumbnailOnImport() {
-        return Boolean.parseBoolean(getProperty(BUILD_THUMBNAIL_ON_IMPORT_TAG, "false"));
     }
 
     public boolean isWindowMaximized() {
@@ -253,10 +248,6 @@ public class Settings extends Properties {
 
     public void setComputeMD5OnImport(boolean computeMD5OnImport) {
         setProperty(COMPUTE_MD5_ON_IMPORT_TAG, computeMD5OnImport + "");
-    }
-
-    public void setBuildThumbnailOnImport(boolean buildThumbnailOnImport) {
-        setProperty(BUILD_THUMBNAIL_ON_IMPORT_TAG, buildThumbnailOnImport + "");
     }
 
     public void setRepeatVideoPreview(boolean repeatVideoPreview) {

@@ -80,7 +80,6 @@ public class MainController {
     public BorderPane settings_rootPane;
     public CheckBox settings_computeMDCheckbox;
     public CheckBox settings_computeHistCheckbox;
-    public CheckBox settings_buildThumbCheckbox;
     public CheckBox settings_autoImportWebCheckbox;
     public CheckBox settings_duplicateComputeHistCheckbox;
     public CheckBox settings_duplicateComputeMD5Checkbox;
@@ -433,7 +432,7 @@ public class MainController {
                 List<Runnable> queue = new ArrayList<>();
                 files.forEach(file -> queue.add(() -> {
                     try {
-                        menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                        menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
                     } catch (Exception e) {
                         Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import a file: " + file, "Unknown")));
                     }
@@ -461,7 +460,7 @@ public class MainController {
                         try {
                             downloadAndSaveFile(url, finalTarget);
                             Platform.runLater(() -> {
-                                ImageInfo img = menagerie.importImage(finalTarget, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                                ImageInfo img = menagerie.importImage(finalTarget, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
                                 if (img == null) {
                                     if (!finalTarget.delete())
                                         System.out.println("Tried to delete a downloaded file, as it couldn't be imported, but failed: " + finalTarget);
@@ -677,7 +676,6 @@ public class MainController {
         settings_autoImportWebCheckbox.setSelected(settings.isAutoImportFromWeb());
         settings_computeMDCheckbox.setSelected(settings.isComputeMD5OnImport());
         settings_computeHistCheckbox.setSelected(settings.isComputeHistogramOnImport());
-        settings_buildThumbCheckbox.setSelected(settings.isBuildThumbnailOnImport());
         settings_duplicateComputeMD5Checkbox.setSelected(settings.isComputeMD5ForSimilarity());
         settings_duplicateComputeHistCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
         settings_duplicateConsolidateTagsCheckbox.setSelected(settings.isConsolidateTags());
@@ -719,7 +717,6 @@ public class MainController {
             settings.setAutoImportFromWeb(settings_autoImportWebCheckbox.isSelected());
             settings.setComputeMD5OnImport(settings_computeMDCheckbox.isSelected());
             settings.setComputeHistogramOnImport(settings_computeHistCheckbox.isSelected());
-            settings.setBuildThumbnailOnImport(settings_buildThumbCheckbox.isSelected());
             settings.setComputeMD5ForSimilarity(settings_duplicateComputeMD5Checkbox.isSelected());
             settings.setComputeHistogramForSimilarity(settings_duplicateComputeHistCheckbox.isSelected());
             settings.setConsolidateTags(settings_duplicateConsolidateTagsCheckbox.isSelected());
@@ -832,7 +829,7 @@ public class MainController {
             menagerie.getImages().forEach(img -> files.remove(img.getFile()));
             files.forEach(file -> queue.add(() -> {
                 try {
-                    menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                    menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
                 } catch (Exception e) {
                     Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
                 }
@@ -858,7 +855,7 @@ public class MainController {
             List<Runnable> queue = new ArrayList<>();
             finalResults.forEach(file -> queue.add(() -> {
                 try {
-                    menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport());
+                    menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
                 } catch (Exception e) {
                     Platform.runLater(() -> errors_addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
                 }
@@ -1290,7 +1287,7 @@ public class MainController {
                             file = dest;
                         }
 
-                        if (menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), settings.isBuildThumbnailOnImport()) == null) {
+                        if (menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport()) == null) {
                             if (!file.delete())
                                 System.out.println("Failed to delete file after it was denied by the Menagerie");
                         }

@@ -178,7 +178,7 @@ public class Menagerie {
         System.out.println("Finished loading " + tags.size() + " tags from database");
     }
 
-    public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram, boolean buildThumbnail) {
+    public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram) {
         if (isFilePresent(file)) return null;
 
         ImageInfo img = new ImageInfo(this, nextImageID, System.currentTimeMillis(), file, null, null);
@@ -230,11 +230,6 @@ public class Menagerie {
             Tag video = getTagByName("video");
             if (video == null) video = createTag("video");
             img.addTag(video);
-        }
-
-        //Build thumbnail if flagged
-        if (buildThumbnail) {
-            img.getThumbnail();
         }
 
         //Update active searches

@@ -57,10 +57,14 @@ public class SlideshowScreen extends Screen {
     }
 
     public void open(ScreenPane manager, List<ImageInfo> items) {
-        manager.open(this);
-
         this.items.clear();
         this.items.addAll(items);
+
+        manager.open(this);
+    }
+
+    @Override
+    protected void onOpen() {
         if (!items.isEmpty()) {
             preview(items.get(0));
         } else {
