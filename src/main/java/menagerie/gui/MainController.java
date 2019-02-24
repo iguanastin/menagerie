@@ -33,7 +33,8 @@ import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
-import menagerie.model.search.*;
+import menagerie.model.search.Search;
+import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
@@ -64,13 +65,13 @@ public class MainController {
     public StackPane screensStackPane;
 
     public BorderPane explorerRootPane;
-    public ToggleButton explorer_descendingToggleButton;
+    public ToggleButton listDescendingToggleButton;
     public PredictiveTextField searchTextField;
-    public ImageGridView explorer_imageGridView;
-    public DynamicMediaView explorer_previewMediaView;
+    public ImageGridView imageGridView;
+    public DynamicMediaView previewMediaView;
     public Label explorer_resultsAndSelectedLabel;
-    public Label explorer_imageInfoLabel;
-    public Label explorer_fileNameLabel;
+    public Label imageInfoLabel;
+    public Label fileNameLabel;
     public ListView<Tag> explorer_tagListView;
     public PredictiveTextField explorer_editTagsTextField;
     public MenuBar explorer_menuBar;
@@ -126,9 +127,9 @@ public class MainController {
     private Menagerie menagerie;
 
     //Explorer screen vars
-    private Search explorer_currentSearch = null;
-    private ImageInfo explorer_previewing = null;
-    private String explorer_lastTagString = null;
+    private Search currentSearch = null;
+    private ImageInfo currentlyPreviewing = null;
+    private String lastEditTagString = null;
     private final ClipboardContent explorer_clipboard = new ClipboardContent();
     private boolean explorer_imageGridViewDragging = false;
     private ContextMenu explorer_cellContextMenu;
@@ -163,30 +164,13 @@ public class MainController {
         }
 
         //Backup database
-        if (settings.isBackupDatabase()) {
-            try {
-                backupDatabase(settings.getDbUrl());
-            } catch (IOException e) {
-                e.printStackTrace();
-                Main.showErrorMessage("Error", "Error while trying to back up the database: " + settings.getDbUrl(), e.getLocalizedMessage());
-            }
-        }
+        if (settings.isBackupDatabase()) backupDatabase();
 
         //Initialize the menagerie
         initMenagerie();
 
         //Init screens
-        initExplorerScreen();
-
-        initSettingsScreen();
-        initDuplicateScreen();
-        initErrorsScreen();
-
-        initTagListScreen();
-        initSlideShowScreen();
-        helpScreen = new HelpScreen();
-        //Init disable listener for explorer screen
-        screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty()));
+        initScreens();
 
         //Things to run on first "tick"
         Platform.runLater(() -> {
@@ -198,11 +182,31 @@ public class MainController {
         });
 
         //Apply a default search
-        explorer_applySearch();
+        applySearch(null, listDescendingToggleButton.isSelected());
 
         //Init folder watcher
         startWatchingFolderForImages();
 
+    }
+
+    private void backupDatabase() {
+        try {
+            backUpDatabase(settings.getDbUrl());
+        } catch (IOException e) {
+            e.printStackTrace();
+            Main.showErrorMessage("Error", "Error while trying to back up the database: " + settings.getDbUrl(), e.getLocalizedMessage());
+        }
+    }
+
+    private void initScreens() {
+        initExplorerScreen();
+        initSettingsScreen();
+        initDuplicateScreen();
+        initErrorsScreen();
+        initTagListScreen();
+        initSlideShowScreen();
+        helpScreen = new HelpScreen();
+        screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
     }
 
     private void initMenagerie() {
@@ -226,18 +230,18 @@ public class MainController {
         MenuItem showInSearchMenuItem = new MenuItem("Show in search");
         showInSearchMenuItem.setOnAction(event -> {
             slideshowScreen.close();
-            explorer_imageGridView.select(slideshowScreen.getShowing(), false, false);
+            imageGridView.select(slideshowScreen.getShowing(), false, false);
         });
         MenuItem forgetCurrentMenuItem = new MenuItem("Forget");
-        forgetCurrentMenuItem.setOnAction(event -> slideShow_tryDeleteCurrent(false));
+        forgetCurrentMenuItem.setOnAction(event -> tryDeleteCurrentSlideShowImage(false));
         MenuItem deleteCurrentMenuItem = new MenuItem("Delete");
-        deleteCurrentMenuItem.setOnAction(event -> slideShow_tryDeleteCurrent(true));
+        deleteCurrentMenuItem.setOnAction(event -> tryDeleteCurrentSlideShowImage(true));
 
         slideshowScreen = new SlideshowScreen();
         slideshowScreen.setItemContextMenu(new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem));
         slideshowScreen.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.DELETE) {
-                slideShow_tryDeleteCurrent(!event.isControlDown());
+                tryDeleteCurrentSlideShowImage(!event.isControlDown());
                 event.consume();
             }
         });
@@ -285,7 +289,7 @@ public class MainController {
         MenuItem showInSearchMenuItem = new MenuItem("Show in search");
         showInSearchMenuItem.setOnAction(event -> {
             closeDuplicateScreen();
-            explorer_imageGridView.select((ImageInfo) duplicate_contextMenu.getUserData(), false, false);
+            imageGridView.select((ImageInfo) duplicate_contextMenu.getUserData(), false, false);
         });
         MenuItem forgetMenuItem = new MenuItem("Forget");
         forgetMenuItem.setOnAction(event -> {
@@ -321,7 +325,7 @@ public class MainController {
                     searchTextField.setText(c.getItem().getName());
                     searchTextField.positionCaret(searchTextField.getText().length());
                     tagListScreen.close();
-                    explorer_applySearch();
+                    applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
                 });
                 ContextMenu m = new ContextMenu(i1);
                 m.show(c, event.getScreenX(), event.getScreenY());
@@ -332,20 +336,20 @@ public class MainController {
 
     private void initExplorerScreen() {
         //Set image grid width from settings
-        explorer_setGridWidth(settings.getImageGridWidth());
+        setGridWidth(settings.getImageGridWidth());
 
         //Init image grid
-        explorer_imageGridView.setSelectionListener(image -> Platform.runLater(() -> explorer_previewImage(image)));
-        explorer_imageGridView.setCellFactory(param -> {
+        imageGridView.setSelectionListener(image -> Platform.runLater(() -> previewImage(image)));
+        imageGridView.setCellFactory(param -> {
             ImageGridCell c = new ImageGridCell();
             c.setOnDragDetected(event -> {
-                if (!explorer_imageGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
-                    if (!explorer_imageGridView.isSelected(c.getItem()))
-                        explorer_imageGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                if (!imageGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
+                    if (!imageGridView.isSelected(c.getItem()))
+                        imageGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
 
                     Dragboard db = c.startDragAndDrop(TransferMode.ANY);
 
-                    for (ImageInfo img : explorer_imageGridView.getSelected()) {
+                    for (ImageInfo img : imageGridView.getSelected()) {
                         String filename = img.getFile().getName().toLowerCase();
                         if (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")) {
                             if (img.getThumbnail().isLoaded()) {
@@ -356,7 +360,7 @@ public class MainController {
                     }
 
                     List<File> files = new ArrayList<>();
-                    explorer_imageGridView.getSelected().forEach(img -> files.add(img.getFile()));
+                    imageGridView.getSelected().forEach(img -> files.add(img.getFile()));
                     explorer_clipboard.putFiles(files);
                     db.setContent(explorer_clipboard);
 
@@ -370,7 +374,7 @@ public class MainController {
             });
             c.setOnMouseReleased(event -> {
                 if (!explorer_imageGridViewDragging && event.getButton() == MouseButton.PRIMARY) {
-                    explorer_imageGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                    imageGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
                     event.consume();
                 }
             });
@@ -381,37 +385,37 @@ public class MainController {
             });
             return c;
         });
-        explorer_imageGridView.setOnKeyPressed(event -> {
+        imageGridView.setOnKeyPressed(event -> {
             switch (event.getCode()) {
                 case DELETE:
                     final boolean deleteFiles = !event.isControlDown();
                     final ConfirmationScreenOkListener onFinish = () -> {
-                        explorer_previewImage(null);
-                        menagerie.removeImages(explorer_imageGridView.getSelected(), deleteFiles);
+                        previewImage(null);
+                        menagerie.removeImages(imageGridView.getSelected(), deleteFiles);
                     };
                     if (deleteFiles) {
-                        new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                                                "This action CANNOT be undone (files will be deleted)", onFinish, null);
+                        new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + imageGridView.getSelected().size() + " files)\n\n" +
+                                "This action CANNOT be undone (files will be deleted)", onFinish, null);
                     } else {
-                        new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                                                "This action CANNOT be undone", onFinish, null);
+                        new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + imageGridView.getSelected().size() + " files)\n\n" +
+                                "This action CANNOT be undone", onFinish, null);
                     }
                     event.consume();
                     break;
             }
         });
-        explorer_imageGridView.getSelected().addListener((ListChangeListener<? super ImageInfo>) c -> explorer_resultsAndSelectedLabel.setText(explorer_imageGridView.getSelected().size() + " / " + explorer_currentSearch.getResults().size()));
+        imageGridView.getSelected().addListener((ListChangeListener<? super ImageInfo>) c -> explorer_resultsAndSelectedLabel.setText(imageGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
         initExplorerGridCellContextMenu();
 
         //Init drag/drop handlers
         explorerRootPane.disabledProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
-                if (explorer_previewMediaView.isPlaying()) {
-                    explorer_previewMediaView.pause();
+                if (previewMediaView.isPlaying()) {
+                    previewMediaView.pause();
                     playVideoAfterExplorerEnabled = true;
                 }
             } else if (playVideoAfterExplorerEnabled) {
-                explorer_previewMediaView.play();
+                previewMediaView.play();
                 playVideoAfterExplorerEnabled = false;
             }
         });
@@ -481,15 +485,15 @@ public class MainController {
                     MenuItem i1 = new MenuItem("Add to search");
                     i1.setOnAction(event1 -> {
                         searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
-                        explorer_applySearch();
+                        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
                     });
                     MenuItem i2 = new MenuItem("Exclude from search");
                     i2.setOnAction(event1 -> {
                         searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
-                        explorer_applySearch();
+                        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
                     });
                     MenuItem i3 = new MenuItem("Remove from selected");
-                    i3.setOnAction(event1 -> explorer_imageGridView.getSelected().forEach(img -> img.removeTag(c.getItem())));
+                    i3.setOnAction(event1 -> imageGridView.getSelected().forEach(img -> img.removeTag(c.getItem())));
                     ContextMenu m = new ContextMenu(i1, i2, new SeparatorMenuItem(), i3);
                     m.show(c, event.getScreenX(), event.getScreenY());
                 }
@@ -523,22 +527,22 @@ public class MainController {
         searchTextField.setTop(false);
         searchTextField.setOptionsListener(explorer_editTagsTextField.getOptionsListener());
 
-        explorer_previewMediaView.setMute(settings.isMuteVideoPreview());
-        explorer_previewMediaView.setRepeat(settings.isRepeatVideoPreview());
+        previewMediaView.setMute(settings.isMuteVideoPreview());
+        previewMediaView.setRepeat(settings.isRepeatVideoPreview());
     }
 
     private void initExplorerGridCellContextMenu() {
         MenuItem slideShowSelectedMenuItem = new MenuItem("Selected");
-        slideShowSelectedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, explorer_imageGridView.getSelected()));
+        slideShowSelectedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, imageGridView.getSelected()));
         MenuItem slideShowSearchedMenuItem = new MenuItem("Searched");
-        slideShowSearchedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, explorer_imageGridView.getItems()));
+        slideShowSearchedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, imageGridView.getItems()));
         Menu slideShowMenu = new Menu("Slideshow", null, slideShowSelectedMenuItem, slideShowSearchedMenuItem);
 
         MenuItem openInExplorerMenuItem = new MenuItem("Open in Explorer");
         openInExplorerMenuItem.setOnAction(event1 -> {
-            if (!explorer_imageGridView.getSelected().isEmpty()) {
+            if (!imageGridView.getSelected().isEmpty()) {
                 try {
-                    Runtime.getRuntime().exec("explorer.exe /select, " + explorer_imageGridView.getLastSelected().getFile().getAbsolutePath());
+                    Runtime.getRuntime().exec("explorer.exe /select, " + imageGridView.getLastSelected().getFile().getAbsolutePath());
                 } catch (IOException e) {
                     e.printStackTrace();
                     Main.showErrorMessage("Unexpected Error", "Error opening file explorer", e.getLocalizedMessage());
@@ -549,7 +553,7 @@ public class MainController {
         MenuItem buildMD5HashMenuItem = new MenuItem("Build MD5 Hash");
         buildMD5HashMenuItem.setOnAction(event1 -> {
             List<Runnable> queue = new ArrayList<>();
-            explorer_imageGridView.getSelected().forEach(img -> {
+            imageGridView.getSelected().forEach(img -> {
                 if (img.getMD5() == null) {
                     queue.add(() -> {
                         try {
@@ -568,7 +572,7 @@ public class MainController {
         MenuItem buildHistogramMenuItem = new MenuItem("Build Histogram");
         buildHistogramMenuItem.setOnAction(event1 -> {
             List<Runnable> queue = new ArrayList<>();
-            explorer_imageGridView.getSelected().forEach(img -> {
+            imageGridView.getSelected().forEach(img -> {
                 String filename = img.getFile().getName().toLowerCase();
                 if (img.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
                     queue.add(() -> {
@@ -587,11 +591,11 @@ public class MainController {
         });
 
         MenuItem findDuplicatesMenuItem = new MenuItem("Find Duplicates");
-        findDuplicatesMenuItem.setOnAction(event1 -> duplicate_compareAndShow(explorer_imageGridView.getSelected()));
+        findDuplicatesMenuItem.setOnAction(event1 -> duplicate_compareAndShow(imageGridView.getSelected()));
 
         MenuItem moveToFolderMenuItem = new MenuItem("Move To...");
         moveToFolderMenuItem.setOnAction(event1 -> {
-            if (!explorer_imageGridView.getSelected().isEmpty()) {
+            if (!imageGridView.getSelected().isEmpty()) {
                 DirectoryChooser dc = new DirectoryChooser();
                 dc.setTitle("Move files to folder...");
                 File result = dc.showDialog(rootPane.getScene().getWindow());
@@ -599,7 +603,7 @@ public class MainController {
                 if (result != null) {
                     List<Runnable> queue = new ArrayList<>();
 
-                    explorer_imageGridView.getSelected().forEach(img -> queue.add(() -> {
+                    imageGridView.getSelected().forEach(img -> queue.add(() -> {
                         File f = result.toPath().resolve(img.getFile().getName()).toFile();
                         if (!img.getFile().equals(f)) {
                             File dest = MainController.resolveDuplicateFilename(f);
@@ -619,15 +623,15 @@ public class MainController {
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
         removeImagesMenuItem.setOnAction(event1 -> {
-            new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                        "This action CANNOT be undone", () -> menagerie.removeImages(explorer_imageGridView.getSelected(), false), null);
+            new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + imageGridView.getSelected().size() + " files)\n\n" +
+                    "This action CANNOT be undone", () -> menagerie.removeImages(imageGridView.getSelected(), false), null);
         });
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
-        deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
-                        "This action CANNOT be undone (files will be deleted)", () -> {
-                    explorer_previewImage(null);
-                    menagerie.removeImages(explorer_imageGridView.getSelected(), true);
-                }, null));
+        deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + imageGridView.getSelected().size() + " files)\n\n" +
+                "This action CANNOT be undone (files will be deleted)", () -> {
+            previewImage(null);
+            menagerie.removeImages(imageGridView.getSelected(), true);
+        }, null));
 
         explorer_cellContextMenu = new ContextMenu(slideShowMenu, new SeparatorMenuItem(), openInExplorerMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), findDuplicatesMenuItem, new SeparatorMenuItem(), moveToFolderMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
     }
@@ -649,12 +653,12 @@ public class MainController {
 
         stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
-                if (explorer_previewMediaView.isPlaying()) {
-                    explorer_previewMediaView.pause();
+                if (previewMediaView.isPlaying()) {
+                    previewMediaView.pause();
                     playVideoAfterFocusGain = true;
                 }
             } else if (playVideoAfterFocusGain) {
-                explorer_previewMediaView.play();
+                previewMediaView.play();
                 playVideoAfterFocusGain = false;
             }
         });
@@ -702,7 +706,7 @@ public class MainController {
         explorerRootPane.setDisable(false);
         settings_rootPane.setDisable(true);
         settings_rootPane.setOpacity(0);
-        explorer_imageGridView.requestFocus();
+        imageGridView.requestFocus();
 
         if (saveChanges) {
             //Save settings to settings object
@@ -730,12 +734,12 @@ public class MainController {
 
             settings.setImageGridWidth(settings_gridWidthChoiceBox.getValue());
 
-            explorer_setGridWidth(settings_gridWidthChoiceBox.getValue());
+            setGridWidth(settings_gridWidthChoiceBox.getValue());
 
             startWatchingFolderForImages();
 
-            explorer_previewMediaView.setMute(settings.isMuteVideoPreview());
-            explorer_previewMediaView.setRepeat(settings.isRepeatVideoPreview());
+            previewMediaView.setMute(settings.isMuteVideoPreview());
+            previewMediaView.setRepeat(settings.isRepeatVideoPreview());
         }
 
         trySaveSettings();
@@ -796,7 +800,7 @@ public class MainController {
 
         explorerRootPane.setDisable(false);
         duplicate_rootPane.setDisable(true);
-        explorer_imageGridView.requestFocus();
+        imageGridView.requestFocus();
         duplicate_rootPane.setOpacity(0);
     }
 
@@ -810,13 +814,13 @@ public class MainController {
     private void closeErrorsScreen() {
         explorerRootPane.setDisable(false);
         errors_rootPane.setDisable(true);
-        explorer_imageGridView.requestFocus();
+        imageGridView.requestFocus();
         errors_rootPane.setOpacity(0);
     }
 
     // -------------------------------- Dialog Openers ---------------------------------------
 
-    private void explorer_requestImportFolder() {
+    private void openImportFolderDialog() {
         DirectoryChooser dc = new DirectoryChooser();
         if (settings.getDefaultFolder() != null && !settings.getDefaultFolder().isEmpty())
             dc.setInitialDirectory(new File(settings.getDefaultFolder()));
@@ -824,7 +828,7 @@ public class MainController {
 
         if (result != null) {
             List<Runnable> queue = new ArrayList<>();
-            List<File> files = getFilesRecursive(result, FILE_FILTER);
+            List<File> files = getFilesRecursively(result, FILE_FILTER);
             menagerie.getImages().forEach(img -> files.remove(img.getFile()));
             files.forEach(file -> queue.add(() -> {
                 try {
@@ -840,7 +844,7 @@ public class MainController {
         }
     }
 
-    private void explorer_requestImportFiles() {
+    private void openImportFilesDialog() {
         FileChooser fc = new FileChooser();
         if (settings.getDefaultFolder() != null && !settings.getDefaultFolder().isEmpty())
             fc.setInitialDirectory(new File(settings.getDefaultFolder()));
@@ -878,28 +882,28 @@ public class MainController {
     // ---------------------------------- GUI Action Methods ------------------------------------
 
     @SuppressWarnings("SameParameterValue")
-    private void explorer_previewImage(ImageInfo image) {
-        if (explorer_previewing != null) explorer_previewing.setTagListener(null);
-        explorer_previewing = image;
+    private void previewImage(ImageInfo image) {
+        if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
+        currentlyPreviewing = image;
 
-        if (!explorer_previewMediaView.preview(image)) {
+        if (!previewMediaView.preview(image)) {
             errors_addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
         }
 
-        tagList_updateTags(image);
+        updateTagList(image);
 
-        updateImageInfoLabel(image, explorer_imageInfoLabel);
+        updateImageInfoLabel(image, imageInfoLabel);
 
         if (image != null) {
-            image.setTagListener(() -> tagList_updateTags(image));
+            image.setTagListener(() -> updateTagList(image));
 
-            explorer_fileNameLabel.setText(image.getFile().toString());
+            fileNameLabel.setText(image.getFile().toString());
         } else {
-            explorer_fileNameLabel.setText("N/A");
+            fileNameLabel.setText("N/A");
         }
     }
 
-    private void tagList_updateTags(ImageInfo image) {
+    private void updateTagList(ImageInfo image) {
         explorer_tagListView.getItems().clear();
         if (image != null) {
             explorer_tagListView.getItems().addAll(image.getTags());
@@ -945,30 +949,28 @@ public class MainController {
         }
     }
 
-    private void explorer_applySearch() {
-        if (explorer_currentSearch != null) explorer_currentSearch.close();
-        explorer_previewImage(null);
+    private void applySearch(String search, boolean descending) {
+        if (currentSearch != null) currentSearch.close();
+        previewImage(null);
 
-        final boolean descending = explorer_descendingToggleButton.isSelected();
-
-        explorer_currentSearch = new Search(menagerie, explorer_constructRuleSet(searchTextField.getText()), descending);
-        explorer_currentSearch.setListener(new SearchUpdateListener() {
+        currentSearch = new Search(menagerie, constructRuleSet(search), descending);
+        currentSearch.setListener(new SearchUpdateListener() {
             @Override
             public void imagesAdded(List<ImageInfo> images) {
                 Platform.runLater(() -> {
-                    explorer_imageGridView.getItems().addAll(0, images);
+                    imageGridView.getItems().addAll(0, images);
 
-//                    explorer_imageGridView.getItems().sort(explorer_currentSearch.getComparator()); // This causes some gridcells to glitch out and get stuck visually
+//                    imageGridView.getItems().sort(currentSearch.getComparator()); // This causes some gridcells to glitch out and get stuck visually
                 });
             }
 
             @Override
             public void imagesRemoved(List<ImageInfo> images) {
                 Platform.runLater(() -> {
-                    final int oldLastIndex = explorer_imageGridView.getItems().indexOf(explorer_imageGridView.getLastSelected()) + 1;
+                    final int oldLastIndex = imageGridView.getItems().indexOf(imageGridView.getLastSelected()) + 1;
                     int newIndex = oldLastIndex;
                     for (ImageInfo image : images) {
-                        final int i = explorer_imageGridView.getItems().indexOf(image);
+                        final int i = imageGridView.getItems().indexOf(image);
                         if (i < 0) continue;
 
                         if (i < oldLastIndex) {
@@ -976,27 +978,28 @@ public class MainController {
                         }
                     }
 
-                    explorer_imageGridView.getItems().removeAll(images);
-                    if (images.contains(explorer_previewing)) explorer_previewImage(null);
+                    imageGridView.getItems().removeAll(images);
+                    if (images.contains(currentlyPreviewing)) previewImage(null);
 
-                    if (!explorer_imageGridView.getItems().isEmpty()) {
-                        if (newIndex >= explorer_imageGridView.getItems().size())
-                            newIndex = explorer_imageGridView.getItems().size() - 1;
-                        explorer_imageGridView.setLastSelected(explorer_imageGridView.getItems().get(newIndex));
+                    if (!imageGridView.getItems().isEmpty()) {
+                        if (newIndex >= imageGridView.getItems().size())
+                            newIndex = imageGridView.getItems().size() - 1;
+                        imageGridView.setLastSelected(imageGridView.getItems().get(newIndex));
                     }
                 });
             }
         });
 
-        explorer_imageGridView.clearSelection();
-        explorer_imageGridView.getItems().clear();
-        explorer_imageGridView.getItems().addAll(explorer_currentSearch.getResults());
+        imageGridView.clearSelection();
+        imageGridView.getItems().clear();
+        imageGridView.getItems().addAll(currentSearch.getResults());
 
-        if (!explorer_imageGridView.getItems().isEmpty())
-            explorer_imageGridView.select(explorer_imageGridView.getItems().get(0), false, false);
+        if (!imageGridView.getItems().isEmpty())
+            imageGridView.select(imageGridView.getItems().get(0), false, false);
     }
 
-    private List<SearchRule> explorer_constructRuleSet(String str) {
+    private List<SearchRule> constructRuleSet(String str) {
+        if (str == null) str = "";
         List<SearchRule> rules = new ArrayList<>();
         for (String arg : str.split("\\s+")) {
             if (arg == null || arg.isEmpty()) continue;
@@ -1082,11 +1085,39 @@ public class MainController {
         return rules;
     }
 
-    private void explorer_setGridWidth(int n) {
-        final double width = 18 + (Thumbnail.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + explorer_imageGridView.getHorizontalCellSpacing() * 2) * n;
-        explorer_imageGridView.setMinWidth(width);
-        explorer_imageGridView.setMaxWidth(width);
-        explorer_imageGridView.setPrefWidth(width);
+    private void setGridWidth(int n) {
+        final double width = 18 + (Thumbnail.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + imageGridView.getHorizontalCellSpacing() * 2) * n;
+        imageGridView.setMinWidth(width);
+        imageGridView.setMaxWidth(width);
+        imageGridView.setPrefWidth(width);
+    }
+
+    private void editTagsOfSelected(String input) {
+        if (input == null || input.isEmpty() || imageGridView.getSelected().isEmpty()) return;
+        lastEditTagString = input.trim();
+
+        List<ImageInfo> changed = new ArrayList<>();
+
+        for (String text : input.split("\\s+")) {
+            if (text.startsWith("-")) {
+                Tag t = menagerie.getTagByName(text.substring(1));
+                if (t != null) {
+                    imageGridView.getSelected().forEach(img -> {
+                        img.removeTag(t);
+                        changed.add(img);
+                    });
+                }
+            } else {
+                Tag t = menagerie.getTagByName(text);
+                if (t == null) t = menagerie.createTag(text);
+                for (ImageInfo img : imageGridView.getSelected()) {
+                    img.addTag(t);
+                    changed.add(img);
+                }
+            }
+        }
+
+        if (!changed.isEmpty()) menagerie.checkImagesStillValidInSearches(changed);
     }
 
     private void duplicate_previewPair(SimilarPair pair) {
@@ -1154,34 +1185,6 @@ public class MainController {
                 duplicate_previewPair(duplicate_pairs.get(0));
             }
         }
-    }
-
-    private void explorer_editTagsOfSelected(String input) {
-        if (input == null || input.isEmpty() || explorer_imageGridView.getSelected().isEmpty()) return;
-        explorer_lastTagString = input.trim();
-
-        List<ImageInfo> changed = new ArrayList<>();
-
-        for (String text : input.split("\\s+")) {
-            if (text.startsWith("-")) {
-                Tag t = menagerie.getTagByName(text.substring(1));
-                if (t != null) {
-                    explorer_imageGridView.getSelected().forEach(img -> {
-                        img.removeTag(t);
-                        changed.add(img);
-                    });
-                }
-            } else {
-                Tag t = menagerie.getTagByName(text);
-                if (t == null) t = menagerie.createTag(text);
-                for (ImageInfo img : explorer_imageGridView.getSelected()) {
-                    img.addTag(t);
-                    changed.add(img);
-                }
-            }
-        }
-
-        if (!changed.isEmpty()) menagerie.recheckRemovalOfImagesInSearches(changed);
     }
 
     private void duplicate_deleteImage(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
@@ -1257,6 +1260,11 @@ public class MainController {
         }
     }
 
+    private void errors_addError(TrackedError error) {
+        errors_listView.getItems().add(0, error);
+        Toolkit.getDefaultToolkit().beep();
+    }
+
     private void startWatchingFolderForImages() {
         if (folderWatcherThread != null) {
             folderWatcherThread.stopWatching();
@@ -1295,7 +1303,7 @@ public class MainController {
     }
 
     private void cleanExit(boolean revertDatabase) {
-        explorer_previewMediaView.releaseMediaPlayer();
+        previewMediaView.releaseMediaPlayer();
         slideshowScreen.releaseMediaPlayer();
         duplicate_leftMediaView.releaseMediaPlayer();
         duplicate_rightMediaView.releaseMediaPlayer();
@@ -1326,12 +1334,7 @@ public class MainController {
         Platform.exit();
     }
 
-    private void errors_addError(TrackedError error) {
-        errors_listView.getItems().add(0, error);
-        Toolkit.getDefaultToolkit().beep();
-    }
-
-    private void slideShow_tryDeleteCurrent(boolean deleteFile) {
+    private void tryDeleteCurrentSlideShowImage(boolean deleteFile) {
         //TODO: Extract this functionality to the slideshow screen
 
         ConfirmationScreenOkListener onFinish = () -> {
@@ -1341,10 +1344,10 @@ public class MainController {
 
         if (deleteFile) {
             new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (1 file)\n\n" +
-                        "This action CANNOT be undone (files will be deleted)", onFinish, null);
+                    "This action CANNOT be undone (files will be deleted)", onFinish, null);
         } else {
             new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (1 file)\n\n" +
-                        "This action CANNOT be undone", onFinish, null);
+                    "This action CANNOT be undone", onFinish, null);
         }
     }
 
@@ -1361,14 +1364,14 @@ public class MainController {
         fos.close();
     }
 
-    private static List<File> getFilesRecursive(File folder, FileFilter filter) {
+    private static List<File> getFilesRecursively(File folder, FileFilter filter) {
         File[] files = folder.listFiles();
         List<File> results = new ArrayList<>();
         if (files == null) return results;
 
         for (File file : files) {
             if (file.isDirectory()) {
-                results.addAll(getFilesRecursive(file, filter));
+                results.addAll(getFilesRecursively(file, filter));
             } else {
                 if (filter.accept(file)) results.add(file);
             }
@@ -1376,7 +1379,7 @@ public class MainController {
         return results;
     }
 
-    private static void backupDatabase(String databaseURL) throws IOException {
+    private static void backUpDatabase(String databaseURL) throws IOException {
         File dbFile = getDatabaseFile(databaseURL);
 
         if (dbFile.exists()) {
@@ -1429,49 +1432,49 @@ public class MainController {
 
     // ---------------------------------- Action Event Handlers ------------------------------------
 
-    public void explorer_searchButtonOnAction(ActionEvent event) {
-        explorer_applySearch();
-        explorer_imageGridView.requestFocus();
+    public void searchButtonOnAction(ActionEvent event) {
+        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
+        imageGridView.requestFocus();
         event.consume();
     }
 
-    public void explorer_searchTextFieldOnAction(ActionEvent event) {
-        explorer_applySearch();
-        explorer_imageGridView.requestFocus();
+    public void searchTextFieldOnAction(ActionEvent event) {
+        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
+        imageGridView.requestFocus();
         event.consume();
     }
 
-    public void explorer_importFilesMenuButtonOnAction(ActionEvent event) {
-        explorer_requestImportFiles();
+    public void importFilesMenuButtonOnAction(ActionEvent event) {
+        openImportFilesDialog();
         event.consume();
     }
 
-    public void explorer_importFolderMenuButtonOnAction(ActionEvent event) {
-        explorer_requestImportFolder();
+    public void importFolderMenuButtonOnAction(ActionEvent event) {
+        openImportFolderDialog();
         event.consume();
     }
 
-    public void explorer_settingsMenuButtonOnAction(ActionEvent event) {
+    public void settingsMenuButtonOnAction(ActionEvent event) {
         openSettingsScreen();
         event.consume();
     }
 
-    public void explorer_helpMenuButtonOnAction(ActionEvent event) {
+    public void helpMenuButtonOnAction(ActionEvent event) {
         screenPane.open(helpScreen);
         event.consume();
     }
 
-    public void explorer_slideShowSearchedMenuButtonOnAction(ActionEvent event) {
-        slideshowScreen.open(screenPane, explorer_currentSearch.getResults());
+    public void slideShowSearchedMenuButtonOnAction(ActionEvent event) {
+        slideshowScreen.open(screenPane, currentSearch.getResults());
         event.consume();
     }
 
-    public void explorer_slideShowSelectedMenuButtonOnAction(ActionEvent event) {
-        slideshowScreen.open(screenPane, explorer_imageGridView.getSelected());
+    public void slideShowSelectedMenuButtonOnAction(ActionEvent event) {
+        slideshowScreen.open(screenPane, imageGridView.getSelected());
         event.consume();
     }
 
-    public void explorer_viewTagsMenuButtonOnAction(ActionEvent event) {
+    public void viewTagsMenuButtonOnAction(ActionEvent event) {
         tagListScreen.open(screenPane, menagerie.getTags());
         event.consume();
     }
@@ -1563,12 +1566,12 @@ public class MainController {
         event.consume();
     }
 
-    public void explorer_showErrorsButtonOnAction(ActionEvent event) {
+    public void showErrorsButtonOnAction(ActionEvent event) {
         openErrorsScreen();
         event.consume();
     }
 
-    public void explorer_revertDatabaseMenuButtonOnAction(ActionEvent event) {
+    public void revertDatabaseMenuButtonOnAction(ActionEvent event) {
         File database = getDatabaseFile(settings.getDbUrl());
         File backup = new File(database + ".bak");
         if (backup.exists()) {
@@ -1579,7 +1582,7 @@ public class MainController {
 
     // ---------------------------------- Key Event Handlers ----------------------------------------
 
-    public void explorer_rootPaneOnKeyPressed(KeyEvent event) {
+    public void explorerRootPaneOnKeyPressed(KeyEvent event) {
         if (event.isControlDown()) {
             switch (event.getCode()) {
                 case F:
@@ -1587,7 +1590,7 @@ public class MainController {
                     event.consume();
                     break;
                 case E:
-                    explorer_editTagsTextField.setText(explorer_lastTagString);
+                    explorer_editTagsTextField.setText(lastEditTagString);
                     explorer_editTagsTextField.requestFocus();
                     event.consume();
                     break;
@@ -1606,9 +1609,9 @@ public class MainController {
                     break;
                 case I:
                     if (event.isShiftDown())
-                        explorer_requestImportFolder();
+                        openImportFolderDialog();
                     else
-                        explorer_requestImportFiles();
+                        openImportFilesDialog();
                     event.consume();
                     break;
                 case H:
@@ -1616,7 +1619,7 @@ public class MainController {
                     event.consume();
                     break;
                 case D:
-                    duplicate_compareAndShow(explorer_imageGridView.getSelected());
+                    duplicate_compareAndShow(imageGridView.getSelected());
                     event.consume();
                     break;
             }
@@ -1624,7 +1627,7 @@ public class MainController {
 
         switch (event.getCode()) {
             case ESCAPE:
-                explorer_imageGridView.requestFocus();
+                imageGridView.requestFocus();
                 event.consume();
                 break;
             case ALT:
@@ -1633,10 +1636,10 @@ public class MainController {
         }
     }
 
-    public void explorer_rootPaneOnKeyReleased(KeyEvent event) {
+    public void explorerRootPaneOnKeyReleased(KeyEvent event) {
         if (event.getCode() == KeyCode.ALT) {
             if (explorer_menuBar.isFocused()) {
-                explorer_imageGridView.requestFocus();
+                imageGridView.requestFocus();
             } else {
                 explorer_menuBar.requestFocus();
             }
@@ -1644,22 +1647,22 @@ public class MainController {
         }
     }
 
-    public void explorer_editTagsTextFieldOnKeyPressed(KeyEvent event) {
+    public void editTagsTextFieldOnKeyPressed(KeyEvent event) {
         switch (event.getCode()) {
             case SPACE:
-                explorer_editTagsOfSelected(explorer_editTagsTextField.getText());
+                editTagsOfSelected(explorer_editTagsTextField.getText());
                 Platform.runLater(() -> explorer_editTagsTextField.setText(null));
                 event.consume();
                 break;
             case ENTER:
-                explorer_editTagsOfSelected(explorer_editTagsTextField.getText());
+                editTagsOfSelected(explorer_editTagsTextField.getText());
                 explorer_editTagsTextField.setText(null);
-                explorer_imageGridView.requestFocus();
+                imageGridView.requestFocus();
                 event.consume();
                 break;
             case ESCAPE:
                 explorer_editTagsTextField.setText(null);
-                explorer_imageGridView.requestFocus();
+                imageGridView.requestFocus();
                 event.consume();
                 break;
         }

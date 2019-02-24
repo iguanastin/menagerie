@@ -311,7 +311,7 @@ public class Menagerie {
         return null;
     }
 
-    public void recheckRemovalOfImagesInSearches(List<ImageInfo> images) {
+    public void checkImagesStillValidInSearches(List<ImageInfo> images) {
         activeSearches.forEach(search -> search.removeIfInvalid(images));
     }
 
