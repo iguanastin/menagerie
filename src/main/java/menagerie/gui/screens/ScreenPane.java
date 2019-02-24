@@ -28,6 +28,8 @@ public class ScreenPane extends StackPane {
         screen.setManager(this);
         screen.setDisable(false);
         screen.focusDefaultNode();
+
+        screen.onOpen();
     }
 
     public boolean close(Screen screen) {
@@ -41,6 +43,7 @@ public class ScreenPane extends StackPane {
                 if (focusTarget != null) focusTarget.requestFocus();
             }
 
+            screen.onClose();
             return true;
         } else {
             return false;

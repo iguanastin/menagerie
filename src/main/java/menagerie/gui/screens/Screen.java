@@ -32,8 +32,8 @@ public class Screen extends BorderPane {
         defaultFocusNode.requestFocus();
     }
 
-    protected void onShow() {}
+    protected void onOpen() {}
 
-    protected void onHide() {}
+    protected void onClose() {}
 
 }

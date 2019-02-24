@@ -69,7 +69,7 @@ public class SlideshowScreen extends Screen {
     }
 
     @Override
-    protected void onHide() {
+    protected void onClose() {
         items.clear();
         preview(null);
     }

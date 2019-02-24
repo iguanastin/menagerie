@@ -96,14 +96,10 @@ public class ProgressScreen extends Screen {
             count.setText((int) (p * 100) + "% - " + (total - num) + " remaining...");
         }));
         progressThread.start();
-
-        if (tasks.isEmpty()) {
-            finishListener.progressFinished(0);
-        }
     }
 
     @Override
-    public void onHide() {
+    public void onClose() {
         if (progressThread != null) progressThread.stopRunning();
     }
 
