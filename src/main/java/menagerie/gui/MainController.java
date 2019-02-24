@@ -119,9 +119,7 @@ public class MainController {
     public ScreenPane screenPane;
     private TagListScreen tagListScreen;
     private HelpScreen helpScreen;
-    private ConfirmationScreen confirmationScreen;
     private SlideshowScreen slideshowScreen;
-    private ProgressScreen progressScreen;
 
 
     //Menagerie vars
@@ -187,8 +185,6 @@ public class MainController {
         initTagListScreen();
         initSlideShowScreen();
         helpScreen = new HelpScreen();
-        confirmationScreen = new ConfirmationScreen();
-        progressScreen = new ProgressScreen();
         //Init disable listener for explorer screen
         screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty()));
 
@@ -394,10 +390,10 @@ public class MainController {
                         menagerie.removeImages(explorer_imageGridView.getSelected(), deleteFiles);
                     };
                     if (deleteFiles) {
-                        confirmationScreen.open(screenPane, "Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
+                        new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                                                 "This action CANNOT be undone (files will be deleted)", onFinish, null);
                     } else {
-                        confirmationScreen.open(screenPane, "Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
+                        new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                                                 "This action CANNOT be undone", onFinish, null);
                     }
                     event.consume();
@@ -440,7 +436,7 @@ public class MainController {
                 }));
 
                 if (!queue.isEmpty()) {
-                    progressScreen.open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+                    new ProgressScreen().open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
                 }
             } else if (url != null && !url.isEmpty()) {
                 Platform.runLater(() -> {
@@ -566,7 +562,7 @@ public class MainController {
                 }
             });
             if (!queue.isEmpty()) {
-                progressScreen.open(screenPane, "Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, null, null);
+                new ProgressScreen().open(screenPane, "Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, null, null);
             }
         });
         MenuItem buildHistogramMenuItem = new MenuItem("Build Histogram");
@@ -586,7 +582,7 @@ public class MainController {
                 }
             });
             if (!queue.isEmpty()) {
-                progressScreen.open(screenPane, "Building Histograms", "Building image histograms for " + queue.size() + " files...", queue, null, null);
+                new ProgressScreen().open(screenPane, "Building Histograms", "Building image histograms for " + queue.size() + " files...", queue, null, null);
             }
         });
 
@@ -615,7 +611,7 @@ public class MainController {
                     }));
 
                     if (!queue.isEmpty()) {
-                        progressScreen.open(screenPane, "Moving files", "Moving " + queue.size() + " files...", queue, null, null);
+                        new ProgressScreen().open(screenPane, "Moving files", "Moving " + queue.size() + " files...", queue, null, null);
                     }
                 }
             }
@@ -623,11 +619,11 @@ public class MainController {
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
         removeImagesMenuItem.setOnAction(event1 -> {
-            confirmationScreen.open(screenPane, "Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
+            new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                         "This action CANNOT be undone", () -> menagerie.removeImages(explorer_imageGridView.getSelected(), false), null);
         });
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
-        deleteImagesMenuItem.setOnAction(event1 -> confirmationScreen.open(screenPane, "Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
+        deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + explorer_imageGridView.getSelected().size() + " files)\n\n" +
                         "This action CANNOT be undone (files will be deleted)", () -> {
                     explorer_previewImage(null);
                     menagerie.removeImages(explorer_imageGridView.getSelected(), true);
@@ -771,7 +767,7 @@ public class MainController {
         }
 
         if (queue.size() > 5000) {
-            progressScreen.open(screenPane, "Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, total -> Platform.runLater(() -> {
+            new ProgressScreen().open(screenPane, "Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, total -> Platform.runLater(() -> {
                 if (duplicate_pairs.isEmpty()) return;
 
                 duplicate_previewPair(duplicate_pairs.get(0));
@@ -839,7 +835,7 @@ public class MainController {
             }));
 
             if (!queue.isEmpty()) {
-                progressScreen.open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+                new ProgressScreen().open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
             }
         }
     }
@@ -865,7 +861,7 @@ public class MainController {
             }));
 
             if (!queue.isEmpty()) {
-                progressScreen.open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
+                new ProgressScreen().open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
             }
         }
     }
@@ -1233,7 +1229,7 @@ public class MainController {
                 });
             });
 
-            progressScreen.open(screenPane, "Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, total -> {
+            new ProgressScreen().open(screenPane, "Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, total -> {
                 //TODO: Fix this. If md5 computing is disabled, histogram building won't happen
                 if (settings.isComputeHistogramForSimilarity()) {
                     List<Runnable> queue2 = new ArrayList<>();
@@ -1251,7 +1247,7 @@ public class MainController {
                             });
                     });
 
-                    Platform.runLater(() -> progressScreen.open(screenPane, "Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
+                    Platform.runLater(() -> new ProgressScreen().open(screenPane, "Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
                 } else {
                     Platform.runLater(() -> openDuplicateScreen(images));
                 }
@@ -1344,10 +1340,10 @@ public class MainController {
         };
 
         if (deleteFile) {
-            confirmationScreen.open(screenPane, "Delete files", "Permanently delete selected files? (1 file)\n\n" +
+            new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (1 file)\n\n" +
                         "This action CANNOT be undone (files will be deleted)", onFinish, null);
         } else {
-            confirmationScreen.open(screenPane, "Forget files", "Remove selected files from database? (1 file)\n\n" +
+            new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (1 file)\n\n" +
                         "This action CANNOT be undone", onFinish, null);
         }
     }
@@ -1576,7 +1572,7 @@ public class MainController {
         File database = getDatabaseFile(settings.getDbUrl());
         File backup = new File(database + ".bak");
         if (backup.exists()) {
-            confirmationScreen.open(screenPane, "Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> cleanExit(true), null);
+            new ConfirmationScreen().open(screenPane, "Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> cleanExit(true), null);
         }
         event.consume();
     }
