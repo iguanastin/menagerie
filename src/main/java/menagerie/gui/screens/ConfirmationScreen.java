@@ -35,6 +35,7 @@ public class ConfirmationScreen extends Screen {
 
         titleLabel = new Label("TITLE");
         messageLabel = new Label("MESSAGE");
+        messageLabel.setWrapText(true);
 
         Button ok = new Button("Ok");
         ok.setOnAction(event -> {

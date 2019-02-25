@@ -1650,7 +1650,7 @@ public class MainController {
                         Toolkit.getDefaultToolkit().beep();
                     } else {
                         TagEditEvent peek = tagEditHistory.peek();
-                        new ConfirmationScreen().open(screenPane, "Undo last tag edit?", "Tags were added to " + peek.getAdded().keySet().size() + " images and removed from " + peek.getRemoved().keySet().size() + " others.", () -> {
+                        new ConfirmationScreen().open(screenPane, "Undo last tag edit?", "Tags were added to " + peek.getAdded().keySet().size() + " items.\nTags were removed from " + peek.getRemoved().keySet().size() + " others.", () -> {
                             TagEditEvent pop = tagEditHistory.pop();
                             pop.reverseAction();
 
