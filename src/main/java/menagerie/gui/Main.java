@@ -58,7 +58,6 @@ public class Main extends Application {
                 stage.close();
             } catch (IOException e) {
                 e.printStackTrace();
-                showErrorMessage("Fatal error", "Unable to load FXML: " + fxml, e.getLocalizedMessage());
                 System.exit(1);
             }
         });
