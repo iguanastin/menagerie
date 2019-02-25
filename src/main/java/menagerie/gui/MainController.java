@@ -1123,6 +1123,14 @@ public class MainController {
         if (input == null || input.isEmpty() || imageGridView.getSelected().isEmpty()) return;
         lastEditTagString = input.trim();
 
+        if (imageGridView.getSelected().size() < 100) {
+            editTagsUtility(input);
+        } else {
+            new ConfirmationScreen().open(screenPane, "Editting large number of items", "You are attempting to edit " + imageGridView.getSelected().size() + " items. Continue?", () -> editTagsUtility(input), null);
+        }
+    }
+
+    private void editTagsUtility(String input) {
         List<ImageInfo> changed = new ArrayList<>();
         Map<ImageInfo, List<Tag>> added = new HashMap<>();
         Map<ImageInfo, List<Tag>> removed = new HashMap<>();
