@@ -14,6 +14,7 @@ public class TagListCell extends ListCell<Tag> {
 
     public TagListCell() {
         countLabel = new Label();
+        countLabel.setMinWidth(USE_PREF_SIZE);
         nameLabel = new Label();
         setGraphic(new BorderPane(null, null, countLabel, null, nameLabel));
     }

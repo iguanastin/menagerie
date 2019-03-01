@@ -506,6 +506,7 @@ public class MainController {
                     m.show(c, event.getScreenX(), event.getScreenY());
                 }
             });
+            c.prefWidthProperty().bind(tagListView.widthProperty().subtract(15));
             return c;
         });
 
