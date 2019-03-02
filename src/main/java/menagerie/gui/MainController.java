@@ -102,25 +102,16 @@ public class MainController {
     public CheckBox settings_muteVideoCheckBox;
     public CheckBox settings_repeatVideoCheckBox;
 
-    public BorderPane duplicate_rootPane;
-    public Label duplicate_similarityLabel;
-    public Label duplicate_leftInfoLabel;
-    public Label duplicate_rightInfoLabel;
-    public TextField duplicate_leftPathTextField;
-    public TextField duplicate_rightPathTextField;
-    public DynamicMediaView duplicate_leftMediaView;
-    public DynamicMediaView duplicate_rightMediaView;
-    public ListView<Tag> duplicate_leftTagListView;
-    public ListView<Tag> duplicate_rightTagListView;
+
+    public ScreenPane screenPane;
 
     // ----------------------------------- Screens ---------------------------------------------------------------------
 
-    public ScreenPane screenPane;
     private TagListScreen tagListScreen;
     private HelpScreen helpScreen;
     private SlideshowScreen slideshowScreen;
     private ErrorsScreen errorsScreen;
-
+    private DuplicatesScreen duplicatesScreen;
 
     //Menagerie vars
     private Menagerie menagerie;
@@ -133,11 +124,6 @@ public class MainController {
     private boolean explorer_imageGridViewDragging = false;
     private ContextMenu explorer_cellContextMenu;
     private Stack<TagEditEvent> tagEditHistory = new Stack<>();
-
-    //Duplicate screen vars
-    private List<SimilarPair> duplicatePairs = null;
-    private SimilarPair duplicate_previewingPair = null;
-    private ContextMenu duplicate_contextMenu;
 
     //Threads
     private FolderWatcherThread folderWatcherThread = null;
@@ -201,11 +187,11 @@ public class MainController {
     private void initScreens() {
         initExplorerScreen();
         initSettingsScreen();
-        initDuplicateScreen();
         initErrorsScreen();
         initTagListScreen();
         initSlideShowScreen();
         helpScreen = new HelpScreen();
+        duplicatesScreen = new DuplicatesScreen();
         screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
     }
 
@@ -271,39 +257,6 @@ public class MainController {
                     settings_histConfidenceTextField.setText("0.95");
                 }
             }
-        });
-    }
-
-    private void initDuplicateScreen() {
-        duplicate_leftTagListView.setCellFactory(param -> new TagListCell());
-        duplicate_rightTagListView.setCellFactory(param -> new TagListCell());
-
-        MenuItem showInSearchMenuItem = new MenuItem("Show in search");
-        showInSearchMenuItem.setOnAction(event -> {
-            closeDuplicateScreen();
-            imageGridView.select((ImageInfo) duplicate_contextMenu.getUserData(), false, false);
-        });
-        MenuItem forgetMenuItem = new MenuItem("Forget");
-        forgetMenuItem.setOnAction(event -> {
-            ImageInfo toKeep = duplicate_previewingPair.getImg1();
-            if (toKeep.equals(duplicate_contextMenu.getUserData())) toKeep = duplicate_previewingPair.getImg2();
-            duplicate_deleteImage((ImageInfo) duplicate_contextMenu.getUserData(), toKeep, false);
-        });
-        MenuItem deleteMenuItem = new MenuItem("Delete");
-        deleteMenuItem.setOnAction(event -> {
-            ImageInfo toKeep = duplicate_previewingPair.getImg1();
-            if (toKeep.equals(duplicate_contextMenu.getUserData())) toKeep = duplicate_previewingPair.getImg2();
-            duplicate_deleteImage((ImageInfo) duplicate_contextMenu.getUserData(), toKeep, false);
-        });
-
-        duplicate_contextMenu = new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetMenuItem, deleteMenuItem);
-        duplicate_leftMediaView.setOnContextMenuRequested(event -> {
-            duplicate_contextMenu.setUserData(duplicate_previewingPair.getImg1());
-            duplicate_contextMenu.show(duplicate_leftMediaView, event.getScreenX(), event.getScreenY());
-        });
-        duplicate_rightMediaView.setOnContextMenuRequested(event -> {
-            duplicate_contextMenu.setUserData(duplicate_previewingPair.getImg2());
-            duplicate_contextMenu.show(duplicate_rightMediaView, event.getScreenX(), event.getScreenY());
         });
     }
 
@@ -671,7 +624,7 @@ public class MainController {
         });
 
         MenuItem findDuplicatesMenuItem = new MenuItem("Find Duplicates");
-        findDuplicatesMenuItem.setOnAction(event1 -> duplicate_prepareAndOpen(imageGridView.getSelected()));
+        findDuplicatesMenuItem.setOnAction(event1 -> prepareAndOpenDuplicateScreen(imageGridView.getSelected()));
 
         MenuItem moveToFolderMenuItem = new MenuItem("Move To...");
         moveToFolderMenuItem.setOnAction(event1 -> {
@@ -812,13 +765,15 @@ public class MainController {
             settings.setComputeHistogramOnImport(settings_computeHistCheckbox.isSelected());
             settings.setComputeMD5ForSimilarity(settings_duplicateComputeMD5Checkbox.isSelected());
             settings.setComputeHistogramForSimilarity(settings_duplicateComputeHistCheckbox.isSelected());
-            settings.setConsolidateTags(settings_duplicateConsolidateTagsCheckbox.isSelected());
             settings.setBackupDatabase(settings_backupDatabaseCheckBox.isSelected());
             settings.setAutoImportFromFolder(settings_autoImportFolderCheckBox.isSelected());
             settings.setAutoImportFromFolderToDefault(settings_autoImportFromFolderToDefaultCheckBox.isSelected());
             settings.setCompareBlackAndWhiteHists(settings_duplicateCompareBlackAndWhiteCheckbox.isSelected());
             settings.setMuteVideoPreview(settings_muteVideoCheckBox.isSelected());
             settings.setRepeatVideoPreview(settings_repeatVideoCheckBox.isSelected());
+
+            settings.setConsolidateTags(settings_duplicateConsolidateTagsCheckbox.isSelected());
+            duplicatesScreen.setConsolidateTags(settings.isConsolidateTags());
 
             settings.setSimilarityThreshold(Double.parseDouble(settings_histConfidenceTextField.getText()));
 
@@ -835,16 +790,16 @@ public class MainController {
         trySaveSettings();
     }
 
-    private void openDuplicateScreen(List<ImageInfo> images) {
-        if (images == null || images.size() <= 1) return;
+    private void openDuplicateScreen(List<ImageInfo> items) {
+        if (items == null || items.size() <= 1) return;
 
-        duplicatePairs = new ArrayList<>();
+        List<SimilarPair> pairs = new ArrayList<>();
 
         ProgressScreen ps = new ProgressScreen();
         CancellableThread ct = new CancellableThread() {
             @Override
             public void run() {
-                final int total = imageGridView.getSelected().size();
+                final int total = items.size();
 
                 for (int i = 0; i < total; i++) {
                     if (!running) {
@@ -852,15 +807,15 @@ public class MainController {
                         return;
                     }
 
-                    ImageInfo i1 = images.get(i);
-                    for (int j = i + 1; j < images.size(); j++) {
-                        ImageInfo i2 = images.get(j);
+                    ImageInfo i1 = items.get(i);
+                    for (int j = i + 1; j < items.size(); j++) {
+                        ImageInfo i2 = items.get(j);
 
                         try {
                             double similarity = i1.getSimilarityTo(i2, settings.isCompareBlackAndWhiteHists());
 
                             if (similarity >= settings.getSimilarityThreshold())
-                                duplicatePairs.add(new SimilarPair(i1, i2, similarity));
+                                pairs.add(new SimilarPair(i1, i2, similarity));
                         } catch (Exception e) {
                             Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
                         }
@@ -872,31 +827,12 @@ public class MainController {
 
                 Platform.runLater(() -> {
                     ps.close();
-
-                    // Open duplicate screen
-                    if (duplicatePairs.isEmpty()) return;
-
-                    //TODO: Convert duplicate screen to Screen object
-                    duplicate_previewPair(duplicatePairs.get(0));
-
-                    explorerRootPane.setDisable(true);
-                    duplicate_rootPane.setDisable(false);
-                    duplicate_rootPane.requestFocus();
-                    duplicate_rootPane.setOpacity(1);
+                    duplicatesScreen.open(screenPane, menagerie, pairs);
                 });
             }
         };
         ps.open(screenPane, "Comparing items", "Checking for duplicate/similar items...", ct::cancel);
         ct.start();
-    }
-
-    private void closeDuplicateScreen() {
-        duplicate_previewPair(null);
-
-        explorerRootPane.setDisable(false);
-        duplicate_rootPane.setDisable(true);
-        imageGridView.requestFocus();
-        duplicate_rootPane.setOpacity(0);
     }
 
     // -------------------------------- Dialog Openers ---------------------------------------
@@ -1252,104 +1188,7 @@ public class MainController {
         }
     }
 
-    private void duplicate_previewPair(SimilarPair pair) {
-        if (pair == null) {
-            duplicate_previewingPair = null;
-
-            duplicate_leftMediaView.preview(null);
-            duplicate_leftTagListView.getItems().clear();
-            duplicate_leftPathTextField.setText("N/A");
-            updateImageInfoLabel(null, duplicate_leftInfoLabel);
-
-            duplicate_rightMediaView.preview(null);
-            duplicate_rightTagListView.getItems().clear();
-            duplicate_rightPathTextField.setText("N/A");
-            updateImageInfoLabel(null, duplicate_rightInfoLabel);
-
-            duplicate_similarityLabel.setText("N/A% Match");
-        } else {
-            duplicate_previewingPair = pair;
-
-            duplicate_leftMediaView.preview(pair.getImg1());
-            duplicate_leftPathTextField.setText(pair.getImg1().getFile().toString());
-            duplicate_leftTagListView.getItems().clear();
-            duplicate_leftTagListView.getItems().addAll(pair.getImg1().getTags());
-            duplicate_leftTagListView.getItems().sort(Comparator.comparing(Tag::getName));
-            updateImageInfoLabel(pair.getImg1(), duplicate_leftInfoLabel);
-
-            duplicate_rightMediaView.preview(pair.getImg2());
-            duplicate_rightPathTextField.setText(pair.getImg2().getFile().toString());
-            duplicate_rightTagListView.getItems().clear();
-            duplicate_rightTagListView.getItems().addAll(pair.getImg2().getTags());
-            duplicate_rightTagListView.getItems().sort(Comparator.comparing(Tag::getName));
-            updateImageInfoLabel(pair.getImg2(), duplicate_rightInfoLabel);
-
-            DecimalFormat df = new DecimalFormat("#.##");
-            duplicate_similarityLabel.setText((duplicatePairs.indexOf(pair) + 1) + "/" + duplicatePairs.size() + " - " + df.format(pair.getSimilarity() * 100) + "% Match");
-        }
-    }
-
-    private void duplicate_previewLastPair() {
-        if (duplicatePairs == null || duplicatePairs.isEmpty()) return;
-
-        if (duplicate_previewingPair == null) {
-            duplicate_previewPair(duplicatePairs.get(0));
-        } else {
-            int i = duplicatePairs.indexOf(duplicate_previewingPair);
-            if (i > 0) {
-                duplicate_previewPair(duplicatePairs.get(i - 1));
-            } else {
-                duplicate_previewPair(duplicatePairs.get(0));
-            }
-        }
-    }
-
-    private void duplicate_previewNextPair() {
-        if (duplicatePairs == null || duplicatePairs.isEmpty()) return;
-
-        if (duplicate_previewingPair == null) {
-            duplicate_previewPair(duplicatePairs.get(0));
-        } else {
-            int i = duplicatePairs.indexOf(duplicate_previewingPair);
-            if (i >= 0) {
-                if (i + 1 < duplicatePairs.size()) duplicate_previewPair(duplicatePairs.get(i + 1));
-            } else {
-                duplicate_previewPair(duplicatePairs.get(0));
-            }
-        }
-    }
-
-    private void duplicate_deleteImage(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
-        int index = duplicatePairs.indexOf(duplicate_previewingPair);
-
-        menagerie.removeImages(Collections.singletonList(toDelete), deleteFile);
-
-        //Consolidate tags
-        if (settings.isConsolidateTags()) {
-            toDelete.getTags().forEach(toKeep::addTag);
-        }
-
-        //Remove other pairs containing the deleted image
-        for (SimilarPair pair : new ArrayList<>(duplicatePairs)) {
-            if (toDelete.equals(pair.getImg1()) || toDelete.equals(pair.getImg2())) {
-                int i = duplicatePairs.indexOf(pair);
-                duplicatePairs.remove(pair);
-                if (i < index) {
-                    index--;
-                }
-            }
-        }
-
-        if (index > duplicatePairs.size() - 1) index = duplicatePairs.size() - 1;
-
-        if (duplicatePairs.isEmpty()) {
-            closeDuplicateScreen();
-        } else {
-            duplicate_previewPair(duplicatePairs.get(index));
-        }
-    }
-
-    private void duplicate_prepareAndOpen(List<ImageInfo> images) {
+    private void prepareAndOpenDuplicateScreen(List<ImageInfo> images) {
         ProgressScreen ps = new ProgressScreen();
 
         CancellableThread ctHist = new CancellableThread() {
@@ -1472,8 +1311,7 @@ public class MainController {
     private void cleanExit(boolean revertDatabase) {
         previewMediaView.releaseMediaPlayer();
         slideshowScreen.releaseMediaPlayer();
-        duplicate_leftMediaView.releaseMediaPlayer();
-        duplicate_rightMediaView.releaseMediaPlayer();
+        duplicatesScreen.releaseMediaPlayers();
         VideoThumbnailThread.releaseThreads();
 
         trySaveSettings();
@@ -1676,35 +1514,6 @@ public class MainController {
         event.consume();
     }
 
-    public void duplicate_leftDeleteButtonOnAction(ActionEvent event) {
-        if (duplicate_previewingPair != null)
-            duplicate_deleteImage(duplicate_previewingPair.getImg1(), duplicate_previewingPair.getImg2(), true);
-
-        event.consume();
-    }
-
-    public void duplicate_rightDeleteButtonOnAction(ActionEvent event) {
-        if (duplicate_previewingPair != null)
-            duplicate_deleteImage(duplicate_previewingPair.getImg2(), duplicate_previewingPair.getImg1(), true);
-
-        event.consume();
-    }
-
-    public void duplicate_closeButtonOnAction(ActionEvent event) {
-        closeDuplicateScreen();
-        event.consume();
-    }
-
-    public void duplicate_prevPairButtonOnAction(ActionEvent event) {
-        duplicate_previewLastPair();
-        event.consume();
-    }
-
-    public void duplicate_nextPairButtonOnAction(ActionEvent event) {
-        duplicate_previewNextPair();
-        event.consume();
-    }
-
     public void showErrorsButtonOnAction(ActionEvent event) {
         screenPane.open(errorsScreen);
         event.consume();
@@ -1758,7 +1567,7 @@ public class MainController {
                     event.consume();
                     break;
                 case D:
-                    duplicate_prepareAndOpen(imageGridView.getSelected());
+                    prepareAndOpenDuplicateScreen(imageGridView.getSelected());
                     event.consume();
                     break;
                 case Z:
@@ -1845,41 +1654,6 @@ public class MainController {
                 }
                 break;
         }
-    }
-
-    public void duplicate_rootPaneOnKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                closeDuplicateScreen();
-                event.consume();
-                break;
-            case LEFT:
-                duplicate_previewLastPair();
-                event.consume();
-                break;
-            case RIGHT:
-                duplicate_previewNextPair();
-                event.consume();
-                break;
-        }
-    }
-
-    // --------------------------- Mouse Event Handlers -----------------------------------------------
-
-    public void duplicate_imagesPaneMouseEntered(MouseEvent event) {
-        duplicate_leftTagListView.setDisable(false);
-        duplicate_rightTagListView.setDisable(false);
-        duplicate_leftTagListView.setOpacity(0.75);
-        duplicate_rightTagListView.setOpacity(0.75);
-        event.consume();
-    }
-
-    public void duplicate_imagesPaneMouseExited(MouseEvent event) {
-        duplicate_leftTagListView.setDisable(true);
-        duplicate_rightTagListView.setDisable(true);
-        duplicate_leftTagListView.setOpacity(0);
-        duplicate_rightTagListView.setOpacity(0);
-        event.consume();
     }
 
 }
