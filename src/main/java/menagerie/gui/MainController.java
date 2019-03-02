@@ -24,7 +24,6 @@ import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.predictive.PredictiveTextField;
-import menagerie.util.CancellableThread;
 import menagerie.gui.screens.*;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
@@ -38,6 +37,7 @@ import menagerie.model.search.Search;
 import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
 import menagerie.model.settings.Settings;
+import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
 import menagerie.util.PokeListener;
 import menagerie.util.folderwatcher.FolderWatcherThread;
@@ -216,9 +216,7 @@ public class MainController {
 
             menagerie = new Menagerie(db);
 
-            menagerie.getUpdateQueue().setErrorListener(e -> Platform.runLater(() -> {
-                errorsScreen.addError(new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"));
-            }));
+            menagerie.getUpdateQueue().setErrorListener(e -> Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"))));
         } catch (SQLException e) {
             e.printStackTrace();
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
@@ -262,11 +260,6 @@ public class MainController {
         for (int i = 0; i < elements.length; i++) elements[i] = i + Settings.MIN_IMAGE_GRID_WIDTH;
         settings_gridWidthChoiceBox.getItems().addAll(elements);
         settings_gridWidthChoiceBox.getSelectionModel().clearAndSelect(0);
-    }
-
-    private void initDuplicateScreen() {
-        duplicate_leftTagListView.setCellFactory(param -> new TagListCell());
-        duplicate_rightTagListView.setCellFactory(param -> new TagListCell());
         settings_histConfidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
                 try {
@@ -279,6 +272,11 @@ public class MainController {
                 }
             }
         });
+    }
+
+    private void initDuplicateScreen() {
+        duplicate_leftTagListView.setCellFactory(param -> new TagListCell());
+        duplicate_rightTagListView.setCellFactory(param -> new TagListCell());
 
         MenuItem showInSearchMenuItem = new MenuItem("Show in search");
         showInSearchMenuItem.setOnAction(event -> {
@@ -718,10 +716,8 @@ public class MainController {
         });
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
-        removeImagesMenuItem.setOnAction(event1 -> {
-            new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + imageGridView.getSelected().size() + " files)\n\n" +
-                    "This action CANNOT be undone", () -> menagerie.removeImages(imageGridView.getSelected(), false), null);
-        });
+        removeImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + imageGridView.getSelected().size() + " files)\n\n" +
+                "This action CANNOT be undone", () -> menagerie.removeImages(imageGridView.getSelected(), false), null));
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
         deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + imageGridView.getSelected().size() + " files)\n\n" +
                 "This action CANNOT be undone (files will be deleted)", () -> {

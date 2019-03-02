@@ -67,11 +67,6 @@ public class Thumbnail {
                     if (getImageLoadedListener() != null) getImageLoadedListener().finishedLoading(image);
                 }
             });
-            image.errorProperty().addListener((observable, oldValue, newValue) -> {
-                if (newValue) {
-                    //TODO
-                }
-            });
         } else {
             loaded = true;
         }

@@ -7,7 +7,6 @@ import uk.co.caprica.vlcj.player.MediaPlayerEventAdapter;
 import uk.co.caprica.vlcj.player.MediaPlayerEventListener;
 import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 
-import java.awt.image.BufferedImage;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.*;

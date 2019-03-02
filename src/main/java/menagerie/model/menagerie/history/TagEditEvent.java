@@ -3,7 +3,6 @@ package menagerie.model.menagerie.history;
 import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Tag;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 

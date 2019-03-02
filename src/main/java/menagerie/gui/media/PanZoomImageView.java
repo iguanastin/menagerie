@@ -2,7 +2,6 @@ package menagerie.gui.media;
 
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
