@@ -108,9 +108,9 @@
                 </Menu>
                 <Menu mnemonicParsing="false" text="View">
                     <Menu mnemonicParsing="false" text="Slideshow">
-                        <MenuItem mnemonicParsing="false" onAction="#slideShowSearchedMenuButtonOnAction"
+                        <MenuItem mnemonicParsing="false" onAction="#viewSlideShowSearchedMenuButtonOnAction"
                                   text="Searched"/>
-                        <MenuItem mnemonicParsing="false" onAction="#slideShowSelectedMenuButtonOnAction"
+                        <MenuItem mnemonicParsing="false" onAction="#viewSlideShowSelectedMenuButtonOnAction"
                                   text="Selected"/>
                     </Menu>
                     <MenuItem mnemonicParsing="false" onAction="#viewTagsMenuButtonOnAction" text="Tags"/>

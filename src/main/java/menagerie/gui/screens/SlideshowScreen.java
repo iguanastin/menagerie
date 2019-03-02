@@ -9,8 +9,11 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Menagerie;
+import menagerie.util.PokeListener;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class SlideshowScreen extends Screen {
@@ -19,6 +22,7 @@ public class SlideshowScreen extends Screen {
 
     private final List<ImageInfo> items = new ArrayList<>();
     private ImageInfo showing = null;
+    private Menagerie menagerie;
 
 
     public SlideshowScreen() {
@@ -31,6 +35,9 @@ public class SlideshowScreen extends Screen {
                 event.consume();
             } else if (event.getCode() == KeyCode.ESCAPE) {
                 close();
+                event.consume();
+            } else if (event.getCode() == KeyCode.DELETE) {
+                tryDeleteCurrent(!event.isControlDown());
                 event.consume();
             }
         });
@@ -56,11 +63,13 @@ public class SlideshowScreen extends Screen {
         setBottom(h);
     }
 
-    public void open(ScreenPane manager, List<ImageInfo> items) {
+    public void open(ScreenPane manager, Menagerie menagerie, List<ImageInfo> items) {
         this.items.clear();
         this.items.addAll(items);
 
         manager.open(this);
+
+        this.menagerie = menagerie;
     }
 
     @Override
@@ -90,17 +99,29 @@ public class SlideshowScreen extends Screen {
         mediaView.releaseMediaPlayer();
     }
 
-    public void removeCurrent() {
-        if (items.isEmpty() || showing == null) return;
+    public void tryDeleteCurrent(boolean deleteFile) {
+        PokeListener onFinish = () -> {
+            menagerie.removeImages(Collections.singletonList(getShowing()), deleteFile);
 
-        final int index = items.indexOf(getShowing());
-        items.remove(getShowing());
+            if (items.isEmpty() || showing == null) return;
 
-        if (!items.isEmpty()) {
-            preview(items.get(Math.max(0, Math.min(index, items.size() - 1))));
+            final int index = items.indexOf(getShowing());
+            items.remove(getShowing());
+
+            if (!items.isEmpty()) {
+                preview(items.get(Math.max(0, Math.min(index, items.size() - 1))));
+            } else {
+                preview(null);
+                close();
+            }
+        };
+
+        if (deleteFile) {
+            new ConfirmationScreen().open(getManager(), "Delete files", "Permanently delete selected files? (1 file)\n\n" +
+                    "This action CANNOT be undone (files will be deleted)", onFinish, null);
         } else {
-            preview(null);
-            close();
+            new ConfirmationScreen().open(getManager(), "Forget files", "Remove selected files from database? (1 file)\n\n" +
+                    "This action CANNOT be undone", onFinish, null);
         }
     }
 

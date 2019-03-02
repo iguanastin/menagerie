@@ -233,18 +233,12 @@ public class MainController {
             imageGridView.select(slideshowScreen.getShowing(), false, false);
         });
         MenuItem forgetCurrentMenuItem = new MenuItem("Forget");
-        forgetCurrentMenuItem.setOnAction(event -> tryDeleteCurrentSlideShowImage(false));
+        forgetCurrentMenuItem.setOnAction(event -> slideshowScreen.tryDeleteCurrent(false));
         MenuItem deleteCurrentMenuItem = new MenuItem("Delete");
-        deleteCurrentMenuItem.setOnAction(event -> tryDeleteCurrentSlideShowImage(true));
+        deleteCurrentMenuItem.setOnAction(event -> slideshowScreen.tryDeleteCurrent(true));
 
         slideshowScreen = new SlideshowScreen();
         slideshowScreen.setItemContextMenu(new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem));
-        slideshowScreen.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.DELETE) {
-                tryDeleteCurrentSlideShowImage(!event.isControlDown());
-                event.consume();
-            }
-        });
     }
 
     private void initErrorsScreen() {
@@ -593,9 +587,9 @@ public class MainController {
 
     private void initExplorerGridCellContextMenu() {
         MenuItem slideShowSelectedMenuItem = new MenuItem("Selected");
-        slideShowSelectedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, imageGridView.getSelected()));
+        slideShowSelectedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, imageGridView.getSelected()));
         MenuItem slideShowSearchedMenuItem = new MenuItem("Searched");
-        slideShowSearchedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, imageGridView.getItems()));
+        slideShowSearchedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, imageGridView.getItems()));
         Menu slideShowMenu = new Menu("Slideshow", null, slideShowSelectedMenuItem, slideShowSearchedMenuItem);
 
         MenuItem openInExplorerMenuItem = new MenuItem("Open in Explorer");
@@ -1511,23 +1505,6 @@ public class MainController {
         Platform.exit();
     }
 
-    private void tryDeleteCurrentSlideShowImage(boolean deleteFile) {
-        //TODO: Extract this functionality to the slideshow screen
-
-        PokeListener onFinish = () -> {
-            menagerie.removeImages(Collections.singletonList(slideshowScreen.getShowing()), deleteFile);
-            slideshowScreen.removeCurrent();
-        };
-
-        if (deleteFile) {
-            new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (1 file)\n\n" +
-                    "This action CANNOT be undone (files will be deleted)", onFinish, null);
-        } else {
-            new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (1 file)\n\n" +
-                    "This action CANNOT be undone", onFinish, null);
-        }
-    }
-
     // ---------------------------------- Compute Utilities ------------------------------------
 
     private static void downloadAndSaveFile(String url, File target) throws IOException {
@@ -1641,13 +1618,13 @@ public class MainController {
         event.consume();
     }
 
-    public void slideShowSearchedMenuButtonOnAction(ActionEvent event) {
-        slideshowScreen.open(screenPane, currentSearch.getResults());
+    public void viewSlideShowSearchedMenuButtonOnAction(ActionEvent event) {
+        slideshowScreen.open(screenPane, menagerie, currentSearch.getResults());
         event.consume();
     }
 
-    public void slideShowSelectedMenuButtonOnAction(ActionEvent event) {
-        slideshowScreen.open(screenPane, imageGridView.getSelected());
+    public void viewSlideShowSelectedMenuButtonOnAction(ActionEvent event) {
+        slideshowScreen.open(screenPane, menagerie, imageGridView.getSelected());
         event.consume();
     }
 
