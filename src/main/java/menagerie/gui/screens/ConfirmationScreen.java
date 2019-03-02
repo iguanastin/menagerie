@@ -10,15 +10,15 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import menagerie.util.SimplePokeListener;
+import menagerie.util.PokeListener;
 
 public class ConfirmationScreen extends Screen {
 
     private final Label titleLabel;
     private final Label messageLabel;
 
-    private SimplePokeListener okListener = null;
-    private SimplePokeListener cancelListener = null;
+    private PokeListener okListener = null;
+    private PokeListener cancelListener = null;
 
 
     public ConfirmationScreen() {
@@ -63,7 +63,7 @@ public class ConfirmationScreen extends Screen {
         setDefaultFocusNode(ok);
     }
 
-    public void open(ScreenPane manager, String title, String message, SimplePokeListener okListener, SimplePokeListener cancelListener) {
+    public void open(ScreenPane manager, String title, String message, PokeListener okListener, PokeListener cancelListener) {
         manager.open(this);
 
         titleLabel.setText(title);

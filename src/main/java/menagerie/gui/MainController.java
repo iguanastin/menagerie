@@ -24,6 +24,7 @@ import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.predictive.PredictiveTextField;
+import menagerie.util.CancellableThread;
 import menagerie.gui.screens.*;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
@@ -38,7 +39,7 @@ import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
 import menagerie.model.settings.Settings;
 import menagerie.util.Filters;
-import menagerie.util.SimplePokeListener;
+import menagerie.util.PokeListener;
 import menagerie.util.folderwatcher.FolderWatcherThread;
 
 import java.awt.*;
@@ -134,7 +135,7 @@ public class MainController {
     private Stack<TagEditEvent> tagEditHistory = new Stack<>();
 
     //Duplicate screen vars
-    private List<SimilarPair> duplicate_pairs = null;
+    private List<SimilarPair> duplicatePairs = null;
     private SimilarPair duplicate_previewingPair = null;
     private ContextMenu duplicate_contextMenu;
 
@@ -388,7 +389,7 @@ public class MainController {
             switch (event.getCode()) {
                 case DELETE:
                     final boolean deleteFiles = !event.isControlDown();
-                    final SimplePokeListener onFinish = () -> {
+                    final PokeListener onFinish = () -> {
                         previewImage(null);
                         menagerie.removeImages(imageGridView.getSelected(), deleteFiles);
                     };
@@ -429,18 +430,33 @@ public class MainController {
             String url = event.getDragboard().getUrl();
 
             if (files != null && !files.isEmpty()) {
-                List<Runnable> queue = new ArrayList<>();
-                files.forEach(file -> queue.add(() -> {
-                    try {
-                        menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
-                    } catch (Exception e) {
-                        Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import a file: " + file, "Unknown")));
-                    }
-                }));
+                ProgressScreen ps = new ProgressScreen();
+                CancellableThread ct = new CancellableThread() {
+                    @Override
+                    public void run() {
+                        int i = 0;
 
-                if (!queue.isEmpty()) {
-                    new ProgressScreen().open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
-                }
+                        for (File f : files) {
+                            if (!running) break;
+
+                            i++;
+
+                            try {
+                                menagerie.importImage(f, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import a file: " + f, "Unknown")));
+                            }
+
+                            final int finalI = i; // Lambda workaround
+                            Platform.runLater(() -> ps.setProgress(finalI, files.size()));
+                        }
+
+                        Platform.runLater(ps::close);
+                    }
+                };
+                ps.open(screenPane, "Importing files", "Importing files...", ct::cancel);
+                ct.start();
             } else if (url != null && !url.isEmpty()) {
                 Platform.runLater(() -> {
                     String folder = settings.getDefaultFolder();
@@ -596,46 +612,74 @@ public class MainController {
 
         MenuItem buildMD5HashMenuItem = new MenuItem("Build MD5 Hash");
         buildMD5HashMenuItem.setOnAction(event1 -> {
-            List<Runnable> queue = new ArrayList<>();
-            imageGridView.getSelected().forEach(img -> {
-                if (img.getMD5() == null) {
-                    queue.add(() -> {
-                        try {
-                            img.initializeMD5();
-                            img.commitMD5ToDatabase();
-                        } catch (Exception e) {
-                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for file: " + img, "Unknown")));
+            ProgressScreen ps = new ProgressScreen();
+            CancellableThread ct = new CancellableThread() {
+                @Override
+                public void run() {
+                    final int total = imageGridView.getSelected().size();
+                    int i = 0;
+
+                    for (ImageInfo item : imageGridView.getSelected()) {
+                        if (!running) break;
+
+                        i++;
+
+                        if (item.getMD5() == null) {
+                            try {
+                                item.initializeMD5();
+                                item.commitMD5ToDatabase();
+                            } catch (Exception e) {
+                                Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for file: " + item, "Unknown")));
+                            }
                         }
-                    });
+
+                        final int finalI = i; // Lambda workaround
+                        Platform.runLater(() -> ps.setProgress(finalI, total));
+                    }
+
+                    Platform.runLater(ps::close);
                 }
-            });
-            if (!queue.isEmpty()) {
-                new ProgressScreen().open(screenPane, "Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, null, null);
-            }
+            };
+            ps.open(screenPane, "Building MD5s", "Building MD5 hashes for files...", ct::cancel);
+            ct.start();
         });
         MenuItem buildHistogramMenuItem = new MenuItem("Build Histogram");
         buildHistogramMenuItem.setOnAction(event1 -> {
-            List<Runnable> queue = new ArrayList<>();
-            imageGridView.getSelected().forEach(img -> {
-                String filename = img.getFile().getName().toLowerCase();
-                if (img.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
-                    queue.add(() -> {
-                        try {
-                            img.initializeHistogram();
-                            img.commitHistogramToDatabase();
-                        } catch (Exception e) {
-                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + img, "Unknown")));
+            ProgressScreen ps = new ProgressScreen();
+            CancellableThread ct = new CancellableThread() {
+                @Override
+                public void run() {
+                    final int total = imageGridView.getSelected().size();
+                    int i = 0;
+
+                    for (ImageInfo item : imageGridView.getSelected()) {
+                        if (!running) break;
+
+                        i++;
+
+                        String filename = item.getFile().getName().toLowerCase();
+                        if (item.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
+                            try {
+                                item.initializeHistogram();
+                                item.commitHistogramToDatabase();
+                            } catch (Exception e) {
+                                Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + item, "Unknown")));
+                            }
                         }
-                    });
+
+                        final int finalI = i; // Lambda workaround
+                        Platform.runLater(() -> ps.setProgress(finalI, total));
+                    }
+
+                    Platform.runLater(ps::close);
                 }
-            });
-            if (!queue.isEmpty()) {
-                new ProgressScreen().open(screenPane, "Building Histograms", "Building image histograms for " + queue.size() + " files...", queue, null, null);
-            }
+            };
+            ps.open(screenPane, "Building Histograms", "Building image histograms for selected files...", ct::cancel);
+            ct.start();
         });
 
         MenuItem findDuplicatesMenuItem = new MenuItem("Find Duplicates");
-        findDuplicatesMenuItem.setOnAction(event1 -> duplicate_compareAndShow(imageGridView.getSelected()));
+        findDuplicatesMenuItem.setOnAction(event1 -> duplicate_prepareAndOpen(imageGridView.getSelected()));
 
         MenuItem moveToFolderMenuItem = new MenuItem("Move To...");
         moveToFolderMenuItem.setOnAction(event1 -> {
@@ -645,22 +689,36 @@ public class MainController {
                 File result = dc.showDialog(rootPane.getScene().getWindow());
 
                 if (result != null) {
-                    List<Runnable> queue = new ArrayList<>();
+                    ProgressScreen ps = new ProgressScreen();
+                    CancellableThread ct = new CancellableThread() {
+                        @Override
+                        public void run() {
+                            final int total = imageGridView.getSelected().size();
+                            int i = 0;
 
-                    imageGridView.getSelected().forEach(img -> queue.add(() -> {
-                        File f = result.toPath().resolve(img.getFile().getName()).toFile();
-                        if (!img.getFile().equals(f)) {
-                            File dest = MainController.resolveDuplicateFilename(f);
+                            for (ImageInfo item : imageGridView.getSelected()) {
+                                if (!running) break;
 
-                            if (!img.renameTo(dest)) {
-                                Platform.runLater(() -> errorsScreen.addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving file", "An exception was thrown while trying to move a file\nFrom: " + img.getFile() + "\nTo: " + dest, "Unknown")));
+                                i++;
+
+                                File f = result.toPath().resolve(item.getFile().getName()).toFile();
+                                if (!item.getFile().equals(f)) {
+                                    File dest = MainController.resolveDuplicateFilename(f);
+
+                                    if (!item.renameTo(dest)) {
+                                        Platform.runLater(() -> errorsScreen.addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving file", "An exception was thrown while trying to move a file\nFrom: " + item.getFile() + "\nTo: " + dest, "Unknown")));
+                                    }
+                                }
+
+                                final int finalI = i; // Lambda workaround
+                                Platform.runLater(() -> ps.setProgress(finalI, total));
                             }
-                        }
-                    }));
 
-                    if (!queue.isEmpty()) {
-                        new ProgressScreen().open(screenPane, "Moving files", "Moving " + queue.size() + " files...", queue, null, null);
-                    }
+                            Platform.runLater(ps::close);
+                        }
+                    };
+                    ps.open(screenPane, "Moving files", "Moving files to: " + result.getAbsolutePath(), ct::cancel);
+                    ct.start();
                 }
             }
         });
@@ -788,53 +846,58 @@ public class MainController {
     }
 
     private void openDuplicateScreen(List<ImageInfo> images) {
-        if (images == null || images.isEmpty()) return;
+        if (images == null || images.size() <= 1) return;
 
-        duplicate_pairs = new ArrayList<>();
-        List<Runnable> queue = new ArrayList<>();
+        duplicatePairs = new ArrayList<>();
 
-        for (int actualI = 0; actualI < images.size(); actualI++) {
-            final int i = actualI;
-            queue.add(() -> {
-                ImageInfo i1 = images.get(i);
-                for (int j = i + 1; j < images.size(); j++) {
-                    ImageInfo i2 = images.get(j);
+        ProgressScreen ps = new ProgressScreen();
+        CancellableThread ct = new CancellableThread() {
+            @Override
+            public void run() {
+                final int total = imageGridView.getSelected().size();
 
-                    try {
-                        double similarity = i1.getSimilarityTo(i2, settings.isCompareBlackAndWhiteHists());
-
-                        if (similarity >= settings.getSimilarityThreshold())
-                            duplicate_pairs.add(new SimilarPair(i1, i2, similarity));
-                    } catch (Exception e) {
-                        Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
+                for (int i = 0; i < total; i++) {
+                    if (!running) {
+                        Platform.runLater(ps::close);
+                        return;
                     }
+
+                    ImageInfo i1 = images.get(i);
+                    for (int j = i + 1; j < images.size(); j++) {
+                        ImageInfo i2 = images.get(j);
+
+                        try {
+                            double similarity = i1.getSimilarityTo(i2, settings.isCompareBlackAndWhiteHists());
+
+                            if (similarity >= settings.getSimilarityThreshold())
+                                duplicatePairs.add(new SimilarPair(i1, i2, similarity));
+                        } catch (Exception e) {
+                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
+                        }
+                    }
+
+                    final int finalI = i; // Lambda workaround
+                    Platform.runLater(() -> ps.setProgress(finalI + 1, total));
                 }
-            });
-        }
 
-        if (queue.size() > 5000) {
-            new ProgressScreen().open(screenPane, "Comparing images", "Checking comparisons for " + queue.size() + " images...", queue, total -> Platform.runLater(() -> {
-                if (duplicate_pairs.isEmpty()) return;
+                Platform.runLater(() -> {
+                    ps.close();
 
-                duplicate_previewPair(duplicate_pairs.get(0));
+                    // Open duplicate screen
+                    if (duplicatePairs.isEmpty()) return;
 
-                explorerRootPane.setDisable(true);
-                duplicate_rootPane.setDisable(false);
-                duplicate_rootPane.setOpacity(1);
-                duplicate_rootPane.requestFocus();
-            }), null);
-        } else {
-            queue.forEach(Runnable::run);
+                    //TODO: Convert duplicate screen to Screen object
+                    duplicate_previewPair(duplicatePairs.get(0));
 
-            if (duplicate_pairs.isEmpty()) return;
-
-            duplicate_previewPair(duplicate_pairs.get(0));
-
-            explorerRootPane.setDisable(true);
-            duplicate_rootPane.setDisable(false);
-            duplicate_rootPane.requestFocus();
-            duplicate_rootPane.setOpacity(1);
-        }
+                    explorerRootPane.setDisable(true);
+                    duplicate_rootPane.setDisable(false);
+                    duplicate_rootPane.requestFocus();
+                    duplicate_rootPane.setOpacity(1);
+                });
+            }
+        };
+        ps.open(screenPane, "Comparing items", "Checking for duplicate/similar items...", ct::cancel);
+        ct.start();
     }
 
     private void closeDuplicateScreen() {
@@ -855,20 +918,36 @@ public class MainController {
         File result = dc.showDialog(rootPane.getScene().getWindow());
 
         if (result != null) {
-            List<Runnable> queue = new ArrayList<>();
             List<File> files = getFilesRecursively(result, FILE_FILTER);
             menagerie.getImages().forEach(img -> files.remove(img.getFile()));
-            files.forEach(file -> queue.add(() -> {
-                try {
-                    menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
-                } catch (Exception e) {
-                    Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
-                }
-            }));
 
-            if (!queue.isEmpty()) {
-                new ProgressScreen().open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
-            }
+            ProgressScreen ps = new ProgressScreen();
+            CancellableThread ct = new CancellableThread() {
+                @Override
+                public void run() {
+                    final int total = files.size();
+                    int i = 0;
+
+                    for (File file : files) {
+                        if (!running) break;
+
+                        i++;
+
+                        try {
+                            menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
+                        } catch (Exception e) {
+                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
+                        }
+
+                        final int finalI = i; // Lambda workaround
+                        Platform.runLater(() -> ps.setProgress(finalI, total));
+                    }
+
+                    Platform.runLater(ps::close);
+                }
+            };
+            ps.open(screenPane, "Importing files", "Importing " + files.size() + " files...", ct::cancel);
+            ct.start();
         }
     }
 
@@ -883,18 +962,33 @@ public class MainController {
             final List<File> finalResults = new ArrayList<>(results);
             menagerie.getImages().forEach(img -> finalResults.remove(img.getFile()));
 
-            List<Runnable> queue = new ArrayList<>();
-            finalResults.forEach(file -> queue.add(() -> {
-                try {
-                    menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
-                } catch (Exception e) {
-                    Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
-                }
-            }));
+            ProgressScreen ps = new ProgressScreen();
+            CancellableThread ct = new CancellableThread() {
+                @Override
+                public void run() {
+                    final int total = finalResults.size();
+                    int i = 0;
 
-            if (!queue.isEmpty()) {
-                new ProgressScreen().open(screenPane, "Importing files", "Importing " + queue.size() + " files...", queue, null, null);
-            }
+                    for (File file : finalResults) {
+                        if (!running) break;
+
+                        i++;
+
+                        try {
+                            menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
+                        } catch (Exception e) {
+                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
+                        }
+
+                        final int finalI = i; // Lambda workaround
+                        Platform.runLater(() -> ps.setProgress(finalI, total));
+                    }
+
+                    Platform.runLater(ps::close);
+                }
+            };
+            ps.open(screenPane, "Importing files", "Importing " + finalResults.size() + " files...", ct::cancel);
+            ct.start();
         }
     }
 
@@ -1201,42 +1295,42 @@ public class MainController {
             updateImageInfoLabel(pair.getImg2(), duplicate_rightInfoLabel);
 
             DecimalFormat df = new DecimalFormat("#.##");
-            duplicate_similarityLabel.setText((duplicate_pairs.indexOf(pair) + 1) + "/" + duplicate_pairs.size() + " - " + df.format(pair.getSimilarity() * 100) + "% Match");
+            duplicate_similarityLabel.setText((duplicatePairs.indexOf(pair) + 1) + "/" + duplicatePairs.size() + " - " + df.format(pair.getSimilarity() * 100) + "% Match");
         }
     }
 
     private void duplicate_previewLastPair() {
-        if (duplicate_pairs == null || duplicate_pairs.isEmpty()) return;
+        if (duplicatePairs == null || duplicatePairs.isEmpty()) return;
 
         if (duplicate_previewingPair == null) {
-            duplicate_previewPair(duplicate_pairs.get(0));
+            duplicate_previewPair(duplicatePairs.get(0));
         } else {
-            int i = duplicate_pairs.indexOf(duplicate_previewingPair);
+            int i = duplicatePairs.indexOf(duplicate_previewingPair);
             if (i > 0) {
-                duplicate_previewPair(duplicate_pairs.get(i - 1));
+                duplicate_previewPair(duplicatePairs.get(i - 1));
             } else {
-                duplicate_previewPair(duplicate_pairs.get(0));
+                duplicate_previewPair(duplicatePairs.get(0));
             }
         }
     }
 
     private void duplicate_previewNextPair() {
-        if (duplicate_pairs == null || duplicate_pairs.isEmpty()) return;
+        if (duplicatePairs == null || duplicatePairs.isEmpty()) return;
 
         if (duplicate_previewingPair == null) {
-            duplicate_previewPair(duplicate_pairs.get(0));
+            duplicate_previewPair(duplicatePairs.get(0));
         } else {
-            int i = duplicate_pairs.indexOf(duplicate_previewingPair);
+            int i = duplicatePairs.indexOf(duplicate_previewingPair);
             if (i >= 0) {
-                if (i + 1 < duplicate_pairs.size()) duplicate_previewPair(duplicate_pairs.get(i + 1));
+                if (i + 1 < duplicatePairs.size()) duplicate_previewPair(duplicatePairs.get(i + 1));
             } else {
-                duplicate_previewPair(duplicate_pairs.get(0));
+                duplicate_previewPair(duplicatePairs.get(0));
             }
         }
     }
 
     private void duplicate_deleteImage(ImageInfo toDelete, ImageInfo toKeep, boolean deleteFile) {
-        int index = duplicate_pairs.indexOf(duplicate_previewingPair);
+        int index = duplicatePairs.indexOf(duplicate_previewingPair);
 
         menagerie.removeImages(Collections.singletonList(toDelete), deleteFile);
 
@@ -1246,63 +1340,103 @@ public class MainController {
         }
 
         //Remove other pairs containing the deleted image
-        for (SimilarPair pair : new ArrayList<>(duplicate_pairs)) {
+        for (SimilarPair pair : new ArrayList<>(duplicatePairs)) {
             if (toDelete.equals(pair.getImg1()) || toDelete.equals(pair.getImg2())) {
-                int i = duplicate_pairs.indexOf(pair);
-                duplicate_pairs.remove(pair);
+                int i = duplicatePairs.indexOf(pair);
+                duplicatePairs.remove(pair);
                 if (i < index) {
                     index--;
                 }
             }
         }
 
-        if (index > duplicate_pairs.size() - 1) index = duplicate_pairs.size() - 1;
+        if (index > duplicatePairs.size() - 1) index = duplicatePairs.size() - 1;
 
-        if (duplicate_pairs.isEmpty()) {
+        if (duplicatePairs.isEmpty()) {
             closeDuplicateScreen();
         } else {
-            duplicate_previewPair(duplicate_pairs.get(index));
+            duplicate_previewPair(duplicatePairs.get(index));
         }
     }
 
-    private void duplicate_compareAndShow(List<ImageInfo> images) {
-        if (settings.isComputeMD5ForSimilarity()) {
-            List<Runnable> queue = new ArrayList<>();
+    private void duplicate_prepareAndOpen(List<ImageInfo> images) {
+        ProgressScreen ps = new ProgressScreen();
 
-            images.forEach(i -> {
-                if (i.getMD5() == null) queue.add(() -> {
-                    try {
-                        i.initializeMD5();
-                        i.commitMD5ToDatabase();
-                    } catch (Exception e) {
-                        Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for file: " + i, "Unknown")));
+        CancellableThread ctHist = new CancellableThread() {
+            @Override
+            public void run() {
+                final int total = images.size();
+                int i = 0;
+
+                for (ImageInfo item : images) {
+                    if (!running) break;
+
+                    i++;
+
+                    String filename = item.getFile().getName().toLowerCase();
+                    if (item.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
+                        try {
+                            item.initializeHistogram();
+                            item.commitHistogramToDatabase();
+                        } catch (Exception e) {
+                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for file: " + item, "Unknown")));
+                        }
+                    }
+
+                    final int finalI = i; // Lambda workaround
+                    Platform.runLater(() -> ps.setProgress(finalI, total));
+                }
+
+                Platform.runLater(() -> {
+                    ps.close();
+
+                    openDuplicateScreen(images);
+                });
+            }
+        };
+        CancellableThread ctMD5 = new CancellableThread() {
+            @Override
+            public void run() {
+                final int total = images.size();
+                int i = 0;
+
+                for (ImageInfo item : images) {
+                    if (!running) break;
+
+                    i++;
+
+                    if (item.getMD5() == null) {
+                        try {
+                            item.initializeMD5();
+                            item.commitMD5ToDatabase();
+                        } catch (Exception e) {
+                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for file: " + item, "Unknown")));
+                        }
+                    }
+
+                    final int finalI = i; // Lambda workaround
+                    Platform.runLater(() -> ps.setProgress(finalI, total));
+                }
+
+                Platform.runLater(() -> {
+                    ps.close();
+
+                    if (settings.isComputeHistogramForSimilarity()) {
+                        ps.open(screenPane, "Building Histograms", "Building histograms for selected items...", ctHist::cancel);
+                        ctHist.start();
+                    } else {
+                        openDuplicateScreen(images);
                     }
                 });
-            });
+            }
+        };
 
-            new ProgressScreen().open(screenPane, "Building MD5s", "Building MD5 hashes for " + queue.size() + " files...", queue, total -> {
-                //TODO: Fix this. If md5 computing is disabled, histogram building won't happen
-                if (settings.isComputeHistogramForSimilarity()) {
-                    List<Runnable> queue2 = new ArrayList<>();
-
-                    images.forEach(i -> {
-                        String filename = i.getFile().getName().toLowerCase();
-                        if (i.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")))
-                            queue2.add(() -> {
-                                try {
-                                    i.initializeHistogram();
-                                    i.commitHistogramToDatabase();
-                                } catch (Exception e) {
-                                    Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for file: " + i, "Unknown")));
-                                }
-                            });
-                    });
-
-                    Platform.runLater(() -> new ProgressScreen().open(screenPane, "Building Histograms", "Building histograms for " + queue2.size() + " files...", queue2, total1 -> Platform.runLater(() -> openDuplicateScreen(images)), null));
-                } else {
-                    Platform.runLater(() -> openDuplicateScreen(images));
-                }
-            }, null);
+        if (settings.isComputeMD5ForSimilarity()) {
+            ps.open(screenPane, "Computing MD5s", "Computing MD5 hashes for selected files...", ctMD5::cancel);
+            ctMD5.start();
+        } else if (settings.isComputeHistogramForSimilarity()) {
+            ps.open(screenPane, "Building Histograms", "Building histograms for selected items...", ctHist::cancel);
+            ctHist.start();
         } else {
             openDuplicateScreen(images);
         }
@@ -1380,7 +1514,7 @@ public class MainController {
     private void tryDeleteCurrentSlideShowImage(boolean deleteFile) {
         //TODO: Extract this functionality to the slideshow screen
 
-        SimplePokeListener onFinish = () -> {
+        PokeListener onFinish = () -> {
             menagerie.removeImages(Collections.singletonList(slideshowScreen.getShowing()), deleteFile);
             slideshowScreen.removeCurrent();
         };
@@ -1651,7 +1785,7 @@ public class MainController {
                     event.consume();
                     break;
                 case D:
-                    duplicate_compareAndShow(imageGridView.getSelected());
+                    duplicate_prepareAndOpen(imageGridView.getSelected());
                     event.consume();
                     break;
                 case Z:

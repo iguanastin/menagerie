@@ -8,7 +8,7 @@ import menagerie.model.menagerie.histogram.ImageHistogram;
 import menagerie.util.Filters;
 import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
-import menagerie.util.SimplePokeListener;
+import menagerie.util.PokeListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +38,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private SoftReference<Thumbnail> thumbnail;
     private WeakReference<Image> image;
 
-    private SimplePokeListener tagListener = null;
+    private PokeListener tagListener = null;
 
 
     public ImageInfo(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
@@ -292,7 +292,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return 0;
     }
 
-    public void setTagListener(SimplePokeListener tagListener) {
+    public void setTagListener(PokeListener tagListener) {
         this.tagListener = tagListener;
     }
 

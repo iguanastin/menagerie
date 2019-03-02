@@ -1,6 +1,6 @@
 package menagerie.util;
 
-public interface SimplePokeListener {
+public interface PokeListener {
 
     void poke();
 

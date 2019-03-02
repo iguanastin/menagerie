@@ -1,6 +1,5 @@
 package menagerie.gui.screens;
 
-import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -11,20 +10,16 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
-import menagerie.gui.progress.ProgressLockThread;
-import menagerie.gui.progress.ProgressLockThreadCancelListener;
-import menagerie.gui.progress.ProgressLockThreadFinishListener;
-
-import java.util.List;
+import menagerie.util.PokeListener;
 
 public class ProgressScreen extends Screen {
-
-    private ProgressLockThread progressThread;
 
     private final Label title;
     private final Label message;
     private final Label count;
     private final ProgressBar progress;
+
+    private PokeListener cancelListener = null;
 
 
     public ProgressScreen() {
@@ -72,35 +67,25 @@ public class ProgressScreen extends Screen {
         setDefaultFocusNode(cancel);
     }
 
-    public void open(ScreenPane manager, String titleText, String messageText, List<Runnable> tasks, ProgressLockThreadFinishListener finishListener, ProgressLockThreadCancelListener cancelListener) {
+    public void open(ScreenPane manager, String titleText, String messageText, PokeListener cancelListener) {
+        this.cancelListener = null;
         manager.open(this);
+
+        this.cancelListener = cancelListener;
 
         title.setText(titleText);
         message.setText(messageText);
-        count.setText("0/" + tasks.size());
-        progress.setProgress(0);
+        setProgress(0, 0);
+    }
 
-        if (progressThread != null) progressThread.stopRunning();
-        progressThread = new ProgressLockThread(tasks);
-        progressThread.setCancelListener((num, total) -> {
-            Platform.runLater(this::close);
-            if (cancelListener != null) cancelListener.progressCanceled(num, total);
-        });
-        progressThread.setFinishListener(total -> {
-            Platform.runLater(this::close);
-            if (finishListener != null) finishListener.progressFinished(total);
-        });
-        progressThread.setUpdateListener((num, total) -> Platform.runLater(() -> {
-            final double p = (double) num / total;
-            progress.setProgress(p);
-            count.setText((int) (p * 100) + "% - " + (total - num) + " remaining...");
-        }));
-        progressThread.start();
+    public void setProgress(int i, int total) {
+        count.setText(i + "/" + total);
+        progress.setProgress((double) i / total);
     }
 
     @Override
-    public void onClose() {
-        if (progressThread != null) progressThread.stopRunning();
+    protected void onClose() {
+        if (cancelListener != null) cancelListener.poke();
     }
 
 }
