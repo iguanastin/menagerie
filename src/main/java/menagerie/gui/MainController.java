@@ -33,6 +33,8 @@ import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.menagerie.history.TagEditEvent;
+import menagerie.model.menagerie.importer.ImportJob;
+import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.Search;
 import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
@@ -45,19 +47,14 @@ import menagerie.util.folderwatcher.FolderWatcherThread;
 import java.awt.*;
 import java.io.File;
 import java.io.FileFilter;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URI;
+import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.text.DecimalFormat;
 import java.util.*;
 import java.util.List;
 
@@ -115,6 +112,7 @@ public class MainController {
 
     //Menagerie vars
     private Menagerie menagerie;
+    private ImporterThread importer;
 
     //Explorer screen vars
     private Search currentSearch = null;
@@ -201,6 +199,9 @@ public class MainController {
             DatabaseVersionUpdater.updateDatabase(db);
 
             menagerie = new Menagerie(db);
+            importer = new ImporterThread(menagerie, settings);
+            importer.setDaemon(true);
+            importer.start();
 
             menagerie.getUpdateQueue().setErrorListener(e -> Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"))));
         } catch (SQLException e) {
@@ -375,64 +376,15 @@ public class MainController {
             String url = event.getDragboard().getUrl();
 
             if (files != null && !files.isEmpty()) {
-                ProgressScreen ps = new ProgressScreen();
-                CancellableThread ct = new CancellableThread() {
-                    @Override
-                    public void run() {
-                        int i = 0;
-
-                        for (File f : files) {
-                            if (!running) break;
-
-                            i++;
-
-                            try {
-                                menagerie.importImage(f, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import a file: " + f, "Unknown")));
-                            }
-
-                            final int finalI = i; // Lambda workaround
-                            Platform.runLater(() -> ps.setProgress(finalI, files.size()));
-                        }
-
-                        Platform.runLater(ps::close);
-                    }
-                };
-                ps.open(screenPane, "Importing files", "Importing files...", ct::cancel);
-                ct.start();
+                for (File file : files) {
+                    importer.queue(new ImportJob(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
+                }
             } else if (url != null && !url.isEmpty()) {
-                Platform.runLater(() -> {
-                    String folder = settings.getDefaultFolder();
-                    if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
-                    String filename = URI.create(url).getPath().replaceAll("^.*/", "");
-                    File target = resolveDuplicateFilename(new File(folder + filename));
-
-                    while (!settings.isAutoImportFromWeb() || !target.getParentFile().exists() || target.exists() || !FILE_FILTER.accept(target)) {
-                        target = openSaveImageDialog(explorerRootPane.getScene().getWindow(), new File(settings.getDefaultFolder()), filename);
-                        if (target == null) return;
-                        if (target.exists())
-                            Main.showErrorMessage("Error", "File already exists, cannot be overwritten", target.getAbsolutePath());
-                    }
-
-                    final File finalTarget = target;
-                    new Thread(() -> {
-                        try {
-                            downloadAndSaveFile(url, finalTarget);
-                            Platform.runLater(() -> {
-                                ImageInfo img = menagerie.importImage(finalTarget, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
-                                if (img == null) {
-                                    if (!finalTarget.delete())
-                                        System.out.println("Tried to delete a downloaded file, as it couldn't be imported, but failed: " + finalTarget);
-                                }
-                            });
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            Platform.runLater(() -> Main.showErrorMessage("Unexpected error", "Error while trying to download file", e.getLocalizedMessage()));
-                        }
-                    }).start();
-                });
+                try {
+                    importer.queue(new ImportJob(new URL(url), settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
             }
             event.consume();
         });
@@ -845,35 +797,11 @@ public class MainController {
 
         if (result != null) {
             List<File> files = getFilesRecursively(result, FILE_FILTER);
-            menagerie.getImages().forEach(img -> files.remove(img.getFile()));
+            menagerie.getItems().forEach(img -> files.remove(img.getFile()));
 
-            ProgressScreen ps = new ProgressScreen();
-            CancellableThread ct = new CancellableThread() {
-                @Override
-                public void run() {
-                    final int total = files.size();
-                    int i = 0;
-
-                    for (File file : files) {
-                        if (!running) break;
-
-                        i++;
-
-                        try {
-                            menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
-                        } catch (Exception e) {
-                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
-                        }
-
-                        final int finalI = i; // Lambda workaround
-                        Platform.runLater(() -> ps.setProgress(finalI, total));
-                    }
-
-                    Platform.runLater(ps::close);
-                }
-            };
-            ps.open(screenPane, "Importing files", "Importing " + files.size() + " files...", ct::cancel);
-            ct.start();
+            for (File file : files) {
+                importer.queue(new ImportJob(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
+            }
         }
     }
 
@@ -886,35 +814,11 @@ public class MainController {
 
         if (results != null && !results.isEmpty()) {
             final List<File> finalResults = new ArrayList<>(results);
-            menagerie.getImages().forEach(img -> finalResults.remove(img.getFile()));
+            menagerie.getItems().forEach(img -> finalResults.remove(img.getFile()));
 
-            ProgressScreen ps = new ProgressScreen();
-            CancellableThread ct = new CancellableThread() {
-                @Override
-                public void run() {
-                    final int total = finalResults.size();
-                    int i = 0;
-
-                    for (File file : finalResults) {
-                        if (!running) break;
-
-                        i++;
-
-                        try {
-                            menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport());
-                        } catch (Exception e) {
-                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to import file", "Exception was thrown while trying to import an file: " + file, "Unknown")));
-                        }
-
-                        final int finalI = i; // Lambda workaround
-                        Platform.runLater(() -> ps.setProgress(finalI, total));
-                    }
-
-                    Platform.runLater(ps::close);
-                }
-            };
-            ps.open(screenPane, "Importing files", "Importing " + finalResults.size() + " files...", ct::cancel);
-            ct.start();
+            for (File file : finalResults) {
+                importer.queue(new ImportJob(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
+            }
         }
     }
 
@@ -1296,10 +1200,7 @@ public class MainController {
                             file = dest;
                         }
 
-                        if (menagerie.importImage(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport()) == null) {
-                            if (!file.delete())
-                                System.out.println("Failed to delete file after it was denied by the Menagerie");
-                        }
+                        importer.queue(new ImportJob(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
                     }
                 });
                 folderWatcherThread.setDaemon(true);
@@ -1341,17 +1242,6 @@ public class MainController {
 
     // ---------------------------------- Compute Utilities ------------------------------------
 
-    private static void downloadAndSaveFile(String url, File target) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.addRequestProperty("User-Agent", "Mozilla/4.0");
-        ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
-        FileOutputStream fos = new FileOutputStream(target);
-        fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-        conn.disconnect();
-        rbc.close();
-        fos.close();
-    }
-
     private static List<File> getFilesRecursively(File folder, FileFilter filter) {
         File[] files = folder.listFiles();
         List<File> results = new ArrayList<>();
@@ -1392,7 +1282,7 @@ public class MainController {
         return new File(path);
     }
 
-    private static File resolveDuplicateFilename(File file) {
+    public static File resolveDuplicateFilename(File file) {
         while (file.exists()) {
             String name = file.getName();
             if (name.matches(".*\\s\\([0-9]+\\)\\..*")) {

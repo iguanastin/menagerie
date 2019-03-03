@@ -42,8 +42,6 @@ public class Menagerie {
     private final List<ImageInfo> images = new ArrayList<>();
     private final List<Tag> tags = new ArrayList<>();
 
-    private final Map<String, ImageInfo> hashes = new HashMap<>();
-
     private int nextImageID;
     private int nextTagID;
 
@@ -142,10 +140,6 @@ public class Menagerie {
             ImageInfo img = new ImageInfo(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
             images.add(img);
 
-            if (img.getMD5() != null) {
-                hashes.put(img.getMD5(), img);
-            }
-
             PS_GET_IMG_TAG_IDS.setInt(1, img.getId());
             ResultSet tagRS = PS_GET_IMG_TAG_IDS.executeQuery();
 
@@ -178,25 +172,10 @@ public class Menagerie {
         System.out.println("Finished loading " + tags.size() + " tags from database");
     }
 
-    public ImageInfo importImage(File file, boolean computeMD5, boolean computeHistogram) {
+    public ImageInfo importFile(File file) {
         if (isFilePresent(file)) return null;
 
         ImageInfo img = new ImageInfo(this, nextImageID, System.currentTimeMillis(), file, null, null);
-
-        //Compute md5 if flagged
-        if (computeMD5) {
-            img.initializeMD5();
-
-            if (hashes.get(img.getMD5()) != null)
-                return null;
-            else
-                hashes.put(img.getMD5(), img);
-        }
-
-        //Compute histogram if flagged
-        if (computeHistogram) {
-            img.initializeHistogram();
-        }
 
         //Add image and commit to database
         images.add(img);
@@ -242,11 +221,7 @@ public class Menagerie {
         List<ImageInfo> toRemove = new ArrayList<>();
 
         for (ImageInfo image : images) {
-            if (getImages().remove(image)) {
-                if (image.getMD5() != null) {
-                    hashes.remove(image.getMD5());
-                }
-
+            if (getItems().remove(image)) {
                 image.getTags().forEach(Tag::decrementFrequency);
 
                 toRemove.add(image);
@@ -310,11 +285,7 @@ public class Menagerie {
         activeSearches.forEach(search -> search.recheckWithSearch(images));
     }
 
-    void imageMD5Updated(ImageInfo img) {
-        hashes.put(img.getMD5(), img);
-    }
-
-    public List<ImageInfo> getImages() {
+    public List<ImageInfo> getItems() {
         return images;
     }
 

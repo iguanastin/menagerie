@@ -38,7 +38,7 @@ public class Search {
 
         menagerie.registerSearch(this);
 
-        addIfValid(menagerie.getImages());
+        addIfValid(menagerie.getItems());
     }
 
     public void setListener(SearchUpdateListener listener) {
