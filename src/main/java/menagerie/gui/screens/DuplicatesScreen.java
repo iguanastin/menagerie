@@ -6,6 +6,7 @@ import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
+import menagerie.gui.ItemInfoBox;
 import menagerie.gui.TagListCell;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.model.SimilarPair;
@@ -23,11 +24,9 @@ public class DuplicatesScreen extends Screen {
 
     private DynamicMediaView leftMediaView, rightMediaView;
     private ListView<Tag> leftTagList, rightTagList;
+    private ItemInfoBox leftInfoBox, rightInfoBox;
 
     private Label similarityLabel;
-    private Label leftInfoLabel, rightInfoLabel;
-
-    private TextField leftPathTextField, rightPathTextField;
 
     private Menagerie menagerie = null;
     private List<SimilarPair> pairs = null;
@@ -57,14 +56,24 @@ public class DuplicatesScreen extends Screen {
         leftMediaView = new DynamicMediaView();
         rightMediaView = new DynamicMediaView();
         leftTagList = new ListView<>();
-        leftTagList.setPrefWidth(200);
         leftTagList.setCellFactory(param -> new TagListCell());
+        leftTagList.setPrefWidth(200);
         rightTagList = new ListView<>();
-        rightTagList.setPrefWidth(200);
         rightTagList.setCellFactory(param -> new TagListCell());
-        BorderPane lbp = new BorderPane(null, null, leftTagList, null, null);
+        rightTagList.setPrefWidth(200);
+        leftInfoBox = new ItemInfoBox();
+        leftInfoBox.setAlignment(Pos.BOTTOM_LEFT);
+        leftInfoBox.setMaxHeight(USE_PREF_SIZE);
+        leftInfoBox.setOpacity(0.75);
+        BorderPane.setAlignment(leftInfoBox, Pos.BOTTOM_LEFT);
+        rightInfoBox = new ItemInfoBox();
+        rightInfoBox.setAlignment(Pos.BOTTOM_RIGHT);
+        rightInfoBox.setMaxHeight(USE_PREF_SIZE);
+        rightInfoBox.setOpacity(0.75);
+        BorderPane.setAlignment(rightInfoBox, Pos.BOTTOM_RIGHT);
+        BorderPane lbp = new BorderPane(null, null, leftTagList, null, leftInfoBox);
         lbp.setPickOnBounds(false);
-        BorderPane rbp = new BorderPane(null, null, null, null, rightTagList);
+        BorderPane rbp = new BorderPane(null, null, rightInfoBox, null, rightTagList);
         rbp.setPickOnBounds(false);
         SplitPane sp = new SplitPane(new StackPane(leftMediaView, lbp), new StackPane(rightMediaView, rbp));
         sp.setOnMouseEntered(event -> {
@@ -86,31 +95,24 @@ public class DuplicatesScreen extends Screen {
         bottom.setPadding(new Insets(5));
         // Construct first element
         similarityLabel = new Label("N/A");
-        leftInfoLabel = new Label("N/A");
         Button leftDeleteButton = new Button("Delete");
         leftDeleteButton.setOnAction(event -> deleteItem(currentPair.getImg1(), currentPair.getImg2()));
-        rightInfoLabel = new Label("N/A");
         Button rightDeleteButton = new Button("Delete");
         rightDeleteButton.setOnAction(event -> deleteItem(currentPair.getImg2(), currentPair.getImg1()));
-        HBox hbl = new HBox(leftDeleteButton, leftInfoLabel);
+        HBox hbl = new HBox(leftDeleteButton);
         hbl.setAlignment(Pos.CENTER_LEFT);
-        HBox hbr = new HBox(rightInfoLabel, rightDeleteButton);
+        HBox hbr = new HBox(rightDeleteButton);
         hbr.setAlignment(Pos.CENTER_RIGHT);
         bottom.getChildren().add(new BorderPane(similarityLabel, null, hbr, null, hbl));
         // Construct second element
-        leftPathTextField = new TextField("N/A");
-        rightPathTextField = new TextField("N/A");
-        leftPathTextField.setEditable(false);
-        rightPathTextField.setEditable(false);
-        HBox.setHgrow(leftPathTextField, Priority.ALWAYS);
-        HBox.setHgrow(rightPathTextField, Priority.ALWAYS);
         Button prevPairButton = new Button("<-");
         prevPairButton.setOnAction(event -> previewPrev());
         Button closeButton = new Button("Close");
         closeButton.setOnAction(event -> close());
         Button nextPairButton = new Button("->");
         nextPairButton.setOnAction(event -> previewNext());
-        HBox hb = new HBox(5, leftPathTextField, prevPairButton, closeButton, nextPairButton, rightPathTextField);
+        HBox hb = new HBox(5, prevPairButton, closeButton, nextPairButton);
+        hb.setAlignment(Pos.CENTER);
         bottom.getChildren().add(hb);
         setBottom(bottom);
 
@@ -173,17 +175,16 @@ public class DuplicatesScreen extends Screen {
             leftTagList.getItems().clear();
             leftTagList.getItems().addAll(pair.getImg1().getTags());
             leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
+
             rightTagList.getItems().clear();
             rightTagList.getItems().addAll(pair.getImg2().getTags());
             rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
 
+            leftInfoBox.setItem(pair.getImg1());
+            rightInfoBox.setItem(pair.getImg2());
+
             DecimalFormat df = new DecimalFormat("#.##");
             similarityLabel.setText((pairs.indexOf(pair) + 1) + "/" + pairs.size() + ": " + df.format(pair.getSimilarity() * 100) + "%");
-            leftInfoLabel.setText("get rid of this please");
-            rightInfoLabel.setText("get rid of this please");
-
-            leftPathTextField.setText(pair.getImg1().getFile().toString());
-            rightPathTextField.setText(pair.getImg2().getFile().toString());
         } else {
             leftMediaView.preview(null);
             rightMediaView.preview(null);
@@ -191,12 +192,10 @@ public class DuplicatesScreen extends Screen {
             leftTagList.getItems().clear();
             rightTagList.getItems().clear();
 
-            similarityLabel.setText("N/A");
-            leftInfoLabel.setText("N/A");
-            rightInfoLabel.setText("N/A");
+            leftInfoBox.setItem(null);
+            rightInfoBox.setItem(null);
 
-            leftPathTextField.setText("N/A");
-            rightPathTextField.setText("N/A");
+            similarityLabel.setText("N/A");
         }
     }
 

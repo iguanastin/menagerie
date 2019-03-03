@@ -69,8 +69,7 @@ public class MainController {
     public ImageGridView imageGridView;
     public DynamicMediaView previewMediaView;
     public Label resultCountLabel;
-    public Label imageInfoLabel;
-    public Label fileNameLabel;
+    public ItemInfoBox itemInfoBox;
     public ListView<Tag> tagListView;
     public PredictiveTextField editTagsTextField;
     public MenuBar menuBar;
@@ -285,7 +284,7 @@ public class MainController {
         setGridWidth(settings.getImageGridWidth());
 
         //Init image grid
-        imageGridView.setSelectionListener(image -> Platform.runLater(() -> previewImage(image)));
+        imageGridView.setSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
         imageGridView.setCellFactory(param -> {
             ImageGridCell c = new ImageGridCell();
             c.setOnDragDetected(event -> {
@@ -336,7 +335,7 @@ public class MainController {
                 case DELETE:
                     final boolean deleteFiles = !event.isControlDown();
                     final PokeListener onFinish = () -> {
-                        previewImage(null);
+                        previewItem(null);
                         menagerie.removeImages(imageGridView.getSelected(), deleteFiles);
                     };
                     if (deleteFiles) {
@@ -626,7 +625,7 @@ public class MainController {
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
         deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + imageGridView.getSelected().size() + " files)\n\n" +
                 "This action CANNOT be undone (files will be deleted)", () -> {
-            previewImage(null);
+            previewItem(null);
             menagerie.removeImages(imageGridView.getSelected(), true);
         }, null));
 
@@ -834,25 +833,17 @@ public class MainController {
     // ---------------------------------- GUI Action Methods ------------------------------------
 
     @SuppressWarnings("SameParameterValue")
-    private void previewImage(ImageInfo image) {
+    private void previewItem(ImageInfo item) {
         if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
-        currentlyPreviewing = image;
+        currentlyPreviewing = item;
 
-        if (!previewMediaView.preview(image)) {
+        if (!previewMediaView.preview(item)) {
             errorsScreen.addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
         }
 
-        updateTagList(image);
+        updateTagList(item);
 
-        updateImageInfoLabel(image, imageInfoLabel);
-
-        if (image != null) {
-            image.setTagListener(() -> updateTagList(image));
-
-            fileNameLabel.setText(image.getFile().toString());
-        } else {
-            fileNameLabel.setText("N/A");
-        }
+        itemInfoBox.setItem(item);
     }
 
     private void updateTagList(ImageInfo image) {
@@ -860,32 +851,6 @@ public class MainController {
         if (image != null) {
             tagListView.getItems().addAll(image.getTags());
             tagListView.getItems().sort(Comparator.comparing(Tag::getName));
-        }
-    }
-
-    private static void updateImageInfoLabel(ImageInfo image, Label label) {
-        if (image == null) {
-            label.setText("Size: N/A - Res: N/A");
-
-            return;
-        }
-
-        if (image.getImage().isBackgroundLoading() && image.getImage().getProgress() != 1) {
-            label.setText("Size: N/A - Res: N/A");
-
-            image.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
-                if (newValue.doubleValue() == 1 && !image.getImage().isError()) updateImageInfoLabel(image, label);
-            });
-        } else {
-            //Find size string
-            double size = image.getFile().length();
-            String sizeStr;
-            if (size > 1024 * 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024 / 1024) + "GB";
-            else if (size > 1024 * 1024) sizeStr = String.format("%.2f", size / 1024 / 1024) + "MB";
-            else if (size > 1024) sizeStr = String.format("%.2f", size / 1024) + "KB";
-            else sizeStr = String.format("%.2f", size) + "B";
-
-            label.setText("Size: " + sizeStr + " - Res: " + (int) image.getImage().getWidth() + "x" + (int) image.getImage().getHeight());
         }
     }
 
@@ -903,7 +868,7 @@ public class MainController {
 
     private void applySearch(String search, boolean descending) {
         if (currentSearch != null) currentSearch.close();
-        previewImage(null);
+        previewItem(null);
 
         currentSearch = new Search(menagerie, constructRuleSet(search), descending);
         currentSearch.setListener(new SearchUpdateListener() {
@@ -931,7 +896,7 @@ public class MainController {
                     }
 
                     imageGridView.getItems().removeAll(images);
-                    if (images.contains(currentlyPreviewing)) previewImage(null);
+                    if (images.contains(currentlyPreviewing)) previewItem(null);
 
                     if (!imageGridView.getItems().isEmpty()) {
                         if (newIndex >= imageGridView.getItems().size())
