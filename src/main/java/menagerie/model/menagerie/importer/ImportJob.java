@@ -53,6 +53,8 @@ public class ImportJob {
     }
 
     void runJob(Menagerie menagerie, Settings settings) {
+        listeners.forEach(listener -> listener.jobStarted());
+
         if (tryDownload(settings)) return;
         if (tryImport(menagerie)) return;
         tryHashHist();

@@ -331,22 +331,20 @@ public class MainController {
             return c;
         });
         imageGridView.setOnKeyPressed(event -> {
-            switch (event.getCode()) {
-                case DELETE:
-                    final boolean deleteFiles = !event.isControlDown();
-                    final PokeListener onFinish = () -> {
-                        previewItem(null);
-                        menagerie.removeImages(imageGridView.getSelected(), deleteFiles);
-                    };
-                    if (deleteFiles) {
-                        new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + imageGridView.getSelected().size() + " files)\n\n" +
-                                "This action CANNOT be undone (files will be deleted)", onFinish, null);
-                    } else {
-                        new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + imageGridView.getSelected().size() + " files)\n\n" +
-                                "This action CANNOT be undone", onFinish, null);
-                    }
-                    event.consume();
-                    break;
+            if (event.getCode() == KeyCode.DELETE) {
+                final boolean deleteFiles = !event.isControlDown();
+                final PokeListener onFinish = () -> {
+                    previewItem(null);
+                    menagerie.removeImages(imageGridView.getSelected(), deleteFiles);
+                };
+                if (deleteFiles) {
+                    new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + imageGridView.getSelected().size() + " files)\n\n" +
+                            "This action CANNOT be undone (files will be deleted)", onFinish, null);
+                } else {
+                    new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + imageGridView.getSelected().size() + " files)\n\n" +
+                            "This action CANNOT be undone", onFinish, null);
+                }
+                event.consume();
             }
         });
         imageGridView.getSelected().addListener((ListChangeListener<? super ImageInfo>) c -> resultCountLabel.setText(imageGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
@@ -843,6 +841,7 @@ public class MainController {
 
         updateTagList(item);
 
+        if (item != null) item.setTagListener(() -> updateTagList(item));
         itemInfoBox.setItem(item);
     }
 

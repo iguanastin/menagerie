@@ -25,7 +25,7 @@
 <?import menagerie.gui.predictive.PredictiveTextField?>
 <?import menagerie.gui.screens.ScreenPane?>
 
-<StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.121" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
+<StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
     <BorderPane fx:id="explorerRootPane" onKeyPressed="#explorerRootPaneOnKeyPressed" onKeyReleased="#explorerRootPaneOnKeyReleased" prefHeight="576.0" prefWidth="994.0">
         <center>
             <StackPane pickOnBounds="false" BorderPane.alignment="CENTER">
@@ -74,7 +74,7 @@
                 </top>
                 <bottom>
                     <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
-                        <Label text="Errors and Warnings:" />
+                        <Label text="Errors" />
                         <Button fx:id="showErrorsButton" mnemonicParsing="false" onAction="#showErrorsButtonOnAction" text="0" />
                     </HBox>
                 </bottom>

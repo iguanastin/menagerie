@@ -6,7 +6,9 @@ import menagerie.model.menagerie.ImageInfo;
 import java.io.File;
 import java.util.List;
 
-public class ImportJobListener {
+public abstract class ImportJobListener {
+
+    public void jobStarted() {}
 
     public void downloadFailed(Exception e) {}
     public void downloadSucceeded(File file) {}
