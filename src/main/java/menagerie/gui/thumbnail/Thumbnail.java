@@ -1,6 +1,7 @@
 package menagerie.gui.thumbnail;
 
 import javafx.scene.image.Image;
+import menagerie.gui.Main;
 import menagerie.util.Filters;
 
 import java.io.File;
@@ -25,7 +26,7 @@ public class Thumbnail {
 
 
     public Thumbnail(File file) throws IOException {
-        if (!videoThumbnailThread.isAlive()) {
+        if (Main.VLCJ_LOADED && !videoThumbnailThread.isAlive()) {
             videoThumbnailThread.setDaemon(true);
             videoThumbnailThread.start();
         }
@@ -34,20 +35,22 @@ public class Thumbnail {
             image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
             registerListenersToImage();
         } else if (Filters.VIDEO_NAME_FILTER.accept(file)) {
-            videoThumbnailThread.enqueueJob(new VideoThumbnailJob() {
-                @Override
-                void imageReady(Image image) {
-                    Thumbnail.this.image = image;
-                    loaded = true;
-                    if (getImageReadyListener() != null) getImageReadyListener().imageReady(image);
-                    if (getImageLoadedListener() != null) getImageLoadedListener().finishedLoading(image);
-                }
+            if (videoThumbnailThread.isAlive()) {
+                videoThumbnailThread.enqueueJob(new VideoThumbnailJob() {
+                    @Override
+                    void imageReady(Image image) {
+                        Thumbnail.this.image = image;
+                        loaded = true;
+                        if (getImageReadyListener() != null) getImageReadyListener().imageReady(image);
+                        if (getImageLoadedListener() != null) getImageLoadedListener().finishedLoading(image);
+                    }
 
-                @Override
-                File getFile() {
-                    return file;
-                }
-            });
+                    @Override
+                    File getFile() {
+                        return file;
+                    }
+                });
+            }
         } else {
             throw new IOException("Unsupported filetype");
         }

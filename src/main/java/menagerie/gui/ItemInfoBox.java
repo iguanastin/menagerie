@@ -52,7 +52,6 @@ public class ItemInfoBox extends VBox {
         extended = b;
         if (extended) {
             getChildren().addAll(idLabel, dateLabel, filePathLabel);
-            System.out.println(1);
         } else {
             getChildren().removeAll(idLabel, dateLabel, filePathLabel);
         }
