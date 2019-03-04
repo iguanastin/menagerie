@@ -15,6 +15,9 @@ import java.io.IOException;
 
 public class Main extends Application {
 
+    public static boolean VLCJ_LOADED = false;
+
+
     public static void showErrorMessage(String title, String header, String content) {
         Alert a = new Alert(Alert.AlertType.ERROR);
         a.setTitle(title);
@@ -24,7 +27,13 @@ public class Main extends Application {
     }
 
     public void start(Stage stage) {
-        NativeLibrary.addSearchPath("libvlc", new DefaultWindowsNativeDiscoveryStrategy().discover());
+        try {
+            NativeLibrary.addSearchPath("libvlc", new DefaultWindowsNativeDiscoveryStrategy().discover());
+            VLCJ_LOADED = true;
+        } catch (UnsatisfiedLinkError e) {
+            e.printStackTrace();
+            System.out.println("Error loading vlcj");
+        }
 
         final String splash = "/fxml/splash.fxml";
         final String fxml = "/fxml/main.fxml";
