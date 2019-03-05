@@ -1,7 +1,7 @@
 package menagerie.model.menagerie.importer;
 
 import menagerie.model.menagerie.Menagerie;
-import menagerie.model.settings.Settings;
+import menagerie.model.Settings;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;

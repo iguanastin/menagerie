@@ -6,12 +6,12 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.*;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
@@ -38,7 +38,7 @@ import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.Search;
 import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
-import menagerie.model.settings.Settings;
+import menagerie.model.Settings;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
 import menagerie.util.PokeListener;
@@ -55,8 +55,8 @@ import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 public class MainController {
 
@@ -126,7 +126,8 @@ public class MainController {
     private FolderWatcherThread folderWatcherThread = null;
 
     //Settings var
-    private final Settings settings = new Settings(new File("menagerie.properties"));
+    private final File settingsFile = new File("menagerie.settings");
+    private final Settings settings = new Settings(settingsFile);
 
     private static final FileFilter FILE_FILTER = Filters.FILE_NAME_FILTER;
 
@@ -139,15 +140,8 @@ public class MainController {
     @FXML
     public void initialize() {
 
-        //Initialize settings
-        try {
-            settings.loadFromFile();
-        } catch (IOException e) {
-            trySaveSettings();
-        }
-
         //Backup database
-        if (settings.isBackupDatabase()) backupDatabase();
+        if (settings.getBoolean(Settings.Key.BACKUP_DATABASE)) backupDatabase();
 
         //Initialize the menagerie
         initMenagerie();
@@ -174,10 +168,10 @@ public class MainController {
 
     private void backupDatabase() {
         try {
-            backUpDatabase(settings.getDbUrl());
+            backUpDatabase(settings.getString(Settings.Key.DATABASE_URL));
         } catch (IOException e) {
             e.printStackTrace();
-            Main.showErrorMessage("Error", "Error while trying to back up the database: " + settings.getDbUrl(), e.getLocalizedMessage());
+            Main.showErrorMessage("Error", "Error while trying to back up the database: " + settings.getString(Settings.Key.DATABASE_URL), e.getLocalizedMessage());
         }
     }
 
@@ -194,7 +188,7 @@ public class MainController {
 
     private void initMenagerie() {
         try {
-            Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getDbUrl(), settings.getDbUser(), settings.getDbPass());
+            Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getString(Settings.Key.DATABASE_URL), settings.getString(Settings.Key.DATABASE_USER), settings.getString(Settings.Key.DATABASE_PASSWORD));
             DatabaseVersionUpdater.updateDatabase(db);
 
             menagerie = new Menagerie(db);
@@ -242,8 +236,7 @@ public class MainController {
 
     private void initSettingsScreen() {
         //Initialize grid width setting choicebox
-        Integer[] elements = new Integer[Settings.MAX_IMAGE_GRID_WIDTH - Settings.MIN_IMAGE_GRID_WIDTH + 1];
-        for (int i = 0; i < elements.length; i++) elements[i] = i + Settings.MIN_IMAGE_GRID_WIDTH;
+        Integer[] elements = {2, 3, 4, 5, 6, 7, 8};
         settings_gridWidthChoiceBox.getItems().addAll(elements);
         settings_gridWidthChoiceBox.getSelectionModel().clearAndSelect(0);
         settings_histConfidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
@@ -281,7 +274,7 @@ public class MainController {
 
     private void initExplorerScreen() {
         //Set image grid width from settings
-        setGridWidth(settings.getImageGridWidth());
+        setGridWidth(settings.getInt(Settings.Key.GRID_WIDTH));
 
         //Init image grid
         imageGridView.setSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
@@ -374,11 +367,11 @@ public class MainController {
 
             if (files != null && !files.isEmpty()) {
                 for (File file : files) {
-                    importer.queue(new ImportJob(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
+                    importer.queue(new ImportJob(file, true, true));
                 }
             } else if (url != null && !url.isEmpty()) {
                 try {
-                    importer.queue(new ImportJob(new URL(url), settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
+                    importer.queue(new ImportJob(new URL(url), true, true));
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
                 }
@@ -481,8 +474,8 @@ public class MainController {
             return results;
         });
 
-        previewMediaView.setMute(settings.isMuteVideoPreview());
-        previewMediaView.setRepeat(settings.isRepeatVideoPreview());
+        previewMediaView.setMute(settings.getBoolean(Settings.Key.MUTE_VIDEO));
+        previewMediaView.setRepeat(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
     }
 
     private void initExplorerGridCellContextMenu() {
@@ -632,18 +625,34 @@ public class MainController {
 
     private void initWindowPropertiesAndListeners() {
         Stage stage = ((Stage) explorerRootPane.getScene().getWindow());
-        stage.setMaximized(settings.isWindowMaximized());
-        if (settings.getWindowWidth() > 0) stage.setWidth(settings.getWindowWidth());
-        if (settings.getWindowHeight() > 0) stage.setHeight(settings.getWindowHeight());
-        if (settings.getWindowX() >= 0) stage.setX(settings.getWindowX());
-        if (settings.getWindowY() >= 0) stage.setY(settings.getWindowY());
+        stage.setMaximized(settings.getBoolean(Settings.Key.WINDOW_MAXIMIZED));
+        if (settings.getInt(Settings.Key.WINDOW_WIDTH) > 0) {
+            stage.setWidth(settings.getInt(Settings.Key.WINDOW_WIDTH));
+        } else {
+            settings.setInt(Settings.Key.WINDOW_WIDTH, (int) stage.getWidth());
+        }
+        if (settings.getInt(Settings.Key.WINDOW_HEIGHT) > 0) {
+            stage.setHeight(settings.getInt(Settings.Key.WINDOW_HEIGHT));
+        } else {
+            settings.setInt(Settings.Key.WINDOW_HEIGHT, (int) stage.getHeight());
+        }
+        if (settings.getInt(Settings.Key.WINDOW_X) >= 0) {
+            stage.setX(settings.getInt(Settings.Key.WINDOW_X));
+        } else {
+            settings.setInt(Settings.Key.WINDOW_X, (int) stage.getX());
+        }
+        if (settings.getInt(Settings.Key.WINDOW_Y) >= 0) {
+            stage.setY(settings.getInt(Settings.Key.WINDOW_Y));
+        } else {
+            settings.setInt(Settings.Key.WINDOW_Y, (int) stage.getY());
+        }
 
         //Bind window properties to settings
-        stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setWindowMaximized(newValue));
-        stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setWindowWidth(newValue.intValue()));
-        stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setWindowHeight(newValue.intValue()));
-        stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setWindowX(newValue.intValue()));
-        stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setWindowY(newValue.intValue()));
+        stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.WINDOW_MAXIMIZED, newValue));
+        stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_WIDTH, newValue.intValue()));
+        stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_HEIGHT, newValue.intValue()));
+        stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_X, newValue.intValue()));
+        stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_Y, newValue.intValue()));
 
         stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
@@ -662,28 +671,28 @@ public class MainController {
 
     private void openSettingsScreen() {
         //Update settings fx nodes
-        settings_defaultFolderTextField.setText(settings.getDefaultFolder());
-        settings_importFromFolderTextField.setText(settings.getImportFromFolderPath());
-        settings_dbURLTextField.setText(settings.getDbUrl());
-        settings_dbUserTextField.setText(settings.getDbUser());
-        settings_dbPassTextField.setText(settings.getDbPass());
-
-        settings_autoImportWebCheckbox.setSelected(settings.isAutoImportFromWeb());
-        settings_computeMDCheckbox.setSelected(settings.isComputeMD5OnImport());
-        settings_computeHistCheckbox.setSelected(settings.isComputeHistogramOnImport());
-        settings_duplicateComputeMD5Checkbox.setSelected(settings.isComputeMD5ForSimilarity());
-        settings_duplicateComputeHistCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
-        settings_duplicateConsolidateTagsCheckbox.setSelected(settings.isConsolidateTags());
-        settings_backupDatabaseCheckBox.setSelected(settings.isBackupDatabase());
-        settings_autoImportFolderCheckBox.setSelected(settings.isAutoImportFromFolder());
-        settings_autoImportFromFolderToDefaultCheckBox.setSelected(settings.isAutoImportFromFolderToDefault());
-        settings_duplicateCompareBlackAndWhiteCheckbox.setSelected(settings.isCompareBlackAndWhiteHists());
-        settings_repeatVideoCheckBox.setSelected(settings.isRepeatVideoPreview());
-        settings_muteVideoCheckBox.setSelected(settings.isMuteVideoPreview());
-
-        settings_histConfidenceTextField.setText("" + settings.getSimilarityThreshold());
-
-        settings_gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
+//        settings_defaultFolderTextField.setText(settings.getDefaultFolder());
+//        settings_importFromFolderTextField.setText(settings.getImportFromFolderPath());
+//        settings_dbURLTextField.setText(settings.getDbUrl());
+//        settings_dbUserTextField.setText(settings.getDbUser());
+//        settings_dbPassTextField.setText(settings.getDbPass());
+//
+//        settings_autoImportWebCheckbox.setSelected(settings.isAutoImportFromWeb());
+//        settings_computeMDCheckbox.setSelected(settings.isComputeMD5OnImport());
+//        settings_computeHistCheckbox.setSelected(settings.isComputeHistogramOnImport());
+//        settings_duplicateComputeMD5Checkbox.setSelected(settings.isComputeMD5ForSimilarity());
+//        settings_duplicateComputeHistCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
+//        settings_duplicateConsolidateTagsCheckbox.setSelected(settings.isConsolidateTags());
+//        settings_backupDatabaseCheckBox.setSelected(settings.isBackupDatabase());
+//        settings_autoImportFolderCheckBox.setSelected(settings.isAutoImportFromFolder());
+//        settings_autoImportFromFolderToDefaultCheckBox.setSelected(settings.isAutoImportFromFolderToDefault());
+//        settings_duplicateCompareBlackAndWhiteCheckbox.setSelected(settings.isCompareBlackAndWhiteHists());
+//        settings_repeatVideoCheckBox.setSelected(settings.isRepeatVideoPreview());
+//        settings_muteVideoCheckBox.setSelected(settings.isMuteVideoPreview());
+//
+//        settings_histConfidenceTextField.setText("" + settings.getSimilarityThreshold());
+//
+//        settings_gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
 
         settings_updateAutoImportFolderDisabledStatus();
 
@@ -703,37 +712,37 @@ public class MainController {
 
         if (saveChanges) {
             //Save settings to settings object
-            settings.setDefaultFolder(settings_defaultFolderTextField.getText());
-            settings.setDbUrl(settings_dbURLTextField.getText());
-            settings.setDbUser(settings_dbUserTextField.getText());
-            settings.setDbPass(settings_dbPassTextField.getText());
-            settings.setImportFromFolderPath(settings_importFromFolderTextField.getText());
-
-            settings.setAutoImportFromWeb(settings_autoImportWebCheckbox.isSelected());
-            settings.setComputeMD5OnImport(settings_computeMDCheckbox.isSelected());
-            settings.setComputeHistogramOnImport(settings_computeHistCheckbox.isSelected());
-            settings.setComputeMD5ForSimilarity(settings_duplicateComputeMD5Checkbox.isSelected());
-            settings.setComputeHistogramForSimilarity(settings_duplicateComputeHistCheckbox.isSelected());
-            settings.setBackupDatabase(settings_backupDatabaseCheckBox.isSelected());
-            settings.setAutoImportFromFolder(settings_autoImportFolderCheckBox.isSelected());
-            settings.setAutoImportFromFolderToDefault(settings_autoImportFromFolderToDefaultCheckBox.isSelected());
-            settings.setCompareBlackAndWhiteHists(settings_duplicateCompareBlackAndWhiteCheckbox.isSelected());
-            settings.setMuteVideoPreview(settings_muteVideoCheckBox.isSelected());
-            settings.setRepeatVideoPreview(settings_repeatVideoCheckBox.isSelected());
-
-            settings.setConsolidateTags(settings_duplicateConsolidateTagsCheckbox.isSelected());
-            duplicatesScreen.setConsolidateTags(settings.isConsolidateTags());
-
-            settings.setSimilarityThreshold(Double.parseDouble(settings_histConfidenceTextField.getText()));
-
-            settings.setImageGridWidth(settings_gridWidthChoiceBox.getValue());
-
-            setGridWidth(settings_gridWidthChoiceBox.getValue());
-
-            startWatchingFolderForImages();
-
-            previewMediaView.setMute(settings.isMuteVideoPreview());
-            previewMediaView.setRepeat(settings.isRepeatVideoPreview());
+//            settings.setDefaultFolder(settings_defaultFolderTextField.getText());
+//            settings.setDbUrl(settings_dbURLTextField.getText());
+//            settings.setDbUser(settings_dbUserTextField.getText());
+//            settings.setDbPass(settings_dbPassTextField.getText());
+//            settings.setImportFromFolderPath(settings_importFromFolderTextField.getText());
+//
+//            settings.setAutoImportFromWeb(settings_autoImportWebCheckbox.isSelected());
+//            settings.setComputeMD5OnImport(settings_computeMDCheckbox.isSelected());
+//            settings.setComputeHistogramOnImport(settings_computeHistCheckbox.isSelected());
+//            settings.setComputeMD5ForSimilarity(settings_duplicateComputeMD5Checkbox.isSelected());
+//            settings.setComputeHistogramForSimilarity(settings_duplicateComputeHistCheckbox.isSelected());
+//            settings.setBackupDatabase(settings_backupDatabaseCheckBox.isSelected());
+//            settings.setAutoImportFromFolder(settings_autoImportFolderCheckBox.isSelected());
+//            settings.setAutoImportFromFolderToDefault(settings_autoImportFromFolderToDefaultCheckBox.isSelected());
+//            settings.setCompareBlackAndWhiteHists(settings_duplicateCompareBlackAndWhiteCheckbox.isSelected());
+//            settings.setMuteVideoPreview(settings_muteVideoCheckBox.isSelected());
+//            settings.setRepeatVideoPreview(settings_repeatVideoCheckBox.isSelected());
+//
+//            settings.setConsolidateTags(settings_duplicateConsolidateTagsCheckbox.isSelected());
+//            duplicatesScreen.setConsolidateTags(settings.isConsolidateTags());
+//
+//            settings.setSimilarityThreshold(Double.parseDouble(settings_histConfidenceTextField.getText()));
+//
+//            settings.setImageGridWidth(settings_gridWidthChoiceBox.getValue());
+//
+//            setGridWidth(settings_gridWidthChoiceBox.getValue());
+//
+//            startWatchingFolderForImages();
+//
+//            previewMediaView.setMute(settings.isMuteVideoPreview());
+//            previewMediaView.setRepeat(settings.isRepeatVideoPreview());
         }
 
         trySaveSettings();
@@ -761,9 +770,9 @@ public class MainController {
                         ImageInfo i2 = items.get(j);
 
                         try {
-                            double similarity = i1.getSimilarityTo(i2, settings.isCompareBlackAndWhiteHists());
+                            double similarity = i1.getSimilarityTo(i2, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
 
-                            if (similarity >= settings.getSimilarityThreshold())
+                            if (similarity >= settings.getDouble(Settings.Key.CONFIDENCE))
                                 pairs.add(new SimilarPair(i1, i2, similarity));
                         } catch (Exception e) {
                             Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
@@ -788,8 +797,9 @@ public class MainController {
 
     private void openImportFolderDialog() {
         DirectoryChooser dc = new DirectoryChooser();
-        if (settings.getDefaultFolder() != null && !settings.getDefaultFolder().isEmpty())
-            dc.setInitialDirectory(new File(settings.getDefaultFolder()));
+        final String defaultFolder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+        if (defaultFolder != null && !defaultFolder.isEmpty())
+            dc.setInitialDirectory(new File(defaultFolder));
         File result = dc.showDialog(rootPane.getScene().getWindow());
 
         if (result != null) {
@@ -797,15 +807,16 @@ public class MainController {
             menagerie.getItems().forEach(img -> files.remove(img.getFile()));
 
             for (File file : files) {
-                importer.queue(new ImportJob(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
+                importer.queue(new ImportJob(file, true, true));
             }
         }
     }
 
     private void openImportFilesDialog() {
         FileChooser fc = new FileChooser();
-        if (settings.getDefaultFolder() != null && !settings.getDefaultFolder().isEmpty())
-            fc.setInitialDirectory(new File(settings.getDefaultFolder()));
+        final String defaultFolder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+        if (defaultFolder != null && !defaultFolder.isEmpty())
+            fc.setInitialDirectory(new File(defaultFolder));
         fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
         List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
 
@@ -814,7 +825,7 @@ public class MainController {
             menagerie.getItems().forEach(img -> finalResults.remove(img.getFile()));
 
             for (File file : finalResults) {
-                importer.queue(new ImportJob(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
+                importer.queue(new ImportJob(file, true, true));
             }
         }
     }
@@ -1117,26 +1128,14 @@ public class MainController {
 
                 Platform.runLater(() -> {
                     ps.close();
-
-                    if (settings.isComputeHistogramForSimilarity()) {
-                        ps.open(screenPane, "Building Histograms", "Building histograms for selected items...", ctHist::cancel);
-                        ctHist.start();
-                    } else {
-                        openDuplicateScreen(images);
-                    }
+                    ps.open(screenPane, "Building Histograms", "Building histograms for selected items...", ctHist::cancel);
+                    ctHist.start();
                 });
             }
         };
 
-        if (settings.isComputeMD5ForSimilarity()) {
-            ps.open(screenPane, "Computing MD5s", "Computing MD5 hashes for selected files...", ctMD5::cancel);
-            ctMD5.start();
-        } else if (settings.isComputeHistogramForSimilarity()) {
-            ps.open(screenPane, "Building Histograms", "Building histograms for selected items...", ctHist::cancel);
-            ctHist.start();
-        } else {
-            openDuplicateScreen(images);
-        }
+        ps.open(screenPane, "Computing MD5s", "Computing MD5 hashes for selected files...", ctMD5::cancel);
+        ctMD5.start();
     }
 
     private void startWatchingFolderForImages() {
@@ -1144,13 +1143,13 @@ public class MainController {
             folderWatcherThread.stopWatching();
         }
 
-        if (settings.isAutoImportFromFolder()) {
-            File watchFolder = new File(settings.getImportFromFolderPath());
+        if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT)) {
+            File watchFolder = new File(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER));
             if (watchFolder.exists() && watchFolder.isDirectory()) {
                 folderWatcherThread = new FolderWatcherThread(watchFolder, FILE_FILTER, 30000, files -> {
                     for (File file : files) {
-                        if (settings.isAutoImportFromFolderToDefault()) {
-                            String folder = settings.getDefaultFolder();
+                        if (settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT)) {
+                            String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
                             if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
                             File f = new File(folder + file.getName());
                             if (file.equals(f)) continue; //File is being "moved" to same folder
@@ -1164,7 +1163,7 @@ public class MainController {
                             file = dest;
                         }
 
-                        importer.queue(new ImportJob(file, settings.isComputeMD5OnImport(), settings.isComputeHistogramOnImport(), true, true));
+                        importer.queue(new ImportJob(file, true, true));
                     }
                 });
                 folderWatcherThread.setDaemon(true);
@@ -1188,7 +1187,7 @@ public class MainController {
                 System.out.println("Done defragging database file");
 
                 if (revertDatabase) {
-                    File database = getDatabaseFile(settings.getDbUrl());
+                    File database = getDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
                     File backup = new File(database + ".bak");
                     try {
                         Files.move(backup.toPath(), database.toPath(), StandardCopyOption.REPLACE_EXISTING);
@@ -1266,7 +1265,7 @@ public class MainController {
 
     private void trySaveSettings() {
         try {
-            settings.saveToFile();
+            settings.save(settingsFile);
         } catch (IOException e1) {
             Platform.runLater(() -> errorsScreen.addError(new TrackedError(e1, TrackedError.Severity.HIGH, "Unable to save properties", "IO Exception thrown while trying to save properties file", "1.) Application may not have write privileges\n2.) File may already be in use")));
         }
@@ -1374,7 +1373,7 @@ public class MainController {
     }
 
     public void revertDatabaseMenuButtonOnAction(ActionEvent event) {
-        File database = getDatabaseFile(settings.getDbUrl());
+        File database = getDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
         File backup = new File(database + ".bak");
         if (backup.exists()) {
             new ConfirmationScreen().open(screenPane, "Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> cleanExit(true), null);

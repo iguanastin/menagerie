@@ -4,7 +4,7 @@ import menagerie.gui.MainController;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
-import menagerie.model.settings.Settings;
+import menagerie.model.Settings;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -24,8 +24,8 @@ public class ImportJob {
 
     private volatile boolean needsDownload = false;
     private volatile boolean needsImport = true;
-    private volatile boolean needsHash;
-    private volatile boolean needsHist;
+    private volatile boolean needsHash = true;
+    private volatile boolean needsHist = true;
     private volatile boolean needsCheckDuplicate;
     private volatile boolean needsCheckSimilar;
 
@@ -34,20 +34,18 @@ public class ImportJob {
     private List<ImportJobListener> listeners = new ArrayList<>();
 
 
-    public ImportJob(URL url, boolean computeHash, boolean computeHistogram, boolean checkForDupes, boolean checkForSimilar) {
-        this(computeHash, computeHistogram, checkForDupes, checkForSimilar);
+    public ImportJob(URL url, boolean checkForDupes, boolean checkForSimilar) {
+        this(checkForDupes, checkForSimilar);
         this.url = url;
         needsDownload = true;
     }
 
-    public ImportJob(File file, boolean computeHash, boolean computeHistogram, boolean checkForDupes, boolean checkForSimilar) {
-        this(computeHash, computeHistogram, checkForDupes, checkForSimilar);
+    public ImportJob(File file, boolean checkForDupes, boolean checkForSimilar) {
+        this(checkForDupes, checkForSimilar);
         this.file = file;
     }
 
-    private ImportJob(boolean computeHash, boolean computeHistogram, boolean checkForDupes, boolean checkForSimilar) {
-        this.needsHash = computeHash;
-        this.needsHist = computeHistogram;
+    private ImportJob(boolean checkForDupes, boolean checkForSimilar) {
         this.needsCheckDuplicate = checkForDupes;
         this.needsCheckSimilar = checkForSimilar;
     }
@@ -70,8 +68,8 @@ public class ImportJob {
             List<SimilarPair> similar = new ArrayList<>();
             for (ImageInfo i : menagerie.getItems()) {
                 if (i.getHistogram() != null) {
-                    double similarity = i.getSimilarityTo(item, settings.isCompareBlackAndWhiteHists());
-                    if (similarity > settings.getSimilarityThreshold()) {
+                    double similarity = i.getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
+                    if (similarity > settings.getDouble(Settings.Key.CONFIDENCE)) {
                         similar.add(new SimilarPair(item, i, similarity));
                     }
                 }
@@ -131,7 +129,7 @@ public class ImportJob {
     private boolean tryDownload(Settings settings) {
         if (needsDownload) {
             try {
-                String folder = settings.getDefaultFolder();
+                String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
                 if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
                 String filename = url.getPath().replaceAll("^.*/", "");
                 File target = MainController.resolveDuplicateFilename(new File(folder + filename));
