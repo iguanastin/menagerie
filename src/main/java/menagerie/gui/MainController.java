@@ -1,6 +1,8 @@
 package menagerie.gui;
 
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -61,7 +63,6 @@ import java.util.*;
 public class MainController {
 
     public StackPane rootPane;
-    public StackPane screensStackPane;
 
     public BorderPane explorerRootPane;
     public ToggleButton listDescendingToggleButton;
@@ -75,30 +76,6 @@ public class MainController {
     public MenuBar menuBar;
     public Button showErrorsButton;
 
-    public BorderPane settings_rootPane;
-    public CheckBox settings_computeMDCheckbox;
-    public CheckBox settings_computeHistCheckbox;
-    public CheckBox settings_autoImportWebCheckbox;
-    public CheckBox settings_duplicateComputeHistCheckbox;
-    public CheckBox settings_duplicateComputeMD5Checkbox;
-    public CheckBox settings_duplicateConsolidateTagsCheckbox;
-    public CheckBox settings_backupDatabaseCheckBox;
-    public CheckBox settings_autoImportFolderCheckBox;
-    public CheckBox settings_autoImportFromFolderToDefaultCheckBox;
-    public CheckBox settings_duplicateCompareBlackAndWhiteCheckbox;
-    public TextField settings_defaultFolderTextField;
-    public TextField settings_dbURLTextField;
-    public TextField settings_dbUserTextField;
-    public TextField settings_dbPassTextField;
-    public TextField settings_histConfidenceTextField;
-    public TextField settings_importFromFolderTextField;
-    public Button settings_cancelButton;
-    public Button settings_importFromFolderBrowseButton;
-    public ChoiceBox<Integer> settings_gridWidthChoiceBox;
-    public CheckBox settings_muteVideoCheckBox;
-    public CheckBox settings_repeatVideoCheckBox;
-
-
     public ScreenPane screenPane;
 
     // ----------------------------------- Screens ---------------------------------------------------------------------
@@ -108,6 +85,7 @@ public class MainController {
     private SlideshowScreen slideshowScreen;
     private ErrorsScreen errorsScreen;
     private DuplicatesScreen duplicatesScreen;
+    private SettingsScreen settingsScreen;
 
     //Menagerie vars
     private Menagerie menagerie;
@@ -126,8 +104,7 @@ public class MainController {
     private FolderWatcherThread folderWatcherThread = null;
 
     //Settings var
-    private final File settingsFile = new File("menagerie.settings");
-    private final Settings settings = new Settings(settingsFile);
+    private final Settings settings = new Settings(new File("menagerie.settings"));
 
     private static final FileFilter FILE_FILTER = Filters.FILE_NAME_FILTER;
 
@@ -162,7 +139,7 @@ public class MainController {
         applySearch(null, listDescendingToggleButton.isSelected());
 
         //Init folder watcher
-        startWatchingFolderForImages();
+        if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT)) startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
 
     }
 
@@ -183,6 +160,8 @@ public class MainController {
         initSlideShowScreen();
         helpScreen = new HelpScreen();
         duplicatesScreen = new DuplicatesScreen();
+        settingsScreen = new SettingsScreen(settings);
+
         screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
     }
 
@@ -235,22 +214,18 @@ public class MainController {
     }
 
     private void initSettingsScreen() {
-        //Initialize grid width setting choicebox
-        Integer[] elements = {2, 3, 4, 5, 6, 7, 8};
-        settings_gridWidthChoiceBox.getItems().addAll(elements);
-        settings_gridWidthChoiceBox.getSelectionModel().clearAndSelect(0);
-        settings_histConfidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) {
-                try {
-                    double d = Double.parseDouble(settings_histConfidenceTextField.getText());
-                    if (d <= 0 || d > 1) {
-                        settings_histConfidenceTextField.setText("0.95");
-                    }
-                } catch (NullPointerException | NumberFormatException e) {
-                    settings_histConfidenceTextField.setText("0.95");
-                }
+        ((IntegerProperty) settings.getProperty(Settings.Key.GRID_WIDTH)).addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
+        ((BooleanProperty) settings.getProperty(Settings.Key.DO_AUTO_IMPORT)).addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
+            // Defer to later to ensure other settings get updated before any action is taken, since this operation relies on other settings
+            if (folderWatcherThread != null) {
+                folderWatcherThread.stopWatching();
             }
-        });
+
+            if (newValue)
+                startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+        }));
+        ((BooleanProperty) settings.getProperty(Settings.Key.MUTE_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
+        ((BooleanProperty) settings.getProperty(Settings.Key.REPEAT_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
     }
 
     private void initTagListScreen() {
@@ -669,85 +644,6 @@ public class MainController {
 
     // ---------------------------------- Screen openers ------------------------------------
 
-    private void openSettingsScreen() {
-        //Update settings fx nodes
-//        settings_defaultFolderTextField.setText(settings.getDefaultFolder());
-//        settings_importFromFolderTextField.setText(settings.getImportFromFolderPath());
-//        settings_dbURLTextField.setText(settings.getDbUrl());
-//        settings_dbUserTextField.setText(settings.getDbUser());
-//        settings_dbPassTextField.setText(settings.getDbPass());
-//
-//        settings_autoImportWebCheckbox.setSelected(settings.isAutoImportFromWeb());
-//        settings_computeMDCheckbox.setSelected(settings.isComputeMD5OnImport());
-//        settings_computeHistCheckbox.setSelected(settings.isComputeHistogramOnImport());
-//        settings_duplicateComputeMD5Checkbox.setSelected(settings.isComputeMD5ForSimilarity());
-//        settings_duplicateComputeHistCheckbox.setSelected(settings.isComputeHistogramForSimilarity());
-//        settings_duplicateConsolidateTagsCheckbox.setSelected(settings.isConsolidateTags());
-//        settings_backupDatabaseCheckBox.setSelected(settings.isBackupDatabase());
-//        settings_autoImportFolderCheckBox.setSelected(settings.isAutoImportFromFolder());
-//        settings_autoImportFromFolderToDefaultCheckBox.setSelected(settings.isAutoImportFromFolderToDefault());
-//        settings_duplicateCompareBlackAndWhiteCheckbox.setSelected(settings.isCompareBlackAndWhiteHists());
-//        settings_repeatVideoCheckBox.setSelected(settings.isRepeatVideoPreview());
-//        settings_muteVideoCheckBox.setSelected(settings.isMuteVideoPreview());
-//
-//        settings_histConfidenceTextField.setText("" + settings.getSimilarityThreshold());
-//
-//        settings_gridWidthChoiceBox.getSelectionModel().select((Integer) settings.getImageGridWidth());
-
-        settings_updateAutoImportFolderDisabledStatus();
-
-        //Enable pane
-        explorerRootPane.setDisable(true);
-        settings_rootPane.setDisable(false);
-        settings_rootPane.setOpacity(1);
-        settings_cancelButton.requestFocus();
-    }
-
-    private void closeSettingsScreen(boolean saveChanges) {
-        //Disable pane
-        explorerRootPane.setDisable(false);
-        settings_rootPane.setDisable(true);
-        settings_rootPane.setOpacity(0);
-        imageGridView.requestFocus();
-
-        if (saveChanges) {
-            //Save settings to settings object
-//            settings.setDefaultFolder(settings_defaultFolderTextField.getText());
-//            settings.setDbUrl(settings_dbURLTextField.getText());
-//            settings.setDbUser(settings_dbUserTextField.getText());
-//            settings.setDbPass(settings_dbPassTextField.getText());
-//            settings.setImportFromFolderPath(settings_importFromFolderTextField.getText());
-//
-//            settings.setAutoImportFromWeb(settings_autoImportWebCheckbox.isSelected());
-//            settings.setComputeMD5OnImport(settings_computeMDCheckbox.isSelected());
-//            settings.setComputeHistogramOnImport(settings_computeHistCheckbox.isSelected());
-//            settings.setComputeMD5ForSimilarity(settings_duplicateComputeMD5Checkbox.isSelected());
-//            settings.setComputeHistogramForSimilarity(settings_duplicateComputeHistCheckbox.isSelected());
-//            settings.setBackupDatabase(settings_backupDatabaseCheckBox.isSelected());
-//            settings.setAutoImportFromFolder(settings_autoImportFolderCheckBox.isSelected());
-//            settings.setAutoImportFromFolderToDefault(settings_autoImportFromFolderToDefaultCheckBox.isSelected());
-//            settings.setCompareBlackAndWhiteHists(settings_duplicateCompareBlackAndWhiteCheckbox.isSelected());
-//            settings.setMuteVideoPreview(settings_muteVideoCheckBox.isSelected());
-//            settings.setRepeatVideoPreview(settings_repeatVideoCheckBox.isSelected());
-//
-//            settings.setConsolidateTags(settings_duplicateConsolidateTagsCheckbox.isSelected());
-//            duplicatesScreen.setConsolidateTags(settings.isConsolidateTags());
-//
-//            settings.setSimilarityThreshold(Double.parseDouble(settings_histConfidenceTextField.getText()));
-//
-//            settings.setImageGridWidth(settings_gridWidthChoiceBox.getValue());
-//
-//            setGridWidth(settings_gridWidthChoiceBox.getValue());
-//
-//            startWatchingFolderForImages();
-//
-//            previewMediaView.setMute(settings.isMuteVideoPreview());
-//            previewMediaView.setRepeat(settings.isRepeatVideoPreview());
-        }
-
-        trySaveSettings();
-    }
-
     private void openDuplicateScreen(List<ImageInfo> items) {
         if (items == null || items.size() <= 1) return;
 
@@ -861,18 +757,6 @@ public class MainController {
         if (image != null) {
             tagListView.getItems().addAll(image.getTags());
             tagListView.getItems().sort(Comparator.comparing(Tag::getName));
-        }
-    }
-
-    private void settings_updateAutoImportFolderDisabledStatus() {
-        if (settings_autoImportFolderCheckBox.isSelected()) {
-            settings_importFromFolderTextField.setDisable(false);
-            settings_importFromFolderBrowseButton.setDisable(false);
-            settings_autoImportFromFolderToDefaultCheckBox.setDisable(false);
-        } else {
-            settings_importFromFolderTextField.setDisable(true);
-            settings_importFromFolderBrowseButton.setDisable(true);
-            settings_autoImportFromFolderToDefaultCheckBox.setDisable(true);
         }
     }
 
@@ -1138,37 +1022,31 @@ public class MainController {
         ctMD5.start();
     }
 
-    private void startWatchingFolderForImages() {
-        if (folderWatcherThread != null) {
-            folderWatcherThread.stopWatching();
-        }
+    private void startWatchingFolderForImages(String folder, boolean moveToDefault) {
+        File watchFolder = new File(folder);
+        if (watchFolder.exists() && watchFolder.isDirectory()) {
+            folderWatcherThread = new FolderWatcherThread(watchFolder, FILE_FILTER, 30000, files -> {
+                for (File file : files) {
+                    if (moveToDefault) {
+                        String work = settings.getString(Settings.Key.DEFAULT_FOLDER);
+                        if (!work.endsWith("/") && !work.endsWith("\\")) work += "/";
+                        File f = new File(work + file.getName());
+                        if (file.equals(f)) continue; //File is being "moved" to same folder
 
-        if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT)) {
-            File watchFolder = new File(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER));
-            if (watchFolder.exists() && watchFolder.isDirectory()) {
-                folderWatcherThread = new FolderWatcherThread(watchFolder, FILE_FILTER, 30000, files -> {
-                    for (File file : files) {
-                        if (settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT)) {
-                            String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
-                            if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
-                            File f = new File(folder + file.getName());
-                            if (file.equals(f)) continue; //File is being "moved" to same folder
+                        File dest = resolveDuplicateFilename(f);
 
-                            File dest = resolveDuplicateFilename(f);
-
-                            if (!file.renameTo(dest)) {
-                                continue;
-                            }
-
-                            file = dest;
+                        if (!file.renameTo(dest)) {
+                            continue;
                         }
 
-                        importer.queue(new ImportJob(file, true, true));
+                        file = dest;
                     }
-                });
-                folderWatcherThread.setDaemon(true);
-                folderWatcherThread.start();
-            }
+
+                    importer.queue(new ImportJob(file, true, true));
+                }
+            });
+            folderWatcherThread.setDaemon(true);
+            folderWatcherThread.start();
         }
     }
 
@@ -1265,7 +1143,7 @@ public class MainController {
 
     private void trySaveSettings() {
         try {
-            settings.save(settingsFile);
+            settings.save();
         } catch (IOException e1) {
             Platform.runLater(() -> errorsScreen.addError(new TrackedError(e1, TrackedError.Severity.HIGH, "Unable to save properties", "IO Exception thrown while trying to save properties file", "1.) Application may not have write privileges\n2.) File may already be in use")));
         }
@@ -1296,7 +1174,7 @@ public class MainController {
     }
 
     public void settingsMenuButtonOnAction(ActionEvent event) {
-        openSettingsScreen();
+        settingsScreen.open(screenPane);
         event.consume();
     }
 
@@ -1317,53 +1195,6 @@ public class MainController {
 
     public void viewTagsMenuButtonOnAction(ActionEvent event) {
         tagListScreen.open(screenPane, menagerie.getTags());
-        event.consume();
-    }
-
-    public void settings_acceptButtonOnAction(ActionEvent event) {
-        closeSettingsScreen(true);
-        event.consume();
-    }
-
-    public void settings_cancelButtonOnAction(ActionEvent event) {
-        closeSettingsScreen(false);
-        event.consume();
-    }
-
-    public void settings_defaultFolderBrowseButtonOnAction(ActionEvent event) {
-        DirectoryChooser dc = new DirectoryChooser();
-        dc.setTitle("Choose default save folder");
-        if (settings_defaultFolderTextField.getText() != null && !settings_defaultFolderTextField.getText().isEmpty()) {
-            File folder = new File(settings_defaultFolderTextField.getText());
-            if (folder.exists() && folder.isDirectory()) dc.setInitialDirectory(folder);
-        }
-        File result = dc.showDialog(settings_rootPane.getScene().getWindow());
-
-        if (result != null) {
-            settings_defaultFolderTextField.setText(result.getAbsolutePath());
-        }
-
-        event.consume();
-    }
-
-    public void settings_importFromFolderBrowseButtonOnAction(ActionEvent event) {
-        DirectoryChooser dc = new DirectoryChooser();
-        dc.setTitle("Choose auto-import folder");
-        if (settings_importFromFolderTextField.getText() != null && !settings_importFromFolderTextField.getText().isEmpty()) {
-            File folder = new File(settings_importFromFolderTextField.getText());
-            if (folder.exists() && folder.isDirectory()) dc.setInitialDirectory(folder);
-        }
-        File result = dc.showDialog(settings_rootPane.getScene().getWindow());
-
-        if (result != null) {
-            settings_importFromFolderTextField.setText(result.getAbsolutePath());
-        }
-
-        event.consume();
-    }
-
-    public void settings_autoImportFolderCheckBoxOnAction(ActionEvent event) {
-        settings_updateAutoImportFolderDisabledStatus();
         event.consume();
     }
 
@@ -1401,7 +1232,7 @@ public class MainController {
                     event.consume();
                     break;
                 case S:
-                    openSettingsScreen();
+                    settingsScreen.open(screenPane);
                     event.consume();
                     break;
                 case T:
@@ -1486,25 +1317,6 @@ public class MainController {
                 editTagsTextField.setText(null);
                 imageGridView.requestFocus();
                 event.consume();
-                break;
-        }
-    }
-
-    public void settings_rootPaneKeyPressed(KeyEvent event) {
-        switch (event.getCode()) {
-            case ESCAPE:
-                closeSettingsScreen(false);
-                event.consume();
-                break;
-            case ENTER:
-                closeSettingsScreen(true);
-                event.consume();
-                break;
-            case S:
-                if (event.isControlDown()) {
-                    closeSettingsScreen(false);
-                    event.consume();
-                }
                 break;
         }
     }

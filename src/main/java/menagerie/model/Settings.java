@@ -38,12 +38,14 @@ public class Settings {
 
 
     private Map<Key, Property> vars = new HashMap<>();
+    private File file;
 
 
     public Settings(File file) {
         this();
 
         if (file != null) {
+            this.file = file;
             try {
                 Scanner scan = new Scanner(file);
 
@@ -51,32 +53,32 @@ public class Settings {
                     String line = scan.nextLine();
                     if (line.startsWith("#") || line.isEmpty()) continue;
 
-                    final int firstColonIndex = line.indexOf(':');
-                    final int secondColonIndex = line.indexOf(':', firstColonIndex + 1);
-                    final Key key = keyFromName(line.substring(0, firstColonIndex));
-                    final String typeName = line.substring(firstColonIndex + 1, secondColonIndex);
-                    final String valueString = line.substring(secondColonIndex + 1);
+                    try {
+                        final int firstColonIndex = line.indexOf(':');
+                        final int secondColonIndex = line.indexOf(':', firstColonIndex + 1);
+                        final Key key = keyFromName(line.substring(0, firstColonIndex));
+                        final String typeName = line.substring(firstColonIndex + 1, secondColonIndex);
+                        final String valueString = line.substring(secondColonIndex + 1);
 
-                    if (key == null) {
-                        System.err.println("Settings tried to load unknown key");
-                        System.err.println("    Key: " + line.substring(0, firstColonIndex));
-                        System.err.println("    Type: " + typeName);
-                        System.err.println("    Value: " + valueString);
-                    }
+                        if (key == null) {
+                            System.err.println("Settings tried to load unknown key in line: " + line);
+                            continue;
+                        }
 
-                    if (typeName.equalsIgnoreCase("BOOLEAN")) {
-                        setBoolean(key, Boolean.parseBoolean(valueString));
-                    } else if (typeName.equalsIgnoreCase("STRING")) {
-                        setString(key, valueString);
-                    } else if (typeName.equalsIgnoreCase("DOUBLE")) {
-                        setDouble(key, Double.parseDouble(valueString));
-                    } else if (typeName.equalsIgnoreCase("INTEGER")) {
-                        setInt(key, Integer.parseInt(valueString));
-                    } else {
-                        System.err.println("Settings tried to load unknown type");
-                        System.err.println("    Key: " + key);
-                        System.err.println("    Type: " + typeName);
-                        System.err.println("    Value: " + valueString);
+                        if (typeName.equalsIgnoreCase("BOOLEAN")) {
+                            setBoolean(key, Boolean.parseBoolean(valueString));
+                        } else if (typeName.equalsIgnoreCase("STRING")) {
+                            setString(key, valueString);
+                        } else if (typeName.equalsIgnoreCase("DOUBLE")) {
+                            setDouble(key, Double.parseDouble(valueString));
+                        } else if (typeName.equalsIgnoreCase("INTEGER")) {
+                            setInt(key, Integer.parseInt(valueString));
+                        } else {
+                            System.err.println("Settings tried to load unknown type from line: " + line);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error trying to read line: " + line);
+                        e.printStackTrace();
                     }
                 }
 
@@ -111,6 +113,12 @@ public class Settings {
     }
 
     public void save(File file) throws FileNotFoundException {
+        this.file = file;
+
+        save();
+    }
+
+    public void save() throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(file);
 
         writer.println("# ------------- Menagerie Settings --------------");
@@ -132,7 +140,13 @@ public class Settings {
                 writer.print("INTEGER");
             }
 
-            writer.println(":" + get.getValue());
+            writer.print(":");
+
+            if (get.getValue() != null) {
+                writer.print(get.getValue());
+            }
+
+            writer.println();
         }
 
         writer.close();
