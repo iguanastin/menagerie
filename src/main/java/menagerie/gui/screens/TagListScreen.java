@@ -49,16 +49,16 @@ public class TagListScreen extends Screen {
         setMargin(v, new Insets(25));
 
         //Init header
-        BorderPane header = new BorderPane();
+        Button exitButton = new Button("X");
+        exitButton.setOnAction(event -> close());
+        BorderPane header = new BorderPane(null, null, exitButton, null, new Label("Tags"));
+
         orderBox = new ChoiceBox<>();
         orderBox.getItems().addAll("Name", "ID", "Frequency");
         orderBox.getSelectionModel().clearAndSelect(0);
         orderBox.setOnAction(event -> updateListOrder());
-        header.setCenter(new HBox(5, new Label("Order by:"), new BorderPane(orderBox)));
-        Button exitButton = new Button("X");
-        exitButton.setOnAction(event -> close());
-        header.setRight(exitButton);
-        setAlignment(exitButton, Pos.CENTER);
+        HBox h = new HBox(5, new Label("Order by:"), orderBox);
+        h.setAlignment(Pos.CENTER_LEFT);
 
         //Init listView
         listView = new ListView<>();
@@ -80,10 +80,11 @@ public class TagListScreen extends Screen {
                     listView.getItems().add(t);
                 }
             }
+            updateListOrder();
         });
 
         //Add children
-        v.getChildren().addAll(header, searchField, listView);
+        v.getChildren().addAll(header, new Separator(), h, searchField, listView);
 
 
         tags.addListener((ListChangeListener<? super Tag>) c -> {
@@ -98,7 +99,7 @@ public class TagListScreen extends Screen {
             }
         });
 
-        setDefaultFocusNode(v);
+        setDefaultFocusNode(searchField);
     }
 
     public void open(ScreenPane manager, List<Tag> tags) {
