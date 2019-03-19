@@ -106,10 +106,10 @@ public class PredictiveTextField extends TextField {
                     }
                     if (selectedIndex >= 0) {
                         if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
-                            setText(((Label) vBox.getChildren().get(selectedIndex)).getText());
+                            setText(((Label) vBox.getChildren().get(selectedIndex)).getText() + " ");
                         } else {
                             String temp = getText().substring(0, getText().lastIndexOf(' ') + 1);
-                            setText(temp + ((Label) vBox.getChildren().get(selectedIndex)).getText());
+                            setText(temp + ((Label) vBox.getChildren().get(selectedIndex)).getText() + " ");
                         }
 
                         positionCaret(getText().length() + 1);

@@ -1302,11 +1302,6 @@ public class MainController {
 
     public void editTagsTextFieldOnKeyPressed(KeyEvent event) {
         switch (event.getCode()) {
-            case SPACE:
-                editTagsOfSelected(editTagsTextField.getText());
-                Platform.runLater(() -> editTagsTextField.setText(null));
-                event.consume();
-                break;
             case ENTER:
                 editTagsOfSelected(editTagsTextField.getText());
                 editTagsTextField.setText(null);
