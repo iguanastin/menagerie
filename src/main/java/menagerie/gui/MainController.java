@@ -25,6 +25,7 @@ import menagerie.gui.errors.TrackedError;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
 import menagerie.gui.media.DynamicMediaView;
+import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
 import menagerie.gui.thumbnail.Thumbnail;
@@ -84,7 +85,7 @@ public class MainController {
     private HelpScreen helpScreen;
     private SlideshowScreen slideshowScreen;
     private ErrorsScreen errorsScreen;
-    private DuplicatesScreen duplicatesScreen;
+    private DuplicateOptionsScreen duplicateOptionsScreen;
     private SettingsScreen settingsScreen;
 
     //Menagerie vars
@@ -159,8 +160,8 @@ public class MainController {
         initTagListScreen();
         initSlideShowScreen();
         helpScreen = new HelpScreen();
-        duplicatesScreen = new DuplicatesScreen();
         settingsScreen = new SettingsScreen(settings);
+        duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
 
         screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
     }
@@ -541,7 +542,7 @@ public class MainController {
         });
 
         MenuItem findDuplicatesMenuItem = new MenuItem("Find Duplicates");
-        findDuplicatesMenuItem.setOnAction(event1 -> prepareAndOpenDuplicateScreen(imageGridView.getSelected()));
+        findDuplicatesMenuItem.setOnAction(event1 -> duplicateOptionsScreen.open(screenPane, menagerie, imageGridView.getSelected(), currentSearch.getResults(), menagerie.getItems()));
 
         MenuItem moveToFolderMenuItem = new MenuItem("Move To...");
         moveToFolderMenuItem.setOnAction(event1 -> {
@@ -640,53 +641,6 @@ public class MainController {
                 playVideoAfterFocusGain = false;
             }
         });
-    }
-
-    // ---------------------------------- Screen openers ------------------------------------
-
-    private void openDuplicateScreen(List<ImageInfo> items) {
-        if (items == null || items.size() <= 1) return;
-
-        List<SimilarPair> pairs = new ArrayList<>();
-
-        ProgressScreen ps = new ProgressScreen();
-        CancellableThread ct = new CancellableThread() {
-            @Override
-            public void run() {
-                final int total = items.size();
-
-                for (int i = 0; i < total; i++) {
-                    if (!running) {
-                        Platform.runLater(ps::close);
-                        return;
-                    }
-
-                    ImageInfo i1 = items.get(i);
-                    for (int j = i + 1; j < items.size(); j++) {
-                        ImageInfo i2 = items.get(j);
-
-                        try {
-                            double similarity = i1.getSimilarityTo(i2, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
-
-                            if (similarity >= settings.getDouble(Settings.Key.CONFIDENCE))
-                                pairs.add(new SimilarPair(i1, i2, similarity));
-                        } catch (Exception e) {
-                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compare images", "Exception was thrown while trying to compare two images: (" + i1 + ", " + i2 + ")", "Unknown")));
-                        }
-                    }
-
-                    final int finalI = i; // Lambda workaround
-                    Platform.runLater(() -> ps.setProgress(finalI + 1, total));
-                }
-
-                Platform.runLater(() -> {
-                    ps.close();
-                    duplicatesScreen.open(screenPane, menagerie, pairs);
-                });
-            }
-        };
-        ps.open(screenPane, "Comparing items", "Checking for duplicate/similar items...", ct::cancel);
-        ct.start();
     }
 
     // -------------------------------- Dialog Openers ---------------------------------------
@@ -951,77 +905,6 @@ public class MainController {
         }
     }
 
-    private void prepareAndOpenDuplicateScreen(List<ImageInfo> images) {
-        ProgressScreen ps = new ProgressScreen();
-
-        CancellableThread ctHist = new CancellableThread() {
-            @Override
-            public void run() {
-                final int total = images.size();
-                int i = 0;
-
-                for (ImageInfo item : images) {
-                    if (!running) break;
-
-                    i++;
-
-                    String filename = item.getFile().getName().toLowerCase();
-                    if (item.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
-                        try {
-                            item.initializeHistogram();
-                            item.commitHistogramToDatabase();
-                        } catch (Exception e) {
-                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for file: " + item, "Unknown")));
-                        }
-                    }
-
-                    final int finalI = i; // Lambda workaround
-                    Platform.runLater(() -> ps.setProgress(finalI, total));
-                }
-
-                Platform.runLater(() -> {
-                    ps.close();
-
-                    openDuplicateScreen(images);
-                });
-            }
-        };
-        CancellableThread ctMD5 = new CancellableThread() {
-            @Override
-            public void run() {
-                final int total = images.size();
-                int i = 0;
-
-                for (ImageInfo item : images) {
-                    if (!running) break;
-
-                    i++;
-
-                    if (item.getMD5() == null) {
-                        try {
-                            item.initializeMD5();
-                            item.commitMD5ToDatabase();
-                        } catch (Exception e) {
-                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute MD5 for file: " + item, "Unknown")));
-                        }
-                    }
-
-                    final int finalI = i; // Lambda workaround
-                    Platform.runLater(() -> ps.setProgress(finalI, total));
-                }
-
-                Platform.runLater(() -> {
-                    ps.close();
-                    ps.open(screenPane, "Building Histograms", "Building histograms for selected items...", ctHist::cancel);
-                    ctHist.start();
-                });
-            }
-        };
-
-        ps.open(screenPane, "Computing MD5s", "Computing MD5 hashes for selected files...", ctMD5::cancel);
-        ctMD5.start();
-    }
-
     private void startWatchingFolderForImages(String folder, boolean moveToDefault) {
         File watchFolder = new File(folder);
         if (watchFolder.exists() && watchFolder.isDirectory()) {
@@ -1051,9 +934,7 @@ public class MainController {
     }
 
     private void cleanExit(boolean revertDatabase) {
-        previewMediaView.releaseMediaPlayer();
-        slideshowScreen.releaseMediaPlayer();
-        duplicatesScreen.releaseMediaPlayers();
+        DynamicVideoView.releaseAllMediaPlayers();
         VideoThumbnailThread.releaseThreads();
 
         trySaveSettings();
@@ -1251,7 +1132,7 @@ public class MainController {
                     event.consume();
                     break;
                 case D:
-                    prepareAndOpenDuplicateScreen(imageGridView.getSelected());
+                    duplicateOptionsScreen.open(screenPane, menagerie, imageGridView.getSelected(), currentSearch.getResults(), menagerie.getItems());
                     event.consume();
                     break;
                 case Z:

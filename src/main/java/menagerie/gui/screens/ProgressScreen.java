@@ -12,6 +12,9 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import menagerie.util.PokeListener;
 
+import java.text.DecimalFormat;
+import java.util.Formatter;
+
 public class ProgressScreen extends Screen {
 
     private final Label title;
@@ -20,6 +23,8 @@ public class ProgressScreen extends Screen {
     private final ProgressBar progress;
 
     private PokeListener cancelListener = null;
+
+    private static DecimalFormat df = new DecimalFormat("#.##");
 
 
     public ProgressScreen() {
@@ -79,7 +84,7 @@ public class ProgressScreen extends Screen {
     }
 
     public void setProgress(int i, int total) {
-        count.setText(i + "/" + total);
+        count.setText(df.format(100.0 * i / total) + "%");
         progress.setProgress((double) i / total);
     }
 
