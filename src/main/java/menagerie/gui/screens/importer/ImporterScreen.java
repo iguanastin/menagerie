@@ -26,6 +26,8 @@ public class ImporterScreen extends Screen {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
+            } else if (event.getCode() == KeyCode.N && event.isControlDown()) {
+                close();
             }
         });
 

@@ -1151,6 +1151,10 @@ public class MainController {
                     }
                     event.consume();
                     break;
+                case N:
+                    screenPane.open(importerScreen);
+                    event.consume();
+                    break;
             }
         }
 

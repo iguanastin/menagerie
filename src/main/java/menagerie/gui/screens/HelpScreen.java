@@ -77,6 +77,11 @@ public class HelpScreen extends Screen {
         v1.getChildren().add(l);
         v2.getChildren().add(new Label("- Show tag list"));
 
+        l = new Label("Ctrl+N");
+        l.setFont(boldItalic);
+        v1.getChildren().add(l);
+        v2.getChildren().add(new Label("- Show import notifications"));
+
         l = new Label("Ctrl+D");
         l.setFont(boldItalic);
         v1.getChildren().add(l);
