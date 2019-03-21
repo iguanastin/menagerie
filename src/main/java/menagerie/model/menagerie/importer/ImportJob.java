@@ -1,5 +1,10 @@
 package menagerie.model.menagerie.importer;
 
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
 import menagerie.gui.MainController;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.ImageInfo;
@@ -18,9 +23,23 @@ import java.util.List;
 
 public class ImportJob {
 
+    public enum Status {
+        WAITING,
+        IMPORTING,
+        SUCCEEDED,
+        SUCCEEDED_SIMILAR,
+        FAILED_DUPLICATE,
+        FAILED_IMPORT,
+
+    }
+
+    private ImporterThread importer = null;
+
     private URL url = null;
     private File file = null;
     private ImageInfo item = null;
+    private ImageInfo duplicateOf = null;
+    private List<SimilarPair> similarTo = null;
 
     private volatile boolean needsDownload = false;
     private volatile boolean needsImport = true;
@@ -29,9 +48,8 @@ public class ImportJob {
     private volatile boolean needsCheckDuplicate;
     private volatile boolean needsCheckSimilar;
 
-    private volatile boolean finished = false;
-
-    private List<ImportJobListener> listeners = new ArrayList<>();
+    private final ObjectProperty<Status> statusProperty = new SimpleObjectProperty<>(Status.WAITING);
+    private final DoubleProperty progressProperty = new SimpleDoubleProperty(-1);
 
 
     public ImportJob(URL url, boolean checkForDupes, boolean checkForSimilar) {
@@ -51,48 +69,66 @@ public class ImportJob {
     }
 
     void runJob(Menagerie menagerie, Settings settings) {
-        listeners.forEach(ImportJobListener::jobStarted);
+        statusProperty.set(Status.IMPORTING);
 
-        if (tryDownload(settings)) return;
-        if (tryImport(menagerie)) return;
+        if (tryDownload(settings)) {
+            statusProperty.set(Status.FAILED_IMPORT);
+            return;
+        }
+        if (tryImport(menagerie)) {
+            statusProperty.set(Status.FAILED_IMPORT);
+            return;
+        }
         tryHashHist();
-        tryDuplicate(menagerie);
-        trySimilar(menagerie, settings);
+        if (tryDuplicate(menagerie)) {
+            statusProperty.set(Status.FAILED_DUPLICATE);
+            return;
+        }
+        if (trySimilar(menagerie, settings)) {
+            statusProperty.set(Status.SUCCEEDED_SIMILAR);
+            return;
+        }
 
-        listeners.forEach(listener -> listener.finishedJob(item));
-        finished = true;
+        statusProperty.set(Status.SUCCEEDED);
     }
 
-    private void trySimilar(Menagerie menagerie, Settings settings) {
+    private boolean trySimilar(Menagerie menagerie, Settings settings) {
         if (needsCheckSimilar && item.getHistogram() != null) {
-            List<SimilarPair> similar = new ArrayList<>();
+            synchronized (this) {
+                similarTo = new ArrayList<>();
+            }
             for (ImageInfo i : menagerie.getItems()) {
-                if (i.getHistogram() != null) {
+                if (!item.equals(i) && i.getHistogram() != null) {
                     double similarity = i.getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
                     if (similarity > settings.getDouble(Settings.Key.CONFIDENCE)) {
-                        similar.add(new SimilarPair(item, i, similarity));
+                        similarTo.add(new SimilarPair(item, i, similarity));
                     }
                 }
             }
 
             needsCheckSimilar = false;
-            listeners.forEach(listener -> listener.foundSimilar(similar));
+            return !similarTo.isEmpty();
         }
+        return false;
     }
 
-    private void tryDuplicate(Menagerie menagerie) {
+    private boolean tryDuplicate(Menagerie menagerie) {
         if (needsCheckDuplicate && item.getMD5() != null) {
             for (ImageInfo i : menagerie.getItems()) {
                 if (!i.equals(item) && i.getMD5() != null && i.getMD5().equalsIgnoreCase(item.getMD5())) {
+                    synchronized (this) {
+                        duplicateOf = i;
+                    }
                     menagerie.removeImages(Collections.singletonList(item), true);
-                    listeners.forEach(listener -> listener.foundDuplicate(item, i));
-                    break;
+                    needsCheckDuplicate = false;
+                    needsCheckSimilar = false;
+                    return true;
                 }
             }
 
             needsCheckDuplicate = false;
-            needsCheckSimilar = false;
         }
+        return false;
     }
 
     private void tryHashHist() {
@@ -112,15 +148,14 @@ public class ImportJob {
 
     private boolean tryImport(Menagerie menagerie) {
         if (needsImport) {
-            //TODO: change import method to not create md5s or histograms
-            setItem(menagerie.importFile(file));
+            synchronized (this) {
+                item = menagerie.importFile(file);
+            }
 
             if (item == null) {
-                listeners.forEach(ImportJobListener::importFailed);
                 return true;
             } else {
                 needsImport = false;
-                listeners.forEach(listener -> listener.importSucceeded(item));
             }
         }
         return false;
@@ -145,43 +180,71 @@ public class ImportJob {
                 for (int i = 0; i < size; i += chunkSize) {
                     fos.getChannel().transferFrom(rbc, i, chunkSize);
 
-                    final int finalI = i + chunkSize; // Lambda workaround
-                    listeners.forEach(listener -> listener.downloadProgress(finalI, size));
+                    progressProperty.set((double) i / size);
                 }
 
                 conn.disconnect();
                 rbc.close();
                 fos.close();
 
-                file = target;
+                synchronized (this) {
+                    file = target;
+                }
                 needsDownload = false;
-                listeners.forEach(listener -> listener.downloadSucceeded(file));
             } catch (Exception e) {
-                listeners.forEach(listener -> listener.downloadFailed(e));
                 return true;
             }
         }
+        progressProperty.set(-1);
         return false;
-    }
-
-    public void addListener(ImportJobListener listener) {
-        listeners.add(listener);
-    }
-
-    public void removeListener(ImportJobListener listener) {
-        listeners.remove(listener);
     }
 
     public synchronized ImageInfo getItem() {
         return item;
     }
 
-    public synchronized void setItem(ImageInfo item) {
-        this.item = item;
+    public synchronized URL getUrl() {
+        return url;
     }
 
-    public boolean isFinished() {
-        return finished;
+    public synchronized File getFile() {
+        return file;
+    }
+
+    public synchronized ImageInfo getDuplicateOf() {
+        return duplicateOf;
+    }
+
+    public synchronized List<SimilarPair> getSimilarTo() {
+        return similarTo;
+    }
+
+    public DoubleProperty getProgressProperty() {
+        return progressProperty;
+    }
+
+    public double getProgress() {
+        return progressProperty.doubleValue();
+    }
+
+    public ObjectProperty<Status> getStatusProperty() {
+        return statusProperty;
+    }
+
+    public Status getStatus() {
+        return statusProperty.get();
+    }
+
+    synchronized void setImporter(ImporterThread importer) {
+        this.importer = importer;
+    }
+
+    private synchronized ImporterThread getImporter() {
+        return importer;
+    }
+
+    public void cancel() {
+        if (getStatus() == Status.WAITING) getImporter().cancel(this);
     }
 
 }

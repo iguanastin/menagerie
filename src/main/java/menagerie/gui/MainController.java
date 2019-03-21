@@ -12,7 +12,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
-import javafx.scene.control.TextField;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
@@ -20,7 +19,6 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.stage.Window;
 import menagerie.gui.errors.TrackedError;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ImageGridView;
@@ -28,9 +26,9 @@ import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
+import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
-import menagerie.model.SimilarPair;
 import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.ImageInfo;
 import menagerie.model.menagerie.Menagerie;
@@ -63,6 +61,7 @@ import java.util.*;
 
 public class MainController {
 
+    // ------------------------------- JFX -------------------------------------------
     public StackPane rootPane;
 
     public BorderPane explorerRootPane;
@@ -76,23 +75,24 @@ public class MainController {
     public PredictiveTextField editTagsTextField;
     public MenuBar menuBar;
     public Button showErrorsButton;
+    public Button importsButton;
 
     public ScreenPane screenPane;
 
-    // ----------------------------------- Screens ---------------------------------------------------------------------
-
+    // ----------------------------------- Screens -----------------------------------
     private TagListScreen tagListScreen;
     private HelpScreen helpScreen;
     private SlideshowScreen slideshowScreen;
     private ErrorsScreen errorsScreen;
     private DuplicateOptionsScreen duplicateOptionsScreen;
     private SettingsScreen settingsScreen;
+    private ImporterScreen importerScreen;
 
-    //Menagerie vars
+    // --------------------------------- Menagerie vars ------------------------------
     private Menagerie menagerie;
     private ImporterThread importer;
 
-    //Explorer screen vars
+    // ------------------------------- Explorer screen vars --------------------------
     private Search currentSearch = null;
     private ImageInfo currentlyPreviewing = null;
     private String lastEditTagString = null;
@@ -101,19 +101,18 @@ public class MainController {
     private ContextMenu explorer_cellContextMenu;
     private Stack<TagEditEvent> tagEditHistory = new Stack<>();
 
-    //Threads
+    // --------------------------------- Threads -------------------------------------
     private FolderWatcherThread folderWatcherThread = null;
 
-    //Settings var
+    // ---------------------------------- Settings var -------------------------------
     private final Settings settings = new Settings(new File("menagerie.settings"));
 
-    private static final FileFilter FILE_FILTER = Filters.FILE_NAME_FILTER;
-
+    // ------------------------------ Video preview status ---------------------------
     private boolean playVideoAfterFocusGain = false;
     private boolean playVideoAfterExplorerEnabled = false;
 
 
-    // ---------------------------------- Initializers ------------------------------------
+    // ---------------------------------- Initializers -------------------------------
 
     @FXML
     public void initialize() {
@@ -162,6 +161,8 @@ public class MainController {
         helpScreen = new HelpScreen();
         settingsScreen = new SettingsScreen(settings);
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
+        importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> imageGridView.select(item, false, false));
+        importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> importsButton.setText("Imports: " + c.getList().size())));
 
         screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
     }
@@ -385,7 +386,6 @@ public class MainController {
                     m.show(c, event.getScreenX(), event.getScreenY());
                 }
             });
-            c.prefWidthProperty().bind(tagListView.widthProperty().subtract(15));
             return c;
         });
 
@@ -643,7 +643,7 @@ public class MainController {
         });
     }
 
-    // -------------------------------- Dialog Openers ---------------------------------------
+    // -------------------------------- Dialog Openers ---------------------------------
 
     private void openImportFolderDialog() {
         DirectoryChooser dc = new DirectoryChooser();
@@ -653,7 +653,7 @@ public class MainController {
         File result = dc.showDialog(rootPane.getScene().getWindow());
 
         if (result != null) {
-            List<File> files = getFilesRecursively(result, FILE_FILTER);
+            List<File> files = getFilesRecursively(result, Filters.FILE_NAME_FILTER);
             menagerie.getItems().forEach(img -> files.remove(img.getFile()));
 
             for (File file : files) {
@@ -680,18 +680,8 @@ public class MainController {
         }
     }
 
-    private static File openSaveImageDialog(Window window, File folder, String filename) {
-        FileChooser fc = new FileChooser();
-        fc.setTitle("Save file from web");
-        if (filename != null) fc.setInitialFileName(filename);
-        if (folder != null) fc.setInitialDirectory(folder);
-        fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
-        return fc.showSaveDialog(window);
-    }
+    // ---------------------------------- GUI Action Methods ---------------------------
 
-    // ---------------------------------- GUI Action Methods ------------------------------------
-
-    @SuppressWarnings("SameParameterValue")
     private void previewItem(ImageInfo item) {
         if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
         currentlyPreviewing = item;
@@ -908,7 +898,7 @@ public class MainController {
     private void startWatchingFolderForImages(String folder, boolean moveToDefault) {
         File watchFolder = new File(folder);
         if (watchFolder.exists() && watchFolder.isDirectory()) {
-            folderWatcherThread = new FolderWatcherThread(watchFolder, FILE_FILTER, 30000, files -> {
+            folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.FILE_NAME_FILTER, 30000, files -> {
                 for (File file : files) {
                     if (moveToDefault) {
                         String work = settings.getString(Settings.Key.DEFAULT_FOLDER);
@@ -962,7 +952,7 @@ public class MainController {
         Platform.exit();
     }
 
-    // ---------------------------------- Compute Utilities ------------------------------------
+    // ---------------------------------- Compute Utilities -----------------------------
 
     private static List<File> getFilesRecursively(File folder, FileFilter filter) {
         File[] files = folder.listFiles();
@@ -1030,7 +1020,7 @@ public class MainController {
         }
     }
 
-    // ---------------------------------- Action Event Handlers ------------------------------------
+    // ---------------------------------- Action Event Handlers --------------------------
 
     public void searchButtonOnAction(ActionEvent event) {
         applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
@@ -1093,7 +1083,12 @@ public class MainController {
         event.consume();
     }
 
-    // ---------------------------------- Key Event Handlers ----------------------------------------
+    public void importsButtonOnAction(ActionEvent event) {
+        screenPane.open(importerScreen);
+        event.consume();
+    }
+
+    // ---------------------------------- Key Event Handlers -------------------------------
 
     public void explorerRootPaneOnKeyPressed(KeyEvent event) {
         if (event.isControlDown()) {

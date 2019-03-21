@@ -255,4 +255,8 @@ public class DuplicateOptionsScreen extends Screen {
         compareGreyscaleCheckBox.setSelected(settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
     }
 
+    public DuplicatesScreen getDuplicatesScreen() {
+        return duplicateScreen;
+    }
+
 }
