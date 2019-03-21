@@ -14,15 +14,23 @@ import menagerie.gui.screens.Screen;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class ImporterScreen extends Screen {
 
     private final Label countLabel;
     private final ListView<ImportJob> listView;
 
+    private final List<ImportJob> jobs = new ArrayList<>();
 
-    public ImporterScreen(ImporterThread importerThread, ImporterCellDuplicateListener duplicateResolverListener, ImporterCellSelectItemListener selectItemListener) {
+    private final ImporterScreenCountListener countListener;
+
+
+    public ImporterScreen(ImporterThread importerThread, ImporterCellDuplicateListener duplicateResolverListener, ImporterCellSelectItemListener selectItemListener, ImporterScreenCountListener countListener) {
+        this.countListener = countListener;
+
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
@@ -82,12 +90,30 @@ public class ImporterScreen extends Screen {
 
 
         // ImporterThread setup
-        listView.setCellFactory(param -> new ImportListCell(duplicateResolverListener, selectItemListener));
-        importerThread.addImporterListener(job -> listView.getItems().add(job));
+        listView.setCellFactory(param -> new ImportListCell(this, duplicateResolverListener, selectItemListener));
+        importerThread.addImporterListener(job -> {
+            jobs.add(job);
+            listView.getItems().add(job);
+            job.addStatusListener(status -> {
+                if (status == ImportJob.Status.SUCCEEDED) {
+                    removeJob(job);
+                    countListener.changed(jobs.size());
+                } else {
+                    listView.getChildrenUnmodifiable().forEach(node -> {
+                        if (node instanceof ImportListCell) {
+                            ((ImportListCell) node).updateItem(((ImportListCell) node).getItem(), ((ImportListCell) node).isEmpty());
+                        }
+                    });
+                }
+            });
+            if (countListener != null) countListener.changed(jobs.size());
+        });
     }
 
-    public ListView<ImportJob> getListView() {
-        return listView;
+    void removeJob(ImportJob job) {
+        jobs.remove(job);
+        listView.getItems().remove(job);
+        if (countListener != null) countListener.changed(jobs.size());
     }
 
 }

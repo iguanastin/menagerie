@@ -161,8 +161,15 @@ public class MainController {
         helpScreen = new HelpScreen();
         settingsScreen = new SettingsScreen(settings);
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
-        importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> imageGridView.select(item, false, false));
-        importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> importsButton.setText("Imports: " + c.getList().size())));
+        importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> imageGridView.select(item, false, false), count -> {
+            Platform.runLater(() -> importsButton.setText("Imports: " + count));
+
+            if (count == 0) {
+                importsButton.setStyle(null);
+            } else {
+                importsButton.setStyle("-fx-base: blue;");
+            }
+        });
 
         screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
     }
@@ -206,9 +213,9 @@ public class MainController {
             final int count = c.getList().size();
 
             if (count == 0) {
-                showErrorsButton.setStyle("-fx-background-color: transparent;");
+                showErrorsButton.setStyle(null);
             } else {
-                showErrorsButton.setStyle("-fx-background-color: red;");
+                showErrorsButton.setStyle("-fx-base: red;");
             }
 
             showErrorsButton.setText("" + count);

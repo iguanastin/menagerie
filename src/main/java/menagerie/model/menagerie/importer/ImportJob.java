@@ -17,9 +17,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class ImportJob {
 
@@ -48,8 +46,9 @@ public class ImportJob {
     private volatile boolean needsCheckDuplicate;
     private volatile boolean needsCheckSimilar;
 
-    private final ObjectProperty<Status> statusProperty = new SimpleObjectProperty<>(Status.WAITING);
     private final DoubleProperty progressProperty = new SimpleDoubleProperty(-1);
+    private volatile Status status = Status.WAITING;
+    private final Set<ImportJobStatusListener> statusListeners = new HashSet<>();
 
 
     public ImportJob(URL url, boolean checkForDupes, boolean checkForSimilar) {
@@ -69,27 +68,27 @@ public class ImportJob {
     }
 
     void runJob(Menagerie menagerie, Settings settings) {
-        statusProperty.set(Status.IMPORTING);
+        setStatus(Status.IMPORTING);
 
         if (tryDownload(settings)) {
-            statusProperty.set(Status.FAILED_IMPORT);
+            setStatus(Status.FAILED_IMPORT);
             return;
         }
         if (tryImport(menagerie)) {
-            statusProperty.set(Status.FAILED_IMPORT);
+            setStatus(Status.FAILED_IMPORT);
             return;
         }
         tryHashHist();
         if (tryDuplicate(menagerie)) {
-            statusProperty.set(Status.FAILED_DUPLICATE);
+            setStatus(Status.FAILED_DUPLICATE);
             return;
         }
         if (trySimilar(menagerie, settings)) {
-            statusProperty.set(Status.SUCCEEDED_SIMILAR);
+            setStatus(Status.SUCCEEDED_SIMILAR);
             return;
         }
 
-        statusProperty.set(Status.SUCCEEDED);
+        setStatus(Status.SUCCEEDED);
     }
 
     private boolean trySimilar(Menagerie menagerie, Settings settings) {
@@ -227,12 +226,30 @@ public class ImportJob {
         return progressProperty.doubleValue();
     }
 
-    public ObjectProperty<Status> getStatusProperty() {
-        return statusProperty;
+    public Status getStatus() {
+        synchronized (statusListeners) {
+            return status;
+        }
     }
 
-    public Status getStatus() {
-        return statusProperty.get();
+    public void setStatus(Status status) {
+        synchronized (statusListeners) {
+            this.status = status;
+
+            statusListeners.forEach(listener -> listener.changed(status));
+        }
+    }
+
+    public void addStatusListener(ImportJobStatusListener listener) {
+        synchronized (statusListeners) {
+            statusListeners.add(listener);
+        }
+    }
+
+    public void removeStatusListener(ImportJobStatusListener listener) {
+        synchronized (statusListeners) {
+            statusListeners.remove(listener);
+        }
     }
 
     synchronized void setImporter(ImporterThread importer) {

@@ -13,7 +13,8 @@ import menagerie.model.menagerie.importer.ImportJob;
 
 public class ImportListCell extends ListCell<ImportJob> {
 
-    private final ChangeListener<ImportJob.Status> statusChangeListener;
+    private final ImporterScreen screen;
+
     private final ChangeListener<Number> progressChangeListener;
 
     private final Label waitingLabel;
@@ -33,13 +34,15 @@ public class ImportListCell extends ListCell<ImportJob> {
     private final Label failedLabel;
     private final BorderPane failedView;
 
-    ImportListCell(ImporterCellDuplicateListener duplicateResolverListener, ImporterCellSelectItemListener selectItemListener) {
+
+    ImportListCell(ImporterScreen screen, ImporterCellDuplicateListener duplicateResolverListener, ImporterCellSelectItemListener selectItemListener) {
         super();
+        this.screen = screen;
 
         Button cancelButton = new Button("Cancel");
         cancelButton.setOnAction(event -> {
             getItem().cancel();
-            removeItem();
+            screen.removeJob(getItem());
         });
         BorderPane.setAlignment(cancelButton, Pos.CENTER_RIGHT);
         waitingLabel = new Label("N/A");
@@ -58,10 +61,10 @@ public class ImportListCell extends ListCell<ImportJob> {
         hasSimilarResolveButton = new Button("Resolve");
         hasSimilarResolveButton.setOnAction(event -> {
             duplicateResolverListener.resolveDuplicates(getItem().getSimilarTo());
-            removeItem();
+            screen.removeJob(getItem());
         });
         Button dismissButton = new Button("Dismiss");
-        EventHandler<ActionEvent> dismissEventHandler = event -> getListView().getItems().remove(getItem());
+        EventHandler<ActionEvent> dismissEventHandler = event -> screen.removeJob(getItem());
         dismissButton.setOnAction(dismissEventHandler);
         HBox h = new HBox(5, hasSimilarResolveButton, dismissButton);
         h.setAlignment(Pos.CENTER_RIGHT);
@@ -75,7 +78,7 @@ public class ImportListCell extends ListCell<ImportJob> {
         Button showDuplicateButton = new Button("View");
         showDuplicateButton.setOnAction(event -> {
             selectItemListener.selectItem(getItem().getDuplicateOf());
-            removeItem();
+            screen.removeJob(getItem());
         });
         h = new HBox(5, showDuplicateButton, dismissButton);
         h.setAlignment(Pos.CENTER_RIGHT);
@@ -91,47 +94,18 @@ public class ImportListCell extends ListCell<ImportJob> {
         failedView = new BorderPane(new Label("Import failed"), failedLabel, null, h, null);
         failedLabel.maxWidthProperty().bind(failedView.widthProperty().subtract(10));
 
-
-        statusChangeListener = (observable, oldValue, newValue) -> {
-            switch (newValue) {
-                case IMPORTING:
-                    Platform.runLater(this::showImportingView);
-                    break;
-                case SUCCEEDED:
-                    Platform.runLater(() -> getListView().getItems().remove(getItem()));
-                    break;
-                case SUCCEEDED_SIMILAR:
-                    Platform.runLater(this::showHasSimilarView);
-                    break;
-                case WAITING:
-                    Platform.runLater(this::showWaitingView);
-                    break;
-                case FAILED_DUPLICATE:
-                    Platform.runLater(this::showDuplicateView);
-                    break;
-                case FAILED_IMPORT:
-                    Platform.runLater(this::showFailedView);
-                    break;
-            }
-        };
         progressChangeListener = (observable, oldValue, newValue) -> Platform.runLater(() -> importingProgressBar.setProgress(newValue.doubleValue()));
-    }
-
-    private void removeItem() {
-        getListView().getItems().remove(getItem());
     }
 
     @Override
     protected void updateItem(ImportJob item, boolean empty) {
         if (getItem() != null) {
-            getItem().getStatusProperty().removeListener(statusChangeListener);
             getItem().getProgressProperty().removeListener(progressChangeListener);
         }
 
         super.updateItem(item, empty);
 
         if (item != null) {
-            item.getStatusProperty().addListener(statusChangeListener);
             item.getProgressProperty().addListener(progressChangeListener);
 
             if (item.getUrl() != null) setTooltip(new Tooltip(item.getUrl().toString()));
@@ -145,7 +119,7 @@ public class ImportListCell extends ListCell<ImportJob> {
                     showImportingView();
                     break;
                 case SUCCEEDED:
-                    Platform.runLater(() -> getListView().getItems().remove(item));
+                    screen.removeJob(getItem());
                     break;
                 case SUCCEEDED_SIMILAR:
                     showHasSimilarView();
