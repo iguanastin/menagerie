@@ -8,8 +8,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import menagerie.gui.media.DynamicMediaView;
-import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Item;
+import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.util.PokeListener;
 
@@ -55,10 +55,16 @@ public class SlideshowScreen extends Screen {
         Button close = new Button("Close");
         close.setOnAction(event -> close());
 
+        Button shuffle = new Button("Shuffle");
+        shuffle.setOnAction(event -> {
+            Collections.shuffle(items);
+            if (!items.isEmpty()) preview(items.get(0));
+        });
+
         Button right = new Button("->");
         right.setOnAction(event -> previewNext());
 
-        HBox h = new HBox(5, left, close, right);
+        HBox h = new HBox(5, left, close, shuffle, right);
         h.setAlignment(Pos.CENTER);
         h.setPadding(new Insets(5));
         setBottom(h);
