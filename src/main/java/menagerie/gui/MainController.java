@@ -27,6 +27,7 @@ import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
 import menagerie.gui.screens.importer.ImporterScreen;
+import menagerie.gui.screens.slideshow.SlideshowScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
 import menagerie.model.db.DatabaseVersionUpdater;
@@ -158,7 +159,10 @@ public class MainController {
         initSettingsScreen();
         initErrorsScreen();
         initTagListScreen();
-        initSlideShowScreen();
+        slideshowScreen = new SlideshowScreen(item -> {
+            slideshowScreen.close();
+            itemGridView.select(item, false, false);
+        });
         helpScreen = new HelpScreen();
         settingsScreen = new SettingsScreen(settings);
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
@@ -191,21 +195,6 @@ public class MainController {
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
             Platform.exit();
         }
-    }
-
-    private void initSlideShowScreen() {
-        MenuItem showInSearchMenuItem = new MenuItem("Show in search");
-        showInSearchMenuItem.setOnAction(event -> {
-            slideshowScreen.close();
-            itemGridView.select(slideshowScreen.getShowing(), false, false);
-        });
-        MenuItem forgetCurrentMenuItem = new MenuItem("Forget");
-        forgetCurrentMenuItem.setOnAction(event -> slideshowScreen.tryDeleteCurrent(false));
-        MenuItem deleteCurrentMenuItem = new MenuItem("Delete");
-        deleteCurrentMenuItem.setOnAction(event -> slideshowScreen.tryDeleteCurrent(true));
-
-        slideshowScreen = new SlideshowScreen();
-        slideshowScreen.setItemContextMenu(new ContextMenu(showInSearchMenuItem, new SeparatorMenuItem(), forgetCurrentMenuItem, deleteCurrentMenuItem));
     }
 
     private void initErrorsScreen() {

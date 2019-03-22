@@ -1,4 +1,4 @@
-package menagerie.gui.screens;
+package menagerie.gui.screens.slideshow;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -6,8 +6,14 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import menagerie.gui.ItemInfoBox;
 import menagerie.gui.media.DynamicMediaView;
+import menagerie.gui.screens.ConfirmationScreen;
+import menagerie.gui.screens.Screen;
+import menagerie.gui.screens.ScreenPane;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
@@ -20,13 +26,18 @@ import java.util.List;
 public class SlideshowScreen extends Screen {
 
     private final DynamicMediaView mediaView;
+    private final ItemInfoBox infoBox;
 
     private final List<Item> items = new ArrayList<>();
     private Item showing = null;
     private Menagerie menagerie;
 
+    private final SlideShowSelectListener selectListener;
 
-    public SlideshowScreen() {
+
+    public SlideshowScreen(SlideShowSelectListener selectListener) {
+        this.selectListener = selectListener;
+
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.LEFT) {
                 previewLast();
@@ -47,10 +58,24 @@ public class SlideshowScreen extends Screen {
         mediaView = new DynamicMediaView();
         mediaView.setRepeat(true);
         mediaView.setMute(false);
-        setCenter(mediaView);
+        infoBox = new ItemInfoBox();
+        infoBox.setMaxWidth(USE_PREF_SIZE);
+        infoBox.setAlignment(Pos.BOTTOM_RIGHT);
+        infoBox.setOpacity(0.75);
+        BorderPane.setAlignment(infoBox, Pos.BOTTOM_RIGHT);
+        BorderPane.setMargin(infoBox, new Insets(5));
+        BorderPane bp = new BorderPane(null, null, null, infoBox, null);
+        bp.setPickOnBounds(false);
+        StackPane sp = new StackPane(mediaView, bp);
+        setCenter(sp);
 
         Button left = new Button("<-");
         left.setOnAction(event -> previewLast());
+
+        Button select = new Button("Select");
+        select.setOnAction(event -> {
+            if (showing != null && selectListener != null) selectListener.select(showing);
+        });
 
         Button close = new Button("Close");
         close.setOnAction(event -> close());
@@ -64,10 +89,11 @@ public class SlideshowScreen extends Screen {
         Button right = new Button("->");
         right.setOnAction(event -> previewNext());
 
-        HBox h = new HBox(5, left, close, shuffle, right);
+        HBox h = new HBox(5, left, select, right);
         h.setAlignment(Pos.CENTER);
-        h.setPadding(new Insets(5));
-        setBottom(h);
+        bp = new BorderPane(h, null, close, null, shuffle);
+        bp.setPadding(new Insets(5));
+        setBottom(bp);
     }
 
     public void open(ScreenPane manager, Menagerie menagerie, List<Item> items) {
@@ -96,10 +122,6 @@ public class SlideshowScreen extends Screen {
 
     public Item getShowing() {
         return showing;
-    }
-
-    public void setItemContextMenu(ContextMenu contextMenu) {
-        mediaView.setOnContextMenuRequested(event -> contextMenu.show(mediaView, event.getScreenX(), event.getScreenY()));
     }
 
     public void tryDeleteCurrent(boolean deleteFile) {
@@ -132,6 +154,7 @@ public class SlideshowScreen extends Screen {
         showing = item;
         if (item instanceof MediaItem) {
             mediaView.preview((MediaItem) item);
+            infoBox.setItem((MediaItem) item);
         } else {
             mediaView.preview(null);
         }
