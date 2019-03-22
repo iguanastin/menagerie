@@ -839,6 +839,13 @@ public class MainController {
                         rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
                         break;
                 }
+            } else if (arg.startsWith("type:")) {
+                String type = arg.substring(arg.indexOf(':') + 1);
+                if (type.equalsIgnoreCase("group")) {
+                    rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
+                } else if (type.equalsIgnoreCase("media")) {
+                    rules.add(new TypeRule(TypeRule.Type.MEDIA, inverted));
+                }
             } else if (arg.startsWith("tags:")) {
                 String temp = arg.substring(arg.indexOf(':') + 1);
                 TagCountRule.Type type = TagCountRule.Type.EQUAL_TO;
@@ -854,6 +861,13 @@ public class MainController {
                 } catch (NumberFormatException e) {
                     e.printStackTrace();
                     Main.showErrorMessage("Error", "Error converting int value for tag count rule", e.getLocalizedMessage());
+                }
+            } else if (arg.startsWith("in:")) {
+                try {
+                    rules.add(new InGroupRule(Integer.parseInt(arg.substring(arg.indexOf(':') + 1)), inverted));
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    Main.showErrorMessage("Error", "Error converting int value for group rule", e.getLocalizedMessage());
                 }
             } else {
                 Tag tag = menagerie.getTagByName(arg);
@@ -913,7 +927,7 @@ public class MainController {
         }
 
         if (!changed.isEmpty()) {
-            menagerie.checkImagesStillValidInSearches(changed);
+            menagerie.checkItemsStillValidInSearches(changed);
 
             tagEditHistory.push(new TagEditEvent(added, removed));
         }
@@ -1170,7 +1184,7 @@ public class MainController {
                             pop.getRemoved().keySet().forEach(item -> {
                                 if (!list.contains(item)) list.add(item);
                             });
-                            menagerie.checkImagesStillValidInSearches(list);
+                            menagerie.checkItemsStillValidInSearches(list);
                         }, null);
                     }
                     event.consume();

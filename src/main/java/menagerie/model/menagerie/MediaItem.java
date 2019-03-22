@@ -29,6 +29,8 @@ public class MediaItem extends Item {
     private SoftReference<Thumbnail> thumbnail;
     private WeakReference<Image> image;
 
+    private GroupItem group;
+
 
     public MediaItem(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
         super(menagerie, id, dateAdded);
@@ -218,6 +220,18 @@ public class MediaItem extends Item {
         }
 
         return 0;
+    }
+
+    void setGroup(GroupItem group) {
+        this.group = group;
+    }
+
+    public boolean inGroup() {
+        return group != null;
+    }
+
+    public GroupItem getGroup() {
+        return group;
     }
 
     @Override

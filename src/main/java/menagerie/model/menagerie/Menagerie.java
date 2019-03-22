@@ -283,7 +283,7 @@ public class Menagerie {
         return null;
     }
 
-    public void checkImagesStillValidInSearches(List<Item> items) {
+    public void checkItemsStillValidInSearches(List<Item> items) {
         activeSearches.forEach(search -> search.recheckWithSearch(items));
     }
 

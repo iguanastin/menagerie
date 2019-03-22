@@ -17,7 +17,7 @@ public abstract class SearchRule implements Comparable<SearchRule> {
         return inverted;
     }
 
-    public abstract boolean accept(Item img);
+    public abstract boolean accept(Item item);
 
     @Override
     public int compareTo(SearchRule o) {
