@@ -1,6 +1,6 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Item;
 
 public abstract class SearchRule implements Comparable<SearchRule> {
 
@@ -17,7 +17,7 @@ public abstract class SearchRule implements Comparable<SearchRule> {
         return inverted;
     }
 
-    public abstract boolean accept(ImageInfo img);
+    public abstract boolean accept(Item img);
 
     @Override
     public int compareTo(SearchRule o) {

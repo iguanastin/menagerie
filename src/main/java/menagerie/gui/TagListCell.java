@@ -12,10 +12,13 @@ public class TagListCell extends ListCell<Tag> {
     private final Label nameLabel;
 
 
-    TagListCell() {
+    public TagListCell() {
         countLabel = new Label();
+        countLabel.setMinWidth(USE_PREF_SIZE);
         nameLabel = new Label();
-        setGraphic(new BorderPane(null, null, countLabel, null, nameLabel));
+        BorderPane bp = new BorderPane(null, null, countLabel, null, nameLabel);
+        setGraphic(bp);
+        nameLabel.maxWidthProperty().bind(bp.widthProperty().subtract(countLabel.widthProperty()).subtract(15));
     }
 
     @Override

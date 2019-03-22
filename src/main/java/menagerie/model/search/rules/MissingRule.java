@@ -1,6 +1,7 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Item;
 
 public class MissingRule extends SearchRule {
 
@@ -19,18 +20,20 @@ public class MissingRule extends SearchRule {
     }
 
     @Override
-    public boolean accept(ImageInfo img) {
+    public boolean accept(Item item) {
         boolean result = false;
-        switch (type) {
-            case MD5:
-                result = img.getMD5() == null;
-                break;
-            case FILE:
-                result = img.getFile() == null || !img.getFile().exists();
-                break;
-            case HISTOGRAM:
-                result = img.getHistogram() == null;
-                break;
+        if (item instanceof MediaItem) {
+            switch (type) {
+                case MD5:
+                    result = ((MediaItem) item).getMD5() == null;
+                    break;
+                case FILE:
+                    result = ((MediaItem) item).getFile() == null || !((MediaItem) item).getFile().exists();
+                    break;
+                case HISTOGRAM:
+                    result = ((MediaItem) item).getHistogram() == null;
+                    break;
+            }
         }
 
         if (isInverted()) result = !result;

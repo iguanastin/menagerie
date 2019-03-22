@@ -8,11 +8,12 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Item;
 import org.controlsfx.control.GridCell;
 
 
-public class ImageGridCell extends GridCell<ImageInfo> {
+public class ImageGridCell extends GridCell<Item> {
 
     private static final String UNSELECTED_BG_CSS = "-fx-background-color: -grid-cell-unselected-color";
     private static final String SELECTED_BG_CSS = "-fx-background-color: -grid-cell-selected-color";
@@ -20,7 +21,7 @@ public class ImageGridCell extends GridCell<ImageInfo> {
     private final ImageView view;
     private final Label label;
 
-    private ImageInfo lastItem = null;
+    private Item lastItem = null;
 
 
     public ImageGridCell() {
@@ -39,7 +40,7 @@ public class ImageGridCell extends GridCell<ImageInfo> {
     }
 
     @Override
-    protected void updateItem(ImageInfo item, boolean empty) {
+    protected void updateItem(Item item, boolean empty) {
         if (lastItem != null) lastItem.getThumbnail().setImageReadyListener(null);
         lastItem = item;
 
@@ -55,12 +56,12 @@ public class ImageGridCell extends GridCell<ImageInfo> {
                     item.getThumbnail().setImageReadyListener(view::setImage);
                 }
             }
-            if (item.isVideo()) label.setText("Video");
+            if (item instanceof MediaItem && ((MediaItem) item).isVideo()) label.setText("Video");
         }
 
         super.updateItem(item, empty);
 
-        if (getGridView() != null && getGridView() instanceof ImageGridView && ((ImageGridView) getGridView()).isSelected(item)) {
+        if (getGridView() != null && getGridView() instanceof ItemGridView && ((ItemGridView) getGridView()).isSelected(item)) {
             setStyle(SELECTED_BG_CSS);
         } else {
             setStyle(UNSELECTED_BG_CSS);

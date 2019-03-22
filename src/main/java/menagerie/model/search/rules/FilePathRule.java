@@ -1,6 +1,7 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Item;
 
 public class FilePathRule extends SearchRule {
 
@@ -13,8 +14,8 @@ public class FilePathRule extends SearchRule {
     }
 
     @Override
-    public boolean accept(ImageInfo img) {
-        boolean result = img.getFile().getAbsolutePath().contains(text);
+    public boolean accept(Item item) {
+        boolean result = item instanceof MediaItem && ((MediaItem) item).getFile().getAbsolutePath().contains(text);
         if (isInverted()) result = !result;
         return result;
     }

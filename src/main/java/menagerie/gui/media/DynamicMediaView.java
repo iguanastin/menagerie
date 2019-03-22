@@ -1,7 +1,8 @@
 package menagerie.gui.media;
 
 import javafx.scene.layout.StackPane;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.gui.Main;
+import menagerie.model.menagerie.MediaItem;
 
 public class DynamicMediaView extends StackPane {
 
@@ -18,16 +19,16 @@ public class DynamicMediaView extends StackPane {
         getChildren().addAll(imageView);
     }
 
-    public boolean preview(ImageInfo info) {
+    public boolean preview(MediaItem info) {
         if (info == null) {
-            getVideoView().getMediaPlayer().stop();
+            if (getVideoView() != null) getVideoView().getMediaPlayer().stop();
             getImageView().setImage(null);
             hideAllViews();
         } else if (info.isImage()) {
-            getVideoView().getMediaPlayer().stop();
+            if (getVideoView() != null) getVideoView().getMediaPlayer().stop();
             getImageView().setImage(info.getImage());
             showImageView();
-        } else if (info.isVideo()) {
+        } else if (info.isVideo() && getVideoView() != null) {
             getImageView().setImage(null);
             getVideoView().getMediaPlayer().startMedia(info.getFile().getAbsolutePath());
             showVideoView();
@@ -41,25 +42,33 @@ public class DynamicMediaView extends StackPane {
     private void hideAllViews() {
         getImageView().setDisable(true);
         getImageView().setOpacity(0);
-        getVideoView().setDisable(true);
-        getVideoView().setOpacity(0);
+        if (getVideoView() != null) {
+            getVideoView().setDisable(true);
+            getVideoView().setOpacity(0);
+        }
     }
 
     private void showImageView() {
         getImageView().setDisable(false);
         getImageView().setOpacity(1);
-        getVideoView().setDisable(true);
-        getVideoView().setOpacity(0);
+        if (getVideoView() != null) {
+            getVideoView().setDisable(true);
+            getVideoView().setOpacity(0);
+        }
     }
 
     private void showVideoView() {
-        getVideoView().setDisable(false);
-        getVideoView().setOpacity(1);
+        if (getVideoView() != null) {
+            getVideoView().setDisable(false);
+            getVideoView().setOpacity(1);
+        }
         getImageView().setDisable(true);
         getImageView().setOpacity(0);
     }
 
     private DynamicVideoView getVideoView() {
+        if (!Main.VLCJ_LOADED) return null;
+
         if (videoView == null) {
             videoView = new DynamicVideoView();
             getChildren().add(videoView);
@@ -77,23 +86,23 @@ public class DynamicMediaView extends StackPane {
     }
 
     public void setMute(boolean mute) {
-        getVideoView().getMediaPlayer().mute(mute);
+        if (getVideoView() != null) getVideoView().getMediaPlayer().mute(mute);
     }
 
     public void setRepeat(boolean repeat) {
-        getVideoView().getMediaPlayer().setRepeat(repeat);
+        if (getVideoView() != null) getVideoView().getMediaPlayer().setRepeat(repeat);
     }
 
     public boolean isPlaying() {
-        return getVideoView().getMediaPlayer().isPlaying();
+        return getVideoView() != null && getVideoView().getMediaPlayer().isPlaying();
     }
 
     public void pause() {
-        getVideoView().getMediaPlayer().pause();
+        if (getVideoView() != null) getVideoView().getMediaPlayer().pause();
     }
 
     public void play() {
-        getVideoView().getMediaPlayer().play();
+        if (getVideoView() != null) getVideoView().getMediaPlayer().play();
     }
 
 }

@@ -2,7 +2,6 @@ package menagerie.gui.media;
 
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -40,7 +39,16 @@ public class PanZoomImageView extends DynamicImageView {
                 clickImageX = deltaX;
                 clickImageY = deltaY;
             } else if (event.getButton().equals(MouseButton.SECONDARY)) {
-                fitImageToView();
+                if (getImage() != null) {
+                    double w = getImage().getWidth() / scale;
+                    double h = getImage().getHeight() / scale;
+                    if (deltaX == 0 && deltaY == 0 && (Math.abs(getFitWidth() - w) < 5 || Math.abs(getFitHeight() - h) < 5)) {
+                        scale = 1;
+                        updateViewPort();
+                    } else {
+                        fitImageToView();
+                    }
+                }
             }
         });
         addEventHandler(ScrollEvent.SCROLL, event -> {

@@ -1,6 +1,6 @@
 package menagerie.model.search;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.search.rules.SearchRule;
 
@@ -16,9 +16,9 @@ public class Search {
     private final List<SearchRule> rules;
     private final boolean descending;
 
-    private final Comparator<ImageInfo> comparator;
+    private final Comparator<Item> comparator;
 
-    private final List<ImageInfo> results = new ArrayList<>();
+    private final List<Item> results = new ArrayList<>();
 
 
     public Search(Menagerie menagerie, List<SearchRule> rules, boolean descending) {
@@ -38,30 +38,30 @@ public class Search {
 
         menagerie.registerSearch(this);
 
-        addIfValid(menagerie.getImages());
+        addIfValid(menagerie.getItems());
     }
 
     public void setListener(SearchUpdateListener listener) {
         this.listener = listener;
     }
 
-    public List<ImageInfo> getResults() {
+    public List<Item> getResults() {
         return results;
     }
 
-    public Comparator<ImageInfo> getComparator() {
+    public Comparator<Item> getComparator() {
         return comparator;
     }
 
-    public void addIfValid(List<ImageInfo> images) {
+    public void addIfValid(List<Item> items) {
         if (rules == null) return;
 
-        List<ImageInfo> toAdd = new ArrayList<>(images);
+        List<Item> toAdd = new ArrayList<>(items);
 
-        for (ImageInfo img : images) {
+        for (Item item : items) {
             for (SearchRule rule : rules) {
-                if (!rule.accept(img)) {
-                    toAdd.remove(img);
+                if (!rule.accept(item)) {
+                    toAdd.remove(item);
                     break;
                 }
             }
@@ -73,24 +73,28 @@ public class Search {
         if (changed && listener != null) listener.imagesAdded(toAdd);
     }
 
-    public void removeIfInvalid(List<ImageInfo> images) {
+    public void recheckWithSearch(List<Item> items) {
         if (rules == null) return;
 
-        List<ImageInfo> toRemove = new ArrayList<>();
-
-        for (ImageInfo img : images) {
+        List<Item> toRemove = new ArrayList<>();
+        List<Item> toAdd = new ArrayList<>();
+        for (Item item : items) {
             for (SearchRule rule : rules) {
-                if (!rule.accept(img)) {
-                    toRemove.add(img);
+                if (!rule.accept(item)) {
+                    toRemove.add(item);
                     break;
                 }
             }
-        }
 
+            if (!results.contains(item) && !toRemove.contains(item)) {
+                toAdd.add(item);
+            }
+        }
         if (results.removeAll(toRemove) && listener != null) listener.imagesRemoved(toRemove);
+        if (results.addAll(toAdd) && listener != null) listener.imagesAdded(toAdd);
     }
 
-    public void remove(List<ImageInfo> images) {
+    public void remove(List<Item> images) {
         if (results.removeAll(images) && listener != null) listener.imagesRemoved(images);
     }
 

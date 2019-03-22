@@ -2,12 +2,12 @@ package menagerie.gui.thumbnail;
 
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
+import menagerie.gui.Main;
 import uk.co.caprica.vlcj.player.MediaPlayer;
 import uk.co.caprica.vlcj.player.MediaPlayerEventAdapter;
 import uk.co.caprica.vlcj.player.MediaPlayerEventListener;
 import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 
-import java.awt.image.BufferedImage;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.*;
@@ -102,6 +102,8 @@ public class VideoThumbnailThread extends Thread {
     }
 
     private static MediaPlayer getThumbnailMediaPlayer() {
+        if (!Main.VLCJ_LOADED) return null;
+
         if (THUMBNAIL_MEDIA_PLAYER == null) {
             MediaPlayerFactory factory = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS);
             THUMBNAIL_MEDIA_PLAYER = factory.newHeadlessMediaPlayer();

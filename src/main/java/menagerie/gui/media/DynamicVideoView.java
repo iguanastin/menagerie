@@ -10,6 +10,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.stage.Screen;
 import uk.co.caprica.vlcj.component.DirectMediaPlayerComponent;
+import uk.co.caprica.vlcj.player.MediaPlayer;
 import uk.co.caprica.vlcj.player.direct.BufferFormat;
 import uk.co.caprica.vlcj.player.direct.BufferFormatCallback;
 import uk.co.caprica.vlcj.player.direct.DirectMediaPlayer;
@@ -17,9 +18,12 @@ import uk.co.caprica.vlcj.player.direct.format.RV32BufferFormat;
 
 import java.awt.*;
 import java.nio.ByteBuffer;
+import java.util.HashSet;
+import java.util.Set;
 
 public class DynamicVideoView extends ImageView {
 
+    private static final Set<MediaPlayer> mediaPlayers = new HashSet<>();
 
     private DirectMediaPlayerComponent mediaPlayerComponent = new CanvasPlayerComponent();
     private WritablePixelFormat<ByteBuffer> pixelFormat = PixelFormat.getByteBgraPreInstance();
@@ -30,6 +34,8 @@ public class DynamicVideoView extends ImageView {
     public DynamicVideoView() {
         super();
 //        NativeLibrary.addSearchPath("vlclib", new DefaultWindowsNativeDiscoveryStrategy().discover());
+
+        mediaPlayers.add(getMediaPlayer());
 
         Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
         writableImage = new WritableImage((int) visualBounds.getWidth(), (int) visualBounds.getHeight());
@@ -151,6 +157,10 @@ public class DynamicVideoView extends ImageView {
             Platform.runLater(() -> videoSourceRatioProperty.set((float) sourceHeight / (float) sourceWidth));
             return new RV32BufferFormat((int) visualBounds.getWidth(), (int) visualBounds.getHeight());
         }
+    }
+
+    public static void releaseAllMediaPlayers() {
+        mediaPlayers.forEach(MediaPlayer::release);
     }
 
 }

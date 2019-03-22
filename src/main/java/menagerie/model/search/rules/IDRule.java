@@ -1,6 +1,6 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Item;
 
 public class IDRule extends SearchRule {
 
@@ -23,17 +23,17 @@ public class IDRule extends SearchRule {
     }
 
     @Override
-    public boolean accept(ImageInfo img) {
+    public boolean accept(Item item) {
         boolean result = false;
         switch (type) {
             case LESS_THAN:
-                result = img.getId() < id;
+                result = item.getId() < id;
                 break;
             case GREATER_THAN:
-                result = img.getId() > id;
+                result = item.getId() > id;
                 break;
             case EQUAL_TO:
-                result = img.getId() == id;
+                result = item.getId() == id;
                 break;
         }
 

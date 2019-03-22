@@ -1,6 +1,6 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Item;
 
 import java.util.Date;
 
@@ -25,17 +25,17 @@ public class DateAddedRule extends SearchRule {
     }
 
     @Override
-    public boolean accept(ImageInfo img) {
+    public boolean accept(Item item) {
         boolean result = false;
         switch (type) {
             case LESS_THAN:
-                result = img.getDateAdded() < time;
+                result = item.getDateAdded() < time;
                 break;
             case GREATER_THAN:
-                result = img.getDateAdded() > time;
+                result = item.getDateAdded() > time;
                 break;
             case EQUAL_TO:
-                result = img.getDateAdded() == time;
+                result = item.getDateAdded() == time;
                 break;
         }
 

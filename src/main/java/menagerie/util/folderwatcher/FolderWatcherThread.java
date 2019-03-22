@@ -38,7 +38,7 @@ public class FolderWatcherThread extends Thread {
 
         while (isRunning()) {
             File folder = watchFolder;
-            if (folder != null && folder.exists() && folder.isDirectory()) {
+            if (folder.exists() && folder.isDirectory()) {
                 File[] files = Objects.requireNonNull(folder.listFiles(filter));
                 if (files.length > 0) listener.foundNewFiles(files);
             }
