@@ -39,7 +39,7 @@ public class Menagerie {
 
     // ------------------------------ Variables -----------------------------------
 
-    private final List<ImageInfo> images = new ArrayList<>();
+    private final List<Item> items = new ArrayList<>();
     private final List<Tag> tags = new ArrayList<>();
 
     private int nextImageID;
@@ -85,7 +85,7 @@ public class Menagerie {
 
     private void clearUnusedTags() throws SQLException {
         Set<Integer> usedTags = new HashSet<>();
-        for (ImageInfo img : images) {
+        for (Item img : items) {
             for (Tag t : img.getTags()) {
                 usedTags.add(t.getId());
             }
@@ -137,8 +137,8 @@ public class Menagerie {
                 }
             }
 
-            ImageInfo img = new ImageInfo(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
-            images.add(img);
+            MediaItem img = new MediaItem(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
+            items.add(img);
 
             PS_GET_IMG_TAG_IDS.setInt(1, img.getId());
             ResultSet tagRS = PS_GET_IMG_TAG_IDS.executeQuery();
@@ -156,7 +156,7 @@ public class Menagerie {
 
         s.close();
 
-        System.out.println("Finished loading " + images.size() + " images from database");
+        System.out.println("Finished loading " + items.size() + " images from database");
     }
 
     private void loadTagsFromDatabase() throws SQLException {
@@ -172,13 +172,13 @@ public class Menagerie {
         System.out.println("Finished loading " + tags.size() + " tags from database");
     }
 
-    public ImageInfo importFile(File file) {
+    public MediaItem importFile(File file) {
         if (isFilePresent(file)) return null;
 
-        ImageInfo img = new ImageInfo(this, nextImageID, System.currentTimeMillis(), file, null, null);
+        MediaItem img = new MediaItem(this, nextImageID, System.currentTimeMillis(), file, null, null);
 
         //Add image and commit to database
-        images.add(img);
+        items.add(img);
         nextImageID++;
         try {
             PS_CREATE_IMG.setInt(1, img.getId());
@@ -217,18 +217,20 @@ public class Menagerie {
         return img;
     }
 
-    public void removeImages(List<ImageInfo> images, boolean deleteFiles) {
-        List<ImageInfo> toRemove = new ArrayList<>();
+    public void removeImages(List<Item> items, boolean deleteFiles) {
+        List<Item> toRemove = new ArrayList<>();
+        List<MediaItem> toDelete = new ArrayList<>();
 
-        for (ImageInfo image : images) {
-            if (getItems().remove(image)) {
-                image.getTags().forEach(Tag::decrementFrequency);
+        for (Item item : items) {
+            if (getItems().remove(item)) {
+                item.getTags().forEach(Tag::decrementFrequency);
 
-                toRemove.add(image);
+                toRemove.add(item);
+                if (deleteFiles && item instanceof MediaItem) toDelete.add((MediaItem) item);
 
                 updateQueue.enqueueUpdate(() -> {
                     try {
-                        PS_DELETE_IMG.setInt(1, image.getId());
+                        PS_DELETE_IMG.setInt(1, item.getId());
                         PS_DELETE_IMG.executeUpdate();
                     } catch (SQLException e) {
                         e.printStackTrace();
@@ -242,18 +244,18 @@ public class Menagerie {
             FileUtils fu = FileUtils.getInstance();
             if (fu.hasTrash()) {
                 try {
-                    File[] fa = new File[toRemove.size()];
-                    for (int i = 0; i < fa.length; i++) fa[i] = toRemove.get(i).getFile();
+                    File[] fa = new File[toDelete.size()];
+                    for (int i = 0; i < fa.length; i++) fa[i] = toDelete.get(i).getFile();
                     fu.moveToTrash(fa);
                 } catch (IOException e) {
                     //TODO: better error handling, preferably send to error list in gui
-                    Main.showErrorMessage("Recycle bin Error", "Unable to send files to recycle bin", toRemove.size() + "");
+                    Main.showErrorMessage("Recycle bin Error", "Unable to send files to recycle bin", toDelete.size() + "");
                 }
             } else {
-                toRemove.forEach(image -> {
-                    if (image.getFile().delete()) {
+                toDelete.forEach(item -> {
+                    if (item.getFile().delete()) {
                         //TODO: better error handling, preferably send to error list in gui
-                        Main.showErrorMessage("Deletion Error", "Unable to delete file", image.getFile().toString());
+                        Main.showErrorMessage("Deletion Error", "Unable to delete file", item.getFile().toString());
                     }
                 });
                 return;
@@ -281,12 +283,12 @@ public class Menagerie {
         return null;
     }
 
-    public void checkImagesStillValidInSearches(List<ImageInfo> images) {
-        activeSearches.forEach(search -> search.recheckWithSearch(images));
+    public void checkImagesStillValidInSearches(List<Item> items) {
+        activeSearches.forEach(search -> search.recheckWithSearch(items));
     }
 
-    public List<ImageInfo> getItems() {
-        return images;
+    public List<Item> getItems() {
+        return items;
     }
 
     public DatabaseUpdateQueue getUpdateQueue() {
@@ -298,8 +300,8 @@ public class Menagerie {
     }
 
     private boolean isFilePresent(File file) {
-        for (ImageInfo img : images) {
-            if (img.getFile().equals(file)) return true;
+        for (Item item : items) {
+            if (item instanceof MediaItem && ((MediaItem) item).getFile().equals(file)) return true;
         }
         return false;
     }

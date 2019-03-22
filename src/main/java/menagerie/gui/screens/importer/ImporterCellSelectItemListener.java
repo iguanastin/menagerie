@@ -1,9 +1,9 @@
 package menagerie.gui.screens.importer;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
 
 public interface ImporterCellSelectItemListener {
 
-    void selectItem(ImageInfo item);
+    void selectItem(MediaItem item);
 
 }

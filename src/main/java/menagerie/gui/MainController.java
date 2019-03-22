@@ -21,7 +21,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import menagerie.gui.errors.TrackedError;
 import menagerie.gui.grid.ImageGridCell;
-import menagerie.gui.grid.ImageGridView;
+import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
@@ -30,7 +30,8 @@ import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
 import menagerie.model.db.DatabaseVersionUpdater;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.menagerie.history.TagEditEvent;
@@ -67,7 +68,7 @@ public class MainController {
     public BorderPane explorerRootPane;
     public ToggleButton listDescendingToggleButton;
     public PredictiveTextField searchTextField;
-    public ImageGridView imageGridView;
+    public ItemGridView itemGridView;
     public DynamicMediaView previewMediaView;
     public Label resultCountLabel;
     public ItemInfoBox itemInfoBox;
@@ -94,7 +95,7 @@ public class MainController {
 
     // ------------------------------- Explorer screen vars --------------------------
     private Search currentSearch = null;
-    private ImageInfo currentlyPreviewing = null;
+    private Item currentlyPreviewing = null;
     private String lastEditTagString = null;
     private final ClipboardContent explorer_clipboard = new ClipboardContent();
     private boolean explorer_imageGridViewDragging = false;
@@ -161,7 +162,7 @@ public class MainController {
         helpScreen = new HelpScreen();
         settingsScreen = new SettingsScreen(settings);
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
-        importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> imageGridView.select(item, false, false), count -> {
+        importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> itemGridView.select(item, false, false), count -> {
             Platform.runLater(() -> importsButton.setText("Imports: " + count));
 
             if (count == 0) {
@@ -196,7 +197,7 @@ public class MainController {
         MenuItem showInSearchMenuItem = new MenuItem("Show in search");
         showInSearchMenuItem.setOnAction(event -> {
             slideshowScreen.close();
-            imageGridView.select(slideshowScreen.getShowing(), false, false);
+            itemGridView.select(slideshowScreen.getShowing(), false, false);
         });
         MenuItem forgetCurrentMenuItem = new MenuItem("Forget");
         forgetCurrentMenuItem.setOnAction(event -> slideshowScreen.tryDeleteCurrent(false));
@@ -261,28 +262,32 @@ public class MainController {
         setGridWidth(settings.getInt(Settings.Key.GRID_WIDTH));
 
         //Init image grid
-        imageGridView.setSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
-        imageGridView.setCellFactory(param -> {
+        itemGridView.setSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
+        itemGridView.setCellFactory(param -> {
             ImageGridCell c = new ImageGridCell();
             c.setOnDragDetected(event -> {
-                if (!imageGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
-                    if (!imageGridView.isSelected(c.getItem()))
-                        imageGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
+                    if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem()))
+                        itemGridView.select((MediaItem) c.getItem(), event.isControlDown(), event.isShiftDown());
 
                     Dragboard db = c.startDragAndDrop(TransferMode.ANY);
 
-                    for (ImageInfo img : imageGridView.getSelected()) {
-                        String filename = img.getFile().getName().toLowerCase();
-                        if (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")) {
-                            if (img.getThumbnail().isLoaded()) {
-                                db.setDragView(img.getThumbnail().getImage());
-                                break;
+                    for (Item item : itemGridView.getSelected()) {
+                        if (item instanceof MediaItem) {
+                            String filename = ((MediaItem) item).getFile().getName().toLowerCase();
+                            if (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")) {
+                                if (item.getThumbnail().isLoaded()) {
+                                    db.setDragView(item.getThumbnail().getImage());
+                                    break;
+                                }
                             }
                         }
                     }
 
                     List<File> files = new ArrayList<>();
-                    imageGridView.getSelected().forEach(img -> files.add(img.getFile()));
+                    itemGridView.getSelected().forEach(item -> {
+                        if (item instanceof MediaItem) files.add(((MediaItem) item).getFile());
+                    });
                     explorer_clipboard.putFiles(files);
                     db.setContent(explorer_clipboard);
 
@@ -296,7 +301,7 @@ public class MainController {
             });
             c.setOnMouseReleased(event -> {
                 if (!explorer_imageGridViewDragging && event.getButton() == MouseButton.PRIMARY) {
-                    imageGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                    itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
                     event.consume();
                 }
             });
@@ -307,24 +312,24 @@ public class MainController {
             });
             return c;
         });
-        imageGridView.setOnKeyPressed(event -> {
+        itemGridView.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.DELETE) {
                 final boolean deleteFiles = !event.isControlDown();
                 final PokeListener onFinish = () -> {
                     previewItem(null);
-                    menagerie.removeImages(imageGridView.getSelected(), deleteFiles);
+                    menagerie.removeImages(itemGridView.getSelected(), deleteFiles);
                 };
                 if (deleteFiles) {
-                    new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + imageGridView.getSelected().size() + " files)\n\n" +
+                    new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" +
                             "This action CANNOT be undone (files will be deleted)", onFinish, null);
                 } else {
-                    new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + imageGridView.getSelected().size() + " files)\n\n" +
+                    new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + itemGridView.getSelected().size() + " files)\n\n" +
                             "This action CANNOT be undone", onFinish, null);
                 }
                 event.consume();
             }
         });
-        imageGridView.getSelected().addListener((ListChangeListener<? super ImageInfo>) c -> resultCountLabel.setText(imageGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
+        itemGridView.getSelected().addListener((ListChangeListener<? super Item>) c -> resultCountLabel.setText(itemGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
         initExplorerGridCellContextMenu();
 
         //Init drag/drop handlers
@@ -380,8 +385,8 @@ public class MainController {
                     });
                     MenuItem i3 = new MenuItem("Remove from selected");
                     i3.setOnAction(event1 -> {
-                        Map<ImageInfo, List<Tag>> removed = new HashMap<>();
-                        imageGridView.getSelected().forEach(item -> {
+                        Map<Item, List<Tag>> removed = new HashMap<>();
+                        itemGridView.getSelected().forEach(item -> {
                             if (item.removeTag(c.getItem())) {
                                 removed.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
                             }
@@ -406,7 +411,7 @@ public class MainController {
             List<Tag> tags;
             if (negative) {
                 tags = new ArrayList<>();
-                for (ImageInfo item : imageGridView.getSelected()) {
+                for (Item item : itemGridView.getSelected()) {
                     item.getTags().forEach(tag -> {
                         if (!tags.contains(tag)) tags.add(tag);
                     });
@@ -463,16 +468,16 @@ public class MainController {
 
     private void initExplorerGridCellContextMenu() {
         MenuItem slideShowSelectedMenuItem = new MenuItem("Selected");
-        slideShowSelectedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, imageGridView.getSelected()));
+        slideShowSelectedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, itemGridView.getSelected()));
         MenuItem slideShowSearchedMenuItem = new MenuItem("Searched");
-        slideShowSearchedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, imageGridView.getItems()));
+        slideShowSearchedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, itemGridView.getItems()));
         Menu slideShowMenu = new Menu("Slideshow", null, slideShowSelectedMenuItem, slideShowSearchedMenuItem);
 
         MenuItem openInExplorerMenuItem = new MenuItem("Open in Explorer");
         openInExplorerMenuItem.setOnAction(event1 -> {
-            if (!imageGridView.getSelected().isEmpty()) {
+            if (!itemGridView.getSelected().isEmpty() && itemGridView.getLastSelected() instanceof MediaItem) {
                 try {
-                    Runtime.getRuntime().exec("explorer.exe /select, " + imageGridView.getLastSelected().getFile().getAbsolutePath());
+                    Runtime.getRuntime().exec("explorer.exe /select, " + ((MediaItem) itemGridView.getLastSelected()).getFile().getAbsolutePath());
                 } catch (IOException e) {
                     e.printStackTrace();
                     Main.showErrorMessage("Unexpected Error", "Error opening file explorer", e.getLocalizedMessage());
@@ -486,18 +491,18 @@ public class MainController {
             CancellableThread ct = new CancellableThread() {
                 @Override
                 public void run() {
-                    final int total = imageGridView.getSelected().size();
+                    final int total = itemGridView.getSelected().size();
                     int i = 0;
 
-                    for (ImageInfo item : imageGridView.getSelected()) {
+                    for (Item item : itemGridView.getSelected()) {
                         if (!running) break;
 
                         i++;
 
-                        if (item.getMD5() == null) {
+                        if (item instanceof MediaItem && ((MediaItem) item).getMD5() == null) {
                             try {
-                                item.initializeMD5();
-                                item.commitMD5ToDatabase();
+                                ((MediaItem) item).initializeMD5();
+                                ((MediaItem) item).commitMD5ToDatabase();
                             } catch (Exception e) {
                                 Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for file: " + item, "Unknown")));
                             }
@@ -519,21 +524,23 @@ public class MainController {
             CancellableThread ct = new CancellableThread() {
                 @Override
                 public void run() {
-                    final int total = imageGridView.getSelected().size();
+                    final int total = itemGridView.getSelected().size();
                     int i = 0;
 
-                    for (ImageInfo item : imageGridView.getSelected()) {
+                    for (Item item : itemGridView.getSelected()) {
                         if (!running) break;
 
                         i++;
 
-                        String filename = item.getFile().getName().toLowerCase();
-                        if (item.getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
-                            try {
-                                item.initializeHistogram();
-                                item.commitHistogramToDatabase();
-                            } catch (Exception e) {
-                                Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + item, "Unknown")));
+                        if (item instanceof MediaItem) {
+                            String filename = ((MediaItem) item).getFile().getName().toLowerCase();
+                            if (((MediaItem) item).getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
+                                try {
+                                    ((MediaItem) item).initializeHistogram();
+                                    ((MediaItem) item).commitHistogramToDatabase();
+                                } catch (Exception e) {
+                                    Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + item, "Unknown")));
+                                }
                             }
                         }
 
@@ -549,11 +556,11 @@ public class MainController {
         });
 
         MenuItem findDuplicatesMenuItem = new MenuItem("Find Duplicates");
-        findDuplicatesMenuItem.setOnAction(event1 -> duplicateOptionsScreen.open(screenPane, menagerie, imageGridView.getSelected(), currentSearch.getResults(), menagerie.getItems()));
+        findDuplicatesMenuItem.setOnAction(event1 -> duplicateOptionsScreen.open(screenPane, menagerie, itemGridView.getSelected(), currentSearch.getResults(), menagerie.getItems()));
 
         MenuItem moveToFolderMenuItem = new MenuItem("Move To...");
         moveToFolderMenuItem.setOnAction(event1 -> {
-            if (!imageGridView.getSelected().isEmpty()) {
+            if (!itemGridView.getSelected().isEmpty()) {
                 DirectoryChooser dc = new DirectoryChooser();
                 dc.setTitle("Move files to folder...");
                 File result = dc.showDialog(rootPane.getScene().getWindow());
@@ -563,20 +570,22 @@ public class MainController {
                     CancellableThread ct = new CancellableThread() {
                         @Override
                         public void run() {
-                            final int total = imageGridView.getSelected().size();
+                            final int total = itemGridView.getSelected().size();
                             int i = 0;
 
-                            for (ImageInfo item : imageGridView.getSelected()) {
+                            for (Item item : itemGridView.getSelected()) {
                                 if (!running) break;
 
                                 i++;
 
-                                File f = result.toPath().resolve(item.getFile().getName()).toFile();
-                                if (!item.getFile().equals(f)) {
-                                    File dest = MainController.resolveDuplicateFilename(f);
+                                if (item instanceof MediaItem) {
+                                    File f = result.toPath().resolve(((MediaItem) item).getFile().getName()).toFile();
+                                    if (!((MediaItem) item).getFile().equals(f)) {
+                                        File dest = MainController.resolveDuplicateFilename(f);
 
-                                    if (!item.renameTo(dest)) {
-                                        Platform.runLater(() -> errorsScreen.addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving file", "An exception was thrown while trying to move a file\nFrom: " + item.getFile() + "\nTo: " + dest, "Unknown")));
+                                        if (!((MediaItem) item).renameTo(dest)) {
+                                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving file", "An exception was thrown while trying to move a file\nFrom: " + ((MediaItem) item).getFile() + "\nTo: " + dest, "Unknown")));
+                                        }
                                     }
                                 }
 
@@ -594,13 +603,13 @@ public class MainController {
         });
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
-        removeImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + imageGridView.getSelected().size() + " files)\n\n" +
-                "This action CANNOT be undone", () -> menagerie.removeImages(imageGridView.getSelected(), false), null));
+        removeImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + itemGridView.getSelected().size() + " files)\n\n" +
+                "This action CANNOT be undone", () -> menagerie.removeImages(itemGridView.getSelected(), false), null));
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
-        deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + imageGridView.getSelected().size() + " files)\n\n" +
+        deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" +
                 "This action CANNOT be undone (files will be deleted)", () -> {
             previewItem(null);
-            menagerie.removeImages(imageGridView.getSelected(), true);
+            menagerie.removeImages(itemGridView.getSelected(), true);
         }, null));
 
         explorer_cellContextMenu = new ContextMenu(slideShowMenu, new SeparatorMenuItem(), openInExplorerMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), findDuplicatesMenuItem, new SeparatorMenuItem(), moveToFolderMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
@@ -661,7 +670,9 @@ public class MainController {
 
         if (result != null) {
             List<File> files = getFilesRecursively(result, Filters.FILE_NAME_FILTER);
-            menagerie.getItems().forEach(img -> files.remove(img.getFile()));
+            menagerie.getItems().forEach(img -> {
+                if (img instanceof MediaItem) files.remove(((MediaItem) img).getFile());
+            });
 
             for (File file : files) {
                 importer.queue(new ImportJob(file, true, true));
@@ -679,7 +690,9 @@ public class MainController {
 
         if (results != null && !results.isEmpty()) {
             final List<File> finalResults = new ArrayList<>(results);
-            menagerie.getItems().forEach(img -> finalResults.remove(img.getFile()));
+            menagerie.getItems().forEach(item -> {
+                if (item instanceof MediaItem) finalResults.remove(((MediaItem) item).getFile());
+            });
 
             for (File file : finalResults) {
                 importer.queue(new ImportJob(file, true, true));
@@ -689,21 +702,25 @@ public class MainController {
 
     // ---------------------------------- GUI Action Methods ---------------------------
 
-    private void previewItem(ImageInfo item) {
+    private void previewItem(Item item) {
         if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
         currentlyPreviewing = item;
 
-        if (!previewMediaView.preview(item)) {
-            errorsScreen.addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
+        if (item instanceof MediaItem) {
+            if (!previewMediaView.preview((MediaItem) item)) {
+                errorsScreen.addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
+            }
+        } else {
+            previewMediaView.preview(null);
         }
 
         updateTagList(item);
 
         if (item != null) item.setTagListener(() -> updateTagList(item));
-        itemInfoBox.setItem(item);
+        if (item instanceof MediaItem) itemInfoBox.setItem((MediaItem) item);
     }
 
-    private void updateTagList(ImageInfo image) {
+    private void updateTagList(Item image) {
         tagListView.getItems().clear();
         if (image != null) {
             tagListView.getItems().addAll(image.getTags());
@@ -718,21 +735,21 @@ public class MainController {
         currentSearch = new Search(menagerie, constructRuleSet(search), descending);
         currentSearch.setListener(new SearchUpdateListener() {
             @Override
-            public void imagesAdded(List<ImageInfo> images) {
+            public void imagesAdded(List<Item> images) {
                 Platform.runLater(() -> {
-                    imageGridView.getItems().addAll(0, images);
+                    itemGridView.getItems().addAll(0, images);
 
-//                    imageGridView.getItems().sort(currentSearch.getComparator()); // This causes some gridcells to glitch out and get stuck visually
+//                    itemGridView.getItems().sort(currentSearch.getComparator()); // This causes some gridcells to glitch out and get stuck visually
                 });
             }
 
             @Override
-            public void imagesRemoved(List<ImageInfo> images) {
+            public void imagesRemoved(List<Item> images) {
                 Platform.runLater(() -> {
-                    final int oldLastIndex = imageGridView.getItems().indexOf(imageGridView.getLastSelected()) + 1;
+                    final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected()) + 1;
                     int newIndex = oldLastIndex;
-                    for (ImageInfo image : images) {
-                        final int i = imageGridView.getItems().indexOf(image);
+                    for (Item image : images) {
+                        final int i = itemGridView.getItems().indexOf(image);
                         if (i < 0) continue;
 
                         if (i < oldLastIndex) {
@@ -740,24 +757,24 @@ public class MainController {
                         }
                     }
 
-                    imageGridView.getItems().removeAll(images);
+                    itemGridView.getItems().removeAll(images);
                     if (images.contains(currentlyPreviewing)) previewItem(null);
 
-                    if (!imageGridView.getItems().isEmpty()) {
-                        if (newIndex >= imageGridView.getItems().size())
-                            newIndex = imageGridView.getItems().size() - 1;
-                        imageGridView.setLastSelected(imageGridView.getItems().get(newIndex));
+                    if (!itemGridView.getItems().isEmpty()) {
+                        if (newIndex >= itemGridView.getItems().size())
+                            newIndex = itemGridView.getItems().size() - 1;
+                        itemGridView.setLastSelected(itemGridView.getItems().get(newIndex));
                     }
                 });
             }
         });
 
-        imageGridView.clearSelection();
-        imageGridView.getItems().clear();
-        imageGridView.getItems().addAll(currentSearch.getResults());
+        itemGridView.clearSelection();
+        itemGridView.getItems().clear();
+        itemGridView.getItems().addAll(currentSearch.getResults());
 
-        if (!imageGridView.getItems().isEmpty())
-            imageGridView.select(imageGridView.getItems().get(0), false, false);
+        if (!itemGridView.getItems().isEmpty())
+            itemGridView.select(itemGridView.getItems().get(0), false, false);
     }
 
     private List<SearchRule> constructRuleSet(String str) {
@@ -848,33 +865,33 @@ public class MainController {
     }
 
     private void setGridWidth(int n) {
-        final double width = 18 + (Thumbnail.THUMBNAIL_SIZE + ImageGridView.CELL_BORDER * 2 + imageGridView.getHorizontalCellSpacing() * 2) * n;
-        imageGridView.setMinWidth(width);
-        imageGridView.setMaxWidth(width);
-        imageGridView.setPrefWidth(width);
+        final double width = 18 + (Thumbnail.THUMBNAIL_SIZE + ItemGridView.CELL_BORDER * 2 + itemGridView.getHorizontalCellSpacing() * 2) * n;
+        itemGridView.setMinWidth(width);
+        itemGridView.setMaxWidth(width);
+        itemGridView.setPrefWidth(width);
     }
 
     private void editTagsOfSelected(String input) {
-        if (input == null || input.isEmpty() || imageGridView.getSelected().isEmpty()) return;
+        if (input == null || input.isEmpty() || itemGridView.getSelected().isEmpty()) return;
         lastEditTagString = input.trim();
 
-        if (imageGridView.getSelected().size() < 100) {
+        if (itemGridView.getSelected().size() < 100) {
             editTagsUtility(input);
         } else {
-            new ConfirmationScreen().open(screenPane, "Editting large number of items", "You are attempting to edit " + imageGridView.getSelected().size() + " items. Continue?", () -> editTagsUtility(input), null);
+            new ConfirmationScreen().open(screenPane, "Editting large number of items", "You are attempting to edit " + itemGridView.getSelected().size() + " items. Continue?", () -> editTagsUtility(input), null);
         }
     }
 
     private void editTagsUtility(String input) {
-        List<ImageInfo> changed = new ArrayList<>();
-        Map<ImageInfo, List<Tag>> added = new HashMap<>();
-        Map<ImageInfo, List<Tag>> removed = new HashMap<>();
+        List<Item> changed = new ArrayList<>();
+        Map<Item, List<Tag>> added = new HashMap<>();
+        Map<Item, List<Tag>> removed = new HashMap<>();
 
         for (String text : input.split("\\s+")) {
             if (text.startsWith("-")) {
                 Tag t = menagerie.getTagByName(text.substring(1));
                 if (t != null) {
-                    for (ImageInfo item : imageGridView.getSelected()) {
+                    for (Item item : itemGridView.getSelected()) {
                         if (item.removeTag(t)) {
                             changed.add(item);
 
@@ -885,7 +902,7 @@ public class MainController {
             } else {
                 Tag t = menagerie.getTagByName(text);
                 if (t == null) t = menagerie.createTag(text);
-                for (ImageInfo item : imageGridView.getSelected()) {
+                for (Item item : itemGridView.getSelected()) {
                     if (item.addTag(t)) {
                         changed.add(item);
 
@@ -1031,13 +1048,13 @@ public class MainController {
 
     public void searchButtonOnAction(ActionEvent event) {
         applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
-        imageGridView.requestFocus();
+        itemGridView.requestFocus();
         event.consume();
     }
 
     public void searchTextFieldOnAction(ActionEvent event) {
         applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
-        imageGridView.requestFocus();
+        itemGridView.requestFocus();
         event.consume();
     }
 
@@ -1067,7 +1084,7 @@ public class MainController {
     }
 
     public void viewSlideShowSelectedMenuButtonOnAction(ActionEvent event) {
-        slideshowScreen.open(screenPane, menagerie, imageGridView.getSelected());
+        slideshowScreen.open(screenPane, menagerie, itemGridView.getSelected());
         event.consume();
     }
 
@@ -1134,7 +1151,7 @@ public class MainController {
                     event.consume();
                     break;
                 case D:
-                    duplicateOptionsScreen.open(screenPane, menagerie, imageGridView.getSelected(), currentSearch.getResults(), menagerie.getItems());
+                    duplicateOptionsScreen.open(screenPane, menagerie, itemGridView.getSelected(), currentSearch.getResults(), menagerie.getItems());
                     event.consume();
                     break;
                 case Z:
@@ -1146,7 +1163,7 @@ public class MainController {
                             TagEditEvent pop = tagEditHistory.pop();
                             pop.reverseAction();
 
-                            List<ImageInfo> list = new ArrayList<>();
+                            List<Item> list = new ArrayList<>();
                             pop.getAdded().keySet().forEach(item -> {
                                 if (!list.contains(item)) list.add(item);
                             });
@@ -1167,7 +1184,7 @@ public class MainController {
 
         switch (event.getCode()) {
             case ESCAPE:
-                imageGridView.requestFocus();
+                itemGridView.requestFocus();
                 event.consume();
                 break;
             case ALT:
@@ -1179,7 +1196,7 @@ public class MainController {
     public void explorerRootPaneOnKeyReleased(KeyEvent event) {
         if (event.getCode() == KeyCode.ALT) {
             if (menuBar.isFocused()) {
-                imageGridView.requestFocus();
+                itemGridView.requestFocus();
             } else {
                 menuBar.requestFocus();
             }
@@ -1192,12 +1209,12 @@ public class MainController {
             case ENTER:
                 editTagsOfSelected(editTagsTextField.getText());
                 editTagsTextField.setText(null);
-                imageGridView.requestFocus();
+                itemGridView.requestFocus();
                 event.consume();
                 break;
             case ESCAPE:
                 editTagsTextField.setText(null);
-                imageGridView.requestFocus();
+                itemGridView.requestFocus();
                 event.consume();
                 break;
         }

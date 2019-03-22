@@ -8,7 +8,6 @@ import menagerie.model.menagerie.histogram.ImageHistogram;
 import menagerie.util.Filters;
 import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
-import menagerie.util.PokeListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,19 +16,11 @@ import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
-public class ImageInfo implements Comparable<ImageInfo> {
+public class MediaItem extends Item {
 
     // -------------------------------- Variables ------------------------------------
-
-    private final Menagerie menagerie;
-
-    private final int id;
-    private final long dateAdded;
-    private final List<Tag> tags = new ArrayList<>();
 
     private File file;
     private String md5;
@@ -38,13 +29,9 @@ public class ImageInfo implements Comparable<ImageInfo> {
     private SoftReference<Thumbnail> thumbnail;
     private WeakReference<Image> image;
 
-    private PokeListener tagListener = null;
 
-
-    public ImageInfo(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
-        this.menagerie = menagerie;
-        this.id = id;
-        this.dateAdded = dateAdded;
+    public MediaItem(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
+        super(menagerie, id, dateAdded);
         this.file = file;
         this.md5 = md5;
         this.histogram = histogram;
@@ -54,14 +41,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return file;
     }
 
-    public long getDateAdded() {
-        return dateAdded;
-    }
-
-    public int getId() {
-        return id;
-    }
-
+    @Override
     public Thumbnail getThumbnail() {
         Thumbnail thumb = null;
         if (thumbnail != null) thumb = thumbnail.get();
@@ -205,56 +185,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
 
     }
 
-    public List<Tag> getTags() {
-        return tags;
-    }
-
-    public boolean hasTag(Tag t) {
-        return tags.contains(t);
-    }
-
-    public boolean addTag(Tag t) {
-        if (hasTag(t)) return false;
-        tags.add(t);
-        t.incrementFrequency();
-
-        menagerie.getUpdateQueue().enqueueUpdate(() -> {
-            try {
-                menagerie.PS_ADD_TAG_TO_IMG.setInt(1, id);
-                menagerie.PS_ADD_TAG_TO_IMG.setInt(2, t.getId());
-                menagerie.PS_ADD_TAG_TO_IMG.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        });
-        menagerie.getUpdateQueue().commit();
-
-        if (tagListener != null) tagListener.poke();
-
-        return true;
-    }
-
-    public boolean removeTag(Tag t) {
-        if (!hasTag(t)) return false;
-        tags.remove(t);
-        t.decrementFrequency();
-
-        menagerie.getUpdateQueue().enqueueUpdate(() -> {
-            try {
-                menagerie.PS_REMOVE_TAG_FROM_IMG.setInt(1, id);
-                menagerie.PS_REMOVE_TAG_FROM_IMG.setInt(2, t.getId());
-                menagerie.PS_REMOVE_TAG_FROM_IMG.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        });
-        menagerie.getUpdateQueue().commit();
-
-        if (tagListener != null) tagListener.poke();
-
-        return true;
-    }
-
     public boolean renameTo(File dest) {
         if (file.equals(dest)) return true;
 
@@ -278,7 +208,7 @@ public class ImageInfo implements Comparable<ImageInfo> {
         return succeeded;
     }
 
-    public double getSimilarityTo(ImageInfo other, boolean compareBlackAndWhiteHists) {
+    public double getSimilarityTo(MediaItem other, boolean compareBlackAndWhiteHists) {
         if (md5 != null && md5.equals(other.getMD5())) {
             return 1.0;
         } else if (histogram != null && other.getHistogram() != null) {
@@ -288,20 +218,6 @@ public class ImageInfo implements Comparable<ImageInfo> {
         }
 
         return 0;
-    }
-
-    public void setTagListener(PokeListener tagListener) {
-        this.tagListener = tagListener;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return obj instanceof ImageInfo && ((ImageInfo) obj).getId() == getId();
-    }
-
-    @Override
-    public int compareTo(ImageInfo o) {
-        return getId() - o.getId();
     }
 
     @Override

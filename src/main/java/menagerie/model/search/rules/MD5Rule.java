@@ -1,6 +1,7 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Item;
 
 public class MD5Rule extends SearchRule {
 
@@ -15,8 +16,8 @@ public class MD5Rule extends SearchRule {
     }
 
     @Override
-    public boolean accept(ImageInfo img) {
-        boolean result = img.getMD5().equalsIgnoreCase(md5);
+    public boolean accept(Item item) {
+        boolean result = item instanceof MediaItem && ((MediaItem) item).getMD5().equalsIgnoreCase(md5);
         if (isInverted()) result = !result;
         return result;
     }

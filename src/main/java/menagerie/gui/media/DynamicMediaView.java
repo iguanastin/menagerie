@@ -2,7 +2,7 @@ package menagerie.gui.media;
 
 import javafx.scene.layout.StackPane;
 import menagerie.gui.Main;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
 
 public class DynamicMediaView extends StackPane {
 
@@ -19,7 +19,7 @@ public class DynamicMediaView extends StackPane {
         getChildren().addAll(imageView);
     }
 
-    public boolean preview(ImageInfo info) {
+    public boolean preview(MediaItem info) {
         if (info == null) {
             if (getVideoView() != null) getVideoView().getMediaPlayer().stop();
             getImageView().setImage(null);

@@ -8,24 +8,24 @@ import javafx.scene.Node;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import menagerie.gui.thumbnail.Thumbnail;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Item;
 import org.controlsfx.control.GridView;
 
-public class ImageGridView extends GridView<ImageInfo> {
+public class ItemGridView extends GridView<Item> {
 
     public static final int CELL_BORDER = 4;
 
-    private final ObservableList<ImageInfo> selected = FXCollections.observableArrayList();
-    private ImageInfo lastSelected = null;
+    private final ObservableList<Item> selected = FXCollections.observableArrayList();
+    private Item lastSelected = null;
 
     private GridSelectionListener selectionListener = null;
 
 
-    public ImageGridView() {
+    public ItemGridView() {
         setCellWidth(Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2);
         setCellHeight(Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2);
 
-        getItems().addListener((ListChangeListener<? super ImageInfo>) c -> {
+        getItems().addListener((ListChangeListener<? super Item>) c -> {
             boolean changed = false;
             while (c.next()) {
                 selected.removeAll(c.getRemoved());
@@ -130,7 +130,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         return (int) Math.floor(getHeight() / (Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
     }
 
-    public void select(ImageInfo item, boolean ctrlDown, boolean shiftDown) {
+    public void select(Item item, boolean ctrlDown, boolean shiftDown) {
         if (ctrlDown) {
             if (isSelected(item)) {
                 selected.remove(item);
@@ -139,7 +139,7 @@ public class ImageGridView extends GridView<ImageInfo> {
             }
             updateCellSelectionCSS();
         } else if (shiftDown) {
-            ImageInfo first = getFirstSelected();
+            Item first = getFirstSelected();
             if (first == null) {
                 selected.add(item);
             } else {
@@ -171,7 +171,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         if (selectionListener != null) selectionListener.targetSelected(item);
     }
 
-    private void selectRange(ImageInfo first, ImageInfo last) {
+    private void selectRange(Item first, Item last) {
         selected.clear();
         final int start = getItems().indexOf(first);
         final int end = getItems().indexOf(last);
@@ -186,7 +186,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         }
     }
 
-    private ImageInfo getFirstSelected() {
+    private Item getFirstSelected() {
         if (selected.isEmpty()) {
             return null;
         } else {
@@ -194,11 +194,11 @@ public class ImageGridView extends GridView<ImageInfo> {
         }
     }
 
-    public ImageInfo getLastSelected() {
+    public Item getLastSelected() {
         return lastSelected;
     }
 
-    public ObservableList<ImageInfo> getSelected() {
+    public ObservableList<Item> getSelected() {
         return selected;
     }
 
@@ -207,7 +207,7 @@ public class ImageGridView extends GridView<ImageInfo> {
         updateCellSelectionCSS();
     }
 
-    public boolean isSelected(ImageInfo img) {
+    public boolean isSelected(Item img) {
         return selected.contains(img);
     }
 
@@ -224,8 +224,8 @@ public class ImageGridView extends GridView<ImageInfo> {
         }
     }
 
-    public void setLastSelected(ImageInfo img) {
-        lastSelected = img;
+    public void setLastSelected(Item item) {
+        lastSelected = item;
     }
 
 }

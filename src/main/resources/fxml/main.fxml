@@ -14,7 +14,7 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import menagerie.gui.ItemInfoBox?>
-<?import menagerie.gui.grid.ImageGridView?>
+<?import menagerie.gui.grid.ItemGridView?>
 <?import menagerie.gui.media.DynamicMediaView?>
 <?import menagerie.gui.predictive.PredictiveTextField?>
 <?import menagerie.gui.screens.ScreenPane?>
@@ -41,8 +41,8 @@
         <right>
             <BorderPane>
                 <center>
-                    <ImageGridView fx:id="imageGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
-                                   BorderPane.alignment="CENTER"/>
+                    <ItemGridView fx:id="itemGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
+                                  BorderPane.alignment="CENTER"/>
                 </center>
                 <top>
                     <VBox BorderPane.alignment="CENTER">

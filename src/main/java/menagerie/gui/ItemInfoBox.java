@@ -4,12 +4,11 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
@@ -57,7 +56,7 @@ public class ItemInfoBox extends VBox {
         }
     }
 
-    public void setItem(ImageInfo item) {
+    public void setItem(MediaItem item) {
         if (item != null) {
             idLabel.setText("ID: " + item.getId());
             dateLabel.setText(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(Locale.getDefault()).withZone(ZoneId.systemDefault()).format(new Date(item.getDateAdded()).toInstant()));

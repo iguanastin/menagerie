@@ -1,9 +1,9 @@
 package menagerie.gui.grid;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Item;
 
 public interface GridSelectionListener {
 
-    void targetSelected(ImageInfo image);
+    void targetSelected(Item image);
 
 }

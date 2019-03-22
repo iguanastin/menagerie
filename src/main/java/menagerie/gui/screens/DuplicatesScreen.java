@@ -10,7 +10,7 @@ import menagerie.gui.ItemInfoBox;
 import menagerie.gui.TagListCell;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.model.SimilarPair;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 
@@ -199,7 +199,7 @@ public class DuplicatesScreen extends Screen {
         }
     }
 
-    private void deleteItem(ImageInfo toDelete, ImageInfo toKeep) {
+    private void deleteItem(MediaItem toDelete, MediaItem toKeep) {
         if (menagerie == null) return;
 
         int index = pairs.indexOf(currentPair);

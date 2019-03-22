@@ -12,7 +12,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import menagerie.model.Settings;
 import menagerie.model.SimilarPair;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.util.CancellableThread;
 
@@ -36,7 +37,7 @@ public class DuplicateOptionsScreen extends Screen {
     private final ChoiceBox<Scope> compareChoiceBox, toChoiceBox;
     private final CheckBox compareGreyscaleCheckBox;
 
-    private List<ImageInfo> selected = null, searched = null, all = null;
+    private List<Item> selected = null, searched = null, all = null;
     private Menagerie menagerie = null;
 
 
@@ -134,7 +135,7 @@ public class DuplicateOptionsScreen extends Screen {
         duplicateScreen = new DuplicatesScreen();
     }
 
-    public void open(ScreenPane manager, Menagerie menagerie, List<ImageInfo> selected, List<ImageInfo> searched, List<ImageInfo> all) {
+    public void open(ScreenPane manager, Menagerie menagerie, List<Item> selected, List<Item> searched, List<Item> all) {
         if (manager == null || menagerie == null || selected == null || searched == null || all == null) return;
         this.menagerie = menagerie;
         this.selected = selected;
@@ -189,13 +190,13 @@ public class DuplicateOptionsScreen extends Screen {
             @Override
             public void run() {
                 //Find lists to compare
-                List<ImageInfo> compare = all;
+                List<Item> compare = all;
                 if (compareChoiceBox.getValue() == Scope.SELECTED) {
                     compare = selected;
                 } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
                     compare = searched;
                 }
-                List<ImageInfo> to = all;
+                List<Item> to = all;
                 if (toChoiceBox.getValue() == Scope.SELECTED) {
                     to = selected;
                 } else if (toChoiceBox.getValue() == Scope.SEARCHED) {
@@ -208,20 +209,24 @@ public class DuplicateOptionsScreen extends Screen {
 
                 //Find duplicates
                 int i = 0;
-                for (ImageInfo i1 : compare) {
+                for (Item i1 : compare) {
                     if (!running) {
                         Platform.runLater(ps::close);
                         return;
                     }
 
+                    if (!(i1 instanceof MediaItem)) continue;
+
                     // Ensures no comparing to self
                     to.remove(i1);
 
                     // Find duplicates of i1
-                    for (ImageInfo i2 : to) {
-                        final double similarity = i1.getSimilarityTo(i2, compareGreyscale);
+                    for (Item i2 : to) {
+                        if (!(i2 instanceof MediaItem)) continue;
+
+                        final double similarity = ((MediaItem) i1).getSimilarityTo((MediaItem) i2, compareGreyscale);
                         if (similarity >= confidence) {
-                            pairs.add(new SimilarPair(i1, i2, similarity));
+                            pairs.add(new SimilarPair((MediaItem) i1, (MediaItem) i2, similarity));
                         }
                     }
 

@@ -1,6 +1,6 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Tag;
 
 public class TagRule extends SearchRule {
@@ -16,11 +16,11 @@ public class TagRule extends SearchRule {
     }
 
     @Override
-    public boolean accept(ImageInfo img) {
+    public boolean accept(Item item) {
         if (isInverted()) {
-            return !img.hasTag(tag);
+            return !item.hasTag(tag);
         } else {
-            return img.hasTag(tag);
+            return item.hasTag(tag);
         }
     }
 

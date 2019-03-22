@@ -8,7 +8,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import menagerie.gui.media.DynamicMediaView;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.util.PokeListener;
 
@@ -20,8 +21,8 @@ public class SlideshowScreen extends Screen {
 
     private final DynamicMediaView mediaView;
 
-    private final List<ImageInfo> items = new ArrayList<>();
-    private ImageInfo showing = null;
+    private final List<Item> items = new ArrayList<>();
+    private Item showing = null;
     private Menagerie menagerie;
 
 
@@ -63,7 +64,7 @@ public class SlideshowScreen extends Screen {
         setBottom(h);
     }
 
-    public void open(ScreenPane manager, Menagerie menagerie, List<ImageInfo> items) {
+    public void open(ScreenPane manager, Menagerie menagerie, List<Item> items) {
         this.items.clear();
         this.items.addAll(items);
 
@@ -87,16 +88,12 @@ public class SlideshowScreen extends Screen {
         preview(null);
     }
 
-    public ImageInfo getShowing() {
+    public Item getShowing() {
         return showing;
     }
 
     public void setItemContextMenu(ContextMenu contextMenu) {
         mediaView.setOnContextMenuRequested(event -> contextMenu.show(mediaView, event.getScreenX(), event.getScreenY()));
-    }
-
-    public void releaseMediaPlayer() {
-        mediaView.releaseMediaPlayer();
     }
 
     public void tryDeleteCurrent(boolean deleteFile) {
@@ -125,9 +122,13 @@ public class SlideshowScreen extends Screen {
         }
     }
 
-    private void preview(ImageInfo item) {
+    private void preview(Item item) {
         showing = item;
-        mediaView.preview(item);
+        if (item instanceof MediaItem) {
+            mediaView.preview((MediaItem) item);
+        } else {
+            mediaView.preview(null);
+        }
     }
 
     private void previewNext() {

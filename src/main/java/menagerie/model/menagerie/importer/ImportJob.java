@@ -1,13 +1,11 @@
 package menagerie.model.menagerie.importer;
 
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.collections.FXCollections;
 import menagerie.gui.MainController;
 import menagerie.model.SimilarPair;
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.Settings;
 
@@ -35,8 +33,8 @@ public class ImportJob {
 
     private URL url = null;
     private File file = null;
-    private ImageInfo item = null;
-    private ImageInfo duplicateOf = null;
+    private MediaItem item = null;
+    private MediaItem duplicateOf = null;
     private List<SimilarPair> similarTo = null;
 
     private volatile boolean needsDownload = false;
@@ -96,11 +94,11 @@ public class ImportJob {
             synchronized (this) {
                 similarTo = new ArrayList<>();
             }
-            for (ImageInfo i : menagerie.getItems()) {
-                if (!item.equals(i) && i.getHistogram() != null) {
-                    double similarity = i.getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
+            for (Item i : menagerie.getItems()) {
+                if (i instanceof MediaItem && !item.equals(i) && ((MediaItem) i).getHistogram() != null) {
+                    double similarity = ((MediaItem) i).getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
                     if (similarity > settings.getDouble(Settings.Key.CONFIDENCE)) {
-                        similarTo.add(new SimilarPair(item, i, similarity));
+                        similarTo.add(new SimilarPair(item, (MediaItem) i, similarity));
                     }
                 }
             }
@@ -113,10 +111,10 @@ public class ImportJob {
 
     private boolean tryDuplicate(Menagerie menagerie) {
         if (needsCheckDuplicate && item.getMD5() != null) {
-            for (ImageInfo i : menagerie.getItems()) {
-                if (!i.equals(item) && i.getMD5() != null && i.getMD5().equalsIgnoreCase(item.getMD5())) {
+            for (Item i : menagerie.getItems()) {
+                if (i instanceof MediaItem && !i.equals(item) && ((MediaItem) i).getMD5() != null && ((MediaItem) i).getMD5().equalsIgnoreCase(item.getMD5())) {
                     synchronized (this) {
-                        duplicateOf = i;
+                        duplicateOf = (MediaItem) i;
                     }
                     menagerie.removeImages(Collections.singletonList(item), true);
                     needsCheckDuplicate = false;
@@ -198,7 +196,7 @@ public class ImportJob {
         return false;
     }
 
-    public synchronized ImageInfo getItem() {
+    public synchronized MediaItem getItem() {
         return item;
     }
 
@@ -210,7 +208,7 @@ public class ImportJob {
         return file;
     }
 
-    public synchronized ImageInfo getDuplicateOf() {
+    public synchronized MediaItem getDuplicateOf() {
         return duplicateOf;
     }
 

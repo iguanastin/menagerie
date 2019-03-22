@@ -1,6 +1,6 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.ImageInfo;
+import menagerie.model.menagerie.Item;
 
 public class TagCountRule extends SearchRule {
 
@@ -21,17 +21,17 @@ public class TagCountRule extends SearchRule {
     }
 
     @Override
-    public boolean accept(ImageInfo img) {
+    public boolean accept(Item item) {
         boolean result = false;
         switch (type) {
             case EQUAL_TO:
-                result = img.getTags().size() == value;
+                result = item.getTags().size() == value;
                 break;
             case LESS_THAN:
-                result = img.getTags().size() < value;
+                result = item.getTags().size() < value;
                 break;
             case GREATER_THAN:
-                result = img.getTags().size() > value;
+                result = item.getTags().size() > value;
                 break;
         }
 
