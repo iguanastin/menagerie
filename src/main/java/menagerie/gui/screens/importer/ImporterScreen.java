@@ -1,5 +1,6 @@
 package menagerie.gui.screens.importer;
 
+import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -61,14 +62,14 @@ public class ImporterScreen extends Screen {
         countLabel = new Label("0");
         Button cancelAllButton = new Button("Cancel All");
         cancelAllButton.setOnAction(event -> {
-            Iterator<ImportJob> iter = listView.getItems().iterator();
-            while (iter.hasNext()) {
-                ImportJob job = iter.next();
+            jobs.forEach(job -> {
                 if (job.getStatus() == ImportJob.Status.WAITING) {
                     job.cancel();
-                    iter.remove();
+                    listView.getItems().remove(job);
                 }
-            }
+            });
+
+            if (countListener != null) countListener.changed(jobs.size());
         });
         BorderPane bottom = new BorderPane(countLabel, null, playPauseButton, null, cancelAllButton);
         bottom.setPadding(new Insets(5));
@@ -112,7 +113,7 @@ public class ImporterScreen extends Screen {
 
     void removeJob(ImportJob job) {
         jobs.remove(job);
-        listView.getItems().remove(job);
+        Platform.runLater(() -> listView.getItems().remove(job));
         if (countListener != null) countListener.changed(jobs.size());
     }
 

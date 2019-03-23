@@ -10,6 +10,8 @@ import javafx.scene.control.Alert;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
+import uk.co.caprica.vlcj.version.LibVlcVersion;
+import uk.co.caprica.vlcj.version.Version;
 
 import java.io.IOException;
 
@@ -29,10 +31,14 @@ public class Main extends Application {
     public void start(Stage stage) {
         try {
             NativeLibrary.addSearchPath("libvlc", new DefaultWindowsNativeDiscoveryStrategy().discover());
+            System.out.println("LibVLC Version: " + LibVlcVersion.getVersion());
+
             VLCJ_LOADED = true;
-        } catch (UnsatisfiedLinkError e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             System.out.println("Error loading vlcj");
+
+            VLCJ_LOADED = false;
         }
 
         final String splash = "/fxml/splash.fxml";
