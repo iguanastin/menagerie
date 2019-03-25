@@ -8,6 +8,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Item;
 import org.controlsfx.control.GridCell;
@@ -56,7 +57,11 @@ public class ImageGridCell extends GridCell<Item> {
                     item.getThumbnail().setImageReadyListener(view::setImage);
                 }
             }
-            if (item instanceof MediaItem && ((MediaItem) item).isVideo()) label.setText("Video");
+            if (item instanceof MediaItem && ((MediaItem) item).isVideo()) {
+                label.setText("Video");
+            } else if (item instanceof GroupItem) {
+                label.setText("Group");
+            }
         }
 
         super.updateItem(item, empty);

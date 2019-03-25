@@ -175,25 +175,25 @@ public class Menagerie {
     public MediaItem importFile(File file) {
         if (isFilePresent(file)) return null;
 
-        MediaItem img = new MediaItem(this, nextImageID, System.currentTimeMillis(), file, null, null);
+        MediaItem media = new MediaItem(this, nextImageID, System.currentTimeMillis(), file, null, null);
 
         //Add image and commit to database
-        items.add(img);
+        items.add(media);
         nextImageID++;
         try {
-            PS_CREATE_IMG.setInt(1, img.getId());
-            PS_CREATE_IMG.setNString(2, img.getFile().getAbsolutePath());
-            PS_CREATE_IMG.setLong(3, img.getDateAdded());
-            PS_CREATE_IMG.setNString(4, img.getMD5());
+            PS_CREATE_IMG.setInt(1, media.getId());
+            PS_CREATE_IMG.setNString(2, media.getFile().getAbsolutePath());
+            PS_CREATE_IMG.setLong(3, media.getDateAdded());
+            PS_CREATE_IMG.setNString(4, media.getMD5());
             PS_CREATE_IMG.setBinaryStream(5, null);
             PS_CREATE_IMG.setBinaryStream(6, null);
             PS_CREATE_IMG.setBinaryStream(7, null);
             PS_CREATE_IMG.setBinaryStream(8, null);
-            if (img.getHistogram() != null) {
-                PS_CREATE_IMG.setBinaryStream(5, img.getHistogram().getAlphaAsInputStream());
-                PS_CREATE_IMG.setBinaryStream(6, img.getHistogram().getRedAsInputStream());
-                PS_CREATE_IMG.setBinaryStream(7, img.getHistogram().getGreenAsInputStream());
-                PS_CREATE_IMG.setBinaryStream(8, img.getHistogram().getBlueAsInputStream());
+            if (media.getHistogram() != null) {
+                PS_CREATE_IMG.setBinaryStream(5, media.getHistogram().getAlphaAsInputStream());
+                PS_CREATE_IMG.setBinaryStream(6, media.getHistogram().getRedAsInputStream());
+                PS_CREATE_IMG.setBinaryStream(7, media.getHistogram().getGreenAsInputStream());
+                PS_CREATE_IMG.setBinaryStream(8, media.getHistogram().getBlueAsInputStream());
             }
             PS_CREATE_IMG.executeUpdate();
         } catch (SQLException e) {
@@ -203,30 +203,56 @@ public class Menagerie {
         //Tag with tagme
         Tag tagme = getTagByName("tagme");
         if (tagme == null) tagme = createTag("tagme");
-        img.addTag(tagme);
+        media.addTag(tagme);
 
-        if (img.isVideo()) {
+        if (media.isVideo()) {
             Tag video = getTagByName("video");
             if (video == null) video = createTag("video");
-            img.addTag(video);
+            media.addTag(video);
         }
 
         //Update active searches
-        activeSearches.forEach(search -> search.addIfValid(Collections.singletonList(img)));
+        activeSearches.forEach(search -> search.addIfValid(Collections.singletonList(media)));
 
-        return img;
+        return media;
+    }
+
+    public GroupItem createGroup(List<Item> elements, String title) {
+        if (title == null || title.isEmpty() || elements == null || elements.isEmpty()) return null;
+
+        GroupItem group = new GroupItem(this, nextImageID, System.currentTimeMillis(), title);
+
+        for (Item item : elements) {
+            if (item instanceof MediaItem && ((MediaItem) item).getGroup() == null) {
+                group.addItem((MediaItem) item);
+            } else {
+                return null;
+            }
+        }
+
+        nextImageID++;
+        items.add(group);
+        checkItemsStillValidInSearches(Collections.singletonList(group));
+
+        //Tag with tagme
+        Tag tagme = getTagByName("tagme");
+        if (tagme == null) tagme = createTag("tagme");
+        group.addTag(tagme);
+
+        return group;
     }
 
     public void removeImages(List<Item> items, boolean deleteFiles) {
-        List<Item> toRemove = new ArrayList<>();
+        List<Item> removed = new ArrayList<>();
         List<MediaItem> toDelete = new ArrayList<>();
 
         for (Item item : items) {
             if (getItems().remove(item)) {
                 item.getTags().forEach(Tag::decrementFrequency);
 
-                toRemove.add(item);
+                removed.add(item);
                 if (deleteFiles && item instanceof MediaItem) toDelete.add((MediaItem) item);
+                if (item instanceof GroupItem) ((GroupItem) item).removeAll();
 
                 updateQueue.enqueueUpdate(() -> {
                     try {
@@ -262,7 +288,7 @@ public class Menagerie {
             }
         }
 
-        activeSearches.forEach(search -> search.remove(toRemove));
+        activeSearches.forEach(search -> search.remove(removed));
     }
 
     public List<Tag> getTags() {

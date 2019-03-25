@@ -112,6 +112,7 @@
                 </Menu>
                 <Menu mnemonicParsing="false" text="View">
                     <Menu mnemonicParsing="false" text="Slideshow">
+                        <MenuItem mnemonicParsing="false" onAction="#viewSlideShowAllMenuButtonOnAction" text="All"/>
                         <MenuItem mnemonicParsing="false" onAction="#viewSlideShowSearchedMenuButtonOnAction"
                                   text="Searched"/>
                         <MenuItem mnemonicParsing="false" onAction="#viewSlideShowSelectedMenuButtonOnAction"

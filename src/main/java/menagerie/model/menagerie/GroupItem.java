@@ -13,7 +13,7 @@ public class GroupItem extends Item {
     private String title;
 
 
-    public GroupItem(Menagerie menagerie, int id, long dateAdded, String title) {
+    GroupItem(Menagerie menagerie, int id, long dateAdded, String title) {
         super(menagerie, id, dateAdded);
         this.title = title;
     }
@@ -50,15 +50,19 @@ public class GroupItem extends Item {
         }
     }
 
-    public void setTitle(String title) {
+    public synchronized void setTitle(String title) {
         this.title = title;
         menagerie.checkItemsStillValidInSearches(Collections.singletonList(this));
 
         //TODO: Update database
     }
 
-    public String getTitle() {
+    public synchronized String getTitle() {
         return title;
+    }
+
+    public List<MediaItem> getElements() {
+        return elements;
     }
 
 }

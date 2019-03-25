@@ -31,10 +31,7 @@ import menagerie.gui.screens.slideshow.SlideshowScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
 import menagerie.model.db.DatabaseVersionUpdater;
-import menagerie.model.menagerie.MediaItem;
-import menagerie.model.menagerie.Item;
-import menagerie.model.menagerie.Menagerie;
-import menagerie.model.menagerie.Tag;
+import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.history.TagEditEvent;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
@@ -456,11 +453,18 @@ public class MainController {
     }
 
     private void initExplorerGridCellContextMenu() {
+        MenuItem groupMenuItem = new MenuItem("Group");
+        groupMenuItem.setOnAction(event -> {
+            GroupItem group = menagerie.createGroup(itemGridView.getSelected(), "test"); //TODO
+        });
+
         MenuItem slideShowSelectedMenuItem = new MenuItem("Selected");
         slideShowSelectedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, itemGridView.getSelected()));
         MenuItem slideShowSearchedMenuItem = new MenuItem("Searched");
         slideShowSearchedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, itemGridView.getItems()));
-        Menu slideShowMenu = new Menu("Slideshow", null, slideShowSelectedMenuItem, slideShowSearchedMenuItem);
+        MenuItem slideShowAllMenuItem = new MenuItem("All");
+        slideShowAllMenuItem.setOnAction(event -> slideshowScreen.open(screenPane, menagerie, menagerie.getItems()));
+        Menu slideShowMenu = new Menu("Slideshow", null, slideShowSelectedMenuItem, slideShowSearchedMenuItem, slideShowAllMenuItem);
 
         MenuItem openInExplorerMenuItem = new MenuItem("Open in Explorer");
         openInExplorerMenuItem.setOnAction(event1 -> {
@@ -601,7 +605,7 @@ public class MainController {
             menagerie.removeImages(itemGridView.getSelected(), true);
         }, null));
 
-        explorer_cellContextMenu = new ContextMenu(slideShowMenu, new SeparatorMenuItem(), openInExplorerMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), findDuplicatesMenuItem, new SeparatorMenuItem(), moveToFolderMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
+        explorer_cellContextMenu = new ContextMenu(groupMenuItem, moveToFolderMenuItem, new SeparatorMenuItem(), slideShowMenu, openInExplorerMenuItem, findDuplicatesMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
     }
 
     private void initWindowPropertiesAndListeners() {
@@ -721,7 +725,7 @@ public class MainController {
         if (currentSearch != null) currentSearch.close();
         previewItem(null);
 
-        currentSearch = new Search(menagerie, constructRuleSet(search), descending);
+        currentSearch = new Search(menagerie, constructRuleSet(search), descending, false); // TODO: add user input instead of hardcoded option
         currentSearch.setListener(new SearchUpdateListener() {
             @Override
             public void imagesAdded(List<Item> images) {
@@ -1088,6 +1092,11 @@ public class MainController {
 
     public void viewSlideShowSelectedMenuButtonOnAction(ActionEvent event) {
         slideshowScreen.open(screenPane, menagerie, itemGridView.getSelected());
+        event.consume();
+    }
+
+    public void viewSlideShowAllMenuButtonOnAction(ActionEvent event) {
+        slideshowScreen.open(screenPane, menagerie, menagerie.getItems());
         event.consume();
     }
 

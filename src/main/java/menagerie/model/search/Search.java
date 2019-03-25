@@ -1,6 +1,7 @@
 package menagerie.model.search;
 
 import menagerie.model.menagerie.Item;
+import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.search.rules.SearchRule;
 
@@ -14,18 +15,18 @@ public class Search {
     private SearchUpdateListener listener = null;
 
     private final List<SearchRule> rules;
-    private final boolean descending;
+    private final boolean showGrouped;
 
     private final Comparator<Item> comparator;
 
     private final List<Item> results = new ArrayList<>();
 
 
-    public Search(Menagerie menagerie, List<SearchRule> rules, boolean descending) {
+    public Search(Menagerie menagerie, List<SearchRule> rules, boolean descending, boolean showGrouped) {
         if (rules == null) rules = new ArrayList<>();
         this.menagerie = menagerie;
         this.rules = rules;
-        this.descending = descending;
+        this.showGrouped = showGrouped;
         rules.sort(null);
 
         comparator = (o1, o2) -> {
@@ -49,7 +50,7 @@ public class Search {
         return results;
     }
 
-    public Comparator<Item> getComparator() {
+    private Comparator<Item> getComparator() {
         return comparator;
     }
 
@@ -59,10 +60,14 @@ public class Search {
         List<Item> toAdd = new ArrayList<>(items);
 
         for (Item item : items) {
-            for (SearchRule rule : rules) {
-                if (!rule.accept(item)) {
-                    toAdd.remove(item);
-                    break;
+            if (item instanceof MediaItem && ((MediaItem) item).getGroup() != null && !showGrouped) {
+                toAdd.remove(item);
+            } else {
+                for (SearchRule rule : rules) {
+                    if (!rule.accept(item)) {
+                        toAdd.remove(item);
+                        break;
+                    }
                 }
             }
         }
@@ -79,10 +84,14 @@ public class Search {
         List<Item> toRemove = new ArrayList<>();
         List<Item> toAdd = new ArrayList<>();
         for (Item item : items) {
-            for (SearchRule rule : rules) {
-                if (!rule.accept(item)) {
-                    toRemove.add(item);
-                    break;
+            if (item instanceof MediaItem && ((MediaItem) item).getGroup() != null && !showGrouped) {
+                toRemove.add(item);
+            } else {
+                for (SearchRule rule : rules) {
+                    if (!rule.accept(item)) {
+                        toRemove.add(item);
+                        break;
+                    }
                 }
             }
 
