@@ -13,6 +13,7 @@ import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
+import menagerie.util.PokeListener;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -56,10 +57,60 @@ public class DuplicatesScreen extends Screen {
         leftMediaView = new DynamicMediaView();
         rightMediaView = new DynamicMediaView();
         leftTagList = new ListView<>();
-        leftTagList.setCellFactory(param -> new TagListCell());
+        leftTagList.setCellFactory(param -> {
+            TagListCell c = new TagListCell() {
+                @Override
+                protected void updateItem(Tag tag, boolean empty) {
+                    super.updateItem(tag, empty);
+
+                    if (tag != null) {
+                        if (currentPair.getImg2().hasTag(tag)) {
+                            setStyle("-fx-background-color: green;");
+                        } else {
+                            setStyle("-fx-background-color: red;");
+                        }
+                    } else {
+                        setStyle(null);
+                    }
+                }
+            };
+
+            MenuItem addToOther = new MenuItem("Add to other");
+            addToOther.setOnAction(event -> currentPair.getImg2().addTag(c.getItem()));
+            MenuItem removeTag = new MenuItem("Remove tag");
+            removeTag.setOnAction(event -> currentPair.getImg1().removeTag(c.getItem()));
+            ContextMenu cm = new ContextMenu(addToOther, new SeparatorMenuItem(), removeTag);
+            c.setOnContextMenuRequested(event -> cm.show(c, event.getScreenX(), event.getScreenY()));
+            return c;
+        });
         leftTagList.setPrefWidth(200);
         rightTagList = new ListView<>();
-        rightTagList.setCellFactory(param -> new TagListCell());
+        rightTagList.setCellFactory(param -> {
+            TagListCell c = new TagListCell() {
+                @Override
+                protected void updateItem(Tag tag, boolean empty) {
+                    super.updateItem(tag, empty);
+
+                    if (tag != null) {
+                        if (currentPair.getImg1().hasTag(tag)) {
+                            setStyle("-fx-background-color: green;");
+                        } else {
+                            setStyle("-fx-background-color: red;");
+                        }
+                    } else {
+                        setStyle(null);
+                    }
+                }
+            };
+
+            MenuItem addToOther = new MenuItem("Add to other");
+            addToOther.setOnAction(event -> currentPair.getImg1().addTag(c.getItem()));
+            MenuItem removeTag = new MenuItem("Remove tag");
+            removeTag.setOnAction(event -> currentPair.getImg2().removeTag(c.getItem()));
+            ContextMenu cm = new ContextMenu(addToOther, new SeparatorMenuItem(), removeTag);
+            c.setOnContextMenuRequested(event -> cm.show(c, event.getScreenX(), event.getScreenY()));
+            return c;
+        });
         rightTagList.setPrefWidth(200);
         leftInfoBox = new ItemInfoBox();
         leftInfoBox.setAlignment(Pos.BOTTOM_LEFT);
@@ -166,19 +217,34 @@ public class DuplicatesScreen extends Screen {
     }
 
     private void preview(SimilarPair pair) {
+        if (currentPair != null) {
+            currentPair.getImg1().setTagListener(null);
+            currentPair.getImg2().setTagListener(null);
+        }
         currentPair = pair;
 
         if (pair != null) {
             leftMediaView.preview(pair.getImg1());
             rightMediaView.preview(pair.getImg2());
 
+            PokeListener tagListener = () -> {
+                leftTagList.getItems().clear();
+                leftTagList.getItems().addAll(pair.getImg1().getTags());
+                leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
+
+                rightTagList.getItems().clear();
+                rightTagList.getItems().addAll(pair.getImg2().getTags());
+                rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
+            };
             leftTagList.getItems().clear();
             leftTagList.getItems().addAll(pair.getImg1().getTags());
             leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
+            currentPair.getImg1().setTagListener(tagListener);
 
             rightTagList.getItems().clear();
             rightTagList.getItems().addAll(pair.getImg2().getTags());
             rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
+            currentPair.getImg2().setTagListener(tagListener);
 
             leftInfoBox.setItem(pair.getImg1());
             rightInfoBox.setItem(pair.getImg2());
@@ -229,11 +295,6 @@ public class DuplicatesScreen extends Screen {
         } else {
             preview(pairs.get(index));
         }
-    }
-
-    public void releaseMediaPlayers() {
-        leftMediaView.releaseMediaPlayer();
-        rightMediaView.releaseMediaPlayer();
     }
 
     public boolean isConsolidateTags() {

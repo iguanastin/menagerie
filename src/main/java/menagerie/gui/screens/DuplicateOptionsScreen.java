@@ -36,6 +36,7 @@ public class DuplicateOptionsScreen extends Screen {
     private final Label compareCountLabel, firstCountLabel, secondCoundLabel;
     private final ChoiceBox<Scope> compareChoiceBox, toChoiceBox;
     private final CheckBox compareGreyscaleCheckBox;
+    private final TextField confidenceTextField;
 
     private List<Item> selected = null, searched = null, all = null;
     private Menagerie menagerie = null;
@@ -107,12 +108,31 @@ public class DuplicateOptionsScreen extends Screen {
         h.setAlignment(Pos.CENTER_LEFT);
         contents.getChildren().add(h);
 
-        compareGreyscaleCheckBox = new CheckBox("Compare greyscale images (inaccurate");
+        compareGreyscaleCheckBox = new CheckBox("Compare greyscale images");
+        compareGreyscaleCheckBox.setTooltip(new Tooltip("Comparing greyscale images is wildly inaccurate"));
         contents.getChildren().add(compareGreyscaleCheckBox);
+
+        confidenceTextField = new TextField();
+        confidenceTextField.setPromptText("0.8-1.0");
+        confidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                try {
+                    double value = Double.parseDouble(confidenceTextField.getText());
+                    if (value < 0.8) confidenceTextField.setText("0.8");
+                    else if (value > 1) confidenceTextField.setText("1");
+                } catch (NumberFormatException e) {
+                    confidenceTextField.setText("0.95");
+                }
+            }
+        });
+        confidenceTextField.setTooltip(new Tooltip("Similarity confidence: (0.8-1.0)"));
+        h = new HBox(5, new Label("Confidence:"), confidenceTextField);
+        h.setAlignment(Pos.CENTER_LEFT);
+        contents.getChildren().add(h);
 
         VBox center = new VBox(5, header, new Separator(), contents);
 
-        compareCountLabel = new Label("N/A comparisons");
+        compareCountLabel = new Label("~N/A comparisons");
         Button compare = new Button("Compare");
         compare.setOnAction(event -> compareButtonOnAction());
         Button cancel = new Button("Cancel");
@@ -166,11 +186,16 @@ public class DuplicateOptionsScreen extends Screen {
         }
         secondCoundLabel.setText(secondNum + "");
 
-        compareCountLabel.setText(firstNum * secondNum + " comparisons");
+        compareCountLabel.setText("~" + firstNum * secondNum + " comparisons");
     }
 
     private void saveSettings() {
         settings.setBoolean(Settings.Key.COMPARE_GREYSCALE, compareGreyscaleCheckBox.isSelected());
+        try {
+            settings.setDouble(Settings.Key.CONFIDENCE, Double.parseDouble(confidenceTextField.getText()));
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        }
 
         try {
             settings.save();
@@ -258,6 +283,7 @@ public class DuplicateOptionsScreen extends Screen {
         updateCounts();
 
         compareGreyscaleCheckBox.setSelected(settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
+        confidenceTextField.setText(settings.getDouble(Settings.Key.CONFIDENCE) + "");
     }
 
     public DuplicatesScreen getDuplicatesScreen() {
