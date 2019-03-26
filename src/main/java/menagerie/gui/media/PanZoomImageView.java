@@ -18,6 +18,8 @@ public class PanZoomImageView extends DynamicImageView {
     private double clickX, clickY;
     private double clickImageX, clickImageY;
 
+    private boolean draggedThisClick = false;
+
 
     public PanZoomImageView() {
         super();
@@ -29,25 +31,29 @@ public class PanZoomImageView extends DynamicImageView {
                 deltaY = clickImageY + (clickY - event.getY()) * scale;
                 updateViewPort();
 
+                draggedThisClick = true;
+
                 event.consume();
             }
         });
         addEventHandler(MouseEvent.MOUSE_PRESSED, event -> {
             if (event.getButton().equals(MouseButton.PRIMARY)) {
+                draggedThisClick = false;
                 clickX = event.getX();
                 clickY = event.getY();
                 clickImageX = deltaX;
                 clickImageY = deltaY;
-            } else if (event.getButton().equals(MouseButton.SECONDARY)) {
-                if (getImage() != null) {
-                    double w = getImage().getWidth() / scale;
-                    double h = getImage().getHeight() / scale;
-                    if (deltaX == 0 && deltaY == 0 && (Math.abs(getFitWidth() - w) < 5 || Math.abs(getFitHeight() - h) < 5)) {
-                        scale = 1;
-                        updateViewPort();
-                    } else {
-                        fitImageToView();
-                    }
+            }
+        });
+        addEventHandler(MouseEvent.MOUSE_RELEASED, event -> {
+            if (event.getButton().equals(MouseButton.PRIMARY) && getImage() != null && !draggedThisClick) {
+                double w = getImage().getWidth() / scale;
+                double h = getImage().getHeight() / scale;
+                if (deltaX == 0 && deltaY == 0 && (Math.abs(getFitWidth() - w) < 5 || Math.abs(getFitHeight() - h) < 5)) {
+                    scale = 1;
+                    updateViewPort();
+                } else {
+                    fitImageToView();
                 }
             }
         });

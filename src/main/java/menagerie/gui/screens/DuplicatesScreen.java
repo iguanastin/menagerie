@@ -33,7 +33,6 @@ public class DuplicatesScreen extends Screen {
     private List<SimilarPair> pairs = null;
     private SimilarPair currentPair = null;
 
-    private boolean consolidateTags = true;
     private boolean deleteFile = true;
 
 
@@ -146,6 +145,12 @@ public class DuplicatesScreen extends Screen {
         bottom.setPadding(new Insets(5));
         // Construct first element
         similarityLabel = new Label("N/A");
+        Button combineLeft = new Button("<- Combine tags");
+        combineLeft.setOnAction(event -> currentPair.getImg2().getTags().forEach(tag -> currentPair.getImg1().addTag(tag)));
+        Button combineRight = new Button("Combine tags ->");
+        combineRight.setOnAction(event -> currentPair.getImg1().getTags().forEach(tag -> currentPair.getImg2().addTag(tag)));
+        HBox hbc = new HBox(5, combineLeft, similarityLabel, combineRight);
+        hbc.setAlignment(Pos.CENTER);
         Button leftDeleteButton = new Button("Delete");
         leftDeleteButton.setOnAction(event -> deleteItem(currentPair.getImg1(), currentPair.getImg2()));
         Button rightDeleteButton = new Button("Delete");
@@ -154,7 +159,7 @@ public class DuplicatesScreen extends Screen {
         hbl.setAlignment(Pos.CENTER_LEFT);
         HBox hbr = new HBox(rightDeleteButton);
         hbr.setAlignment(Pos.CENTER_RIGHT);
-        bottom.getChildren().add(new BorderPane(similarityLabel, null, hbr, null, hbl));
+        bottom.getChildren().add(new BorderPane(hbc, null, hbr, null, hbl));
         // Construct second element
         Button prevPairButton = new Button("<-");
         prevPairButton.setOnAction(event -> previewPrev());
@@ -272,11 +277,6 @@ public class DuplicatesScreen extends Screen {
 
         menagerie.removeImages(Collections.singletonList(toDelete), isDeleteFile());
 
-        //Consolidate tags
-        if (isConsolidateTags()) {
-            toDelete.getTags().forEach(toKeep::addTag);
-        }
-
         //Remove other pairs containing the deleted image
         for (SimilarPair pair : new ArrayList<>(pairs)) {
             if (toDelete.equals(pair.getImg1()) || toDelete.equals(pair.getImg2())) {
@@ -297,16 +297,8 @@ public class DuplicatesScreen extends Screen {
         }
     }
 
-    public boolean isConsolidateTags() {
-        return consolidateTags;
-    }
-
     public boolean isDeleteFile() {
         return deleteFile;
-    }
-
-    public void setConsolidateTags(boolean consolidateTags) {
-        this.consolidateTags = consolidateTags;
     }
 
     public void setDeleteFile(boolean deleteFile) {
