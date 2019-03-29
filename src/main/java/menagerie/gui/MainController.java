@@ -248,7 +248,7 @@ public class MainController {
         setGridWidth(settings.getInt(Settings.Key.GRID_WIDTH));
 
         //Init image grid
-        itemGridView.setSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
+        itemGridView.addSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
         itemGridView.setCellFactory(param -> {
             ImageGridCell c = new ImageGridCell();
             c.setOnDragDetected(event -> {
@@ -456,6 +456,7 @@ public class MainController {
         MenuItem groupMenuItem = new MenuItem("Group");
         groupMenuItem.setOnAction(event -> {
             GroupItem group = menagerie.createGroup(itemGridView.getSelected(), "test"); //TODO
+            itemGridView.select(group, false, false);
         });
 
         MenuItem slideShowSelectedMenuItem = new MenuItem("Selected");

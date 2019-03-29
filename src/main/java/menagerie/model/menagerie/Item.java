@@ -86,7 +86,7 @@ public abstract class Item implements Comparable<Item> {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof MediaItem && ((Item) obj).getId() == getId();
+        return obj instanceof Item && ((Item) obj).getId() == getId();
     }
 
     @Override

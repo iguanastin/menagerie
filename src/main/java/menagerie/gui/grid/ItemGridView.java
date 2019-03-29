@@ -11,6 +11,9 @@ import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.menagerie.Item;
 import org.controlsfx.control.GridView;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class ItemGridView extends GridView<Item> {
 
     public static final int CELL_BORDER = 4;
@@ -18,7 +21,7 @@ public class ItemGridView extends GridView<Item> {
     private final ObservableList<Item> selected = FXCollections.observableArrayList();
     private Item lastSelected = null;
 
-    private GridSelectionListener selectionListener = null;
+    private Set<GridSelectionListener> selectionListeners = new HashSet<>();
 
 
     public ItemGridView() {
@@ -168,7 +171,7 @@ public class ItemGridView extends GridView<Item> {
         }
 
         // Notify selection listener
-        if (selectionListener != null) selectionListener.targetSelected(item);
+        selectionListeners.forEach(listener -> listener.targetSelected(item));
     }
 
     private void selectRange(Item first, Item last) {
@@ -211,8 +214,12 @@ public class ItemGridView extends GridView<Item> {
         return selected.contains(img);
     }
 
-    public void setSelectionListener(GridSelectionListener selectionListener) {
-        this.selectionListener = selectionListener;
+    public boolean addSelectionListener(GridSelectionListener listener) {
+        return selectionListeners.add(listener);
+    }
+
+    public boolean removeSelectionListener(GridSelectionListener listener) {
+        return selectionListeners.remove(listener);
     }
 
     private void updateCellSelectionCSS() {
