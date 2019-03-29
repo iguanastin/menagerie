@@ -3,18 +3,17 @@ package menagerie.model.menagerie;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.util.PokeListener;
 
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Item implements Comparable<Item> {
     protected final Menagerie menagerie;
     protected final int id;
-    protected final long dateAdded;
+    private final long dateAdded;
     private final List<Tag> tags = new ArrayList<>();
     private PokeListener tagListener = null;
 
-    public Item(Menagerie menagerie, int id, long dateAdded) {
+    Item(Menagerie menagerie, int id, long dateAdded) {
         this.menagerie = menagerie;
         this.id = id;
         this.dateAdded = dateAdded;
@@ -43,16 +42,7 @@ public abstract class Item implements Comparable<Item> {
         tags.add(t);
         t.incrementFrequency();
 
-        menagerie.getUpdateQueue().enqueueUpdate(() -> {
-            try {
-                menagerie.PS_ADD_TAG_TO_IMG.setInt(1, id);
-                menagerie.PS_ADD_TAG_TO_IMG.setInt(2, t.getId());
-                menagerie.PS_ADD_TAG_TO_IMG.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        });
-        menagerie.getUpdateQueue().commit();
+        menagerie.getDatabaseUpdater().tagItemAsync(id, t.getId());
 
         if (tagListener != null) tagListener.poke();
 
@@ -64,16 +54,7 @@ public abstract class Item implements Comparable<Item> {
         tags.remove(t);
         t.decrementFrequency();
 
-        menagerie.getUpdateQueue().enqueueUpdate(() -> {
-            try {
-                menagerie.PS_REMOVE_TAG_FROM_IMG.setInt(1, id);
-                menagerie.PS_REMOVE_TAG_FROM_IMG.setInt(2, t.getId());
-                menagerie.PS_REMOVE_TAG_FROM_IMG.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        });
-        menagerie.getUpdateQueue().commit();
+        menagerie.getDatabaseUpdater().untagItemAsync(id, t.getId());
 
         if (tagListener != null) tagListener.poke();
 

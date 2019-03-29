@@ -1,4 +1,4 @@
-package menagerie.model.db;
+package menagerie.model.menagerie.db;
 
 
 import java.sql.*;

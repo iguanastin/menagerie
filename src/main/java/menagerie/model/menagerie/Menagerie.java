@@ -2,7 +2,7 @@ package menagerie.model.menagerie;
 
 import com.sun.jna.platform.FileUtils;
 import menagerie.gui.Main;
-import menagerie.model.db.DatabaseUpdateQueue;
+import menagerie.model.menagerie.db.DatabaseUpdater;
 import menagerie.model.menagerie.histogram.HistogramReadException;
 import menagerie.model.menagerie.histogram.ImageHistogram;
 import menagerie.model.search.Search;
@@ -19,23 +19,9 @@ public class Menagerie {
 
     private static final String SQL_GET_TAGS = "SELECT tags.* FROM tags;";
     private static final String SQL_GET_IMGS = "SELECT imgs.* FROM imgs;";
-
-    // -------------------------------- SQL Statements ----------------------------
-
-    private final PreparedStatement PS_GET_IMG_TAG_IDS;
-    private final PreparedStatement PS_GET_HIGHEST_IMG_ID;
-    private final PreparedStatement PS_GET_HIGHEST_TAG_ID;
-    private final PreparedStatement PS_DELETE_IMG;
-    private final PreparedStatement PS_CREATE_IMG;
-    private final PreparedStatement PS_DELETE_TAG;
-    private final PreparedStatement PS_CREATE_TAG;
-    final PreparedStatement PS_SET_IMG_MD5;
-    final PreparedStatement PS_SET_IMG_HISTOGRAM;
-    final PreparedStatement PS_SET_IMG_THUMBNAIL;
-    final PreparedStatement PS_GET_IMG_THUMBNAIL;
-    final PreparedStatement PS_ADD_TAG_TO_IMG;
-    final PreparedStatement PS_REMOVE_TAG_FROM_IMG;
-    final PreparedStatement PS_SET_IMG_PATH;
+    private static final String SQL_GET_IMG_TAGS = "SELECT tagged.tag_id FROM tagged JOIN imgs ON tagged.img_id=imgs.id WHERE imgs.id=?;";
+    private static final String SQL_GET_HIGHEST_IMG_ID = "SELECT TOP 1 imgs.id FROM imgs ORDER BY imgs.id DESC;";
+    private static final String SQL_GET_HIGHEST_TAG_ID = "SELECT TOP 1 tags.id FROM tags ORDER BY tags.id DESC;";
 
     // ------------------------------ Variables -----------------------------------
 
@@ -46,7 +32,7 @@ public class Menagerie {
     private int nextTagID;
 
     private final Connection database;
-    private final DatabaseUpdateQueue updateQueue = new DatabaseUpdateQueue();
+    private final DatabaseUpdater databaseUpdater;
 
     private final List<Search> activeSearches = new ArrayList<>();
 
@@ -54,31 +40,14 @@ public class Menagerie {
     public Menagerie(Connection database) throws SQLException {
         this.database = database;
 
-        //Initialize prepared database statements
-        PS_GET_IMG_TAG_IDS = database.prepareStatement("SELECT tagged.tag_id FROM tagged JOIN imgs ON tagged.img_id=imgs.id WHERE imgs.id=?;");
-        PS_SET_IMG_MD5 = database.prepareStatement("UPDATE imgs SET imgs.md5=? WHERE imgs.id=?;");
-        PS_SET_IMG_HISTOGRAM = database.prepareStatement("UPDATE imgs SET imgs.hist_a=?, imgs.hist_r=?, imgs.hist_g=?, imgs.hist_b=? WHERE imgs.id=?");
-        PS_SET_IMG_THUMBNAIL = database.prepareStatement("UPDATE imgs SET imgs.thumbnail=? WHERE imgs.id=?;");
-        PS_GET_IMG_THUMBNAIL = database.prepareStatement("SELECT imgs.thumbnail FROM imgs WHERE imgs.id=?;");
-        PS_ADD_TAG_TO_IMG = database.prepareStatement("INSERT INTO tagged(img_id, tag_id) VALUES (?, ?);");
-        PS_REMOVE_TAG_FROM_IMG = database.prepareStatement("DELETE FROM tagged WHERE img_id=? AND tag_id=?;");
-        PS_GET_HIGHEST_IMG_ID = database.prepareStatement("SELECT TOP 1 imgs.id FROM imgs ORDER BY imgs.id DESC;");
-        PS_GET_HIGHEST_TAG_ID = database.prepareStatement("SELECT TOP 1 tags.id FROM tags ORDER BY tags.id DESC;");
-        PS_DELETE_IMG = database.prepareStatement("DELETE FROM imgs WHERE imgs.id=?;");
-        PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5, hist_a, hist_r, hist_g, hist_b) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
-        PS_DELETE_TAG = database.prepareStatement("DELETE FROM tags WHERE tags.id=?;");
-        PS_CREATE_TAG = database.prepareStatement("INSERT INTO tags(id, name) VALUES (?, ?);");
-        PS_SET_IMG_PATH = database.prepareStatement("UPDATE imgs SET path=? WHERE id=?;");
+        databaseUpdater = new DatabaseUpdater(database);
+        databaseUpdater.setDaemon(true);
+        databaseUpdater.start();
 
         // Load data from database
         loadTagsFromDatabase();
-        loadImagesFromDatabase();
+        loadMediaFromDatabase();
         clearUnusedTags();
-
-        // Start runnable queue for database updates
-        Thread thread = new Thread(updateQueue);
-        thread.setDaemon(true);
-        thread.start();
 
         initializeIdCounters();
     }
@@ -93,17 +62,15 @@ public class Menagerie {
         for (Tag t : new ArrayList<>(tags)) {
             if (!usedTags.contains(t.getId())) {
                 System.out.println("Deleting unused tag: " + t);
-
                 tags.remove(t);
-
-                PS_DELETE_TAG.setInt(1, t.getId());
-                PS_DELETE_TAG.executeUpdate();
+                getDatabaseUpdater().deleteTag(t.getId());
             }
         }
     }
 
     private void initializeIdCounters() throws SQLException {
-        ResultSet rs = PS_GET_HIGHEST_IMG_ID.executeQuery();
+        Statement s = database.createStatement();
+        ResultSet rs = s.executeQuery(SQL_GET_HIGHEST_IMG_ID);
         if (rs.next()) {
             nextImageID = rs.getInt("id") + 1;
         } else {
@@ -111,16 +78,17 @@ public class Menagerie {
         }
         rs.close();
 
-        rs = PS_GET_HIGHEST_TAG_ID.executeQuery();
+        rs = s.executeQuery(SQL_GET_HIGHEST_TAG_ID);
         if (rs.next()) {
             nextTagID = rs.getInt("id") + 1;
         } else {
             nextTagID = 1;
         }
         rs.close();
+        s.close();
     }
 
-    private void loadImagesFromDatabase() throws SQLException {
+    private void loadMediaFromDatabase() throws SQLException {
         Statement s = database.createStatement();
         ResultSet rs = s.executeQuery(SQL_GET_IMGS);
 
@@ -137,17 +105,18 @@ public class Menagerie {
                 }
             }
 
-            MediaItem img = new MediaItem(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
-            items.add(img);
+            MediaItem media = new MediaItem(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
+            items.add(media);
 
-            PS_GET_IMG_TAG_IDS.setInt(1, img.getId());
-            ResultSet tagRS = PS_GET_IMG_TAG_IDS.executeQuery();
+            PreparedStatement ps = database.prepareStatement(SQL_GET_IMG_TAGS);
+            ps.setInt(1, media.getId());
+            ResultSet tagRS = ps.executeQuery();
 
             while (tagRS.next()) {
                 Tag tag = getTagByID(tagRS.getInt("tag_id"));
                 if (tag != null) {
                     tag.incrementFrequency();
-                    img.getTags().add(tag);
+                    media.getTags().add(tag);
                 } else {
                     System.err.println("Major issue, tag wasn't loaded in but somehow still exists in the database");
                 }
@@ -181,22 +150,9 @@ public class Menagerie {
         items.add(media);
         nextImageID++;
         try {
-            PS_CREATE_IMG.setInt(1, media.getId());
-            PS_CREATE_IMG.setNString(2, media.getFile().getAbsolutePath());
-            PS_CREATE_IMG.setLong(3, media.getDateAdded());
-            PS_CREATE_IMG.setNString(4, media.getMD5());
-            PS_CREATE_IMG.setBinaryStream(5, null);
-            PS_CREATE_IMG.setBinaryStream(6, null);
-            PS_CREATE_IMG.setBinaryStream(7, null);
-            PS_CREATE_IMG.setBinaryStream(8, null);
-            if (media.getHistogram() != null) {
-                PS_CREATE_IMG.setBinaryStream(5, media.getHistogram().getAlphaAsInputStream());
-                PS_CREATE_IMG.setBinaryStream(6, media.getHistogram().getRedAsInputStream());
-                PS_CREATE_IMG.setBinaryStream(7, media.getHistogram().getGreenAsInputStream());
-                PS_CREATE_IMG.setBinaryStream(8, media.getHistogram().getBlueAsInputStream());
-            }
-            PS_CREATE_IMG.executeUpdate();
+            getDatabaseUpdater().createMedia(media);
         } catch (SQLException e) {
+            System.err.println("Failed to create media in database: " + media);
             e.printStackTrace();
         }
 
@@ -254,15 +210,7 @@ public class Menagerie {
                 if (deleteFiles && item instanceof MediaItem) toDelete.add((MediaItem) item);
                 if (item instanceof GroupItem) ((GroupItem) item).removeAll();
 
-                updateQueue.enqueueUpdate(() -> {
-                    try {
-                        PS_DELETE_IMG.setInt(1, item.getId());
-                        PS_DELETE_IMG.executeUpdate();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
-                    }
-                });
-                updateQueue.commit();
+                getDatabaseUpdater().removeItemAsync(item.getId());
             }
         }
 
@@ -317,8 +265,8 @@ public class Menagerie {
         return items;
     }
 
-    public DatabaseUpdateQueue getUpdateQueue() {
-        return updateQueue;
+    public DatabaseUpdater getDatabaseUpdater() {
+        return databaseUpdater;
     }
 
     public Connection getDatabase() {
@@ -346,16 +294,9 @@ public class Menagerie {
 
         tags.add(t);
 
-        updateQueue.enqueueUpdate(() -> {
-            try {
-                PS_CREATE_TAG.setInt(1, t.getId());
-                PS_CREATE_TAG.setNString(2, t.getName());
-                PS_CREATE_TAG.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        });
+        getDatabaseUpdater().createTagAsync(t.getId(), t.getName());
 
         return t;
     }
+
 }

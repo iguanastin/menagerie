@@ -65,4 +65,9 @@ public class GroupItem extends Item {
         return elements;
     }
 
+    @Override
+    public String toString() {
+        return getId() + " (" + elements.size() + "): " + title;
+    }
+
 }

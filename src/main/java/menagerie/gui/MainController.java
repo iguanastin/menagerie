@@ -30,9 +30,8 @@ import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.slideshow.SlideshowScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
-import menagerie.model.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.*;
-import menagerie.model.menagerie.history.TagEditEvent;
+import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.Search;
@@ -186,7 +185,7 @@ public class MainController {
             importer.setDaemon(true);
             importer.start();
 
-            menagerie.getUpdateQueue().setErrorListener(e -> Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"))));
+//            menagerie.getUpdateQueue().setErrorListener(e -> Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"))));
         } catch (SQLException e) {
             e.printStackTrace();
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
@@ -1140,8 +1139,7 @@ public class MainController {
                     event.consume();
                     break;
                 case Q:
-                    menagerie.getUpdateQueue().enqueueUpdate(() -> cleanExit(false));
-                    menagerie.getUpdateQueue().commit();
+                    menagerie.getDatabaseUpdater().enqueue(() -> cleanExit(false));
                     event.consume();
                     break;
                 case S:
