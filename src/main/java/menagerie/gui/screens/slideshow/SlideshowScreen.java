@@ -31,12 +31,8 @@ public class SlideshowScreen extends Screen {
     private Item showing = null;
     private Menagerie menagerie;
 
-    private final SlideShowSelectListener selectListener;
-
 
     public SlideshowScreen(SlideShowSelectListener selectListener) {
-        this.selectListener = selectListener;
-
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.LEFT) {
                 previewLast();
@@ -49,6 +45,12 @@ public class SlideshowScreen extends Screen {
                 event.consume();
             } else if (event.getCode() == KeyCode.DELETE) {
                 tryDeleteCurrent(!event.isControlDown());
+                event.consume();
+            } else if (event.getCode() == KeyCode.END) {
+                preview(items.get(items.size() - 1));
+                event.consume();
+            } else if (event.getCode() == KeyCode.HOME) {
+                preview(items.get(0));
                 event.consume();
             }
         });

@@ -35,8 +35,10 @@ public class ImporterScreen extends Screen {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
+                event.consume();
             } else if (event.getCode() == KeyCode.N && event.isControlDown()) {
                 close();
+                event.consume();
             }
         });
 
@@ -49,6 +51,15 @@ public class ImporterScreen extends Screen {
         top.setPadding(new Insets(0, 0, 0, 5));
 
         listView = new ListView<>();
+        listView.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ESCAPE) {
+                close();
+                event.consume();
+            } else if (event.getCode() == KeyCode.N && event.isControlDown()) {
+                close();
+                event.consume();
+            }
+        });
 
         Button playPauseButton = new Button("Pause");
         playPauseButton.setOnAction(event -> {

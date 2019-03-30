@@ -1,4 +1,4 @@
-package menagerie.gui.screens;
+package menagerie.gui.screens.duplicates;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -9,6 +9,8 @@ import javafx.scene.layout.*;
 import menagerie.gui.ItemInfoBox;
 import menagerie.gui.TagListCell;
 import menagerie.gui.media.DynamicMediaView;
+import menagerie.gui.screens.Screen;
+import menagerie.gui.screens.ScreenPane;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
@@ -46,6 +48,12 @@ public class DuplicatesScreen extends Screen {
                 event.consume();
             } else if (event.getCode() == KeyCode.RIGHT) {
                 previewNext();
+                event.consume();
+            } else if (event.getCode() == KeyCode.END) {
+                preview(pairs.get(pairs.size() - 1));
+                event.consume();
+            } else if (event.getCode() == KeyCode.HOME) {
+                preview(pairs.get(0));
                 event.consume();
             }
         });

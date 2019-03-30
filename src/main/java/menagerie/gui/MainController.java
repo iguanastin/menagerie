@@ -26,6 +26,7 @@ import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
+import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.slideshow.SlideshowScreen;
 import menagerie.gui.thumbnail.Thumbnail;
@@ -64,6 +65,7 @@ public class MainController {
 
     public BorderPane explorerRootPane;
     public ToggleButton listDescendingToggleButton;
+    public ToggleButton showGroupedToggleButton;
     public PredictiveTextField searchTextField;
     public ItemGridView itemGridView;
     public DynamicMediaView previewMediaView;
@@ -134,7 +136,7 @@ public class MainController {
         });
 
         //Apply a default search
-        applySearch(null, listDescendingToggleButton.isSelected());
+        applySearch(null, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
 
         //Init folder watcher
         if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT)) startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
@@ -233,7 +235,7 @@ public class MainController {
                     searchTextField.setText(c.getItem().getName());
                     searchTextField.positionCaret(searchTextField.getText().length());
                     tagListScreen.close();
-                    applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
+                    applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
                 });
                 ContextMenu m = new ContextMenu(i1);
                 m.show(c, event.getScreenX(), event.getScreenY());
@@ -294,6 +296,12 @@ public class MainController {
                 if (explorer_cellContextMenu.isShowing()) explorer_cellContextMenu.hide();
                 explorer_cellContextMenu.show(c, event.getScreenX(), event.getScreenY());
                 event.consume();
+            });
+            c.setOnMouseClicked(event -> {
+                if (c.getItem() instanceof GroupItem && event.getButton() == MouseButton.PRIMARY && event.getClickCount() > 1) {
+                    searchTextField.setText("in:" + c.getItem().getId());
+                    applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+                }
             });
             return c;
         });
@@ -361,12 +369,12 @@ public class MainController {
                     MenuItem i1 = new MenuItem("Add to search");
                     i1.setOnAction(event1 -> {
                         searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
-                        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
+                        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
                     });
                     MenuItem i2 = new MenuItem("Exclude from search");
                     i2.setOnAction(event1 -> {
                         searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
-                        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
+                        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
                     });
                     MenuItem i3 = new MenuItem("Remove from selected");
                     i3.setOnAction(event1 -> {
@@ -721,11 +729,11 @@ public class MainController {
         }
     }
 
-    private void applySearch(String search, boolean descending) {
+    private void applySearch(String search, boolean descending, boolean showGrouped) {
         if (currentSearch != null) currentSearch.close();
         previewItem(null);
 
-        currentSearch = new Search(menagerie, constructRuleSet(search), descending, false); // TODO: add user input instead of hardcoded option
+        currentSearch = new Search(menagerie, constructRuleSet(search), descending, showGrouped); // TODO: add user input instead of hardcoded option
         currentSearch.setListener(new SearchUpdateListener() {
             @Override
             public void imagesAdded(List<Item> images) {
@@ -1054,13 +1062,13 @@ public class MainController {
     // ---------------------------------- Action Event Handlers --------------------------
 
     public void searchButtonOnAction(ActionEvent event) {
-        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
+        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
         itemGridView.requestFocus();
         event.consume();
     }
 
     public void searchTextFieldOnAction(ActionEvent event) {
-        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected());
+        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
         itemGridView.requestFocus();
         event.consume();
     }

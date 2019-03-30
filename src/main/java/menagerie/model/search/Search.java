@@ -3,6 +3,7 @@ package menagerie.model.search;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
+import menagerie.model.search.rules.InGroupRule;
 import menagerie.model.search.rules.SearchRule;
 
 import java.util.ArrayList;
@@ -26,8 +27,17 @@ public class Search {
         if (rules == null) rules = new ArrayList<>();
         this.menagerie = menagerie;
         this.rules = rules;
-        this.showGrouped = showGrouped;
         rules.sort(null);
+
+        if (!showGrouped) {
+            for (SearchRule rule : rules) {
+                if (rule instanceof InGroupRule) {
+                    showGrouped = true;
+                    break;
+                }
+            }
+        }
+        this.showGrouped = showGrouped;
 
         comparator = (o1, o2) -> {
             if (descending) {

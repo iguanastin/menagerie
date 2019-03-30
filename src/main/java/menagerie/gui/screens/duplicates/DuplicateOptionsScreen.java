@@ -1,4 +1,4 @@
-package menagerie.gui.screens;
+package menagerie.gui.screens.duplicates;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -10,6 +10,9 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import menagerie.gui.screens.ProgressScreen;
+import menagerie.gui.screens.Screen;
+import menagerie.gui.screens.ScreenPane;
 import menagerie.model.Settings;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.MediaItem;

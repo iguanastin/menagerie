@@ -67,8 +67,12 @@
                                 <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
                             </padding>
                             <left>
-                                <ToggleButton fx:id="listDescendingToggleButton" mnemonicParsing="false" selected="true"
-                                              text="Descending" BorderPane.alignment="CENTER"/>
+                                <HBox spacing="5.0" BorderPane.alignment="CENTER">
+                                    <ToggleButton fx:id="listDescendingToggleButton" mnemonicParsing="false"
+                                                  selected="true" text="Descending"/>
+                                    <ToggleButton fx:id="showGroupedToggleButton" mnemonicParsing="false"
+                                                  text="Show Grouped"/>
+                                </HBox>
                             </left>
                         </BorderPane>
                     </VBox>
