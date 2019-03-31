@@ -42,7 +42,7 @@ public class ImageGridCell extends GridCell<Item> {
 
     @Override
     protected void updateItem(Item item, boolean empty) {
-        if (lastItem != null) lastItem.getThumbnail().setImageReadyListener(null);
+        if (lastItem != null && lastItem.getThumbnail() != null) lastItem.getThumbnail().setImageReadyListener(null);
         lastItem = item;
 
         if (empty) {

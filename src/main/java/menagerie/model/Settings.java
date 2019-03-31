@@ -37,7 +37,7 @@ public class Settings {
     }
 
 
-    private Map<Key, Property> vars = new HashMap<>();
+    private final Map<Key, Property> vars = new HashMap<>();
     private File file;
 
 

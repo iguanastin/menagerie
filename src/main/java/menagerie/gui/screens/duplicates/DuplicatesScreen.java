@@ -25,11 +25,14 @@ import java.util.List;
 
 public class DuplicatesScreen extends Screen {
 
-    private DynamicMediaView leftMediaView, rightMediaView;
-    private ListView<Tag> leftTagList, rightTagList;
-    private ItemInfoBox leftInfoBox, rightInfoBox;
+    private final DynamicMediaView leftMediaView;
+    private final DynamicMediaView rightMediaView;
+    private final ListView<Tag> leftTagList;
+    private final ListView<Tag> rightTagList;
+    private final ItemInfoBox leftInfoBox;
+    private final ItemInfoBox rightInfoBox;
 
-    private Label similarityLabel;
+    private final Label similarityLabel;
 
     private Menagerie menagerie = null;
     private List<SimilarPair> pairs = null;
@@ -283,7 +286,7 @@ public class DuplicatesScreen extends Screen {
 
         int index = pairs.indexOf(currentPair);
 
-        menagerie.removeImages(Collections.singletonList(toDelete), isDeleteFile());
+        menagerie.removeItems(Collections.singletonList(toDelete), isDeleteFile());
 
         //Remove other pairs containing the deleted image
         for (SimilarPair pair : new ArrayList<>(pairs)) {

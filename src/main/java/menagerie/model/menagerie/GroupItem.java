@@ -26,18 +26,13 @@ public class GroupItem extends Item {
         //TODO: Update database
     }
 
-    public void removeItem(MediaItem item) {
-        elements.remove(item);
-        item.setGroup(null);
-        menagerie.checkItemsStillValidInSearches(Collections.singletonList(item));
-
-        //TODO: Update database
-    }
-
     public void removeAll() {
         Iterator<MediaItem> iter = elements.iterator();
         while (iter.hasNext()) {
-            removeItem(iter.next());
+            MediaItem item = iter.next();
+            iter.remove();
+            item.setGroup(null);
+            menagerie.checkItemsStillValidInSearches(Collections.singletonList(item));
         }
     }
 

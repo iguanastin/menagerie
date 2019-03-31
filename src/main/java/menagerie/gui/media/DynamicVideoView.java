@@ -25,10 +25,10 @@ public class DynamicVideoView extends ImageView {
 
     private static final Set<MediaPlayer> mediaPlayers = new HashSet<>();
 
-    private DirectMediaPlayerComponent mediaPlayerComponent = new CanvasPlayerComponent();
-    private WritablePixelFormat<ByteBuffer> pixelFormat = PixelFormat.getByteBgraPreInstance();
-    private FloatProperty videoSourceRatioProperty = new SimpleFloatProperty(0.4f);
-    private WritableImage writableImage;
+    private final DirectMediaPlayerComponent mediaPlayerComponent = new CanvasPlayerComponent();
+    private final WritablePixelFormat<ByteBuffer> pixelFormat = PixelFormat.getByteBgraPreInstance();
+    private final FloatProperty videoSourceRatioProperty = new SimpleFloatProperty(0.4f);
+    private final WritableImage writableImage;
 
 
     public DynamicVideoView() {

@@ -9,6 +9,7 @@ import uk.co.caprica.vlcj.player.MediaPlayerEventListener;
 import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 
 import java.util.ArrayDeque;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.*;
 
@@ -16,10 +17,10 @@ public class VideoThumbnailThread extends Thread {
 
     private static final String[] VLC_THUMBNAILER_ARGS = {"--intf", "dummy", "--vout", "dummy", "--no-audio", "--no-osd", "--no-spu", "--no-stats", "--no-sub-autodetect-file", "--no-disable-screensaver", "--no-snapshot-preview"};
     private static MediaPlayer THUMBNAIL_MEDIA_PLAYER = null;
-    private static ExecutorService executor = Executors.newCachedThreadPool();
+    private static final ExecutorService executor = Executors.newCachedThreadPool();
 
     private boolean running = false;
-    private Queue<VideoThumbnailJob> jobs = new ArrayDeque<>();
+    private final Queue<VideoThumbnailJob> jobs = new ArrayDeque<>();
 
 
     public synchronized void enqueueJob(VideoThumbnailJob job) {
@@ -57,7 +58,7 @@ public class VideoThumbnailThread extends Thread {
                             inPositionLatch.countDown();
                         }
                     };
-                    mp.addMediaPlayerEventListener(eventListener);
+                    Objects.requireNonNull(mp).addMediaPlayerEventListener(eventListener);
 
                     if (mp.startMedia(job.getFile().getAbsolutePath())) {
                         mp.setPosition(0.1f);

@@ -16,7 +16,6 @@ import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class ImporterScreen extends Screen {

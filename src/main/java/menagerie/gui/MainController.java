@@ -99,7 +99,7 @@ public class MainController {
     private final ClipboardContent explorer_clipboard = new ClipboardContent();
     private boolean explorer_imageGridViewDragging = false;
     private ContextMenu explorer_cellContextMenu;
-    private Stack<TagEditEvent> tagEditHistory = new Stack<>();
+    private final Stack<TagEditEvent> tagEditHistory = new Stack<>();
 
     // --------------------------------- Threads -------------------------------------
     private FolderWatcherThread folderWatcherThread = null;
@@ -255,7 +255,7 @@ public class MainController {
             c.setOnDragDetected(event -> {
                 if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
                     if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem()))
-                        itemGridView.select((MediaItem) c.getItem(), event.isControlDown(), event.isShiftDown());
+                        itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
 
                     Dragboard db = c.startDragAndDrop(TransferMode.ANY);
 
@@ -274,6 +274,7 @@ public class MainController {
                     List<File> files = new ArrayList<>();
                     itemGridView.getSelected().forEach(item -> {
                         if (item instanceof MediaItem) files.add(((MediaItem) item).getFile());
+                        else if (item instanceof GroupItem) ((GroupItem) item).getElements().forEach(mediaItem -> files.add(mediaItem.getFile()));
                     });
                     explorer_clipboard.putFiles(files);
                     db.setContent(explorer_clipboard);
@@ -310,7 +311,7 @@ public class MainController {
                 final boolean deleteFiles = !event.isControlDown();
                 final PokeListener onFinish = () -> {
                     previewItem(null);
-                    menagerie.removeImages(itemGridView.getSelected(), deleteFiles);
+                    menagerie.removeItems(itemGridView.getSelected(), deleteFiles);
                 };
                 if (deleteFiles) {
                     new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" +
@@ -323,6 +324,14 @@ public class MainController {
             }
         });
         itemGridView.getSelected().addListener((ListChangeListener<? super Item>) c -> resultCountLabel.setText(itemGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
+        itemGridView.getItems().addListener((ListChangeListener<? super Item>) c -> {
+            while (c.next()) {
+                if (c.getAddedSize() > 0) {
+                    itemGridView.getItems().sort(currentSearch.getComparator());
+                    break;
+                }
+            }
+        });
         initExplorerGridCellContextMenu();
 
         //Init drag/drop handlers
@@ -462,7 +471,7 @@ public class MainController {
     private void initExplorerGridCellContextMenu() {
         MenuItem groupMenuItem = new MenuItem("Group");
         groupMenuItem.setOnAction(event -> {
-            GroupItem group = menagerie.createGroup(itemGridView.getSelected(), "test"); //TODO
+            GroupItem group = menagerie.createGroup(itemGridView.getSelected(), "test"); //TODO get title from user
             itemGridView.select(group, false, false);
         });
 
@@ -605,12 +614,12 @@ public class MainController {
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
         removeImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + itemGridView.getSelected().size() + " files)\n\n" +
-                "This action CANNOT be undone", () -> menagerie.removeImages(itemGridView.getSelected(), false), null));
+                "This action CANNOT be undone", () -> menagerie.removeItems(itemGridView.getSelected(), false), null));
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
         deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" +
                 "This action CANNOT be undone (files will be deleted)", () -> {
             previewItem(null);
-            menagerie.removeImages(itemGridView.getSelected(), true);
+            menagerie.removeItems(itemGridView.getSelected(), true);
         }, null));
 
         explorer_cellContextMenu = new ContextMenu(groupMenuItem, moveToFolderMenuItem, new SeparatorMenuItem(), slideShowMenu, openInExplorerMenuItem, findDuplicatesMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
@@ -733,15 +742,11 @@ public class MainController {
         if (currentSearch != null) currentSearch.close();
         previewItem(null);
 
-        currentSearch = new Search(menagerie, constructRuleSet(search), descending, showGrouped); // TODO: add user input instead of hardcoded option
-        currentSearch.setListener(new SearchUpdateListener() {
+        currentSearch = new Search(menagerie, constructRuleSet(search), descending, showGrouped);
+        currentSearch.setListener(new SearchUpdateListener() { // TODO: Use jfx observable list for improved performance?
             @Override
             public void imagesAdded(List<Item> images) {
-                Platform.runLater(() -> {
-                    itemGridView.getItems().addAll(0, images);
-
-//                    itemGridView.getItems().sort(currentSearch.getComparator()); // This causes some gridcells to glitch out and get stuck visually
-                });
+                Platform.runLater(() -> itemGridView.getItems().addAll(0, images));
             }
 
             @Override

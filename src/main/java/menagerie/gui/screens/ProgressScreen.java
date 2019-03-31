@@ -13,7 +13,6 @@ import javafx.scene.layout.VBox;
 import menagerie.util.PokeListener;
 
 import java.text.DecimalFormat;
-import java.util.Formatter;
 
 public class ProgressScreen extends Screen {
 
@@ -24,7 +23,7 @@ public class ProgressScreen extends Screen {
 
     private PokeListener cancelListener = null;
 
-    private static DecimalFormat df = new DecimalFormat("#.##");
+    private static final DecimalFormat df = new DecimalFormat("#.##");
 
 
     public ProgressScreen() {

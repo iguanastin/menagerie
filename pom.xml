@@ -48,7 +48,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>1.4.197</version>
+            <version>1.4.199</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.controlsfx/controlsfx -->
         <dependency>
@@ -60,13 +60,13 @@
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
-            <version>5.0.0</version>
+            <version>5.2.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/net.java.dev.jna/jna-platform -->
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna-platform</artifactId>
-            <version>5.0.0</version>
+            <version>5.2.0</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/uk.co.caprica/vlcj -->
         <dependency>

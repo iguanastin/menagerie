@@ -21,7 +21,7 @@ public class ItemGridView extends GridView<Item> {
     private final ObservableList<Item> selected = FXCollections.observableArrayList();
     private Item lastSelected = null;
 
-    private Set<GridSelectionListener> selectionListeners = new HashSet<>();
+    private final Set<GridSelectionListener> selectionListeners = new HashSet<>();
 
 
     public ItemGridView() {

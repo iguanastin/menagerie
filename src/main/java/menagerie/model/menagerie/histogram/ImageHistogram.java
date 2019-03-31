@@ -84,7 +84,7 @@ public final class ImageHistogram {
         return arrayAsInputStream(blue);
     }
 
-    public boolean isBlackAndWhite() {
+    public boolean isColorful() {
         if (blackAndWhite == null) {
             double d = 0;
 

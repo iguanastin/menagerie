@@ -160,7 +160,7 @@ public class MediaItem extends Item {
         if (md5 != null && md5.equals(other.getMD5())) {
             return 1.0;
         } else if (histogram != null && other.getHistogram() != null) {
-            if (compareBlackAndWhiteHists || (!histogram.isBlackAndWhite() && !other.getHistogram().isBlackAndWhite())) {
+            if (compareBlackAndWhiteHists || (histogram.isColorful() && other.getHistogram().isColorful())) {
                 return histogram.getSimilarity(other.getHistogram());
             }
         }
@@ -170,7 +170,7 @@ public class MediaItem extends Item {
 
     void setGroup(GroupItem group) {
         this.group = group;
-        //TODO
+        //TODO update database
     }
 
     public boolean inGroup() {

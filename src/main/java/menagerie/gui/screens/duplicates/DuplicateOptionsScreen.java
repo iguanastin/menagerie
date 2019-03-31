@@ -79,9 +79,7 @@ public class DuplicateOptionsScreen extends Screen {
         toChoiceBox = new ChoiceBox<>();
         toChoiceBox.getItems().addAll(Scope.SELECTED, Scope.SEARCHED, Scope.ALL);
         toChoiceBox.getSelectionModel().selectFirst();
-        toChoiceBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            updateCounts();
-        });
+        toChoiceBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> updateCounts());
         compareChoiceBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             Scope toSelected = toChoiceBox.getValue();
             switch (newValue) {

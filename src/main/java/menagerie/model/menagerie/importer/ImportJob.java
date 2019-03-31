@@ -116,7 +116,7 @@ public class ImportJob {
                     synchronized (this) {
                         duplicateOf = (MediaItem) i;
                     }
-                    menagerie.removeImages(Collections.singletonList(item), true);
+                    menagerie.removeItems(Collections.singletonList(item), true);
                     needsCheckDuplicate = false;
                     needsCheckSimilar = false;
                     return true;

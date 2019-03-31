@@ -11,7 +11,6 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.version.LibVlcVersion;
-import uk.co.caprica.vlcj.version.Version;
 
 import java.io.IOException;
 

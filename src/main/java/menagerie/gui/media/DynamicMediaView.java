@@ -7,7 +7,7 @@ import menagerie.model.menagerie.MediaItem;
 public class DynamicMediaView extends StackPane {
 
     private DynamicVideoView videoView;
-    private PanZoomImageView imageView;
+    private final PanZoomImageView imageView;
 
 
     public DynamicMediaView() {

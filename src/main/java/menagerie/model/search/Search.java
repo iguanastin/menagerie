@@ -60,7 +60,7 @@ public class Search {
         return results;
     }
 
-    private Comparator<Item> getComparator() {
+    public Comparator<Item> getComparator() {
         return comparator;
     }
 

@@ -20,11 +20,11 @@ public class ItemInfoBox extends VBox {
     private static final String DEFAULT_RESOLUTION_TEXT = "0x0";
     private static final String DEFAULT_FILEPATH_TEXT = "N/A";
 
-    private Label idLabel = new Label(DEFAULT_ID_TEXT);
-    private Label dateLabel = new Label(DEFAULT_DATE_TEXT);
-    private Label fileSizeLabel = new Label(DEFAULT_FILESIZE_TEXT);
-    private Label resolutionLabel = new Label(DEFAULT_RESOLUTION_TEXT);
-    private Label filePathLabel = new Label(DEFAULT_FILEPATH_TEXT);
+    private final Label idLabel = new Label(DEFAULT_ID_TEXT);
+    private final Label dateLabel = new Label(DEFAULT_DATE_TEXT);
+    private final Label fileSizeLabel = new Label(DEFAULT_FILESIZE_TEXT);
+    private final Label resolutionLabel = new Label(DEFAULT_RESOLUTION_TEXT);
+    private final Label filePathLabel = new Label(DEFAULT_FILEPATH_TEXT);
 
     private boolean extended = false;
 
@@ -34,9 +34,7 @@ public class ItemInfoBox extends VBox {
         setStyle("-fx-background-color: -fx-base;");
         setSpacing(2);
 
-        addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
-            setExtended(!isExtended());
-        });
+        addEventHandler(MouseEvent.MOUSE_CLICKED, event -> setExtended(!isExtended()));
 
         getChildren().addAll(resolutionLabel, fileSizeLabel);
     }

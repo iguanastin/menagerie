@@ -28,7 +28,7 @@ public class Menagerie {
     private final List<Item> items = new ArrayList<>();
     private final List<Tag> tags = new ArrayList<>();
 
-    private int nextImageID;
+    private int nextItemID;
     private int nextTagID;
 
     private final Connection database;
@@ -72,9 +72,9 @@ public class Menagerie {
         Statement s = database.createStatement();
         ResultSet rs = s.executeQuery(SQL_GET_HIGHEST_IMG_ID);
         if (rs.next()) {
-            nextImageID = rs.getInt("id") + 1;
+            nextItemID = rs.getInt("id") + 1;
         } else {
-            nextImageID = 1;
+            nextItemID = 1;
         }
         rs.close();
 
@@ -144,11 +144,11 @@ public class Menagerie {
     public MediaItem importFile(File file) {
         if (isFilePresent(file)) return null;
 
-        MediaItem media = new MediaItem(this, nextImageID, System.currentTimeMillis(), file, null, null);
+        MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), file, null, null);
 
         //Add image and commit to database
         items.add(media);
-        nextImageID++;
+        nextItemID++;
         try {
             getDatabaseUpdater().createMedia(media);
         } catch (SQLException e) {
@@ -176,17 +176,22 @@ public class Menagerie {
     public GroupItem createGroup(List<Item> elements, String title) {
         if (title == null || title.isEmpty() || elements == null || elements.isEmpty()) return null;
 
-        GroupItem group = new GroupItem(this, nextImageID, System.currentTimeMillis(), title);
+        GroupItem group = new GroupItem(this, nextItemID, System.currentTimeMillis(), title);
+
+        //TODO: Option to combine tags of elements for group
 
         for (Item item : elements) {
             if (item instanceof MediaItem && ((MediaItem) item).getGroup() == null) {
                 group.addItem((MediaItem) item);
+            } else if (item instanceof GroupItem) {
+                removeItems(Collections.singletonList(item), false);
+                ((GroupItem) item).getElements().forEach(group::addItem);
             } else {
                 return null;
             }
         }
 
-        nextImageID++;
+        nextItemID++;
         items.add(group);
         checkItemsStillValidInSearches(Collections.singletonList(group));
 
@@ -198,7 +203,7 @@ public class Menagerie {
         return group;
     }
 
-    public void removeImages(List<Item> items, boolean deleteFiles) {
+    public void removeItems(List<Item> items, boolean deleteFiles) {
         List<Item> removed = new ArrayList<>();
         List<MediaItem> toDelete = new ArrayList<>();
 
@@ -208,7 +213,10 @@ public class Menagerie {
 
                 removed.add(item);
                 if (deleteFiles && item instanceof MediaItem) toDelete.add((MediaItem) item);
-                if (item instanceof GroupItem) ((GroupItem) item).removeAll();
+                if (item instanceof GroupItem) {
+                    activeSearches.forEach(search -> search.recheckWithSearch(new ArrayList<Item>(((GroupItem) item).getElements())));
+                    ((GroupItem) item).removeAll();
+                }
 
                 getDatabaseUpdater().removeItemAsync(item.getId());
             }
