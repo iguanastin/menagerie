@@ -1,6 +1,5 @@
 package menagerie.gui;
 
-import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -28,6 +27,8 @@ import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
+import menagerie.gui.screens.log.LogListCell;
+import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.screens.slideshow.SlideshowScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
@@ -58,7 +59,6 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.Temporal;
 import java.util.List;
 import java.util.*;
 import java.util.logging.*;
@@ -80,6 +80,7 @@ public class MainController {
     public PredictiveTextField editTagsTextField;
     public MenuBar menuBar;
     public Button importsButton;
+    public Button logButton;
 
     public ScreenPane screenPane;
 
@@ -90,6 +91,7 @@ public class MainController {
     private DuplicateOptionsScreen duplicateOptionsScreen;
     private SettingsScreen settingsScreen;
     private ImporterScreen importerScreen;
+    private LogScreen logScreen;
 
     // --------------------------------- Menagerie vars ------------------------------
     private Menagerie menagerie;
@@ -153,7 +155,8 @@ public class MainController {
         applySearch(null, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
 
         // Init folder watcher
-        if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT)) startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+        if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT))
+            startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
 
     }
 
@@ -188,6 +191,7 @@ public class MainController {
                 importsButton.setStyle("-fx-base: blue;");
             }
         });
+        initLogScreen();
 
         screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
     }
@@ -247,6 +251,35 @@ public class MainController {
         });
     }
 
+    private void initLogScreen() {
+        logScreen = new LogScreen();
+        logScreen.getListView().setCellFactory(param -> new LogListCell());
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_INSTANT;
+        Main.log.addHandler(new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                StringBuilder work = new StringBuilder(dtf.format(Instant.ofEpochMilli(record.getMillis())) + " [" + record.getLevel() + "]: " + record.getMessage());
+                if (record.getThrown() != null) {
+                    work.append("\n").append(record.getThrown().toString());
+                    for (StackTraceElement e : record.getThrown().getStackTrace()) {
+                        work.append("\n    at ").append(e);
+                    }
+                }
+                Platform.runLater(() -> logScreen.getListView().getItems().add(work.toString()));
+            }
+
+            @Override
+            public void flush() {
+
+            }
+
+            @Override
+            public void close() throws SecurityException {
+
+            }
+        });
+    }
+
     private void initExplorerScreen() {
         //Set image grid width from settings
         setGridWidth(settings.getInt(Settings.Key.GRID_WIDTH));
@@ -277,7 +310,8 @@ public class MainController {
                     List<File> files = new ArrayList<>();
                     itemGridView.getSelected().forEach(item -> {
                         if (item instanceof MediaItem) files.add(((MediaItem) item).getFile());
-                        else if (item instanceof GroupItem) ((GroupItem) item).getElements().forEach(mediaItem -> files.add(mediaItem.getFile()));
+                        else if (item instanceof GroupItem)
+                            ((GroupItem) item).getElements().forEach(mediaItem -> files.add(mediaItem.getFile()));
                     });
                     explorer_clipboard.putFiles(files);
                     db.setContent(explorer_clipboard);
@@ -1137,6 +1171,11 @@ public class MainController {
         event.consume();
     }
 
+    public void logButtonOnAction(ActionEvent event) {
+        screenPane.open(logScreen);
+        event.consume();
+    }
+
     // ---------------------------------- Key Event Handlers -------------------------------
 
     public void explorerRootPaneOnKeyPressed(KeyEvent event) {
@@ -1201,6 +1240,10 @@ public class MainController {
                     break;
                 case N:
                     screenPane.open(importerScreen);
+                    event.consume();
+                    break;
+                case L:
+                    screenPane.open(logScreen);
                     event.consume();
                     break;
             }

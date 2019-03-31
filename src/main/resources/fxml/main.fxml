@@ -19,19 +19,16 @@
 <?import menagerie.gui.predictive.PredictiveTextField?>
 <?import menagerie.gui.screens.ScreenPane?>
 
-<StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="menagerie.gui.MainController">
-    <BorderPane fx:id="explorerRootPane" onKeyPressed="#explorerRootPaneOnKeyPressed"
-                onKeyReleased="#explorerRootPaneOnKeyReleased" prefHeight="576.0" prefWidth="994.0">
+<StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.MainController">
+    <BorderPane fx:id="explorerRootPane" onKeyPressed="#explorerRootPaneOnKeyPressed" onKeyReleased="#explorerRootPaneOnKeyReleased" prefHeight="576.0" prefWidth="994.0">
         <center>
             <StackPane pickOnBounds="false" BorderPane.alignment="CENTER">
-                <DynamicMediaView fx:id="previewMediaView"/>
+                <DynamicMediaView fx:id="previewMediaView" />
                 <BorderPane pickOnBounds="false">
                     <bottom>
-                        <ItemInfoBox fx:id="itemInfoBox" alignment="BOTTOM_RIGHT" maxWidth="-Infinity" opacity="0.75"
-                                     BorderPane.alignment="BOTTOM_RIGHT">
+                        <ItemInfoBox fx:id="itemInfoBox" alignment="BOTTOM_RIGHT" maxWidth="-Infinity" opacity="0.75" BorderPane.alignment="BOTTOM_RIGHT">
                             <BorderPane.margin>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                             </BorderPane.margin>
                         </ItemInfoBox>
                     </bottom>
@@ -41,47 +38,47 @@
         <right>
             <BorderPane>
                 <center>
-                    <ItemGridView fx:id="itemGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
-                                  BorderPane.alignment="CENTER"/>
+                    <ItemGridView fx:id="itemGridView" horizontalCellSpacing="3" verticalCellSpacing="3" BorderPane.alignment="CENTER" />
                 </center>
                 <top>
                     <VBox BorderPane.alignment="CENTER">
                         <HBox spacing="5.0">
                             <padding>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                             </padding>
-                            <PredictiveTextField fx:id="searchTextField" onAction="#searchTextFieldOnAction"
-                                                 promptText="Search" HBox.hgrow="ALWAYS"/>
+                            <PredictiveTextField fx:id="searchTextField" onAction="#searchTextFieldOnAction" promptText="Search" HBox.hgrow="ALWAYS" />
                         </HBox>
                         <BorderPane>
                             <right>
                                 <HBox alignment="CENTER" spacing="5.0" BorderPane.alignment="CENTER">
-                                    <Label fx:id="resultCountLabel" text="Results: 0"/>
-                                    <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search"/>
+                                    <Label fx:id="resultCountLabel" text="Results: 0" />
+                                    <Button mnemonicParsing="false" onAction="#searchButtonOnAction" text="Search" />
                                 </HBox>
                             </right>
                             <VBox.margin>
-                                <Insets/>
+                                <Insets />
                             </VBox.margin>
                             <padding>
-                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                             </padding>
                             <left>
                                 <HBox spacing="5.0" BorderPane.alignment="CENTER">
-                                    <ToggleButton fx:id="listDescendingToggleButton" mnemonicParsing="false"
-                                                  selected="true" text="Descending"/>
-                                    <ToggleButton fx:id="showGroupedToggleButton" mnemonicParsing="false"
-                                                  text="Show Grouped"/>
+                                    <ToggleButton fx:id="listDescendingToggleButton" mnemonicParsing="false" selected="true" text="Descending" />
+                                    <ToggleButton fx:id="showGroupedToggleButton" mnemonicParsing="false" text="Show Grouped" />
                                 </HBox>
                             </left>
                         </BorderPane>
                     </VBox>
                 </top>
                 <bottom>
-                    <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
-                        <Button fx:id="importsButton" mnemonicParsing="false" onAction="#importsButtonOnAction"
-                                text="Imports: 0"/>
-                    </HBox>
+               <BorderPane BorderPane.alignment="CENTER">
+                  <left>
+                           <Button fx:id="importsButton" mnemonicParsing="false" onAction="#importsButtonOnAction" text="Imports: 0" BorderPane.alignment="CENTER" />
+                  </left>
+                  <right>
+                     <Button fx:id="logButton" mnemonicParsing="false" onAction="#logButtonOnAction" text="Log" BorderPane.alignment="CENTER" />
+                  </right>
+               </BorderPane>
                 </bottom>
             </BorderPane>
         </right>
@@ -89,13 +86,12 @@
             <VBox prefWidth="200.0" BorderPane.alignment="CENTER">
                 <ListView fx:id="tagListView" focusTraversable="false" VBox.vgrow="ALWAYS">
                     <padding>
-                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                     </padding>
                 </ListView>
-                <PredictiveTextField fx:id="editTagsTextField" onKeyPressed="#editTagsTextFieldOnKeyPressed"
-                                     promptText="Edit tags">
+                <PredictiveTextField fx:id="editTagsTextField" onKeyPressed="#editTagsTextFieldOnKeyPressed" promptText="Edit tags">
                     <VBox.margin>
-                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                     </VBox.margin>
                 </PredictiveTextField>
             </VBox>
@@ -103,30 +99,27 @@
         <top>
             <MenuBar fx:id="menuBar" BorderPane.alignment="CENTER">
                 <Menu mnemonicParsing="false" text="File">
-                    <MenuItem mnemonicParsing="false" onAction="#importFilesMenuButtonOnAction" text="Import file(s)"/>
-                    <MenuItem mnemonicParsing="false" onAction="#importFolderMenuButtonOnAction" text="Import folder"/>
-                    <SeparatorMenuItem/>
-                    <MenuItem mnemonicParsing="false" onAction="#revertDatabaseMenuButtonOnAction"
-                              text="Revert to backup"/>
+                    <MenuItem mnemonicParsing="false" onAction="#importFilesMenuButtonOnAction" text="Import file(s)" />
+                    <MenuItem mnemonicParsing="false" onAction="#importFolderMenuButtonOnAction" text="Import folder" />
+                    <SeparatorMenuItem />
+                    <MenuItem mnemonicParsing="false" onAction="#revertDatabaseMenuButtonOnAction" text="Revert to backup" />
                 </Menu>
                 <Menu mnemonicParsing="false" text="Edit">
-                    <MenuItem mnemonicParsing="false" onAction="#settingsMenuButtonOnAction" text="Settings"/>
+                    <MenuItem mnemonicParsing="false" onAction="#settingsMenuButtonOnAction" text="Settings" />
                 </Menu>
                 <Menu mnemonicParsing="false" text="View">
                     <Menu mnemonicParsing="false" text="Slideshow">
-                        <MenuItem mnemonicParsing="false" onAction="#viewSlideShowAllMenuButtonOnAction" text="All"/>
-                        <MenuItem mnemonicParsing="false" onAction="#viewSlideShowSearchedMenuButtonOnAction"
-                                  text="Searched"/>
-                        <MenuItem mnemonicParsing="false" onAction="#viewSlideShowSelectedMenuButtonOnAction"
-                                  text="Selected"/>
+                        <MenuItem mnemonicParsing="false" onAction="#viewSlideShowAllMenuButtonOnAction" text="All" />
+                        <MenuItem mnemonicParsing="false" onAction="#viewSlideShowSearchedMenuButtonOnAction" text="Searched" />
+                        <MenuItem mnemonicParsing="false" onAction="#viewSlideShowSelectedMenuButtonOnAction" text="Selected" />
                     </Menu>
-                    <MenuItem mnemonicParsing="false" onAction="#viewTagsMenuButtonOnAction" text="Tags"/>
+                    <MenuItem mnemonicParsing="false" onAction="#viewTagsMenuButtonOnAction" text="Tags" />
                 </Menu>
                 <Menu mnemonicParsing="false" text="Help">
-                    <MenuItem mnemonicParsing="false" onAction="#helpMenuButtonOnAction" text="Help"/>
+                    <MenuItem mnemonicParsing="false" onAction="#helpMenuButtonOnAction" text="Help" />
                 </Menu>
             </MenuBar>
         </top>
     </BorderPane>
-    <ScreenPane fx:id="screenPane"/>
+    <ScreenPane fx:id="screenPane" />
 </StackPane>
