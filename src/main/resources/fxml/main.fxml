@@ -81,8 +81,6 @@
                     <HBox alignment="CENTER_RIGHT" spacing="5.0" BorderPane.alignment="CENTER">
                         <Button fx:id="importsButton" mnemonicParsing="false" onAction="#importsButtonOnAction"
                                 text="Imports: 0"/>
-                        <Button fx:id="showErrorsButton" mnemonicParsing="false" onAction="#showErrorsButtonOnAction"
-                                text="Errors: 0"/>
                     </HBox>
                 </bottom>
             </BorderPane>

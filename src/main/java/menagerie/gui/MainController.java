@@ -19,7 +19,6 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import menagerie.gui.errors.TrackedError;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
@@ -31,6 +30,7 @@ import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.slideshow.SlideshowScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
+import menagerie.model.Settings;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.importer.ImportJob;
@@ -38,7 +38,6 @@ import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.Search;
 import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
-import menagerie.model.Settings;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
 import menagerie.util.PokeListener;
@@ -74,7 +73,6 @@ public class MainController {
     public ListView<Tag> tagListView;
     public PredictiveTextField editTagsTextField;
     public MenuBar menuBar;
-    public Button showErrorsButton;
     public Button importsButton;
 
     public ScreenPane screenPane;
@@ -83,7 +81,6 @@ public class MainController {
     private TagListScreen tagListScreen;
     private HelpScreen helpScreen;
     private SlideshowScreen slideshowScreen;
-    private ErrorsScreen errorsScreen;
     private DuplicateOptionsScreen duplicateOptionsScreen;
     private SettingsScreen settingsScreen;
     private ImporterScreen importerScreen;
@@ -155,7 +152,6 @@ public class MainController {
     private void initScreens() {
         initExplorerScreen();
         initSettingsScreen();
-        initErrorsScreen();
         initTagListScreen();
         slideshowScreen = new SlideshowScreen(item -> {
             slideshowScreen.close();
@@ -193,21 +189,6 @@ public class MainController {
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
             Platform.exit();
         }
-    }
-
-    private void initErrorsScreen() {
-        errorsScreen = new ErrorsScreen();
-        errorsScreen.getErrors().addListener((ListChangeListener<? super TrackedError>) c -> {
-            final int count = c.getList().size();
-
-            if (count == 0) {
-                showErrorsButton.setStyle(null);
-            } else {
-                showErrorsButton.setStyle("-fx-base: red;");
-            }
-
-            showErrorsButton.setText("" + count);
-        });
     }
 
     private void initSettingsScreen() {
@@ -514,7 +495,7 @@ public class MainController {
                                 ((MediaItem) item).initializeMD5();
                                 ((MediaItem) item).commitMD5ToDatabase();
                             } catch (Exception e) {
-                                Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute MD5", "Exception was thrown while trying to compute an MD5 for file: " + item, "Unknown")));
+                                e.printStackTrace();
                             }
                         }
 
@@ -549,7 +530,7 @@ public class MainController {
                                     ((MediaItem) item).initializeHistogram();
                                     ((MediaItem) item).commitHistogramToDatabase();
                                 } catch (Exception e) {
-                                    Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.NORMAL, "Failed to compute histogram", "Exception was thrown while trying to compute a histogram for image: " + item, "Unknown")));
+                                    e.printStackTrace();
                                 }
                             }
                         }
@@ -594,7 +575,7 @@ public class MainController {
                                         File dest = MainController.resolveDuplicateFilename(f);
 
                                         if (!((MediaItem) item).renameTo(dest)) {
-                                            Platform.runLater(() -> errorsScreen.addError(new TrackedError(null, TrackedError.Severity.HIGH, "Error moving file", "An exception was thrown while trying to move a file\nFrom: " + ((MediaItem) item).getFile() + "\nTo: " + dest, "Unknown")));
+                                            System.err.println("Failed to rename file"); //TODO
                                         }
                                     }
                                 }
@@ -718,7 +699,7 @@ public class MainController {
 
         if (item instanceof MediaItem) {
             if (!previewMediaView.preview((MediaItem) item)) {
-                errorsScreen.addError(new TrackedError(null, TrackedError.Severity.NORMAL, "Unsupported preview filetype", "Tried to preview a filetype that isn't supposed", "An unsupported filetype somehow got added to the system"));
+                System.err.println("Failed to preview file"); //TODO
             }
         } else {
             previewMediaView.preview(null);
@@ -1060,7 +1041,7 @@ public class MainController {
         try {
             settings.save();
         } catch (IOException e1) {
-            Platform.runLater(() -> errorsScreen.addError(new TrackedError(e1, TrackedError.Severity.HIGH, "Unable to save properties", "IO Exception thrown while trying to save properties file", "1.) Application may not have write privileges\n2.) File may already be in use")));
+            e1.printStackTrace();
         }
     }
 
@@ -1115,11 +1096,6 @@ public class MainController {
 
     public void viewTagsMenuButtonOnAction(ActionEvent event) {
         tagListScreen.open(screenPane, menagerie.getTags());
-        event.consume();
-    }
-
-    public void showErrorsButtonOnAction(ActionEvent event) {
-        screenPane.open(errorsScreen);
         event.consume();
     }
 
