@@ -13,6 +13,7 @@ import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrateg
 import uk.co.caprica.vlcj.version.LibVlcVersion;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Handler;
@@ -42,8 +43,7 @@ public class Main extends Application {
 
             VLCJ_LOADED = true;
         } catch (Throwable e) {
-            e.printStackTrace();
-            log.warning("Error loading vlcj");
+            log.log(Level.WARNING, "Error loading vlcj", e);
 
             VLCJ_LOADED = false;
         }
@@ -95,7 +95,9 @@ public class Main extends Application {
         log.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {
-                System.out.println(dtf.format(Instant.ofEpochMilli(record.getMillis())) + " [" + record.getLevel() + "]: " + record.getMessage());
+                PrintStream s = System.out;
+                if (record.getLevel() == Level.SEVERE) s = System.err;
+                s.println(dtf.format(Instant.ofEpochMilli(record.getMillis())) + " [" + record.getLevel() + "]: " + record.getMessage());
                 if (record.getThrown() != null) record.getThrown().printStackTrace();
             }
 

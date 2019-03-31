@@ -1,6 +1,7 @@
 package menagerie.model;
 
 import javafx.beans.property.*;
+import menagerie.gui.Main;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -10,6 +11,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
+import java.util.logging.Level;
 
 public class Settings {
 
@@ -52,6 +54,7 @@ public class Settings {
                 while (scan.hasNextLine()) {
                     String line = scan.nextLine();
                     if (line.startsWith("#") || line.isEmpty()) continue;
+                    Main.log.config("Settings read line: " + line);
 
                     try {
                         final int firstColonIndex = line.indexOf(':');
@@ -61,7 +64,7 @@ public class Settings {
                         final String valueString = line.substring(secondColonIndex + 1);
 
                         if (key == null) {
-                            System.err.println("Settings tried to load unknown key in line: " + line);
+                            Main.log.warning("Settings tried to load unknown key in line: " + line);
                             continue;
                         }
 
@@ -74,17 +77,16 @@ public class Settings {
                         } else if (typeName.equalsIgnoreCase("INTEGER")) {
                             setInt(key, Integer.parseInt(valueString));
                         } else {
-                            System.err.println("Settings tried to load unknown type from line: " + line);
+                            Main.log.warning("Settings tried to load unknown type from line: " + line);
                         }
                     } catch (Exception e) {
-                        System.err.println("Error trying to read line: " + line);
-                        e.printStackTrace();
+                        Main.log.log(Level.WARNING, "Error trying to read settings line: " + line);
                     }
                 }
 
                 scan.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                Main.log.log(Level.WARNING, "Error trying to read settings file: " + file, e);
             }
         }
     }

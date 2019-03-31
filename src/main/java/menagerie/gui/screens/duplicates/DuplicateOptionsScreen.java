@@ -10,6 +10,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import menagerie.gui.Main;
 import menagerie.gui.screens.ProgressScreen;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
@@ -23,6 +24,7 @@ import menagerie.util.CancellableThread;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 
 public class DuplicateOptionsScreen extends Screen {
 
@@ -195,13 +197,13 @@ public class DuplicateOptionsScreen extends Screen {
         try {
             settings.setDouble(Settings.Key.CONFIDENCE, Double.parseDouble(confidenceTextField.getText()));
         } catch (NumberFormatException e) {
-            e.printStackTrace();
+            Main.log.log(Level.WARNING, "Failed to convert DuplicateOptionsScreen confidenceTextField to double for saving settings", e);
         }
 
         try {
             settings.save();
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            Main.log.log(Level.SEVERE, "Failed to save settings", e);
         }
     }
 

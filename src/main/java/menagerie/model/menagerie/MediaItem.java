@@ -2,6 +2,7 @@ package menagerie.model.menagerie;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
+import menagerie.gui.Main;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.menagerie.histogram.HistogramReadException;
 import menagerie.model.menagerie.histogram.ImageHistogram;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.sql.SQLException;
+import java.util.logging.Level;
 
 public class MediaItem extends Item {
 
@@ -48,8 +50,7 @@ public class MediaItem extends Item {
                 thumb = menagerie.getDatabaseUpdater().getThumbnail(getId());
                 if (thumb != null) thumbnail = new SoftReference<>(thumb);
             } catch (SQLException e) {
-                System.err.println("Failed to get thumbnail from database: " + getId());
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to get thumbnail from database: " + getId(), e);
             }
         }
         if (thumb == null) {
@@ -116,7 +117,7 @@ public class MediaItem extends Item {
         try {
             md5 = HexBin.encode(MD5Hasher.hash(getFile()));
         } catch (IOException e) {
-            e.printStackTrace();
+            Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
         }
     }
 
@@ -148,8 +149,7 @@ public class MediaItem extends Item {
             try {
                 menagerie.getDatabaseUpdater().setPath(getId(), file.getAbsolutePath());
             } catch (SQLException e) {
-                System.err.println("Failed to update new path to file");
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to update new path to file", e);
             }
         }
 

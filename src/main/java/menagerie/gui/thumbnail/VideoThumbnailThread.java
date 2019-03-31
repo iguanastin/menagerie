@@ -12,6 +12,7 @@ import java.util.ArrayDeque;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.*;
+import java.util.logging.Level;
 
 public class VideoThumbnailThread extends Thread {
 
@@ -65,7 +66,7 @@ public class VideoThumbnailThread extends Thread {
                         try {
                             inPositionLatch.await();
                         } catch (InterruptedException e) {
-                            e.printStackTrace();
+                            Main.log.log(Level.WARNING, "Video thumbnailer interrupted while waiting for video init", e);
                         }
                         mp.removeMediaPlayerEventListener(eventListener);
 
@@ -87,7 +88,7 @@ public class VideoThumbnailThread extends Thread {
                         mp.stop();
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    Main.log.log(Level.SEVERE, "Unexpected error caught while running video thumbnailer job", e);
                 }
 
                 job = dequeuJob();
@@ -118,9 +119,7 @@ public class VideoThumbnailThread extends Thread {
             THUMBNAIL_MEDIA_PLAYER.release();
             THUMBNAIL_MEDIA_PLAYER = null;
         }
-        if (executor != null) {
-            executor.shutdownNow();
-        }
+        executor.shutdownNow();
     }
 
 }

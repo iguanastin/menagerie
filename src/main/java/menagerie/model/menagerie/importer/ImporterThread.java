@@ -1,5 +1,6 @@
 package menagerie.model.menagerie.importer;
 
+import menagerie.gui.Main;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.Settings;
 
@@ -7,6 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
 
 public class ImporterThread extends Thread {
 
@@ -43,7 +45,7 @@ public class ImporterThread extends Thread {
 
                 if (running) job.runJob(menagerie, settings);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Main.log.log(Level.WARNING, "Interrupted while importer thread taking job", e);
             }
         }
     }

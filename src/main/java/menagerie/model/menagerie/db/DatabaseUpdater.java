@@ -1,6 +1,7 @@
 package menagerie.model.menagerie.db;
 
 import javafx.scene.image.Image;
+import menagerie.gui.Main;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.histogram.ImageHistogram;
@@ -14,6 +15,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
 
 public class DatabaseUpdater extends Thread {
 
@@ -61,11 +63,10 @@ public class DatabaseUpdater extends Thread {
                 try {
                     job.run();
                 } catch (Exception e) {
-                    System.err.println("Failed to do job: " + job);
-                    e.printStackTrace();
+                    Main.log.log(Level.SEVERE, "Exception while running database updater job", e);
                 }
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                Main.log.log(Level.WARNING, "Database updater interrupted while waiting for queue", e);
             }
         }
     }
@@ -87,8 +88,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 setThumbnail(id, thumbnail);
             } catch (SQLException | IOException e) {
-                System.err.println("Failed to set thumbnail async: " + id);
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to set thumbnail async: " + id, e);
             }
         });
     }
@@ -106,8 +106,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 setMD5(id, md5);
             } catch (SQLException e) {
-                System.err.println("Failed to set md5 async: " + id + " - md5: " + md5);
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to set md5 async: " + id + " - md5: " + md5, e);
             }
         });
     }
@@ -128,8 +127,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 setHist(id, hist);
             } catch (SQLException e) {
-                System.err.println("Failed to set histogram async: " + id);
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to set histogram async: " + id, e);
             }
         });
     }
@@ -147,8 +145,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 setPath(id, path);
             } catch (SQLException e) {
-                System.err.println("Failed to set new path: " + id + " - \"" + path + "\"");
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to set new path: " + id + " - \"" + path + "\"", e);
             }
         });
     }
@@ -166,8 +163,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 tagItem(item, tag);
             } catch (SQLException e) {
-                System.err.println("Failed to tag item: " + item + " with tag: " + tag);
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to tag item: " + item + " with tag: " + tag, e);
             }
         });
     }
@@ -185,8 +181,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 untagItem(item, tag);
             } catch (SQLException e) {
-                System.err.println("Failed to untag item: " + item + " from tag: " + tag);
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to untag item: " + item + " from tag: " + tag, e);
             }
         });
     }
@@ -203,8 +198,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 removeItem(id);
             } catch (SQLException e) {
-                System.err.println("Failed to remove item: " + id);
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to remove item: " + id, e);
             }
         });
     }
@@ -222,8 +216,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 createTag(id, name);
             } catch (SQLException e) {
-                System.err.println("Failed to create tag: " + id + " - \"" + name + "\"");
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to create tag: " + id + " - \"" + name + "\"", e);
             }
         });
     }
@@ -240,8 +233,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 deleteTag(id);
             } catch (SQLException e) {
-                System.err.println("Failed to delete tag: " + id);
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to delete tag: " + id, e);
             }
         });
     }
@@ -271,8 +263,7 @@ public class DatabaseUpdater extends Thread {
             try {
                 createMedia(media);
             } catch (SQLException e) {
-                System.err.println("Failed to create media async: " + media);
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to create media async: " + media, e);
             }
         });
     }

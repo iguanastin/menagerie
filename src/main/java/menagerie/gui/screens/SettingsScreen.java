@@ -11,10 +11,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
+import menagerie.gui.Main;
 import menagerie.model.Settings;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.logging.Level;
 
 public class SettingsScreen extends Screen {
 
@@ -227,7 +229,7 @@ public class SettingsScreen extends Screen {
         try {
             settings.save();
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            Main.log.log(Level.WARNING, "Unable to save settings file", e);
         }
     }
 
