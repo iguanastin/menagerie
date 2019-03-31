@@ -91,6 +91,10 @@ public class Thumbnail {
         this.imageReadyListener = imageReadyListener;
     }
 
+    public static VideoThumbnailThread getVideoThumbnailThread() {
+        return videoThumbnailThread;
+    }
+
     public synchronized Image getImage() {
         return image;
     }

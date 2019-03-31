@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
 import java.util.*;
+import java.util.logging.Level;
 
 public class Menagerie {
 
@@ -61,7 +62,7 @@ public class Menagerie {
         }
         for (Tag t : new ArrayList<>(tags)) {
             if (!usedTags.contains(t.getId())) {
-                System.out.println("Deleting unused tag: " + t);
+                Main.log.info("Deleting unused tag: " + t);
                 tags.remove(t);
                 getDatabaseUpdater().deleteTag(t.getId());
             }
@@ -100,8 +101,7 @@ public class Menagerie {
                 try {
                     hist = new ImageHistogram(histAlpha, rs.getBinaryStream("hist_r"), rs.getBinaryStream("hist_g"), rs.getBinaryStream("hist_b"));
                 } catch (HistogramReadException e) {
-                    System.out.println("Histogram failed to load from database:");
-                    e.printStackTrace();
+                    Main.log.log(Level.SEVERE, "Histogram failed to load from database", e);
                 }
             }
 
@@ -118,14 +118,14 @@ public class Menagerie {
                     tag.incrementFrequency();
                     media.getTags().add(tag);
                 } else {
-                    System.err.println("Major issue, tag wasn't loaded in but somehow still exists in the database");
+                    Main.log.warning("Major issue, tag wasn't loaded in but somehow still exists in the database: " + tagRS.getInt("tag_id"));
                 }
             }
         }
 
         s.close();
 
-        System.out.println("Finished loading " + items.size() + " images from database");
+        Main.log.info("Finished loading " + items.size() + " images from database");
     }
 
     private void loadTagsFromDatabase() throws SQLException {
@@ -138,7 +138,7 @@ public class Menagerie {
 
         s.close();
 
-        System.out.println("Finished loading " + tags.size() + " tags from database");
+        Main.log.info("Finished loading " + tags.size() + " tags from database");
     }
 
     public MediaItem importFile(File file) {
@@ -152,8 +152,7 @@ public class Menagerie {
         try {
             getDatabaseUpdater().createMedia(media);
         } catch (SQLException e) {
-            System.err.println("Failed to create media in database: " + media);
-            e.printStackTrace();
+            Main.log.log(Level.SEVERE, "Failed to create media in database: " + media, e);
         }
 
         //Tag with tagme

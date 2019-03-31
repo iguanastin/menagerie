@@ -13,10 +13,18 @@ import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrateg
 import uk.co.caprica.vlcj.version.LibVlcVersion;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 public class Main extends Application {
 
     public static boolean VLCJ_LOADED = false;
+
+    public static final Logger log = Logger.getGlobal();
 
 
     public static void showErrorMessage(String title, String header, String content) {
@@ -30,12 +38,12 @@ public class Main extends Application {
     public void start(Stage stage) {
         try {
             NativeLibrary.addSearchPath("libvlc", new DefaultWindowsNativeDiscoveryStrategy().discover());
-            System.out.println("LibVLC Version: " + LibVlcVersion.getVersion());
+            log.config("LibVLC Version: " + LibVlcVersion.getVersion());
 
             VLCJ_LOADED = true;
         } catch (Throwable e) {
             e.printStackTrace();
-            System.out.println("Error loading vlcj");
+            log.warning("Error loading vlcj");
 
             VLCJ_LOADED = false;
         }
@@ -54,7 +62,7 @@ public class Main extends Application {
             stage.setScene(scene);
             stage.show();
         } catch (IOException e) {
-            e.printStackTrace();
+            log.log(Level.SEVERE, "Error loading FXML: " + splash, e);
             showErrorMessage("Error", "Unable to load FXML: " + splash, e.getLocalizedMessage());
         }
 
@@ -71,7 +79,7 @@ public class Main extends Application {
                 newStage.show();
                 stage.close();
             } catch (IOException e) {
-                e.printStackTrace();
+                log.log(Level.SEVERE, "Failed to load FXML: " + fxml, e);
                 System.exit(1);
             }
         });
@@ -79,6 +87,28 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
+        log.setLevel(Level.ALL);
+
+        // Init logger handler
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_INSTANT;
+        log.setUseParentHandlers(false);
+        log.addHandler(new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                System.out.println(dtf.format(Instant.ofEpochMilli(record.getMillis())) + " [" + record.getLevel() + "]: " + record.getMessage());
+                if (record.getThrown() != null) record.getThrown().printStackTrace();
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() throws SecurityException {
+            }
+        });
+
+        // Launch application
         launch(args);
     }
 

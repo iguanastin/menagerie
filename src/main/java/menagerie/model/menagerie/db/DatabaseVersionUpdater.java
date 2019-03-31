@@ -1,6 +1,8 @@
 package menagerie.model.menagerie.db;
 
 
+import menagerie.gui.Main;
+
 import java.sql.*;
 import java.util.ArrayList;
 
@@ -31,7 +33,7 @@ public class DatabaseVersionUpdater {
         while (outOfDate(db)) {
             int version = getVersion(db);
 
-            System.out.println("Database version: " + version);
+            Main.log.info("Found database version: " + version);
 
             switch (version) {
                 case -1:
@@ -39,14 +41,14 @@ public class DatabaseVersionUpdater {
                     initializeTables(db);
                     break;
                 case 0:
-                    System.out.println("!!! Database needs to update from 0 to 1 !!!");
+                    Main.log.warning("!!! Database needs to update from 0 to 1 !!!");
                     updateFromV0ToV1(db);
                     break;
                 case 1:
-                    System.out.println("!!! Database needs to update from 1 to 2 !!!");
+                    Main.log.warning("!!! Database needs to update from 1 to 2 !!!");
                     updateFromV1ToV2(db);
                 case 2:
-                    System.out.println("Database is up to date");
+                    Main.log.info("Database is up to date");
                     break;
             }
         }
@@ -94,27 +96,27 @@ public class DatabaseVersionUpdater {
     }
 
     private static void initializeV1Tables(Connection db) throws SQLException {
-        System.out.println("Initializing v1 tables");
+        Main.log.info("Initializing v1 tables");
 
         Statement s = db.createStatement();
 
         s.executeUpdate(CREATE_IMGS_TABLE_V1);
-        System.out.println("  Initialized imgs table");
+        Main.log.info("  Initialized imgs table");
         s.executeUpdate(CREATE_TAGS_TABLE_V1);
-        System.out.println("  Initialized tags table");
+        Main.log.info("  Initialized tags table");
         s.executeUpdate(CREATE_TAGGED_TABLE_V1);
-        System.out.println("  Initialized tagged table");
+        Main.log.info("  Initialized tagged table");
         s.executeUpdate("CREATE TABLE version(version INT NOT NULL PRIMARY KEY);");
         s.executeUpdate("INSERT INTO version(version) VALUES (1);");
-        System.out.println("  Initialized version table and inserted current version");
+        Main.log.info("  Initialized version table and inserted current version");
 
         s.close();
 
-        System.out.println("Finished initializing v1 tables");
+        Main.log.info("Finished initializing v1 tables");
     }
 
     private static void updateFromV0ToV1(Connection db) throws SQLException {
-        System.out.println("Database updating from v0 to v1...");
+        Main.log.warning("Database updating from v0 to v1...");
 
         long t = System.currentTimeMillis();
 
@@ -122,28 +124,33 @@ public class DatabaseVersionUpdater {
 
         //------------------------ Set version in schema ---------------------------------------------------------------
 
+        Main.log.info("Updating database version");
         s.executeUpdate("CREATE TABLE version(version INT NOT NULL PRIMARY KEY);");
         s.executeUpdate("INSERT INTO version(version) VALUES (1);");
 
         //---------------------------- Add columns ---------------------------------------------------------------------
 
+        Main.log.info("Modifying database columns");
         s.executeUpdate("ALTER TABLE imgs ADD md5 NVARCHAR(32)");
         s.executeUpdate("ALTER TABLE imgs ADD thumbnail BLOB;");
         s.executeUpdate("ALTER TABLE imgs ADD histogram OBJECT;");
 
         //--------------------------------- Rename columns -------------------------------------------------------------
 
+        Main.log.info("Renaming database columns");
         s.executeUpdate("ALTER TABLE imgs RENAME COLUMN img_id TO id;");
         s.executeUpdate("ALTER TABLE imgs RENAME COLUMN img_path TO path;");
         s.executeUpdate("ALTER TABLE imgs RENAME COLUMN img_added TO added;");
 
         //------------------------- Create tagging tables --------------------------------------------------------------
 
+        Main.log.info("Creating tagging tables");
         s.executeUpdate(CREATE_TAGS_TABLE_V1);
         s.executeUpdate(CREATE_TAGGED_TABLE_V1);
 
         //------------------------------ Convert tags ------------------------------------------------------------------
 
+        Main.log.info("Converting database tags format");
         PreparedStatement s_createTag = db.prepareStatement("INSERT INTO tags(name) VALUES (?);");
         PreparedStatement s_getTagID = db.prepareStatement("SELECT tags.id FROM tags WHERE tags.name=?;");
         PreparedStatement tagImage = db.prepareStatement("INSERT INTO tagged VALUES (?, ?);");
@@ -180,6 +187,7 @@ public class DatabaseVersionUpdater {
 
         //--------------------------------- Remove columns -------------------------------------------------------------
 
+        Main.log.info("Removing database columns");
         //Guaranteed
         s.executeUpdate("ALTER TABLE imgs DROP COLUMN img_tags;");
         //Possible
@@ -193,15 +201,16 @@ public class DatabaseVersionUpdater {
 
         s.close();
 
-        System.out.println("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
 
     }
 
     private static void updateFromV1ToV2(Connection db) throws SQLException {
-        System.out.println("Database updating from v1 to v2...");
+        Main.log.warning("Database updating from v1 to v2...");
         long t = System.currentTimeMillis();
         Statement s = db.createStatement();
 
+        Main.log.info("Altering database histogram columns");
         //Update histogram storage
         s.executeUpdate("ALTER TABLE imgs DROP COLUMN histogram;" +
                 "ALTER TABLE imgs ADD COLUMN hist_a BLOB;" +
@@ -209,6 +218,7 @@ public class DatabaseVersionUpdater {
                 "ALTER TABLE imgs ADD COLUMN hist_g BLOB;" +
                 "ALTER TABLE imgs ADD COLUMN hist_b BLOB;");
 
+        Main.log.info("Updating database version");
         //Update version table
         s.executeUpdate("INSERT INTO version VALUES (2);");
 
@@ -216,7 +226,7 @@ public class DatabaseVersionUpdater {
 
         s.close();
 
-        System.out.println("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
     }
 
     private static Tag getTagByName(Iterable<Tag> tags, String name) {
@@ -230,22 +240,19 @@ public class DatabaseVersionUpdater {
     }
 
     private static void cleanDatabase(Connection db) throws SQLException {
-        System.out.println("Cleaning database....");
+        Main.log.warning("Cleaning database....");
 
         Statement s = db.createStatement();
 
+        Main.log.info("Dropping database tables");
         s.executeUpdate("DROP TABLE IF EXISTS imgs;");
-        System.out.println("  Dropped table: imgs");
         s.executeUpdate("DROP TABLE IF EXISTS tags;");
-        System.out.println("  Dropped table: tags");
         s.executeUpdate("DROP TABLE IF EXISTS tagged;");
-        System.out.println("  Dropped table: tagged");
         s.executeUpdate("DROP TABLE IF EXISTS version;");
-        System.out.println("  Dropped table: version");
 
         s.close();
 
-        System.out.println("Finished cleaning database");
+        Main.log.info("Finished cleaning database");
     }
 
 }

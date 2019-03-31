@@ -1,5 +1,6 @@
 package menagerie.gui;
 
+import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -32,6 +33,7 @@ import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.gui.thumbnail.VideoThumbnailThread;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.*;
+import menagerie.model.menagerie.db.DatabaseUpdater;
 import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
@@ -54,8 +56,12 @@ import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.Temporal;
 import java.util.List;
 import java.util.*;
+import java.util.logging.*;
 
 public class MainController {
 
@@ -114,16 +120,27 @@ public class MainController {
     @FXML
     public void initialize() {
 
-        //Backup database
+        // Init default thread exception handlers
+        Thread.UncaughtExceptionHandler ueh = (thread, e) -> {
+            Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + thread, e);
+            //TODO
+        };
+        ImporterThread.setDefaultUncaughtExceptionHandler(ueh);
+        DatabaseUpdater.setDefaultUncaughtExceptionHandler(ueh);
+        VideoThumbnailThread.setDefaultUncaughtExceptionHandler(ueh);
+        CancellableThread.setDefaultUncaughtExceptionHandler(ueh);
+        FolderWatcherThread.setDefaultUncaughtExceptionHandler(ueh);
+
+        // Backup database
         if (settings.getBoolean(Settings.Key.BACKUP_DATABASE)) backupDatabase();
 
-        //Initialize the menagerie
+        // Initialize the menagerie
         initMenagerie();
 
-        //Init screens
+        // Init screens
         initScreens();
 
-        //Things to run on first "tick"
+        // Things to run on first "tick"
         Platform.runLater(() -> {
             //Apply window props and listeners
             initWindowPropertiesAndListeners();
@@ -132,10 +149,10 @@ public class MainController {
             rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
         });
 
-        //Apply a default search
+        // Apply a default search
         applySearch(null, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
 
-        //Init folder watcher
+        // Init folder watcher
         if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT)) startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
 
     }
@@ -144,12 +161,14 @@ public class MainController {
         try {
             backUpDatabase(settings.getString(Settings.Key.DATABASE_URL));
         } catch (IOException e) {
-            e.printStackTrace();
+            Main.log.log(Level.SEVERE, "Failed to backup database", e);
             Main.showErrorMessage("Error", "Error while trying to back up the database: " + settings.getString(Settings.Key.DATABASE_URL), e.getLocalizedMessage());
         }
     }
 
     private void initScreens() {
+        Main.log.info("Initializing screens");
+
         initExplorerScreen();
         initSettingsScreen();
         initTagListScreen();
@@ -175,17 +194,20 @@ public class MainController {
 
     private void initMenagerie() {
         try {
+            Main.log.info("Connecting to database: " + settings.getString(Settings.Key.DATABASE_URL) + " - " + settings.getString(Settings.Key.DATABASE_USER) + "/" + settings.getString(Settings.Key.DATABASE_PASSWORD));
             Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getString(Settings.Key.DATABASE_URL), settings.getString(Settings.Key.DATABASE_USER), settings.getString(Settings.Key.DATABASE_PASSWORD));
+            Main.log.info("Verifying database");
             DatabaseVersionUpdater.updateDatabase(db);
 
+            Main.log.info("Initializing Menagerie");
             menagerie = new Menagerie(db);
+
+            Main.log.info("Starting importer thread");
             importer = new ImporterThread(menagerie, settings);
             importer.setDaemon(true);
             importer.start();
-
-//            menagerie.getUpdateQueue().setErrorListener(e -> Platform.runLater(() -> errorsScreen.addError(new TrackedError(e, TrackedError.Severity.HIGH, "Error while updating database", "An exception as thrown while trying to update the database", "Concurrent modification error or SQL statement out of date"))));
         } catch (SQLException e) {
-            e.printStackTrace();
+            Main.log.log(Level.SEVERE, "Error connecting to or verifying database", e);
             Main.showErrorMessage("Database Error", "Error when connecting to database or verifying it", e.getLocalizedMessage());
             Platform.exit();
         }
@@ -345,7 +367,7 @@ public class MainController {
                 try {
                     importer.queue(new ImportJob(new URL(url), true, true));
                 } catch (MalformedURLException e) {
-                    e.printStackTrace();
+                    Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
                 }
             }
             event.consume();
@@ -470,7 +492,7 @@ public class MainController {
                 try {
                     Runtime.getRuntime().exec("explorer.exe /select, " + ((MediaItem) itemGridView.getLastSelected()).getFile().getAbsolutePath());
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    Main.log.log(Level.SEVERE, "Error opening file in explorer", e);
                     Main.showErrorMessage("Unexpected Error", "Error opening file explorer", e.getLocalizedMessage());
                 }
             }
@@ -495,7 +517,7 @@ public class MainController {
                                 ((MediaItem) item).initializeMD5();
                                 ((MediaItem) item).commitMD5ToDatabase();
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                Main.log.log(Level.WARNING, "Error initializing or storing MD5 hash", e);
                             }
                         }
 
@@ -530,7 +552,7 @@ public class MainController {
                                     ((MediaItem) item).initializeHistogram();
                                     ((MediaItem) item).commitHistogramToDatabase();
                                 } catch (Exception e) {
-                                    e.printStackTrace();
+                                    Main.log.log(Level.WARNING, "Error initializing or storing histogram", e);
                                 }
                             }
                         }
@@ -575,7 +597,7 @@ public class MainController {
                                         File dest = MainController.resolveDuplicateFilename(f);
 
                                         if (!((MediaItem) item).renameTo(dest)) {
-                                            System.err.println("Failed to rename file"); //TODO
+                                            Main.log.severe("Failed to rename " + ((MediaItem) item).getFile() + " to " + dest);
                                         }
                                     }
                                 }
@@ -699,7 +721,7 @@ public class MainController {
 
         if (item instanceof MediaItem) {
             if (!previewMediaView.preview((MediaItem) item)) {
-                System.err.println("Failed to preview file"); //TODO
+                Main.log.warning("Failed to preview file: " + ((MediaItem) item).getFile());
             }
         } else {
             previewMediaView.preview(null);
@@ -720,6 +742,8 @@ public class MainController {
     }
 
     private void applySearch(String search, boolean descending, boolean showGrouped) {
+        Main.log.info("Searching: \"" + search + "\", descending:" + descending + ", showGrouped:" + showGrouped);
+
         if (currentSearch != null) currentSearch.close();
         previewItem(null);
 
@@ -789,8 +813,7 @@ public class MainController {
                 try {
                     rules.add(new IDRule(type, Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
-                    e.printStackTrace();
-                    Main.showErrorMessage("Error", "Error converting int value for ID rule", e.getLocalizedMessage());
+                    Main.log.warning("Failed to convert parameter to integer: " + temp);
                 }
             } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
                 String temp = arg.substring(arg.indexOf(':') + 1);
@@ -805,8 +828,7 @@ public class MainController {
                 try {
                     rules.add(new DateAddedRule(type, Long.parseLong(temp), inverted));
                 } catch (NumberFormatException e) {
-                    e.printStackTrace();
-                    Main.showErrorMessage("Error", "Error converting long value for date added rule", e.getLocalizedMessage());
+                    Main.log.warning("Failed to convert parameter to long: " + temp);
                 }
             } else if (arg.startsWith("md5:")) {
                 rules.add(new MD5Rule(arg.substring(arg.indexOf(':') + 1), inverted));
@@ -846,15 +868,13 @@ public class MainController {
                 try {
                     rules.add(new TagCountRule(type, Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
-                    e.printStackTrace();
-                    Main.showErrorMessage("Error", "Error converting int value for tag count rule", e.getLocalizedMessage());
+                    Main.log.warning("Failed to convert parameter to integer: " + temp);
                 }
             } else if (arg.startsWith("in:")) {
                 try {
                     rules.add(new InGroupRule(Integer.parseInt(arg.substring(arg.indexOf(':') + 1)), inverted));
                 } catch (NumberFormatException e) {
-                    e.printStackTrace();
-                    Main.showErrorMessage("Error", "Error converting int value for group rule", e.getLocalizedMessage());
+                    Main.log.warning("Failed to convert parameter to integer: " + arg.substring(arg.indexOf(':') + 1));
                 }
             } else {
                 Tag tag = menagerie.getTagByName(arg);
@@ -923,8 +943,10 @@ public class MainController {
     private void startWatchingFolderForImages(String folder, boolean moveToDefault) {
         File watchFolder = new File(folder);
         if (watchFolder.exists() && watchFolder.isDirectory()) {
+            Main.log.info("Starting folder watcher in folder: " + watchFolder);
             folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.FILE_NAME_FILTER, 30000, files -> {
                 for (File file : files) {
+                    Main.log.info("Folder watcher got file to import: " + file);
                     if (moveToDefault) {
                         String work = settings.getString(Settings.Key.DEFAULT_FOLDER);
                         if (!work.endsWith("/") && !work.endsWith("\\")) work += "/";
@@ -949,6 +971,8 @@ public class MainController {
     }
 
     private void cleanExit(boolean revertDatabase) {
+        Main.log.info("Attempting clean exit");
+
         DynamicVideoView.releaseAllMediaPlayers();
         VideoThumbnailThread.releaseThreads();
 
@@ -956,9 +980,9 @@ public class MainController {
 
         new Thread(() -> {
             try {
-                System.out.println("Attempting to shut down Menagerie database and defragment the file");
+                Main.log.info("Attempting to shut down Menagerie database and defragment the file");
                 menagerie.getDatabase().createStatement().executeUpdate("SHUTDOWN DEFRAG;");
-                System.out.println("Done defragging database file");
+                Main.log.info("Done defragging database file");
 
                 if (revertDatabase) {
                     File database = getDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
@@ -966,11 +990,11 @@ public class MainController {
                     try {
                         Files.move(backup.toPath(), database.toPath(), StandardCopyOption.REPLACE_EXISTING);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        Main.log.log(Level.SEVERE, "Failed to revert the database: " + database, e);
                     }
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "SQL exception when shutting down with defrag", e);
             }
         }).start();
 
@@ -998,10 +1022,10 @@ public class MainController {
         File dbFile = getDatabaseFile(databaseURL);
 
         if (dbFile.exists()) {
-            System.out.println("Backing up database at: " + dbFile);
+            Main.log.info("Backing up database at: " + dbFile);
             File backupFile = new File(dbFile.getAbsolutePath() + ".bak");
             Files.copy(dbFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            System.out.println("Successfully backed up database to: " + backupFile);
+            Main.log.info("Successfully backed up database to: " + backupFile);
         }
     }
 
@@ -1040,8 +1064,8 @@ public class MainController {
     private void trySaveSettings() {
         try {
             settings.save();
-        } catch (IOException e1) {
-            e1.printStackTrace();
+        } catch (IOException e) {
+            Main.log.log(Level.WARNING, "Failed to save settings to file", e);
         }
     }
 
