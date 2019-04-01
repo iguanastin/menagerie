@@ -1,6 +1,8 @@
 package menagerie.gui;
 
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -213,8 +215,8 @@ public class MainController {
     }
 
     private void initSettingsScreen() {
-        settings.getProperty(Settings.Key.GRID_WIDTH).addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
-        settings.getProperty(Settings.Key.DO_AUTO_IMPORT).addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
+        ((IntegerProperty) settings.getProperty(Settings.Key.GRID_WIDTH)).addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
+        ((BooleanProperty) settings.getProperty(Settings.Key.DO_AUTO_IMPORT)).addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
             // Defer to later to ensure other settings get updated before any action is taken, since this operation relies on other settings
             if (folderWatcherThread != null) {
                 folderWatcherThread.stopWatching();
@@ -223,8 +225,8 @@ public class MainController {
             if (newValue)
                 startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
         }));
-        settings.getProperty(Settings.Key.MUTE_VIDEO).addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
-        settings.getProperty(Settings.Key.REPEAT_VIDEO).addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
+        ((BooleanProperty) settings.getProperty(Settings.Key.MUTE_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
+        ((BooleanProperty) settings.getProperty(Settings.Key.REPEAT_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
     }
 
     private void initTagListScreen() {
