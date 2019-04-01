@@ -56,9 +56,19 @@ public class DatabaseUpdater extends Thread {
     public void run() {
         running = true;
 
+        int databaseUpdates = 0;
+        long lastLog = System.currentTimeMillis();
+
         while (running) {
             try {
                 Runnable job = queue.take();
+                databaseUpdates++;
+
+                if (System.currentTimeMillis() - lastLog > 30000) {
+                    Main.log.info(String.format("DatabaseUpdater updated %d times in the last %.2fs", databaseUpdates, (System.currentTimeMillis() - lastLog) / 1000.0));
+                    lastLog = System.currentTimeMillis();
+                    databaseUpdates = 0;
+                }
 
                 try {
                     job.run();
@@ -271,11 +281,12 @@ public class DatabaseUpdater extends Thread {
     public Thumbnail getThumbnail(int id) throws SQLException {
         synchronized (PS_GET_IMG_THUMBNAIL) {
             PS_GET_IMG_THUMBNAIL.setInt(1, id);
-            ResultSet rs = PS_GET_IMG_THUMBNAIL.executeQuery();
-            if (rs.next()) {
-                InputStream binaryStream = rs.getBinaryStream("thumbnail");
-                if (binaryStream != null) {
-                    return new Thumbnail(ImageInputStreamConverter.imageFromInputStream(binaryStream));
+            try (ResultSet rs = PS_GET_IMG_THUMBNAIL.executeQuery()) {
+                if (rs.next()) {
+                    InputStream binaryStream = rs.getBinaryStream("thumbnail");
+                    if (binaryStream != null) {
+                        return new Thumbnail(ImageInputStreamConverter.imageFromInputStream(binaryStream));
+                    }
                 }
             }
         }

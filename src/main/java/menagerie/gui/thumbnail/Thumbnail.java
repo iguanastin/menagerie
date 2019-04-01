@@ -26,7 +26,7 @@ public class Thumbnail {
 
 
     public Thumbnail(File file) throws IOException {
-        if (Main.VLCJ_LOADED && !videoThumbnailThread.isAlive()) {
+        if (Main.isVlcjLoaded() && !videoThumbnailThread.isAlive()) {
             videoThumbnailThread.setDaemon(true);
             videoThumbnailThread.start();
         }

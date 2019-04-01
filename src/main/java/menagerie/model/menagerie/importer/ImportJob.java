@@ -2,6 +2,7 @@ package menagerie.model.menagerie.importer;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import menagerie.gui.Main;
 import menagerie.gui.MainController;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.MediaItem;
@@ -11,11 +12,13 @@ import menagerie.model.Settings;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.*;
+import java.util.logging.Level;
 
 public class ImportJob {
 
@@ -98,13 +101,17 @@ public class ImportJob {
                 if (i instanceof MediaItem && !item.equals(i) && ((MediaItem) i).getHistogram() != null) {
                     double similarity = ((MediaItem) i).getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
                     if (similarity > settings.getDouble(Settings.Key.CONFIDENCE)) {
-                        similarTo.add(new SimilarPair(item, (MediaItem) i, similarity));
+                        synchronized (this) {
+                            similarTo.add(new SimilarPair(item, (MediaItem) i, similarity));
+                        }
                     }
                 }
             }
 
             needsCheckSimilar = false;
-            return !similarTo.isEmpty();
+            synchronized (this) {
+                return !similarTo.isEmpty();
+            }
         }
         return false;
     }
@@ -170,25 +177,28 @@ public class ImportJob {
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.addRequestProperty("User-Agent", "Mozilla/4.0");
                 ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
-                FileOutputStream fos = new FileOutputStream(target);
+                try (FileOutputStream fos = new FileOutputStream(target)) {
+                    final long size = conn.getContentLengthLong();
+                    final int chunkSize = 4096;
+                    for (int i = 0; i < size; i += chunkSize) {
+                        fos.getChannel().transferFrom(rbc, i, chunkSize);
 
-                final long size = conn.getContentLengthLong();
-                final int chunkSize = 4096;
-                for (int i = 0; i < size; i += chunkSize) {
-                    fos.getChannel().transferFrom(rbc, i, chunkSize);
+                        progressProperty.set((double) i / size);
+                    }
 
-                    progressProperty.set((double) i / size);
                 }
-
-                conn.disconnect();
                 rbc.close();
-                fos.close();
+                conn.disconnect();
 
                 synchronized (this) {
                     file = target;
                 }
                 needsDownload = false;
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
+                Main.log.log(Level.WARNING, String.format("Unexpected exception while downloading from url: %s", url.toString()), e);
+                return true;
+            } catch (IOException e) {
+                Main.log.log(Level.WARNING, String.format("Failed to download file from url: %s", url.toString()), e);
                 return true;
             }
         }

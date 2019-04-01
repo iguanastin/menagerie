@@ -57,11 +57,14 @@ import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.*;
-import java.util.logging.*;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
 
 public class MainController {
 
@@ -123,10 +126,7 @@ public class MainController {
     public void initialize() {
 
         // Init default thread exception handlers
-        Thread.UncaughtExceptionHandler ueh = (thread, e) -> {
-            Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + thread, e);
-            //TODO
-        };
+        Thread.UncaughtExceptionHandler ueh = (thread, e) -> Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + thread, e);
         ImporterThread.setDefaultUncaughtExceptionHandler(ueh);
         DatabaseUpdater.setDefaultUncaughtExceptionHandler(ueh);
         VideoThumbnailThread.setDefaultUncaughtExceptionHandler(ueh);
@@ -162,7 +162,14 @@ public class MainController {
 
     private void backupDatabase() {
         try {
-            backUpDatabase(settings.getString(Settings.Key.DATABASE_URL));
+            File dbFile = getDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
+
+            if (dbFile.exists()) {
+                Main.log.info("Backing up database at: " + dbFile);
+                File backupFile = new File(dbFile.getAbsolutePath() + ".bak");
+                Files.copy(dbFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                Main.log.info("Successfully backed up database to: " + backupFile);
+            }
         } catch (IOException e) {
             Main.log.log(Level.SEVERE, "Failed to backup database", e);
             Main.showErrorMessage("Error", "Error while trying to back up the database: " + settings.getString(Settings.Key.DATABASE_URL), e.getLocalizedMessage());
@@ -265,7 +272,10 @@ public class MainController {
                         work.append("\n    at ").append(e);
                     }
                 }
-                Platform.runLater(() -> logScreen.getListView().getItems().add(work.toString()));
+                Platform.runLater(() -> {
+                    logScreen.getListView().getItems().add(work.toString());
+                    if (record.getLevel() == Level.SEVERE) logButton.setStyle("-fx-base: red;");
+                });
             }
 
             @Override
@@ -881,6 +891,9 @@ public class MainController {
                     case "hist":
                         rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
                         break;
+                    default:
+                        Main.log.warning("Unknown type for missing type: " + type);
+                        break;
                 }
             } else if (arg.startsWith("type:")) {
                 String type = arg.substring(arg.indexOf(':') + 1);
@@ -1008,14 +1021,20 @@ public class MainController {
         Main.log.info("Attempting clean exit");
 
         DynamicVideoView.releaseAllMediaPlayers();
-        VideoThumbnailThread.releaseThreads();
+        Thumbnail.getVideoThumbnailThread().releaseResources();
 
-        trySaveSettings();
+        try {
+            settings.save();
+        } catch (IOException e1) {
+            Main.log.log(Level.WARNING, "Failed to save settings to file", e1);
+        }
 
         new Thread(() -> {
             try {
                 Main.log.info("Attempting to shut down Menagerie database and defragment the file");
-                menagerie.getDatabase().createStatement().executeUpdate("SHUTDOWN DEFRAG;");
+                try (Statement s = menagerie.getDatabase().createStatement()) {
+                    s.executeUpdate("SHUTDOWN DEFRAG;");
+                }
                 Main.log.info("Done defragging database file");
 
                 if (revertDatabase) {
@@ -1052,17 +1071,6 @@ public class MainController {
         return results;
     }
 
-    private static void backUpDatabase(String databaseURL) throws IOException {
-        File dbFile = getDatabaseFile(databaseURL);
-
-        if (dbFile.exists()) {
-            Main.log.info("Backing up database at: " + dbFile);
-            File backupFile = new File(dbFile.getAbsolutePath() + ".bak");
-            Files.copy(dbFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            Main.log.info("Successfully backed up database to: " + backupFile);
-        }
-    }
-
     private static File getDatabaseFile(String databaseURL) {
         String path = databaseURL + ".mv.db";
         if (path.startsWith("~")) {
@@ -1093,14 +1101,6 @@ public class MainController {
         }
 
         return file;
-    }
-
-    private void trySaveSettings() {
-        try {
-            settings.save();
-        } catch (IOException e) {
-            Main.log.log(Level.WARNING, "Failed to save settings to file", e);
-        }
     }
 
     // ---------------------------------- Action Event Handlers --------------------------

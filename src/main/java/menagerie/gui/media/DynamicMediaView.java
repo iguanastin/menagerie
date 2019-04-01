@@ -67,7 +67,7 @@ public class DynamicMediaView extends StackPane {
     }
 
     private DynamicVideoView getVideoView() {
-        if (!Main.VLCJ_LOADED) return null;
+        if (!Main.isVlcjLoaded()) return null;
 
         if (videoView == null) {
             videoView = new DynamicVideoView();

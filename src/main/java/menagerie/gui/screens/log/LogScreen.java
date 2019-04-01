@@ -63,4 +63,9 @@ public class LogScreen extends Screen {
         return listView;
     }
 
+    @Override
+    protected void onOpen() {
+        listView.scrollTo(listView.getItems().size() - 1);
+    }
+
 }

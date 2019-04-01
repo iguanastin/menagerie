@@ -71,6 +71,11 @@ public abstract class Item implements Comparable<Item> {
     }
 
     @Override
+    public int hashCode() {
+        return Integer.hashCode(getId());
+    }
+
+    @Override
     public int compareTo(Item o) {
         return getId() - o.getId();
     }

@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 
 public class Main extends Application {
 
-    public static boolean VLCJ_LOADED = false;
+    private static boolean VLCJ_LOADED = false;
 
     public static final Logger log = Logger.getGlobal();
 
@@ -112,6 +112,10 @@ public class Main extends Application {
 
         // Launch application
         launch(args);
+    }
+
+    public static boolean isVlcjLoaded() {
+        return VLCJ_LOADED;
     }
 
 }

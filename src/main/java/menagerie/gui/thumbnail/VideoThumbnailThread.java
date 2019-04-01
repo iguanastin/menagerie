@@ -17,39 +17,38 @@ import java.util.logging.Level;
 public class VideoThumbnailThread extends Thread {
 
     private static final String[] VLC_THUMBNAILER_ARGS = {"--intf", "dummy", "--vout", "dummy", "--no-audio", "--no-osd", "--no-spu", "--no-stats", "--no-sub-autodetect-file", "--no-disable-screensaver", "--no-snapshot-preview"};
-    private static MediaPlayer THUMBNAIL_MEDIA_PLAYER = null;
-    private static final ExecutorService executor = Executors.newCachedThreadPool();
 
-    private boolean running = false;
-    private final Queue<VideoThumbnailJob> jobs = new ArrayDeque<>();
+    private volatile boolean running = false;
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final BlockingQueue<VideoThumbnailJob> jobs = new LinkedBlockingQueue<>();
+    private MediaPlayer mediaPlayer;
 
 
-    public synchronized void enqueueJob(VideoThumbnailJob job) {
-        jobs.add(job);
-        notifyAll();
+    public void enqueueJob(VideoThumbnailJob job) {
+        synchronized (jobs) {
+            jobs.add(job);
+        }
     }
 
-    public synchronized void stopRunning() {
+    public void stopRunning() {
         running = false;
-    }
-
-    private synchronized boolean isRunning() {
-        return running;
-    }
-
-    private synchronized VideoThumbnailJob dequeuJob() {
-        return jobs.poll();
     }
 
     @Override
     public void run() {
+        if (!Main.isVlcjLoaded()) return;
+
         running = true;
-        MediaPlayer mp = getThumbnailMediaPlayer();
+        MediaPlayerFactory factory = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS);
+        mediaPlayer = factory.newHeadlessMediaPlayer();
 
-        while (isRunning()) {
-            VideoThumbnailJob job = dequeuJob();
+        while (running) {
+            try {
+                VideoThumbnailJob job;
+                synchronized (jobs) {
+                    job = jobs.take();
+                }
 
-            while (job != null) {
                 try {
                     final CountDownLatch inPositionLatch = new CountDownLatch(1);
 
@@ -59,25 +58,26 @@ public class VideoThumbnailThread extends Thread {
                             inPositionLatch.countDown();
                         }
                     };
-                    Objects.requireNonNull(mp).addMediaPlayerEventListener(eventListener);
+                    Objects.requireNonNull(mediaPlayer).addMediaPlayerEventListener(eventListener);
 
-                    if (mp.startMedia(job.getFile().getAbsolutePath())) {
-                        mp.setPosition(0.1f);
+                    if (mediaPlayer.startMedia(job.getFile().getAbsolutePath())) {
+                        mediaPlayer.setPosition(0.1f);
                         try {
                             inPositionLatch.await();
                         } catch (InterruptedException e) {
                             Main.log.log(Level.WARNING, "Video thumbnailer interrupted while waiting for video init", e);
                         }
-                        mp.removeMediaPlayerEventListener(eventListener);
+                        mediaPlayer.removeMediaPlayerEventListener(eventListener);
 
-                        float vidWidth = (float) mp.getVideoDimension().getWidth();
-                        float vidHeight = (float) mp.getVideoDimension().getHeight();
+                        float vidWidth = (float) mediaPlayer.getVideoDimension().getWidth();
+                        float vidHeight = (float) mediaPlayer.getVideoDimension().getHeight();
                         float scale = Thumbnail.THUMBNAIL_SIZE / vidWidth;
                         if (scale * vidHeight > Thumbnail.THUMBNAIL_SIZE) scale = Thumbnail.THUMBNAIL_SIZE / vidHeight;
                         int width = (int) (scale * vidWidth);
                         int height = (int) (scale * vidHeight);
 
-                        Future<Image> future = executor.submit(() -> SwingFXUtils.toFXImage(mp.getSnapshot(width, height), null));
+                        // Use executor and Future to limit time spent computing in order to avoid infinite blocking
+                        Future<Image> future = executor.submit(() -> SwingFXUtils.toFXImage(mediaPlayer.getSnapshot(width, height), null));
                         try {
                             job.imageReady(future.get(1, TimeUnit.SECONDS));
                         } catch (Exception ignored) {
@@ -85,40 +85,19 @@ public class VideoThumbnailThread extends Thread {
                             future.cancel(true);
                         }
 
-                        mp.stop();
+                        mediaPlayer.stop();
                     }
                 } catch (Exception e) {
                     Main.log.log(Level.SEVERE, "Unexpected error caught while running video thumbnailer job", e);
                 }
-
-                job = dequeuJob();
-            }
-
-            synchronized (this) {
-                try {
-                    wait();
-                } catch (InterruptedException ignore) {
-                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
 
-    private static MediaPlayer getThumbnailMediaPlayer() {
-        if (!Main.VLCJ_LOADED) return null;
-
-        if (THUMBNAIL_MEDIA_PLAYER == null) {
-            MediaPlayerFactory factory = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS);
-            THUMBNAIL_MEDIA_PLAYER = factory.newHeadlessMediaPlayer();
-        }
-
-        return THUMBNAIL_MEDIA_PLAYER;
-    }
-
-    public static void releaseThreads() {
-        if (THUMBNAIL_MEDIA_PLAYER != null) {
-            THUMBNAIL_MEDIA_PLAYER.release();
-            THUMBNAIL_MEDIA_PLAYER = null;
-        }
+    public void releaseResources() {
+        if (mediaPlayer != null) mediaPlayer.release();
         executor.shutdownNow();
     }
 

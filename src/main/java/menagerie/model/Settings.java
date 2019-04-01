@@ -1,6 +1,7 @@
 package menagerie.model;
 
 import javafx.beans.property.*;
+import javafx.util.Pair;
 import menagerie.gui.Main;
 
 import java.io.File;
@@ -126,26 +127,23 @@ public class Settings {
         writer.println("# ------------- Menagerie Settings --------------");
         writer.println("# " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(Locale.getDefault()).withZone(ZoneId.systemDefault()).format(new Date().toInstant()));
 
-        for (Key key : vars.keySet()) {
-            Property get = vars.get(key);
-            if (get == null) continue;
+        for (Map.Entry<Key, Property> entry : vars.entrySet()) {
+            writer.print(entry.getKey() + ":");
 
-            writer.print(key + ":");
-
-            if (get instanceof BooleanProperty) {
+            if (entry.getValue() instanceof BooleanProperty) {
                 writer.print("BOOLEAN");
-            } else if (get instanceof StringProperty) {
+            } else if (entry.getValue() instanceof StringProperty) {
                 writer.print("STRING");
-            } else if (get instanceof DoubleProperty) {
+            } else if (entry.getValue() instanceof DoubleProperty) {
                 writer.print("DOUBLE");
-            } else if (get instanceof IntegerProperty) {
+            } else if (entry.getValue() instanceof IntegerProperty) {
                 writer.print("INTEGER");
             }
 
             writer.print(":");
 
-            if (get.getValue() != null) {
-                writer.print(get.getValue());
+            if (entry.getValue().getValue() != null) {
+                writer.print(entry.getValue().getValue());
             }
 
             writer.println();

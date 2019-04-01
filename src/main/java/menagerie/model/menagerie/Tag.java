@@ -39,6 +39,11 @@ public class Tag implements Comparable<Tag> {
     }
 
     @Override
+    public int hashCode() {
+        return Integer.hashCode(getId());
+    }
+
+    @Override
     public String toString() {
         return "Tag (" + getId() + ") \"" + getName() + "\"";
     }

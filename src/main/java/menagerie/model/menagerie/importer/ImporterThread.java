@@ -29,6 +29,9 @@ public class ImporterThread extends Thread {
 
     @Override
     public void run() {
+        int importCount = 0;
+        long lastLog = System.currentTimeMillis();
+
         while (running) {
             try {
                 ImportJob job = jobs.take();
@@ -36,14 +39,23 @@ public class ImporterThread extends Thread {
                 while (paused) {
                     synchronized (this) {
                         try {
-                            wait();
+                            wait(10000);
                         } catch (InterruptedException ignore) {
                         }
                     }
                     if (!running) break;
                 }
 
-                if (running) job.runJob(menagerie, settings);
+                if (running) {
+                    job.runJob(menagerie, settings);
+                    importCount++;
+
+                    if (System.currentTimeMillis() - lastLog > 30000) {
+                        Main.log.info(String.format("ImporterThread imported %d items in the last %.2fs", importCount, (System.currentTimeMillis() - lastLog) / 1000.0));
+                        lastLog = System.currentTimeMillis();
+                        importCount = 0;
+                    }
+                }
             } catch (InterruptedException e) {
                 Main.log.log(Level.WARNING, "Interrupted while importer thread taking job", e);
             }

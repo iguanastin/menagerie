@@ -120,6 +120,9 @@ public class TagListScreen extends Screen {
             case "Name":
                 listView.getItems().sort(Comparator.comparing(Tag::getName));
                 break;
+            default:
+                listView.getItems().sort(Comparator.comparing(Tag::getName));
+                break;
         }
     }
 

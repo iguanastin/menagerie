@@ -28,32 +28,31 @@ public class DatabaseVersionUpdater {
     }
 
     public static void updateDatabase(Connection db) throws SQLException {
-        Statement s = db.createStatement();
+        try (Statement s = db.createStatement()) {
+            while (outOfDate(db)) {
+                int version = getVersion(db);
 
-        while (outOfDate(db)) {
-            int version = getVersion(db);
+                Main.log.info("Found database version: " + version);
 
-            Main.log.info("Found database version: " + version);
-
-            switch (version) {
-                case -1:
-                    cleanDatabase(db);
-                    initializeTables(db);
-                    break;
-                case 0:
-                    Main.log.warning("!!! Database needs to update from 0 to 1 !!!");
-                    updateFromV0ToV1(db);
-                    break;
-                case 1:
-                    Main.log.warning("!!! Database needs to update from 1 to 2 !!!");
-                    updateFromV1ToV2(db);
-                case 2:
-                    Main.log.info("Database is up to date");
-                    break;
+                switch (version) {
+                    case -1:
+                        cleanDatabase(db);
+                        initializeTables(db);
+                        break;
+                    case 0:
+                        Main.log.warning("!!! Database needs to update from 0 to 1 !!!");
+                        updateFromV0ToV1(db);
+                        break;
+                    case 1:
+                        Main.log.warning("!!! Database needs to update from 1 to 2 !!!");
+                        updateFromV1ToV2(db);
+                        break;
+                    case 2:
+                        Main.log.info("Database is up to date");
+                        break;
+                }
             }
         }
-
-        s.close();
     }
 
     /**
@@ -98,21 +97,19 @@ public class DatabaseVersionUpdater {
     private static void initializeV1Tables(Connection db) throws SQLException {
         Main.log.info("Initializing v1 tables");
 
-        Statement s = db.createStatement();
+        try (Statement s = db.createStatement()) {
+            s.executeUpdate(CREATE_IMGS_TABLE_V1);
+            Main.log.info("  Initialized imgs table");
+            s.executeUpdate(CREATE_TAGS_TABLE_V1);
+            Main.log.info("  Initialized tags table");
+            s.executeUpdate(CREATE_TAGGED_TABLE_V1);
+            Main.log.info("  Initialized tagged table");
+            s.executeUpdate("CREATE TABLE version(version INT NOT NULL PRIMARY KEY);");
+            s.executeUpdate("INSERT INTO version(version) VALUES (1);");
+            Main.log.info("  Initialized version table and inserted current version");
 
-        s.executeUpdate(CREATE_IMGS_TABLE_V1);
-        Main.log.info("  Initialized imgs table");
-        s.executeUpdate(CREATE_TAGS_TABLE_V1);
-        Main.log.info("  Initialized tags table");
-        s.executeUpdate(CREATE_TAGGED_TABLE_V1);
-        Main.log.info("  Initialized tagged table");
-        s.executeUpdate("CREATE TABLE version(version INT NOT NULL PRIMARY KEY);");
-        s.executeUpdate("INSERT INTO version(version) VALUES (1);");
-        Main.log.info("  Initialized version table and inserted current version");
-
-        s.close();
-
-        Main.log.info("Finished initializing v1 tables");
+            Main.log.info("Finished initializing v1 tables");
+        }
     }
 
     private static void updateFromV0ToV1(Connection db) throws SQLException {
@@ -208,25 +205,21 @@ public class DatabaseVersionUpdater {
     private static void updateFromV1ToV2(Connection db) throws SQLException {
         Main.log.warning("Database updating from v1 to v2...");
         long t = System.currentTimeMillis();
-        Statement s = db.createStatement();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Altering database histogram columns");
+            //Update histogram storage
+            s.executeUpdate("ALTER TABLE imgs DROP COLUMN histogram;" +
+                    "ALTER TABLE imgs ADD COLUMN hist_a BLOB;" +
+                    "ALTER TABLE imgs ADD COLUMN hist_r BLOB;" +
+                    "ALTER TABLE imgs ADD COLUMN hist_g BLOB;" +
+                    "ALTER TABLE imgs ADD COLUMN hist_b BLOB;");
 
-        Main.log.info("Altering database histogram columns");
-        //Update histogram storage
-        s.executeUpdate("ALTER TABLE imgs DROP COLUMN histogram;" +
-                "ALTER TABLE imgs ADD COLUMN hist_a BLOB;" +
-                "ALTER TABLE imgs ADD COLUMN hist_r BLOB;" +
-                "ALTER TABLE imgs ADD COLUMN hist_g BLOB;" +
-                "ALTER TABLE imgs ADD COLUMN hist_b BLOB;");
+            Main.log.info("Updating database version");
+            //Update version table
+            s.executeUpdate("INSERT INTO version VALUES (2);");
 
-        Main.log.info("Updating database version");
-        //Update version table
-        s.executeUpdate("INSERT INTO version VALUES (2);");
-
-        //------------------------------------ Done Updating -----------------------------------------------------------
-
-        s.close();
-
-        Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
     }
 
     private static Tag getTagByName(Iterable<Tag> tags, String name) {
@@ -242,17 +235,15 @@ public class DatabaseVersionUpdater {
     private static void cleanDatabase(Connection db) throws SQLException {
         Main.log.warning("Cleaning database....");
 
-        Statement s = db.createStatement();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Dropping database tables");
+            s.executeUpdate("DROP TABLE IF EXISTS imgs;");
+            s.executeUpdate("DROP TABLE IF EXISTS tags;");
+            s.executeUpdate("DROP TABLE IF EXISTS tagged;");
+            s.executeUpdate("DROP TABLE IF EXISTS version;");
 
-        Main.log.info("Dropping database tables");
-        s.executeUpdate("DROP TABLE IF EXISTS imgs;");
-        s.executeUpdate("DROP TABLE IF EXISTS tags;");
-        s.executeUpdate("DROP TABLE IF EXISTS tagged;");
-        s.executeUpdate("DROP TABLE IF EXISTS version;");
-
-        s.close();
-
-        Main.log.info("Finished cleaning database");
+            Main.log.info("Finished cleaning database");
+        }
     }
 
 }

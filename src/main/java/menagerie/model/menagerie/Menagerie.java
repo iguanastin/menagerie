@@ -70,75 +70,76 @@ public class Menagerie {
     }
 
     private void initializeIdCounters() throws SQLException {
-        Statement s = database.createStatement();
-        ResultSet rs = s.executeQuery(SQL_GET_HIGHEST_IMG_ID);
-        if (rs.next()) {
-            nextItemID = rs.getInt("id") + 1;
-        } else {
-            nextItemID = 1;
-        }
-        rs.close();
+        try (Statement s = database.createStatement()) {
+            try (ResultSet rs = s.executeQuery(SQL_GET_HIGHEST_IMG_ID)) {
+                if (rs.next()) {
+                    nextItemID = rs.getInt("id") + 1;
+                } else {
+                    nextItemID = 1;
+                }
+                rs.close();
 
-        rs = s.executeQuery(SQL_GET_HIGHEST_TAG_ID);
-        if (rs.next()) {
-            nextTagID = rs.getInt("id") + 1;
-        } else {
-            nextTagID = 1;
+                try (ResultSet rs2 = s.executeQuery(SQL_GET_HIGHEST_TAG_ID)) {
+                    if (rs2.next()) {
+                        nextTagID = rs2.getInt("id") + 1;
+                    } else {
+                        nextTagID = 1;
+                    }
+                }
+            }
         }
-        rs.close();
-        s.close();
     }
 
     private void loadMediaFromDatabase() throws SQLException {
-        Statement s = database.createStatement();
-        ResultSet rs = s.executeQuery(SQL_GET_IMGS);
+        try (Statement s = database.createStatement()) {
+            try (ResultSet rs = s.executeQuery(SQL_GET_IMGS)) {
+                while (rs.next()) {
+                    ImageHistogram hist = null;
 
-        while (rs.next()) {
-            ImageHistogram hist = null;
+                    InputStream histAlpha = rs.getBinaryStream("hist_a");
+                    if (histAlpha != null) {
+                        try {
+                            hist = new ImageHistogram(histAlpha, rs.getBinaryStream("hist_r"), rs.getBinaryStream("hist_g"), rs.getBinaryStream("hist_b"));
+                        } catch (HistogramReadException e) {
+                            Main.log.log(Level.SEVERE, "Histogram failed to load from database", e);
+                        }
+                    }
 
-            InputStream histAlpha = rs.getBinaryStream("hist_a");
-            if (histAlpha != null) {
-                try {
-                    hist = new ImageHistogram(histAlpha, rs.getBinaryStream("hist_r"), rs.getBinaryStream("hist_g"), rs.getBinaryStream("hist_b"));
-                } catch (HistogramReadException e) {
-                    Main.log.log(Level.SEVERE, "Histogram failed to load from database", e);
+                    MediaItem media = new MediaItem(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
+                    items.add(media);
+
+                    PreparedStatement ps = database.prepareStatement(SQL_GET_IMG_TAGS);
+                    ps.setInt(1, media.getId());
+                    ResultSet tagRS = ps.executeQuery();
+
+                    while (tagRS.next()) {
+                        Tag tag = getTagByID(tagRS.getInt("tag_id"));
+                        if (tag != null) {
+                            tag.incrementFrequency();
+                            media.getTags().add(tag);
+                        } else {
+                            Main.log.warning("Major issue, tag wasn't loaded in but somehow still exists in the database: " + tagRS.getInt("tag_id"));
+                        }
+                    }
+
+                    ps.close();
                 }
-            }
 
-            MediaItem media = new MediaItem(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
-            items.add(media);
-
-            PreparedStatement ps = database.prepareStatement(SQL_GET_IMG_TAGS);
-            ps.setInt(1, media.getId());
-            ResultSet tagRS = ps.executeQuery();
-
-            while (tagRS.next()) {
-                Tag tag = getTagByID(tagRS.getInt("tag_id"));
-                if (tag != null) {
-                    tag.incrementFrequency();
-                    media.getTags().add(tag);
-                } else {
-                    Main.log.warning("Major issue, tag wasn't loaded in but somehow still exists in the database: " + tagRS.getInt("tag_id"));
-                }
+                Main.log.info("Finished loading " + items.size() + " images from database");
             }
         }
-
-        s.close();
-
-        Main.log.info("Finished loading " + items.size() + " images from database");
     }
 
     private void loadTagsFromDatabase() throws SQLException {
-        Statement s = database.createStatement();
-        ResultSet rs = s.executeQuery(SQL_GET_TAGS);
+        try (Statement s = database.createStatement()) {
+            try (ResultSet rs = s.executeQuery(SQL_GET_TAGS)) {
+                while (rs.next()) {
+                    tags.add(new Tag(rs.getInt("id"), rs.getNString("name")));
+                }
 
-        while (rs.next()) {
-            tags.add(new Tag(rs.getInt("id"), rs.getNString("name")));
+                Main.log.info("Finished loading " + tags.size() + " tags from database");
+            }
         }
-
-        s.close();
-
-        Main.log.info("Finished loading " + tags.size() + " tags from database");
     }
 
     public MediaItem importFile(File file) {

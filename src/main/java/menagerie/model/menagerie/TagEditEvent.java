@@ -16,25 +16,12 @@ public class TagEditEvent {
     }
 
     public void reverseAction() {
-        for (Item item : added.keySet()) {
-            added.get(item).forEach(item::removeTag);
+        for (Map.Entry<Item, List<Tag>> entry : added.entrySet()) {
+            entry.getValue().forEach(entry.getKey()::removeTag);
         }
-        for (Item item : removed.keySet()) {
-            removed.get(item).forEach(item::addTag);
+        for (Map.Entry<Item, List<Tag>> entry : removed.entrySet()) {
+            entry.getValue().forEach(entry.getKey()::addTag);
         }
-    }
-
-    public int getNumChanges() {
-        int n = 0;
-
-        for (Item item : added.keySet()) {
-            n += added.get(item).size();
-        }
-        for (Item item : removed.keySet()) {
-            n += removed.get(item).size();
-        }
-
-        return n;
     }
 
     public Map<Item, List<Tag>> getAdded() {
