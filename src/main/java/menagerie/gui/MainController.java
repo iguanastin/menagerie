@@ -1,8 +1,6 @@
 package menagerie.gui;
 
 import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -31,10 +29,8 @@ import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.screens.slideshow.SlideshowScreen;
 import menagerie.gui.thumbnail.Thumbnail;
-import menagerie.gui.thumbnail.VideoThumbnailThread;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.*;
-import menagerie.model.menagerie.db.DatabaseUpdater;
 import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
@@ -217,8 +213,8 @@ public class MainController {
     }
 
     private void initSettingsScreen() {
-        ((IntegerProperty) settings.getProperty(Settings.Key.GRID_WIDTH)).addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
-        ((BooleanProperty) settings.getProperty(Settings.Key.DO_AUTO_IMPORT)).addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
+        settings.getProperty(Settings.Key.GRID_WIDTH).addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
+        settings.getProperty(Settings.Key.DO_AUTO_IMPORT).addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
             // Defer to later to ensure other settings get updated before any action is taken, since this operation relies on other settings
             if (folderWatcherThread != null) {
                 folderWatcherThread.stopWatching();
@@ -227,8 +223,8 @@ public class MainController {
             if (newValue)
                 startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
         }));
-        ((BooleanProperty) settings.getProperty(Settings.Key.MUTE_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
-        ((BooleanProperty) settings.getProperty(Settings.Key.REPEAT_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
+        settings.getProperty(Settings.Key.MUTE_VIDEO).addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
+        settings.getProperty(Settings.Key.REPEAT_VIDEO).addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
     }
 
     private void initTagListScreen() {
@@ -353,11 +349,9 @@ public class MainController {
                     menagerie.removeItems(itemGridView.getSelected(), deleteFiles);
                 };
                 if (deleteFiles) {
-                    new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" +
-                            "This action CANNOT be undone (files will be deleted)", onFinish, null);
+                    new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" + "This action CANNOT be undone (files will be deleted)", onFinish, null);
                 } else {
-                    new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + itemGridView.getSelected().size() + " files)\n\n" +
-                            "This action CANNOT be undone", onFinish, null);
+                    new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + itemGridView.getSelected().size() + " files)\n\n" + "This action CANNOT be undone", onFinish, null);
                 }
                 event.consume();
             }
@@ -652,11 +646,9 @@ public class MainController {
         });
 
         MenuItem removeImagesMenuItem = new MenuItem("Remove");
-        removeImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + itemGridView.getSelected().size() + " files)\n\n" +
-                "This action CANNOT be undone", () -> menagerie.removeItems(itemGridView.getSelected(), false), null));
+        removeImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + itemGridView.getSelected().size() + " files)\n\n" + "This action CANNOT be undone", () -> menagerie.removeItems(itemGridView.getSelected(), false), null));
         MenuItem deleteImagesMenuItem = new MenuItem("Delete");
-        deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" +
-                "This action CANNOT be undone (files will be deleted)", () -> {
+        deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" + "This action CANNOT be undone (files will be deleted)", () -> {
             previewItem(null);
             menagerie.removeItems(itemGridView.getSelected(), true);
         }, null));
@@ -713,8 +705,7 @@ public class MainController {
     private void openImportFolderDialog() {
         DirectoryChooser dc = new DirectoryChooser();
         final String defaultFolder = settings.getString(Settings.Key.DEFAULT_FOLDER);
-        if (defaultFolder != null && !defaultFolder.isEmpty())
-            dc.setInitialDirectory(new File(defaultFolder));
+        if (defaultFolder != null && !defaultFolder.isEmpty()) dc.setInitialDirectory(new File(defaultFolder));
         File result = dc.showDialog(rootPane.getScene().getWindow());
 
         if (result != null) {
@@ -732,8 +723,7 @@ public class MainController {
     private void openImportFilesDialog() {
         FileChooser fc = new FileChooser();
         final String defaultFolder = settings.getString(Settings.Key.DEFAULT_FOLDER);
-        if (defaultFolder != null && !defaultFolder.isEmpty())
-            fc.setInitialDirectory(new File(defaultFolder));
+        if (defaultFolder != null && !defaultFolder.isEmpty()) fc.setInitialDirectory(new File(defaultFolder));
         fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
         List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
 
@@ -808,8 +798,7 @@ public class MainController {
                     if (images.contains(currentlyPreviewing)) previewItem(null);
 
                     if (!itemGridView.getItems().isEmpty()) {
-                        if (newIndex >= itemGridView.getItems().size())
-                            newIndex = itemGridView.getItems().size() - 1;
+                        if (newIndex >= itemGridView.getItems().size()) newIndex = itemGridView.getItems().size() - 1;
                         itemGridView.setLastSelected(itemGridView.getItems().get(newIndex));
                     }
                 });
@@ -820,8 +809,7 @@ public class MainController {
         itemGridView.getItems().clear();
         itemGridView.getItems().addAll(currentSearch.getResults());
 
-        if (!itemGridView.getItems().isEmpty())
-            itemGridView.select(itemGridView.getItems().get(0), false, false);
+        if (!itemGridView.getItems().isEmpty()) itemGridView.select(itemGridView.getItems().get(0), false, false);
     }
 
     private List<SearchRule> constructRuleSet(String str) {
@@ -1195,10 +1183,8 @@ public class MainController {
                     event.consume();
                     break;
                 case I:
-                    if (event.isShiftDown())
-                        openImportFolderDialog();
-                    else
-                        openImportFilesDialog();
+                    if (event.isShiftDown()) openImportFolderDialog();
+                    else openImportFilesDialog();
                     event.consume();
                     break;
                 case H:

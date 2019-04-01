@@ -13,8 +13,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 
 public class DatabaseUpdater extends Thread {
@@ -34,9 +38,13 @@ public class DatabaseUpdater extends Thread {
     private final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
     private volatile boolean running = false;
 
+    private final Timer loggingTimer = new Timer(true);
+    private final Lock loggingLock = new ReentrantLock();
+    private int databaseUpdates = 0;
+    private long lastLog = System.currentTimeMillis();
+
 
     public DatabaseUpdater(Connection database) throws SQLException {
-
 
         // ------------------------------------ Init statements -----------------------------------
         PS_SET_IMG_MD5 = database.prepareStatement("UPDATE imgs SET imgs.md5=? WHERE imgs.id=?;");
@@ -56,18 +64,16 @@ public class DatabaseUpdater extends Thread {
     public void run() {
         running = true;
 
-        int databaseUpdates = 0;
-        long lastLog = System.currentTimeMillis();
+        startLoggingTimer();
 
         while (running) {
             try {
                 Runnable job = queue.take();
-                databaseUpdates++;
-
-                if (System.currentTimeMillis() - lastLog > 30000) {
-                    Main.log.info(String.format("DatabaseUpdater updated %d times in the last %.2fs", databaseUpdates, (System.currentTimeMillis() - lastLog) / 1000.0));
-                    lastLog = System.currentTimeMillis();
-                    databaseUpdates = 0;
+                try {
+                    loggingLock.lock();
+                    databaseUpdates++;
+                } finally {
+                    loggingLock.unlock();
                 }
 
                 try {
@@ -79,6 +85,24 @@ public class DatabaseUpdater extends Thread {
                 Main.log.log(Level.WARNING, "Database updater interrupted while waiting for queue", e);
             }
         }
+    }
+
+    private void startLoggingTimer() {
+        loggingTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    loggingLock.lock();
+                    if (databaseUpdates > 0) {
+                        Main.log.info(String.format("DatabaseUpdater updated %d times in the last %.2fs", databaseUpdates, (System.currentTimeMillis() - lastLog) / 1000.0));
+                        lastLog = System.currentTimeMillis();
+                        databaseUpdates = 0;
+                    }
+                } finally {
+                    loggingLock.unlock();
+                }
+            }
+        }, 30000, 30000);
     }
 
     public void enqueue(Runnable job) {
@@ -296,6 +320,7 @@ public class DatabaseUpdater extends Thread {
 
     public void cleanStop() {
         running = false;
+        loggingTimer.cancel();
     }
 
 }
