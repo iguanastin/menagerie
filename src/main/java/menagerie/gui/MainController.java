@@ -125,14 +125,6 @@ public class MainController {
     @FXML
     public void initialize() {
 
-        // Init default thread exception handlers
-        Thread.UncaughtExceptionHandler ueh = (thread, e) -> Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + thread, e);
-        ImporterThread.setDefaultUncaughtExceptionHandler(ueh);
-        DatabaseUpdater.setDefaultUncaughtExceptionHandler(ueh);
-        VideoThumbnailThread.setDefaultUncaughtExceptionHandler(ueh);
-        CancellableThread.setDefaultUncaughtExceptionHandler(ueh);
-        FolderWatcherThread.setDefaultUncaughtExceptionHandler(ueh);
-
         // Backup database
         if (settings.getBoolean(Settings.Key.BACKUP_DATABASE)) backupDatabase();
 

@@ -90,6 +90,7 @@ public class Main extends Application {
         log.setLevel(Level.ALL);
 
         // Init logger handler
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + t, e));
         DateTimeFormatter dtf = DateTimeFormatter.ISO_INSTANT;
         log.setUseParentHandlers(false);
         log.addHandler(new Handler() {
