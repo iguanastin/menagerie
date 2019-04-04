@@ -127,9 +127,11 @@ public class MediaItem extends Item {
     }
 
     public void initializeHistogram() {
-        try {
-            histogram = new ImageHistogram(getImageAsync());
-        } catch (HistogramReadException ignore) {
+        if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
+            try {
+                histogram = new ImageHistogram(getImageAsync());
+            } catch (HistogramReadException ignore) {
+            }
         }
     }
 
