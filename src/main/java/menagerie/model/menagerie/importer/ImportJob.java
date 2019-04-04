@@ -4,11 +4,11 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import menagerie.gui.Main;
 import menagerie.gui.MainController;
-import menagerie.model.SimilarPair;
-import menagerie.model.menagerie.MediaItem;
-import menagerie.model.menagerie.Item;
-import menagerie.model.menagerie.Menagerie;
 import menagerie.model.Settings;
+import menagerie.model.SimilarPair;
+import menagerie.model.menagerie.Item;
+import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Menagerie;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -52,20 +52,13 @@ public class ImportJob {
     private final Set<ImportJobStatusListener> statusListeners = new HashSet<>();
 
 
-    public ImportJob(URL url, boolean checkForDupes, boolean checkForSimilar) {
-        this(checkForDupes, checkForSimilar);
+    public ImportJob(URL url) {
         this.url = url;
         needsDownload = true;
     }
 
-    public ImportJob(File file, boolean checkForDupes, boolean checkForSimilar) {
-        this(checkForDupes, checkForSimilar);
+    public ImportJob(File file) {
         this.file = file;
-    }
-
-    private ImportJob(boolean checkForDupes, boolean checkForSimilar) {
-        this.needsCheckDuplicate = checkForDupes;
-        this.needsCheckSimilar = checkForSimilar;
     }
 
     void runJob(Menagerie menagerie, Settings settings) {

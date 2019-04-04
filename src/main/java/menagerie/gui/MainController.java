@@ -91,6 +91,7 @@ public class MainController {
     private SettingsScreen settingsScreen;
     private ImporterScreen importerScreen;
     private LogScreen logScreen;
+    private ImportDialogScreen importDialogScreen;
 
     // --------------------------------- Menagerie vars ------------------------------
     private Menagerie menagerie;
@@ -187,6 +188,7 @@ public class MainController {
             }
         });
         initLogScreen();
+        importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
 
         screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
     }
@@ -390,11 +392,11 @@ public class MainController {
 
             if (files != null && !files.isEmpty()) {
                 for (File file : files) {
-                    importer.queue(new ImportJob(file, true, true));
+                    importer.queue(new ImportJob(file));
                 }
             } else if (url != null && !url.isEmpty()) {
                 try {
-                    importer.queue(new ImportJob(new URL(url), true, true));
+                    importer.queue(new ImportJob(new URL(url)));
                 } catch (MalformedURLException e) {
                     Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
                 }
@@ -714,7 +716,7 @@ public class MainController {
             });
 
             for (File file : files) {
-                importer.queue(new ImportJob(file, true, true));
+                importer.queue(new ImportJob(file));
             }
         }
     }
@@ -733,7 +735,7 @@ public class MainController {
             });
 
             for (File file : finalResults) {
-                importer.queue(new ImportJob(file, true, true));
+                importer.queue(new ImportJob(file));
             }
         }
     }
@@ -988,7 +990,7 @@ public class MainController {
                         file = dest;
                     }
 
-                    importer.queue(new ImportJob(file, true, true));
+                    importer.queue(new ImportJob(file));
                 }
             });
             folderWatcherThread.setDaemon(true);
@@ -1182,8 +1184,9 @@ public class MainController {
                     event.consume();
                     break;
                 case I:
-                    if (event.isShiftDown()) openImportFolderDialog();
-                    else openImportFilesDialog();
+                    //                    if (event.isShiftDown()) openImportFolderDialog();
+                    //                    else openImportFilesDialog();
+                    screenPane.open(importDialogScreen);
                     event.consume();
                     break;
                 case H:
