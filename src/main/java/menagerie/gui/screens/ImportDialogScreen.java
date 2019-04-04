@@ -62,8 +62,10 @@ public class ImportDialogScreen extends Screen {
             FileChooser fc = new FileChooser();
             fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
             fc.setTitle("Import files...");
-            if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null)
-                fc.setInitialDirectory(new File(settings.getString(Settings.Key.DEFAULT_FOLDER)));
+            if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null) {
+                File f = new File(settings.getString(Settings.Key.DEFAULT_FOLDER));
+                if (f.isDirectory()) fc.setInitialDirectory(f);
+            }
             List<File> result = fc.showOpenMultipleDialog(getScene().getWindow());
             if (result != null && !result.isEmpty()) {
                 files = new ArrayList<>(result);
@@ -78,8 +80,10 @@ public class ImportDialogScreen extends Screen {
         browseFolders.setOnAction(event -> {
             DirectoryChooser dc = new DirectoryChooser();
             dc.setTitle("Import folder...");
-            if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null)
-                dc.setInitialDirectory(new File(settings.getString(Settings.Key.DEFAULT_FOLDER)));
+            if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null) {
+                File f = new File(settings.getString(Settings.Key.DEFAULT_FOLDER));
+                if (f.isDirectory()) dc.setInitialDirectory(f);
+            }
             File folder = dc.showDialog(getScene().getWindow());
             if (folder != null) {
                 files = new ArrayList<>();
