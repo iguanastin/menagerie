@@ -56,8 +56,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.*;
 import java.util.logging.Handler;
@@ -251,11 +249,10 @@ public class MainController {
     private void initLogScreen() {
         logScreen = new LogScreen();
         logScreen.getListView().setCellFactory(param -> new LogListCell());
-        DateTimeFormatter dtf = DateTimeFormatter.ISO_INSTANT;
         Main.log.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {
-                StringBuilder work = new StringBuilder(dtf.format(Instant.ofEpochMilli(record.getMillis())) + " [" + record.getLevel() + "]: " + record.getMessage());
+                StringBuilder work = new StringBuilder(new Date() + " [" + record.getLevel() + "]: " + record.getMessage());
                 if (record.getThrown() != null) {
                     work.append("\n").append(record.getThrown().toString());
                     for (StackTraceElement e : record.getThrown().getStackTrace()) {

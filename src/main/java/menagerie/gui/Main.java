@@ -14,8 +14,7 @@ import uk.co.caprica.vlcj.version.LibVlcVersion;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -91,14 +90,13 @@ public class Main extends Application {
 
         // Init logger handler
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + t, e));
-        DateTimeFormatter dtf = DateTimeFormatter.ISO_INSTANT;
         log.setUseParentHandlers(false);
         log.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {
                 PrintStream s = System.out;
                 if (record.getLevel() == Level.SEVERE) s = System.err;
-                s.println(dtf.format(Instant.ofEpochMilli(record.getMillis())) + " [" + record.getLevel() + "]: " + record.getMessage());
+                s.println(new Date() + " [" + record.getLevel() + "]: " + record.getMessage());
                 if (record.getThrown() != null) record.getThrown().printStackTrace();
             }
 
