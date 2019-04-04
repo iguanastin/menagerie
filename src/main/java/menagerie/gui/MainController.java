@@ -17,7 +17,6 @@ import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ItemGridView;
@@ -46,7 +45,6 @@ import menagerie.util.folderwatcher.FolderWatcherThread;
 
 import java.awt.*;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -701,45 +699,6 @@ public class MainController {
         });
     }
 
-    // -------------------------------- Dialog Openers ---------------------------------
-
-    private void openImportFolderDialog() {
-        DirectoryChooser dc = new DirectoryChooser();
-        final String defaultFolder = settings.getString(Settings.Key.DEFAULT_FOLDER);
-        if (defaultFolder != null && !defaultFolder.isEmpty()) dc.setInitialDirectory(new File(defaultFolder));
-        File result = dc.showDialog(rootPane.getScene().getWindow());
-
-        if (result != null) {
-            List<File> files = getFilesRecursively(result, Filters.FILE_NAME_FILTER);
-            menagerie.getItems().forEach(img -> {
-                if (img instanceof MediaItem) files.remove(((MediaItem) img).getFile());
-            });
-
-            for (File file : files) {
-                importer.queue(new ImportJob(file));
-            }
-        }
-    }
-
-    private void openImportFilesDialog() {
-        FileChooser fc = new FileChooser();
-        final String defaultFolder = settings.getString(Settings.Key.DEFAULT_FOLDER);
-        if (defaultFolder != null && !defaultFolder.isEmpty()) fc.setInitialDirectory(new File(defaultFolder));
-        fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
-        List<File> results = fc.showOpenMultipleDialog(rootPane.getScene().getWindow());
-
-        if (results != null && !results.isEmpty()) {
-            final List<File> finalResults = new ArrayList<>(results);
-            menagerie.getItems().forEach(item -> {
-                if (item instanceof MediaItem) finalResults.remove(((MediaItem) item).getFile());
-            });
-
-            for (File file : finalResults) {
-                importer.queue(new ImportJob(file));
-            }
-        }
-    }
-
     // ---------------------------------- GUI Action Methods ---------------------------
 
     private void previewItem(Item item) {
@@ -1037,21 +996,6 @@ public class MainController {
 
     // ---------------------------------- Compute Utilities -----------------------------
 
-    private static List<File> getFilesRecursively(File folder, FileFilter filter) {
-        File[] files = folder.listFiles();
-        List<File> results = new ArrayList<>();
-        if (files == null) return results;
-
-        for (File file : files) {
-            if (file.isDirectory()) {
-                results.addAll(getFilesRecursively(file, filter));
-            } else {
-                if (filter.accept(file)) results.add(file);
-            }
-        }
-        return results;
-    }
-
     private static File getDatabaseFile(String databaseURL) {
         String path = databaseURL + ".mv.db";
         if (path.startsWith("~")) {
@@ -1099,12 +1043,7 @@ public class MainController {
     }
 
     public void importFilesMenuButtonOnAction(ActionEvent event) {
-        openImportFilesDialog();
-        event.consume();
-    }
-
-    public void importFolderMenuButtonOnAction(ActionEvent event) {
-        openImportFolderDialog();
+        screenPane.open(importDialogScreen);
         event.consume();
     }
 
