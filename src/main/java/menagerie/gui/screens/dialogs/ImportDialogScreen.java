@@ -1,4 +1,4 @@
-package menagerie.gui.screens;
+package menagerie.gui.screens.dialogs;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -12,6 +12,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import menagerie.gui.screens.Screen;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;

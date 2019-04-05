@@ -1,4 +1,4 @@
-package menagerie.gui.screens;
+package menagerie.gui.screens.dialogs;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -10,6 +10,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import menagerie.gui.screens.Screen;
+import menagerie.gui.screens.ScreenPane;
 import menagerie.util.PokeListener;
 
 public class ConfirmationScreen extends Screen {

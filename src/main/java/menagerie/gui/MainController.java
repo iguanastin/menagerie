@@ -24,6 +24,8 @@ import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
+import menagerie.gui.screens.dialogs.ConfirmationScreen;
+import menagerie.gui.screens.dialogs.ImportDialogScreen;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
