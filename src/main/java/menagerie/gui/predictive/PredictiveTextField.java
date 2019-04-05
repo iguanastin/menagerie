@@ -102,10 +102,14 @@ public class PredictiveTextField extends TextField {
                 case SPACE:
                 case ENTER:
                 case TAB:
-                    if (event.isControlDown() || event.getCode() == KeyCode.TAB) {
-                        if (top) selectedIndex = vBox.getChildren().size() - 1;
-                        else selectedIndex = 0;
+                    if (selectedIndex < 0) {
+                        if (event.isControlDown() || event.getCode() == KeyCode.TAB) {
+                            if (top) selectedIndex = vBox.getChildren().size() - 1;
+                            else selectedIndex = 0;
+                        }
+                    }
 
+                    if (selectedIndex >= 0) {
                         if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
                             setText(((Label) vBox.getChildren().get(selectedIndex)).getText() + " ");
                         } else {

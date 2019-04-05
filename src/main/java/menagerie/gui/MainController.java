@@ -545,6 +545,7 @@ public class MainController {
 
             MenuItem findDupes = new MenuItem("Find Duplicates");
             findDupes.setOnAction(event -> duplicateOptionsScreen.open(screenPane, menagerie, selected, currentSearch.getResults(), menagerie.getItems()));
+            // TODO: What happens when finding duplicates and groups exist in scope
 
             cm.getItems().addAll(slideshow, moveFiles, findDupes);
         }
@@ -1225,8 +1226,6 @@ public class MainController {
                     event.consume();
                     break;
                 case I:
-                    //                    if (event.isShiftDown()) openImportFolderDialog();
-                    //                    else openImportFilesDialog();
                     screenPane.open(importDialogScreen);
                     event.consume();
                     break;
@@ -1276,12 +1275,13 @@ public class MainController {
                 event.consume();
                 break;
             case ALT:
-                event.consume();
+                event.consume(); // Workaround for alt-tabbing correctly
                 break;
         }
     }
 
     public void explorerRootPaneOnKeyReleased(KeyEvent event) {
+        // Workaround for alt-tabbing correctly
         if (event.getCode() == KeyCode.ALT) {
             if (menuBar.isFocused()) {
                 itemGridView.requestFocus();

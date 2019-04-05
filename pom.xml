@@ -74,6 +74,24 @@
             <artifactId>vlcj</artifactId>
             <version>3.12.1</version>
         </dependency>
+        <!--&lt;!&ndash; https://mvnrepository.com/artifact/org.openjfx/javafx-controls &ndash;&gt;-->
+        <!--<dependency>-->
+        <!--<groupId>org.openjfx</groupId>-->
+        <!--<artifactId>javafx-controls</artifactId>-->
+        <!--<version>12</version>-->
+        <!--</dependency>-->
+        <!--&lt;!&ndash; https://mvnrepository.com/artifact/org.openjfx/javafx-fxml &ndash;&gt;-->
+        <!--<dependency>-->
+        <!--<groupId>org.openjfx</groupId>-->
+        <!--<artifactId>javafx-fxml</artifactId>-->
+        <!--<version>12</version>-->
+        <!--</dependency>-->
+        <!--&lt;!&ndash; https://mvnrepository.com/artifact/org.openjfx/javafx-swing &ndash;&gt;-->
+        <!--<dependency>-->
+        <!--<groupId>org.openjfx</groupId>-->
+        <!--<artifactId>javafx-swing</artifactId>-->
+        <!--<version>12</version>-->
+        <!--</dependency>-->
     </dependencies>
 
 </project>
