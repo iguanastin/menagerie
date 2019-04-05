@@ -13,7 +13,7 @@ import menagerie.gui.screens.Screen;
 
 public class LogScreen extends Screen {
 
-    private final ListView<String> listView;
+    private final ListView<LogItem> listView;
 
 
     public LogScreen() {
@@ -59,7 +59,7 @@ public class LogScreen extends Screen {
         setDefaultFocusNode(exit);
     }
 
-    public ListView<String> getListView() {
+    public ListView<LogItem> getListView() {
         return listView;
     }
 

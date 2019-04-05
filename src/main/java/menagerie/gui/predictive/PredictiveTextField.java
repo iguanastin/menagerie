@@ -4,6 +4,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
@@ -100,11 +101,11 @@ public class PredictiveTextField extends TextField {
                     break;
                 case SPACE:
                 case ENTER:
-                    if (event.isControlDown()) {
+                case TAB:
+                    if (event.isControlDown() || event.getCode() == KeyCode.TAB) {
                         if (top) selectedIndex = vBox.getChildren().size() - 1;
                         else selectedIndex = 0;
-                    }
-                    if (selectedIndex >= 0) {
+
                         if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
                             setText(((Label) vBox.getChildren().get(selectedIndex)).getText() + " ");
                         } else {
@@ -115,6 +116,8 @@ public class PredictiveTextField extends TextField {
                         positionCaret(getText().length() + 1);
 
                         popup.hide();
+
+                        if (event.getCode() == KeyCode.TAB) event.consume();
                     }
                     break;
             }

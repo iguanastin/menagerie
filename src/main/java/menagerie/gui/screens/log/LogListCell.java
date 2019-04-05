@@ -7,7 +7,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 
-public class LogListCell extends ListCell<String> {
+public class LogListCell extends ListCell<LogItem> {
 
     private Label label = new Label();
 
@@ -33,9 +33,15 @@ public class LogListCell extends ListCell<String> {
     }
 
     @Override
-    protected void updateItem(String item, boolean empty) {
+    protected void updateItem(LogItem item, boolean empty) {
         super.updateItem(item, empty);
 
-        label.setText(item);
+        if (item != null) {
+            label.setText(item.getText());
+            label.setStyle(item.getCSS());
+        } else {
+            label.setText(null);
+            label.setStyle(null);
+        }
     }
 }

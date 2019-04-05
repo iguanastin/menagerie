@@ -26,6 +26,7 @@ import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
+import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.screens.slideshow.SlideshowScreen;
@@ -260,8 +261,14 @@ public class MainController {
                     }
                 }
                 Platform.runLater(() -> {
-                    logScreen.getListView().getItems().add(work.toString());
-                    if (record.getLevel() == Level.SEVERE) logButton.setStyle("-fx-base: red;");
+                    LogItem item;
+                    if (record.getLevel() == Level.SEVERE) {
+                        item = new LogItem(work.toString(), "-fx-text-fill: red;");
+                        logButton.setStyle("-fx-base: red;");
+                    } else {
+                        item = new LogItem(work.toString());
+                    }
+                    logScreen.getListView().getItems().add(item);
                 });
             }
 

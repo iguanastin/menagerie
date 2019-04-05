@@ -259,6 +259,7 @@ public class Menagerie {
     }
 
     public Tag getTagByName(String name) {
+        name = name.replace(' ', '_');
         for (Tag t : tags) {
             if (t.getName().equalsIgnoreCase(name)) return t;
         }
@@ -297,6 +298,8 @@ public class Menagerie {
     }
 
     public Tag createTag(String name) {
+        name = name.replace(' ', '_');
+
         Tag t = new Tag(nextTagID, name);
         nextTagID++;
 
