@@ -26,6 +26,7 @@ import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
 import menagerie.gui.screens.dialogs.ConfirmationScreen;
 import menagerie.gui.screens.dialogs.ImportDialogScreen;
+import menagerie.gui.screens.dialogs.TextDialogScreen;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
@@ -43,7 +44,6 @@ import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
-import menagerie.util.PokeListener;
 import menagerie.util.folderwatcher.FolderWatcherThread;
 
 import java.awt.*;
@@ -104,7 +104,6 @@ public class MainController {
     private String lastEditTagString = null;
     private final ClipboardContent explorer_clipboard = new ClipboardContent();
     private boolean explorer_imageGridViewDragging = false;
-    private ContextMenu explorer_cellContextMenu;
     private final Stack<TagEditEvent> tagEditHistory = new Stack<>();
 
     // --------------------------------- Threads -------------------------------------
@@ -337,8 +336,7 @@ public class MainController {
                 }
             });
             c.setOnContextMenuRequested(event -> {
-                if (explorer_cellContextMenu.isShowing()) explorer_cellContextMenu.hide();
-                explorer_cellContextMenu.show(c, event.getScreenX(), event.getScreenY());
+                constructGridCellContextMenu(itemGridView.getSelected()).show(c, event.getScreenX(), event.getScreenY());
                 event.consume();
             });
             c.setOnMouseClicked(event -> {
@@ -351,17 +349,16 @@ public class MainController {
         });
         itemGridView.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.DELETE) {
-                final boolean deleteFiles = !event.isControlDown();
-                final PokeListener onFinish = () -> {
-                    previewItem(null);
-                    menagerie.removeItems(itemGridView.getSelected(), deleteFiles);
-                };
-                if (deleteFiles) {
-                    new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" + "This action CANNOT be undone (files will be deleted)", onFinish, null);
+                if (event.isControlDown()) {
+                    forgetFilesDialog(itemGridView.getSelected());
                 } else {
-                    new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + itemGridView.getSelected().size() + " files)\n\n" + "This action CANNOT be undone", onFinish, null);
+                    deleteFilesDialog(itemGridView.getSelected());
                 }
                 event.consume();
+            } else if (event.getCode() == KeyCode.G && event.isControlDown()) {
+                groupDialog(itemGridView.getSelected());
+            } else if (event.getCode() == KeyCode.U && event.isControlDown()) {
+                ungroupDialog(itemGridView.getSelected());
             }
         });
         itemGridView.getSelected().addListener((ListChangeListener<? super Item>) c -> resultCountLabel.setText(itemGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
@@ -373,7 +370,6 @@ public class MainController {
                 }
             }
         });
-        initExplorerGridCellContextMenu();
 
         //Init drag/drop handlers
         explorerRootPane.disabledProperty().addListener((observable, oldValue, newValue) -> {
@@ -509,160 +505,157 @@ public class MainController {
         previewMediaView.setRepeat(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
     }
 
-    private void initExplorerGridCellContextMenu() {
-        MenuItem groupMenuItem = new MenuItem("Group");
-        groupMenuItem.setOnAction(event -> {
-            GroupItem group = menagerie.createGroup(itemGridView.getSelected(), "test"); //TODO get title from user
-            itemGridView.select(group, false, false);
-        });
+    private ContextMenu constructGridCellContextMenu(List<Item> selected) {
+        if (selected == null || selected.isEmpty()) {
+            MenuItem mi = new MenuItem("Nothing selected");
+            mi.setDisable(true);
+            return new ContextMenu(mi);
+        }
 
-        MenuItem slideShowSelectedMenuItem = new MenuItem("Selected");
-        slideShowSelectedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, itemGridView.getSelected()));
-        MenuItem slideShowSearchedMenuItem = new MenuItem("Searched");
-        slideShowSearchedMenuItem.setOnAction(event1 -> slideshowScreen.open(screenPane, menagerie, itemGridView.getItems()));
-        MenuItem slideShowAllMenuItem = new MenuItem("All");
-        slideShowAllMenuItem.setOnAction(event -> slideshowScreen.open(screenPane, menagerie, menagerie.getItems()));
-        Menu slideShowMenu = new Menu("Slideshow", null, slideShowSelectedMenuItem, slideShowSearchedMenuItem, slideShowAllMenuItem);
+        ContextMenu cm = new ContextMenu();
 
-        MenuItem openInExplorerMenuItem = new MenuItem("Open in Explorer");
-        openInExplorerMenuItem.setOnAction(event1 -> {
-            if (!itemGridView.getSelected().isEmpty() && itemGridView.getLastSelected() instanceof MediaItem) {
-                try {
-                    Runtime.getRuntime().exec("explorer.exe /select, " + ((MediaItem) itemGridView.getLastSelected()).getFile().getAbsolutePath());
-                } catch (IOException e) {
-                    Main.log.log(Level.SEVERE, "Error opening file in explorer", e);
-                    Main.showErrorMessage("Unexpected Error", "Error opening file explorer", e.getLocalizedMessage());
-                }
+        int groupCount = 0, mediaCount = 0;
+        for (Item item : selected) {
+            if (item instanceof GroupItem) {
+                groupCount++;
+            } else if (item instanceof MediaItem) {
+                mediaCount++;
             }
-        });
+        }
 
-        MenuItem buildMD5HashMenuItem = new MenuItem("Build MD5 Hash");
-        buildMD5HashMenuItem.setOnAction(event1 -> {
-            ProgressScreen ps = new ProgressScreen();
-            CancellableThread ct = new CancellableThread() {
-                @Override
-                public void run() {
-                    final int total = itemGridView.getSelected().size();
-                    int i = 0;
+        // More than one group or at least one media item
+        if (groupCount > 1 || mediaCount > 0) {
+            MenuItem combineGroups = new MenuItem("Combine into Group");
+            combineGroups.setOnAction(event -> groupDialog(selected));
+            cm.getItems().add(combineGroups);
+        }
 
-                    for (Item item : itemGridView.getSelected()) {
-                        if (!running) break;
+        if (groupCount > 0 || mediaCount > 0) {
+            Menu slideshow = new Menu("Slideshow...");
+            MenuItem grabbed = new MenuItem("Selected");
+            grabbed.setOnAction(event -> slideShowDialog(selected));
+            MenuItem searched = new MenuItem("Searched");
+            searched.setOnAction(event -> slideShowDialog(currentSearch.getResults()));
+            MenuItem all = new MenuItem("All");
+            all.setOnAction(event -> slideShowDialog(menagerie.getItems()));
+            slideshow.getItems().addAll(grabbed, searched, all);
 
-                        i++;
+            MenuItem moveFiles = new MenuItem("Move Files");
+            moveFiles.setOnAction(event -> moveFilesDialog(selected));
 
-                        if (item instanceof MediaItem && ((MediaItem) item).getMD5() == null) {
-                            try {
-                                ((MediaItem) item).initializeMD5();
-                                ((MediaItem) item).commitMD5ToDatabase();
-                            } catch (Exception e) {
-                                Main.log.log(Level.WARNING, "Error initializing or storing MD5 hash", e);
-                            }
-                        }
+            MenuItem findDupes = new MenuItem("Find Duplicates");
+            findDupes.setOnAction(event -> duplicateOptionsScreen.open(screenPane, menagerie, selected, currentSearch.getResults(), menagerie.getItems()));
 
-                        final int finalI = i; // Lambda workaround
-                        Platform.runLater(() -> ps.setProgress(finalI, total));
+            cm.getItems().addAll(slideshow, moveFiles, findDupes);
+        }
+
+        if (mediaCount > 0) {
+            MenuItem explorer = new MenuItem("Open in Explorer");
+            explorer.setOnAction(event -> {
+                Item last = selected.get(selected.size() - 1);
+                if (last instanceof MediaItem) {
+                    try {
+                        Runtime.getRuntime().exec("explorer.exe /select, " + ((MediaItem) last).getFile().getAbsolutePath());
+                    } catch (IOException e) {
+                        Main.log.log(Level.SEVERE, "Error opening file in explorer", e);
                     }
-
-                    Platform.runLater(ps::close);
                 }
-            };
-            ps.open(screenPane, "Building MD5s", "Building MD5 hashes for files...", ct::cancel);
-            ct.start();
-        });
-        MenuItem buildHistogramMenuItem = new MenuItem("Build Histogram");
-        buildHistogramMenuItem.setOnAction(event1 -> {
-            ProgressScreen ps = new ProgressScreen();
-            CancellableThread ct = new CancellableThread() {
-                @Override
-                public void run() {
-                    final int total = itemGridView.getSelected().size();
-                    int i = 0;
+            });
+            cm.getItems().add(explorer);
+        }
 
-                    for (Item item : itemGridView.getSelected()) {
-                        if (!running) break;
+        if (groupCount > 0 || mediaCount > 0) cm.getItems().add(new SeparatorMenuItem());
+        if (groupCount > 0) {
+            MenuItem ungroup = new MenuItem("Ungroup");
+            ungroup.setOnAction(event -> ungroupDialog(selected));
+            cm.getItems().add(ungroup);
+        }
+        if (mediaCount > 0) {
+            MenuItem forget = new MenuItem("Forget files");
+            forget.setOnAction(event -> forgetFilesDialog(selected));
+            forget.setStyle("-fx-text-fill: red;");
+            MenuItem delete = new MenuItem("Delete files");
+            delete.setOnAction(event -> deleteFilesDialog(selected));
+            delete.setStyle("-fx-text-fill: red;");
+            cm.getItems().addAll(forget, delete);
+        }
 
-                        i++;
-
-                        if (item instanceof MediaItem) {
-                            String filename = ((MediaItem) item).getFile().getName().toLowerCase();
-                            if (((MediaItem) item).getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
-                                try {
-                                    ((MediaItem) item).initializeHistogram();
-                                    ((MediaItem) item).commitHistogramToDatabase();
-                                } catch (Exception e) {
-                                    Main.log.log(Level.WARNING, "Error initializing or storing histogram", e);
-                                }
-                            }
-                        }
-
-                        final int finalI = i; // Lambda workaround
-                        Platform.runLater(() -> ps.setProgress(finalI, total));
-                    }
-
-                    Platform.runLater(ps::close);
-                }
-            };
-            ps.open(screenPane, "Building Histograms", "Building image histograms for selected files...", ct::cancel);
-            ct.start();
-        });
-
-        MenuItem findDuplicatesMenuItem = new MenuItem("Find Duplicates");
-        findDuplicatesMenuItem.setOnAction(event1 -> duplicateOptionsScreen.open(screenPane, menagerie, itemGridView.getSelected(), currentSearch.getResults(), menagerie.getItems()));
-
-        MenuItem moveToFolderMenuItem = new MenuItem("Move To...");
-        moveToFolderMenuItem.setOnAction(event1 -> {
-            if (!itemGridView.getSelected().isEmpty()) {
-                DirectoryChooser dc = new DirectoryChooser();
-                dc.setTitle("Move files to folder...");
-                File result = dc.showDialog(rootPane.getScene().getWindow());
-
-                if (result != null) {
-                    ProgressScreen ps = new ProgressScreen();
-                    CancellableThread ct = new CancellableThread() {
-                        @Override
-                        public void run() {
-                            final int total = itemGridView.getSelected().size();
-                            int i = 0;
-
-                            for (Item item : itemGridView.getSelected()) {
-                                if (!running) break;
-
-                                i++;
-
-                                if (item instanceof MediaItem) {
-                                    File f = result.toPath().resolve(((MediaItem) item).getFile().getName()).toFile();
-                                    if (!((MediaItem) item).getFile().equals(f)) {
-                                        File dest = MainController.resolveDuplicateFilename(f);
-
-                                        if (!((MediaItem) item).renameTo(dest)) {
-                                            Main.log.severe("Failed to rename " + ((MediaItem) item).getFile() + " to " + dest);
-                                        }
-                                    }
-                                }
-
-                                final int finalI = i; // Lambda workaround
-                                Platform.runLater(() -> ps.setProgress(finalI, total));
-                            }
-
-                            Platform.runLater(ps::close);
-                        }
-                    };
-                    ps.open(screenPane, "Moving files", "Moving files to: " + result.getAbsolutePath(), ct::cancel);
-                    ct.start();
-                }
-            }
-        });
-
-        MenuItem removeImagesMenuItem = new MenuItem("Remove");
-        removeImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Forget files", "Remove selected files from database? (" + itemGridView.getSelected().size() + " files)\n\n" + "This action CANNOT be undone", () -> menagerie.removeItems(itemGridView.getSelected(), false), null));
-        MenuItem deleteImagesMenuItem = new MenuItem("Delete");
-        deleteImagesMenuItem.setOnAction(event1 -> new ConfirmationScreen().open(screenPane, "Delete files", "Permanently delete selected files? (" + itemGridView.getSelected().size() + " files)\n\n" + "This action CANNOT be undone (files will be deleted)", () -> {
-            previewItem(null);
-            menagerie.removeItems(itemGridView.getSelected(), true);
-        }, null));
-
-        explorer_cellContextMenu = new ContextMenu(groupMenuItem, moveToFolderMenuItem, new SeparatorMenuItem(), slideShowMenu, openInExplorerMenuItem, findDuplicatesMenuItem, new SeparatorMenuItem(), buildMD5HashMenuItem, buildHistogramMenuItem, new SeparatorMenuItem(), removeImagesMenuItem, deleteImagesMenuItem);
+        return cm;
     }
+
+    //    private void initExplorerGridCellContextMenu() {
+    //
+    //        MenuItem buildMD5HashMenuItem = new MenuItem("Build MD5 Hash");
+    //        buildMD5HashMenuItem.setOnAction(event1 -> {
+    //            ProgressScreen ps = new ProgressScreen();
+    //            CancellableThread ct = new CancellableThread() {
+    //                @Override
+    //                public void run() {
+    //                    final int total = itemGridView.getSelected().size();
+    //                    int i = 0;
+    //
+    //                    for (Item item : itemGridView.getSelected()) {
+    //                        if (!running) break;
+    //
+    //                        i++;
+    //
+    //                        if (item instanceof MediaItem && ((MediaItem) item).getMD5() == null) {
+    //                            try {
+    //                                ((MediaItem) item).initializeMD5();
+    //                                ((MediaItem) item).commitMD5ToDatabase();
+    //                            } catch (Exception e) {
+    //                                Main.log.log(Level.WARNING, "Error initializing or storing MD5 hash", e);
+    //                            }
+    //                        }
+    //
+    //                        final int finalI = i; // Lambda workaround
+    //                        Platform.runLater(() -> ps.setProgress(finalI, total));
+    //                    }
+    //
+    //                    Platform.runLater(ps::close);
+    //                }
+    //            };
+    //            ps.open(screenPane, "Building MD5s", "Building MD5 hashes for files...", ct::cancel);
+    //            ct.start();
+    //        });
+    //        MenuItem buildHistogramMenuItem = new MenuItem("Build Histogram");
+    //        buildHistogramMenuItem.setOnAction(event1 -> {
+    //            ProgressScreen ps = new ProgressScreen();
+    //            CancellableThread ct = new CancellableThread() {
+    //                @Override
+    //                public void run() {
+    //                    final int total = itemGridView.getSelected().size();
+    //                    int i = 0;
+    //
+    //                    for (Item item : itemGridView.getSelected()) {
+    //                        if (!running) break;
+    //
+    //                        i++;
+    //
+    //                        if (item instanceof MediaItem) {
+    //                            String filename = ((MediaItem) item).getFile().getName().toLowerCase();
+    //                            if (((MediaItem) item).getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
+    //                                try {
+    //                                    ((MediaItem) item).initializeHistogram();
+    //                                    ((MediaItem) item).commitHistogramToDatabase();
+    //                                } catch (Exception e) {
+    //                                    Main.log.log(Level.WARNING, "Error initializing or storing histogram", e);
+    //                                }
+    //                            }
+    //                        }
+    //
+    //                        final int finalI = i; // Lambda workaround
+    //                        Platform.runLater(() -> ps.setProgress(finalI, total));
+    //                    }
+    //
+    //                    Platform.runLater(ps::close);
+    //                }
+    //            };
+    //            ps.open(screenPane, "Building Histograms", "Building image histograms for selected files...", ct::cancel);
+    //            ct.start();
+    //        });
+    //
+    //    }
 
     private void initWindowPropertiesAndListeners() {
         Stage stage = ((Stage) explorerRootPane.getScene().getWindow());
@@ -726,6 +719,106 @@ public class MainController {
 
         if (item != null) item.setTagListener(() -> updateTagList(item));
         if (item instanceof MediaItem) itemInfoBox.setItem((MediaItem) item);
+    }
+
+    private void forgetFilesDialog(List<Item> toForget) {
+        List<Item> items = new ArrayList<>(toForget);
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i) instanceof GroupItem) items.addAll(((GroupItem) items.get(i)).getElements());
+        }
+        new ConfirmationScreen().open(screenPane, "Forget files", String.format("Remove selected files from database? (%d files)\n\n" + "This action CANNOT be undone", items.size()), () -> {
+            menagerie.removeItems(items, false);
+            previewItem(null);
+        }, null);
+    }
+
+    private void deleteFilesDialog(List<Item> toDelete) {
+        List<Item> items = new ArrayList<>(toDelete);
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i) instanceof GroupItem) items.addAll(((GroupItem) items.get(i)).getElements());
+        }
+        new ConfirmationScreen().open(screenPane, "Delete files", String.format("Permanently delete selected files? (%d files)\n\n" + "This action CANNOT be undone (files will be deleted)", items.size()), () -> {
+            menagerie.removeItems(items, true);
+            previewItem(null);
+        }, null);
+    }
+
+    private void ungroupDialog(List<Item> items) {
+        List<Item> groups = new ArrayList<>(items);
+        groups.removeIf(item -> !(item instanceof GroupItem));
+        new ConfirmationScreen().open(screenPane, "Ungroup group?", String.format("Are you sure you want to ungroup %d groups?", groups.size()), () -> menagerie.removeItems(groups, false), null);
+    }
+
+    private void groupDialog(List<Item> toGroup) {
+        String title = null;
+        for (Item item : toGroup) {
+            if (item instanceof GroupItem) {
+                title = ((GroupItem) item).getTitle();
+                break;
+            }
+        }
+        new TextDialogScreen().open(screenPane, "New Group", "Title of new group", title, text -> menagerie.createGroup(toGroup, text), null);
+    }
+
+    private void slideShowDialog(List<Item> items) {
+        items = new ArrayList<>(items);
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i) instanceof GroupItem) {
+                GroupItem group = (GroupItem) items.remove(i);
+                items.addAll(i, group.getElements());
+            }
+        }
+        slideshowScreen.open(screenPane, menagerie, items);
+    }
+
+    private void moveFilesDialog(List<Item> items) {
+        items = new ArrayList<>(items);
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i) instanceof GroupItem) {
+                GroupItem group = (GroupItem) items.remove(i);
+                items.addAll(i, group.getElements());
+            }
+        }
+        List<Item> finalItems = items;
+
+        DirectoryChooser dc = new DirectoryChooser();
+        dc.setTitle("Move files to folder...");
+        File result = dc.showDialog(rootPane.getScene().getWindow());
+
+        if (result != null) {
+            ProgressScreen ps = new ProgressScreen();
+            CancellableThread ct = new CancellableThread() {
+                @Override
+                public void run() {
+                    final int total = finalItems.size();
+                    int i = 0;
+
+                    for (Item item : finalItems) {
+                        if (!running) break;
+
+                        i++;
+
+                        if (item instanceof MediaItem) {
+                            File f = result.toPath().resolve(((MediaItem) item).getFile().getName()).toFile();
+                            if (!((MediaItem) item).getFile().equals(f)) {
+                                File dest = MainController.resolveDuplicateFilename(f);
+
+                                if (!((MediaItem) item).renameTo(dest)) {
+                                    Main.log.severe("Failed to rename " + ((MediaItem) item).getFile() + " to " + dest);
+                                }
+                            }
+                        }
+
+                        final int finalI = i; // Lambda workaround
+                        Platform.runLater(() -> ps.setProgress(finalI, total));
+                    }
+
+                    Platform.runLater(ps::close);
+                }
+            };
+            ps.open(screenPane, "Moving files", "Moving files to: " + result.getAbsolutePath(), ct::cancel);
+            ct.start();
+        }
     }
 
     private void updateTagList(Item image) {

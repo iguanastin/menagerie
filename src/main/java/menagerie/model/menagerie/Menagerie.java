@@ -184,8 +184,9 @@ public class Menagerie {
             if (item instanceof MediaItem && ((MediaItem) item).getGroup() == null) {
                 group.addItem((MediaItem) item);
             } else if (item instanceof GroupItem) {
+                List<MediaItem> e = new ArrayList<>(((GroupItem) item).getElements());
                 removeItems(Collections.singletonList(item), false);
-                ((GroupItem) item).getElements().forEach(group::addItem);
+                e.forEach(group::addItem);
             } else {
                 return null;
             }
@@ -194,6 +195,8 @@ public class Menagerie {
         nextItemID++;
         items.add(group);
         checkItemsStillValidInSearches(Collections.singletonList(group));
+
+        // TODO: Store new group in database
 
         //Tag with tagme
         Tag tagme = getTagByName("tagme");
