@@ -9,8 +9,8 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import menagerie.model.menagerie.GroupItem;
-import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Item;
+import menagerie.model.menagerie.MediaItem;
 import org.controlsfx.control.GridCell;
 
 
@@ -18,6 +18,9 @@ public class ImageGridCell extends GridCell<Item> {
 
     private static final String UNSELECTED_BG_CSS = "-fx-background-color: -grid-cell-unselected-color";
     private static final String SELECTED_BG_CSS = "-fx-background-color: -grid-cell-selected-color";
+
+    private static final Font largeFont = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 28);
+    private static final Font smallFont = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 14);
 
     private final ImageView view;
     private final Label label;
@@ -32,8 +35,9 @@ public class ImageGridCell extends GridCell<Item> {
         view = new ImageView();
         label = new Label();
         label.setPadding(new Insets(5));
-        label.setFont(Font.font(Font.getDefault().getName(), FontWeight.BOLD, 28));
+        label.setFont(largeFont);
         label.setEffect(new DropShadow());
+        label.setWrapText(true);
         setGraphic(new StackPane(view, label));
         setAlignment(Pos.CENTER);
         setStyle(UNSELECTED_BG_CSS);
@@ -59,8 +63,10 @@ public class ImageGridCell extends GridCell<Item> {
             }
             if (item instanceof MediaItem && ((MediaItem) item).isVideo()) {
                 label.setText("Video");
+                label.setFont(largeFont);
             } else if (item instanceof GroupItem) {
-                label.setText("Group");
+                label.setText(((GroupItem) item).getTitle());
+                label.setFont(smallFont);
             }
         }
 

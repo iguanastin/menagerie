@@ -545,7 +545,6 @@ public class MainController {
 
             MenuItem findDupes = new MenuItem("Find Duplicates");
             findDupes.setOnAction(event -> duplicateOptionsScreen.open(screenPane, menagerie, selected, currentSearch.getResults(), menagerie.getItems()));
-            // TODO: What happens when finding duplicates and groups exist in scope
 
             cm.getItems().addAll(slideshow, moveFiles, findDupes);
         }
@@ -758,7 +757,10 @@ public class MainController {
                 break;
             }
         }
-        new TextDialogScreen().open(screenPane, "New Group", "Title of new group", title, text -> menagerie.createGroup(toGroup, text), null);
+        new TextDialogScreen().open(screenPane, "New Group", "Title of new group", title, text -> {
+            GroupItem group = menagerie.createGroup(toGroup, text);
+            if (currentSearch.getResults().contains(group)) itemGridView.select(group, false, false);
+        }, null);
     }
 
     private void slideShowDialog(List<Item> items) {
@@ -1196,6 +1198,7 @@ public class MainController {
 
     public void logButtonOnAction(ActionEvent event) {
         screenPane.open(logScreen);
+        logButton.setStyle(null);
         event.consume();
     }
 
@@ -1264,6 +1267,7 @@ public class MainController {
                     break;
                 case L:
                     screenPane.open(logScreen);
+                    logButton.setStyle(null);
                     event.consume();
                     break;
             }

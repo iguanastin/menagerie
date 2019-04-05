@@ -16,8 +16,9 @@ import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.model.Settings;
 import menagerie.model.SimilarPair;
-import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
+import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.util.CancellableThread;
 
@@ -161,9 +162,9 @@ public class DuplicateOptionsScreen extends Screen {
     public void open(ScreenPane manager, Menagerie menagerie, List<Item> selected, List<Item> searched, List<Item> all) {
         if (manager == null || menagerie == null || selected == null || searched == null || all == null) return;
         this.menagerie = menagerie;
-        this.selected = selected;
-        this.searched = searched;
-        this.all = all;
+        this.selected = expandGroups(selected);
+        this.searched = expandGroups(searched);
+        this.all = expandGroups(all);
 
         manager.open(this);
     }
@@ -291,6 +292,17 @@ public class DuplicateOptionsScreen extends Screen {
 
     public DuplicatesScreen getDuplicatesScreen() {
         return duplicateScreen;
+    }
+
+    private List<Item> expandGroups(List<Item> items) {
+        items = new ArrayList<>(items);
+        for (int i = 0; i < items.size(); i++) {
+            if (items.get(i) instanceof GroupItem) {
+                GroupItem group = (GroupItem) items.remove(i);
+                items.addAll(i, group.getElements());
+            }
+        }
+        return items;
     }
 
 }
