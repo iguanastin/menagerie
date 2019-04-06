@@ -44,8 +44,8 @@ public class ImportJob {
     private volatile boolean needsImport = true;
     private volatile boolean needsHash = true;
     private volatile boolean needsHist = true;
-    private volatile boolean needsCheckDuplicate;
-    private volatile boolean needsCheckSimilar;
+    private volatile boolean needsCheckDuplicate = true;
+    private volatile boolean needsCheckSimilar = true;
 
     private final DoubleProperty progressProperty = new SimpleDoubleProperty(-1);
     private volatile Status status = Status.WAITING;
