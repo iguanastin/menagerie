@@ -178,6 +178,7 @@ public class MainController {
         helpScreen = new HelpScreen();
         settingsScreen = new SettingsScreen(settings);
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
+        duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(item -> itemGridView.select(item, false, false));
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> itemGridView.select(item, false, false), count -> {
             Platform.runLater(() -> importsButton.setText("Imports: " + count));
 

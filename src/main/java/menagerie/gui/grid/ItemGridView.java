@@ -134,6 +134,8 @@ public class ItemGridView extends GridView<Item> {
     }
 
     public void select(Item item, boolean ctrlDown, boolean shiftDown) {
+        if (!getItems().contains(item)) return;
+
         if (ctrlDown) {
             if (isSelected(item)) {
                 selected.remove(item);

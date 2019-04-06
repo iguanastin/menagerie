@@ -5,7 +5,10 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.*;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import menagerie.gui.ItemInfoBox;
 import menagerie.gui.TagListCell;
 import menagerie.gui.media.DynamicMediaView;
@@ -40,6 +43,8 @@ public class DuplicatesScreen extends Screen {
 
     private boolean deleteFile = true;
 
+    private DuplicatesSelectExplorerListener selectListener = null;
+
 
     public DuplicatesScreen() {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
@@ -65,7 +70,27 @@ public class DuplicatesScreen extends Screen {
 
         // ---------------------------------------------- Center Element -----------------------------------------------
         leftMediaView = new DynamicMediaView();
+        leftMediaView.setOnContextMenuRequested(event -> {
+            MenuItem select = new MenuItem("Select in explorer");
+            ContextMenu cm = new ContextMenu(select);
+            select.setOnAction(event1 -> {
+                if (selectListener != null) selectListener.select(currentPair.getImg1());
+                cm.hide();
+                close();
+            });
+            cm.show(leftMediaView, event.getScreenX(), event.getScreenY());
+        });
         rightMediaView = new DynamicMediaView();
+        rightMediaView.setOnContextMenuRequested(event -> {
+            MenuItem select = new MenuItem("Select in explorer");
+            ContextMenu cm = new ContextMenu(select);
+            select.setOnAction(event1 -> {
+                if (selectListener != null) selectListener.select(currentPair.getImg2());
+                cm.hide();
+                close();
+            });
+            cm.show(rightMediaView, event.getScreenX(), event.getScreenY());
+        });
         leftTagList = new ListView<>();
         leftTagList.setCellFactory(param -> {
             TagListCell c = new TagListCell() {
@@ -314,6 +339,10 @@ public class DuplicatesScreen extends Screen {
 
     public void setDeleteFile(boolean deleteFile) {
         this.deleteFile = deleteFile;
+    }
+
+    public void setSelectListener(DuplicatesSelectExplorerListener selectListener) {
+        this.selectListener = selectListener;
     }
 
     @Override
