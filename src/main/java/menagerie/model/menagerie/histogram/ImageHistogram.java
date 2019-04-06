@@ -19,7 +19,7 @@ public final class ImageHistogram {
     private final double[] green;
     private final double[] blue;
 
-    private Boolean blackAndWhite = null;
+    private Boolean colorful = null;
 
 
     public ImageHistogram(InputStream a, InputStream r, InputStream g, InputStream b) throws HistogramReadException {
@@ -85,17 +85,17 @@ public final class ImageHistogram {
     }
 
     public boolean isColorful() {
-        if (blackAndWhite == null) {
+        if (colorful == null) {
             double d = 0;
 
             for (int i = 0; i < BIN_SIZE; i++) {
                 d += Math.max(Math.max(red[i], green[i]), blue[i]) - Math.min(Math.min(red[i], green[i]), blue[i]);
             }
 
-            blackAndWhite = d < BLACK_AND_WHITE_CONFIDENCE;
+            colorful = d > BLACK_AND_WHITE_CONFIDENCE;
         }
 
-        return blackAndWhite;
+        return colorful;
     }
 
     public double getSimilarity(ImageHistogram other) {

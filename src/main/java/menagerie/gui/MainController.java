@@ -266,6 +266,9 @@ public class MainController {
                     if (record.getLevel() == Level.SEVERE) {
                         item = new LogItem(work.toString(), "-fx-text-fill: red;");
                         logButton.setStyle("-fx-base: red;");
+                    } else if (record.getLevel() == Level.WARNING) {
+                        item = new LogItem(work.toString(), "-fx-text-fill: yellow;");
+                        logButton.setStyle("-fx-base: yellow;");
                     } else {
                         item = new LogItem(work.toString());
                     }

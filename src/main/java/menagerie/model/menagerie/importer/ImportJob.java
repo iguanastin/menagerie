@@ -131,14 +131,10 @@ public class ImportJob {
     private void tryHashHist() {
         if (needsHash) {
             item.initializeMD5();
-            item.commitMD5ToDatabase();
-
             needsHash = false;
         }
         if (needsHist) {
             item.initializeHistogram();
-            item.commitHistogramToDatabase();
-
             needsHist = false;
         }
     }

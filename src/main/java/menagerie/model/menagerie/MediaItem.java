@@ -116,28 +116,21 @@ public class MediaItem extends Item {
 
         try {
             md5 = HexBin.encode(MD5Hasher.hash(getFile()));
+            menagerie.getDatabaseUpdater().setMD5Async(getId(), md5);
         } catch (IOException e) {
             Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
         }
-    }
-
-    public void commitMD5ToDatabase() {
-        if (md5 == null) return;
-        menagerie.getDatabaseUpdater().setMD5Async(getId(), md5);
     }
 
     public void initializeHistogram() {
         if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
             try {
                 histogram = new ImageHistogram(getImageAsync());
-            } catch (HistogramReadException ignore) {
+                menagerie.getDatabaseUpdater().setHistAsync(getId(), histogram);
+            } catch (HistogramReadException e) {
+                Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
             }
         }
-    }
-
-    public void commitHistogramToDatabase() {
-        if (histogram == null) return;
-        menagerie.getDatabaseUpdater().setHistAsync(getId(), histogram);
     }
 
     public boolean renameTo(File dest) {
