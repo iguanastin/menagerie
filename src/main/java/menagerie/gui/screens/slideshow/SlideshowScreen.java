@@ -3,6 +3,7 @@ package menagerie.gui.screens.slideshow;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -24,8 +25,9 @@ import java.util.List;
 
 public class SlideshowScreen extends Screen {
 
-    private final DynamicMediaView mediaView;
-    private final ItemInfoBox infoBox;
+    private final DynamicMediaView mediaView = new DynamicMediaView();
+    private final ItemInfoBox infoBox = new ItemInfoBox();
+    private final Label countLabel = new Label("0/0");
 
     private final List<Item> items = new ArrayList<>();
     private Item showing = null;
@@ -52,14 +54,18 @@ public class SlideshowScreen extends Screen {
             } else if (event.getCode() == KeyCode.HOME) {
                 preview(items.get(0));
                 event.consume();
+            } else if (event.getCode() == KeyCode.R && event.isControlDown()) {
+                reverse();
+                event.consume();
+            } else if (event.getCode() == KeyCode.S && event.isControlDown()) {
+                shuffle();
+                event.consume();
             }
         });
 
         setStyle("-fx-background-color: -fx-base;");
-        mediaView = new DynamicMediaView();
         mediaView.setRepeat(true);
         mediaView.setMute(false);
-        infoBox = new ItemInfoBox();
         infoBox.setMaxWidth(USE_PREF_SIZE);
         infoBox.setAlignment(Pos.BOTTOM_RIGHT);
         infoBox.setOpacity(0.75);
@@ -82,19 +88,30 @@ public class SlideshowScreen extends Screen {
         close.setOnAction(event -> close());
 
         Button shuffle = new Button("Shuffle");
-        shuffle.setOnAction(event -> {
-            Collections.shuffle(items);
-            if (!items.isEmpty()) preview(items.get(0));
-        });
+        shuffle.setOnAction(event -> shuffle());
+
+        Button reverse = new Button("Reverse");
+        reverse.setOnAction(event -> reverse());
 
         Button right = new Button("->");
         right.setOnAction(event -> previewNext());
 
-        HBox h = new HBox(5, left, select, right);
+        HBox h = new HBox(5, left, select, right, countLabel);
         h.setAlignment(Pos.CENTER);
-        bp = new BorderPane(h, null, close, null, shuffle);
+        bp = new BorderPane(h, null, close, null, new HBox(5, shuffle, reverse));
         bp.setPadding(new Insets(5));
         setBottom(bp);
+    }
+
+    private void reverse() {
+        Collections.reverse(items);
+        updateCountLabel();
+    }
+
+    private void shuffle() {
+        Collections.shuffle(items);
+        updateCountLabel();
+        if (!items.isEmpty()) preview(items.get(0));
     }
 
     public void open(ScreenPane manager, Menagerie menagerie, List<Item> items) {
@@ -153,11 +170,22 @@ public class SlideshowScreen extends Screen {
 
     private void preview(Item item) {
         showing = item;
+
+        updateCountLabel();
+
         if (item instanceof MediaItem) {
             mediaView.preview((MediaItem) item);
             infoBox.setItem((MediaItem) item);
         } else {
             mediaView.preview(null);
+        }
+    }
+
+    private void updateCountLabel() {
+        if (showing != null) {
+            countLabel.setText(String.format("%d/%d", items.indexOf(showing) + 1, items.size()));
+        } else {
+            countLabel.setText("" + items.size());
         }
     }
 
