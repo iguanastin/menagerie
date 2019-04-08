@@ -27,6 +27,13 @@ public class Main extends Application {
     public static final Logger log = Logger.getGlobal();
 
 
+    /**
+     * Creates and shows a JFX alert.
+     *
+     * @param title   Title of alert
+     * @param header  Header of the alert
+     * @param content Content of the alert
+     */
     public static void showErrorMessage(String title, String header, String content) {
         Alert a = new Alert(Alert.AlertType.ERROR);
         a.setTitle(title);
@@ -35,58 +42,15 @@ public class Main extends Application {
         a.showAndWait();
     }
 
-    public void start(Stage stage) {
-        try {
-            NativeLibrary.addSearchPath("libvlc", new DefaultWindowsNativeDiscoveryStrategy().discover());
-            log.config("LibVLC Version: " + LibVlcVersion.getVersion());
-
-            VLCJ_LOADED = true;
-        } catch (Throwable e) {
-            log.log(Level.WARNING, "Error loading vlcj", e);
-
-            VLCJ_LOADED = false;
-        }
-
-        final String splash = "/fxml/splash.fxml";
-        final String fxml = "/fxml/main.fxml";
-        final String css = "/fxml/dark.css";
-        final String title = "Menagerie";
-
-        try {
-            Parent root = FXMLLoader.load(getClass().getResource(splash));
-            Scene scene = new Scene(root);
-            scene.getStylesheets().add(css);
-
-            stage.initStyle(StageStyle.UNDECORATED);
-            stage.setScene(scene);
-            stage.show();
-        } catch (IOException e) {
-            log.log(Level.SEVERE, "Error loading FXML: " + splash, e);
-            showErrorMessage("Error", "Unable to load FXML: " + splash, e.getLocalizedMessage());
-        }
-
-        Platform.runLater(() -> {
-            try {
-                FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
-                Parent root = loader.load();
-                Scene scene = new Scene(root);
-                scene.getStylesheets().add(css);
-
-                Stage newStage = new Stage();
-                newStage.setScene(scene);
-                newStage.setTitle(title);
-                newStage.show();
-                stage.close();
-            } catch (IOException e) {
-                log.log(Level.SEVERE, "Failed to load FXML: " + fxml, e);
-                System.exit(1);
-            }
-        });
-
-    }
-
     public static void main(String[] args) {
-        log.setLevel(Level.ALL);
+        log.setLevel(Level.ALL); // Default log level
+
+        // Set log level to severe only with arg
+        for (String arg : args) {
+            if (arg.equalsIgnoreCase("-quiet")) {
+                log.setLevel(Level.SEVERE);
+            }
+        }
 
         // Init logger handler
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + t, e));
@@ -110,11 +74,73 @@ public class Main extends Application {
         });
 
         // Launch application
+        log.info("Starting JFX Application...");
         launch(args);
     }
 
+    /**
+     * Checks flag that is set during FX Application launch.
+     *
+     * @return True if VLCJ native libraries were found and loaded successfully, false otherwise.
+     */
     public static boolean isVlcjLoaded() {
         return VLCJ_LOADED;
+    }
+
+    /**
+     * JavaFX application start method, called via launch() in main()
+     * @param stage State supplied by JFX
+     */
+    public void start(Stage stage) {
+        try {
+            NativeLibrary.addSearchPath("libvlc", new DefaultWindowsNativeDiscoveryStrategy().discover());
+            log.config("Loaded LibVLC Version: " + LibVlcVersion.getVersion());
+
+            VLCJ_LOADED = true;
+        } catch (Throwable e) {
+            log.log(Level.WARNING, "Error loading vlcj", e);
+
+            VLCJ_LOADED = false;
+        }
+
+        final String splash = "/fxml/splash.fxml";
+        final String fxml = "/fxml/main.fxml";
+        final String css = "/fxml/dark.css";
+        final String title = "Menagerie";
+
+        try {
+            log.info(String.format("Loading FXML: %s", splash));
+            Parent root = FXMLLoader.load(getClass().getResource(splash));
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(css);
+
+            stage.initStyle(StageStyle.UNDECORATED);
+            stage.setScene(scene);
+            stage.show();
+        } catch (IOException e) {
+            log.log(Level.SEVERE, "Error loading FXML: " + splash, e);
+            showErrorMessage("Error", "Unable to load FXML: " + splash, e.getLocalizedMessage());
+        }
+
+        Platform.runLater(() -> {
+            try {
+                log.info(String.format("Loading FXML: %s", fxml));
+                FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
+                Parent root = loader.load();
+                Scene scene = new Scene(root);
+                scene.getStylesheets().add(css);
+
+                Stage newStage = new Stage();
+                newStage.setScene(scene);
+                newStage.setTitle(title);
+                newStage.show();
+                stage.close();
+            } catch (IOException e) {
+                log.log(Level.SEVERE, "Failed to load FXML: " + fxml, e);
+                System.exit(1);
+            }
+        });
+
     }
 
 }
