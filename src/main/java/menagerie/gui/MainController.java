@@ -997,7 +997,7 @@ public class MainController {
     private void applySearch(String search, boolean descending, boolean showGrouped) {
         Main.log.info("Searching: \"" + search + "\", descending:" + descending + ", showGrouped:" + showGrouped);
 
-        if (currentSearch != null) menagerie.closeSearch(currentSearch);
+        if (currentSearch != null) menagerie.unregisterSearch(currentSearch);
         previewItem(null);
 
         currentSearch = new Search(constructRuleSet(search), descending, showGrouped);

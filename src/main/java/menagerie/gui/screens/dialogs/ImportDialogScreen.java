@@ -169,6 +169,9 @@ public class ImportDialogScreen extends Screen {
                 job.addStatusListener(status -> {
                     if (status == ImportJob.Status.SUCCEEDED || status == ImportJob.Status.SUCCEEDED_SIMILAR) {
                         for (String tagName : tagsToAdd) {
+                            if (tagName.contains(" "))
+                                tagName = tagName.replaceAll("\\s", "_"); // Replace all whitespace
+
                             Tag t = menagerie.getTagByName(tagName);
                             if (t == null) t = menagerie.createTag(tagName);
                             job.getItem().addTag(t);

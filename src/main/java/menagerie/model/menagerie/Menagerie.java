@@ -14,6 +14,9 @@ import java.sql.*;
 import java.util.*;
 import java.util.logging.Level;
 
+/**
+ * Menagerie system. Contains items, manages database.
+ */
 public class Menagerie {
 
     // ----------------------------- Constants ------------------------------------
@@ -38,6 +41,12 @@ public class Menagerie {
     private final List<Search> activeSearches = new ArrayList<>();
 
 
+    /**
+     * Constructs a Menagerie. Starts a database updater thread, loads tags and media info from database, prunes database.
+     *
+     * @param database Database to back this menagerie. Expected to be in the current schema.
+     * @throws SQLException If any errors occur in database loading/prep.
+     */
     public Menagerie(Connection database) throws SQLException {
         this.database = database;
 
@@ -53,6 +62,11 @@ public class Menagerie {
         initializeIdCounters();
     }
 
+    /**
+     * Removes all unused tags from the database.
+     *
+     * @throws SQLException If any error occurs in database.
+     */
     private void clearUnusedTags() throws SQLException {
         Set<Integer> usedTags = new HashSet<>();
         for (Item img : items) {
@@ -69,6 +83,11 @@ public class Menagerie {
         }
     }
 
+    /**
+     * Initializes ID counters used for creating new items and tags.
+     *
+     * @throws SQLException If any error occurs in the database.
+     */
     private void initializeIdCounters() throws SQLException {
         try (Statement s = database.createStatement()) {
             try (ResultSet rs = s.executeQuery(SQL_GET_HIGHEST_IMG_ID)) {
@@ -90,6 +109,11 @@ public class Menagerie {
         }
     }
 
+    /**
+     * Loads all media items from the database into MediaItems.
+     *
+     * @throws SQLException If any error occurs in the database.
+     */
     private void loadMediaFromDatabase() throws SQLException {
         try (Statement s = database.createStatement()) {
             try (ResultSet rs = s.executeQuery(SQL_GET_IMGS)) {
@@ -130,6 +154,11 @@ public class Menagerie {
         }
     }
 
+    /**
+     * Loads all tags from the database.
+     *
+     * @throws SQLException If any error occurs in the database.
+     */
     private void loadTagsFromDatabase() throws SQLException {
         try (Statement s = database.createStatement()) {
             try (ResultSet rs = s.executeQuery(SQL_GET_TAGS)) {
@@ -142,6 +171,12 @@ public class Menagerie {
         }
     }
 
+    /**
+     * Attempts to import a file into this Menagerie. Will fail if file is already present.
+     *
+     * @param file File to import.
+     * @return The MediaItem for the imported file, or null if import failed.
+     */
     public MediaItem importFile(File file) {
         if (isFilePresent(file)) return null;
 
@@ -173,6 +208,13 @@ public class Menagerie {
         return media;
     }
 
+    /**
+     * Creates a group and adds elements to it.
+     *
+     * @param elements Elements to be added. If an element is a GroupItem, that group's contents will be removed and added to the new group.
+     * @param title    Title of the new group.
+     * @return The newly created group. Null if title is null or empty, and null if element list is null or empty.
+     */
     public GroupItem createGroup(List<Item> elements, String title) {
         if (title == null || title.isEmpty() || elements == null || elements.isEmpty()) return null;
 
@@ -206,6 +248,29 @@ public class Menagerie {
         return group;
     }
 
+    /**
+     * Creates a new tag in this Menagerie.
+     *
+     * @param name Name of new tag. Must be unique (case insensitive).
+     * @return The newly created tag, or null if name is not unique.
+     */
+    public Tag createTag(String name) {
+        Tag t = new Tag(nextTagID, name);
+        nextTagID++;
+
+        tags.add(t);
+
+        getDatabaseUpdater().createTagAsync(t.getId(), t.getName());
+
+        return t;
+    }
+
+    /**
+     * Removes items from this Menagerie.
+     *
+     * @param items       Items to be removed.
+     * @param deleteFiles Delete the files after removing them. Files will be moved to recycle bin if possible.
+     */
     public void removeItems(List<Item> items, boolean deleteFiles) {
         List<Item> removed = new ArrayList<>();
         List<MediaItem> toDelete = new ArrayList<>();
@@ -250,10 +315,19 @@ public class Menagerie {
         activeSearches.forEach(search -> search.remove(removed));
     }
 
+    /**
+     * @return All tags in the Menagerie environment.
+     */
     public List<Tag> getTags() {
         return tags;
     }
 
+    /**
+     * Attempts to find a tag given a tag id.
+     *
+     * @param id ID of tag to find.
+     * @return Tag with given ID, or null if none exist.
+     */
     private Tag getTagByID(int id) {
         for (Tag t : tags) {
             if (t.getId() == id) return t;
@@ -261,6 +335,14 @@ public class Menagerie {
         return null;
     }
 
+    /**
+     * Attempts to find a tag given a tag name.
+     * <p>
+     * Case insensitive.
+     *
+     * @param name Name of tag to find.
+     * @return Tag with given name, or null if none exist.
+     */
     public Tag getTagByName(String name) {
         name = name.replace(' ', '_');
         for (Tag t : tags) {
@@ -269,22 +351,43 @@ public class Menagerie {
         return null;
     }
 
+    /**
+     * Check with all active searches to see if items are still valid or need to be removed. This method should be called after an item is modified.
+     *
+     * @param items Items to check.
+     */
     public void checkItemsStillValidInSearches(List<Item> items) {
         activeSearches.forEach(search -> search.recheckWithSearch(items));
     }
 
+    /**
+     * @return All items in this Menagerie.
+     */
     public List<Item> getItems() {
         return items;
     }
 
+    /**
+     *
+     * @return The database updater thread backing this Menagerie.
+     */
     public DatabaseUpdater getDatabaseUpdater() {
         return databaseUpdater;
     }
 
+    /**
+     *
+     * @return The database backing this menagerie.
+     */
     public Connection getDatabase() {
         return database;
     }
 
+    /**
+     *
+     * @param file File to search for.
+     * @return True if this file has already been imported into this Menagerie.
+     */
     private boolean isFilePresent(File file) {
         for (Item item : items) {
             if (item instanceof MediaItem && ((MediaItem) item).getFile().equals(file)) return true;
@@ -292,25 +395,22 @@ public class Menagerie {
         return false;
     }
 
-    public void closeSearch(Search search) {
+    /**
+     * Unregisters a search from this Menagerie.
+     *
+     * @param search Search to unregister.
+     */
+    public void unregisterSearch(Search search) {
         activeSearches.remove(search);
     }
 
+    /**
+     * Registers a search to this Menagerie so it will receive updates when items are modified.
+     *
+     * @param search Search to register.
+     */
     public void registerSearch(Search search) {
         activeSearches.add(search);
-    }
-
-    public Tag createTag(String name) {
-        name = name.replace(' ', '_');
-
-        Tag t = new Tag(nextTagID, name);
-        nextTagID++;
-
-        tags.add(t);
-
-        getDatabaseUpdater().createTagAsync(t.getId(), t.getName());
-
-        return t;
     }
 
 }

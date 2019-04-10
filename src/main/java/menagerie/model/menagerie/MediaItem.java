@@ -16,6 +16,9 @@ import java.lang.ref.WeakReference;
 import java.sql.SQLException;
 import java.util.logging.Level;
 
+/**
+ * A Menagerie item representing a media file of some form. Image and video.
+ */
 public class MediaItem extends Item {
 
     // -------------------------------- Variables ------------------------------------
@@ -30,6 +33,14 @@ public class MediaItem extends Item {
     private GroupItem group;
 
 
+    /**
+     * @param menagerie The Menagerie this item belongs to.
+     * @param id        The unique ID of this item.
+     * @param dateAdded The date this item was added to the Menagerie.
+     * @param file      The file this item points to.
+     * @param md5       The MD5 hash of the file.
+     * @param histogram The color histogram of the image. (If the media is an image)
+     */
     MediaItem(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
         super(menagerie, id, dateAdded);
         this.file = file;
@@ -37,10 +48,18 @@ public class MediaItem extends Item {
         this.histogram = histogram;
     }
 
+    /**
+     * @return The file of this item.
+     */
     public File getFile() {
         return file;
     }
 
+    /**
+     * Creates a thumbnail if one does not already exist.
+     *
+     * @return The thumbnail of this media.
+     */
     @Override
     public Thumbnail getThumbnail() {
         Thumbnail thumb = null;
@@ -73,6 +92,9 @@ public class MediaItem extends Item {
         return thumb;
     }
 
+    /**
+     * @return The full size image, if this item represents an image.
+     */
     public Image getImage() {
         Image img = null;
         if (image != null) img = image.get();
@@ -83,34 +105,54 @@ public class MediaItem extends Item {
         return img;
     }
 
-    private Image getImageAsync() {
+    /**
+     * @return The full size image, guaranteed to be loaded.
+     */
+    private Image getImageSynchronously() {
         Image img = null;
         if (image != null) img = image.get();
         if (img == null) {
             img = new Image(file.toURI().toString());
             image = new WeakReference<>(img);
         } else if (img.isBackgroundLoading() && img.getProgress() != 1) {
-            img = new Image(file.toURI().toString());
+            img = new Image(file.toURI().toString()); // TODO: Use a CountDownLatch?
         }
         return img;
     }
 
+    /**
+     * @return The MD5 hash string of the file.
+     */
     public String getMD5() {
         return md5;
     }
 
+    /**
+     * @return The color histogram of the image. Null if this file is not an image.
+     */
     public ImageHistogram getHistogram() {
         return histogram;
     }
 
+    /**
+     * @return True if the file is accepted by the image file filter.
+     * @see Filters
+     */
     public boolean isImage() {
         return Filters.IMAGE_NAME_FILTER.accept(file);
     }
 
+    /**
+     * @return True if the file is accepted by the video file filter.
+     * @see Filters
+     */
     public boolean isVideo() {
         return Filters.VIDEO_NAME_FILTER.accept(file);
     }
 
+    /**
+     * Computes the MD5 of the file. No operation if MD5 already exists.
+     */
     public void initializeMD5() {
         if (md5 != null) return;
 
@@ -122,10 +164,13 @@ public class MediaItem extends Item {
         }
     }
 
+    /**
+     * Computes the color histogram of the image. No operation if file is not an image, or is a GIF image.
+     */
     public void initializeHistogram() {
         if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
             try {
-                histogram = new ImageHistogram(getImageAsync());
+                histogram = new ImageHistogram(getImageSynchronously());
                 menagerie.getDatabaseUpdater().setHistAsync(getId(), histogram);
             } catch (HistogramReadException e) {
                 Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
@@ -133,6 +178,12 @@ public class MediaItem extends Item {
         }
     }
 
+    /**
+     * Renames a file to a new location on the local disk. Safe operation to maintain the file without losing track of it.
+     *
+     * @param dest Destination file to rename this file to.
+     * @return True if successful.
+     */
     public boolean renameTo(File dest) {
         if (file.equals(dest)) return true;
 
@@ -151,6 +202,11 @@ public class MediaItem extends Item {
         return succeeded;
     }
 
+    /**
+     * @param other                     Target to compare with.
+     * @param compareBlackAndWhiteHists Compare black and white images. Poor accuracy.
+     * @return Similarity to another image. 1 if MD5 hashes match, [0.0-1.0] if histograms exist, 0 otherwise.
+     */
     public double getSimilarityTo(MediaItem other, boolean compareBlackAndWhiteHists) {
         if (md5 != null && md5.equals(other.getMD5())) {
             return 1.0;
@@ -163,15 +219,24 @@ public class MediaItem extends Item {
         return 0;
     }
 
+    /**
+     * @param group The new parent group of this item.
+     */
     void setGroup(GroupItem group) {
         this.group = group;
         //TODO update database
     }
 
+    /**
+     * @return True if this item has a parent group.
+     */
     public boolean inGroup() {
         return group != null;
     }
 
+    /**
+     * @return The parent group of this item. Null if none.
+     */
     public GroupItem getGroup() {
         return group;
     }
