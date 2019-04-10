@@ -4,19 +4,25 @@ import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 
+/**
+ * Rule that checks the type of item.
+ */
 public class TypeRule extends SearchRule {
 
-    public enum Type {
-        GROUP,
-        MEDIA
+    /**
+     * @param type     Type of item to accept.
+     * @param inverted Negate this rule.
+     */
+    public TypeRule(Type type, boolean inverted) {
+        super(inverted);
+        this.type = type;
     }
 
     private final Type type;
 
 
-    public TypeRule(Type type, boolean inverted) {
-        super(inverted);
-        this.type = type;
+    public enum Type {
+        GROUP, MEDIA
     }
 
     @Override

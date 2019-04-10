@@ -22,6 +22,7 @@ public class Settings {
 
     /**
      * Constructs a settings object using settings read from file. If setting is not present in the file, default value is used.
+     *
      * @param file File to read from
      */
     public Settings(File file) {
@@ -105,6 +106,7 @@ public class Settings {
 
     /**
      * Saves the current settings to a file.
+     *
      * @param file File to write settings to.
      * @throws FileNotFoundException If file cannot be created when it does not exist.
      */
@@ -116,6 +118,7 @@ public class Settings {
 
     /**
      * Saves the current settings to the file stored in this object.
+     *
      * @throws FileNotFoundException If the file cannot be created when it does not exist.
      */
     public void save() throws FileNotFoundException {
@@ -157,6 +160,7 @@ public class Settings {
 
     /**
      * Sets a boolean value for the given key.
+     *
      * @param key   Key to store value at.
      * @param value Value to store
      */
@@ -182,7 +186,6 @@ public class Settings {
      *
      * @param key   Key to store value at.
      * @param value Value to store.
-     *
      * @return True if the string was accepted. False if no change was made because the string is not sanitary.
      */
     public boolean setString(Key key, String value) {
@@ -199,6 +202,7 @@ public class Settings {
 
     /**
      * Sets a double value for the given key.
+     *
      * @param key   Key to store value at.
      * @param value Value to store.
      */
@@ -213,6 +217,7 @@ public class Settings {
 
     /**
      * Sets an int value for the given key.
+     *
      * @param key   Key to store value at.
      * @param value Value to store.
      */
@@ -227,6 +232,7 @@ public class Settings {
 
     /**
      * Gets the backing property that backs the setting for a key.
+     *
      * @param key Key.
      * @return The property associated with that key. Null if no default value exists AND no value was set to this key.
      */
@@ -236,6 +242,7 @@ public class Settings {
 
     /**
      * Gets a boolean setting for a key.
+     *
      * @param key Key.
      * @return Value.
      */
@@ -245,6 +252,7 @@ public class Settings {
 
     /**
      * Gets a String setting for a key.
+     *
      * @param key Key.
      * @return Value.
      */
@@ -254,6 +262,7 @@ public class Settings {
 
     /**
      * Gets a double setting for a key.
+     *
      * @param key Key.
      * @return Value.
      */
@@ -263,6 +272,7 @@ public class Settings {
 
     /**
      * Gets an int setting for a key.
+     *
      * @param key Key.
      * @return Value.
      */

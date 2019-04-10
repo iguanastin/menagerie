@@ -9,6 +9,9 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Data class that contains results of a search filtered and sorted by the given rules.
+ */
 public class Search {
 
     private SearchUpdateListener listener = null;
@@ -21,11 +24,19 @@ public class Search {
     private final List<Item> results = new ArrayList<>();
 
 
+    /**
+     * Constructs a search with given rules.
+     *
+     * @param rules       Item rules.
+     * @param descending  Sort the results descending.
+     * @param showGrouped Show items that are part of a group.
+     */
     public Search(List<SearchRule> rules, boolean descending, boolean showGrouped) {
         if (rules == null) rules = new ArrayList<>();
         this.rules = rules;
         rules.sort(null);
 
+        // Show grouped items if the search contains an InGroupRule
         if (!showGrouped) {
             for (SearchRule rule : rules) {
                 if (rule instanceof InGroupRule) {
@@ -45,18 +56,34 @@ public class Search {
         };
     }
 
+    /**
+     * Sets the listener that will be notified when items are added or removed from the search.
+     *
+     * @param listener Listener.
+     */
     public void setListener(SearchUpdateListener listener) {
         this.listener = listener;
     }
 
+    /**
+     * @return List of all results currently in the search. Is a direct reference to the backing list.
+     */
     public List<Item> getResults() {
         return results;
     }
 
+    /**
+     * @return The comparator being used to sort search results.
+     */
     public Comparator<Item> getComparator() {
         return comparator;
     }
 
+    /**
+     * Adds all the accepted items in the given list to this search. Ignores items that do not fit the rules of this search.
+     *
+     * @param items Items to attempt to add.
+     */
     public void addIfValid(List<Item> items) {
         if (rules == null) return;
 
@@ -81,6 +108,11 @@ public class Search {
         if (changed && listener != null) listener.imagesAdded(toAdd);
     }
 
+    /**
+     * Checks items to see if they need to be removed from or added to this search.
+     *
+     * @param items Items to check.
+     */
     public void recheckWithSearch(List<Item> items) {
         if (rules == null) return;
 
@@ -106,6 +138,11 @@ public class Search {
         if (results.addAll(toAdd) && listener != null) listener.imagesAdded(toAdd);
     }
 
+    /**
+     * Removes items from this search.
+     *
+     * @param images Items to remove.
+     */
     public void remove(List<Item> images) {
         if (results.removeAll(images) && listener != null) listener.imagesRemoved(images);
     }

@@ -17,7 +17,6 @@ public class SimilarPair<T> {
      * @param obj1       First object.
      * @param obj2       Second object.
      * @param similarity Similarity of the two objects. [0.0-1.0]
-     *
      * @throws NullPointerException     When obj1 or obj2 is null.
      * @throws IllegalArgumentException When similarity is outside of range [0.0-1.0]
      */

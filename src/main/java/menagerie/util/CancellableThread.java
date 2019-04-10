@@ -1,5 +1,8 @@
 package menagerie.util;
 
+/**
+ * Simple thread template that can be cancelled mid-run.
+ */
 public abstract class CancellableThread extends Thread {
 
     protected volatile boolean running = false;
@@ -10,6 +13,9 @@ public abstract class CancellableThread extends Thread {
         super.start();
     }
 
+    /**
+     * Tells the thread to stop running. Does not forcibly stop the thread.
+     */
     public synchronized void cancel() {
         running = false;
     }

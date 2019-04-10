@@ -2,18 +2,24 @@ package menagerie.model.search.rules;
 
 import menagerie.model.menagerie.Item;
 
+/**
+ * Rule that compares item IDs.
+ */
 public class IDRule extends SearchRule {
 
     public enum Type {
-        LESS_THAN,
-        GREATER_THAN,
-        EQUAL_TO
+        LESS_THAN, GREATER_THAN, EQUAL_TO
     }
 
     private final int id;
     private final Type type;
 
 
+    /**
+     * @param type     Type of rule.
+     * @param value    Value to compare with.
+     * @param inverted Negate this rule.
+     */
     public IDRule(Type type, int value, boolean inverted) {
         super(inverted);
         priority = 1;
