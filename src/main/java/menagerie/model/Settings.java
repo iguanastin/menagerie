@@ -1,7 +1,6 @@
 package menagerie.model;
 
 import javafx.beans.property.*;
-import javafx.util.Pair;
 import menagerie.gui.Main;
 
 import java.io.File;
@@ -14,36 +13,17 @@ import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.logging.Level;
 
+/**
+ * A JavaFX Application settings object supporting 4 types, file storing, and settings listeners via Property objects.
+ * <p>
+ * Property events are handled on the FX thread.
+ */
 public class Settings {
 
-    public enum Key {
-        USE_FILENAME_FROM_URL,
-        BACKUP_DATABASE,
-        WINDOW_MAXIMIZED,
-        COMBINE_TAGS,
-        DO_AUTO_IMPORT,
-        AUTO_IMPORT_MOVE_TO_DEFAULT,
-        MUTE_VIDEO,
-        REPEAT_VIDEO,
-        COMPARE_GREYSCALE,
-        GRID_WIDTH,
-        WINDOW_WIDTH,
-        WINDOW_HEIGHT,
-        WINDOW_X,
-        WINDOW_Y,
-        DEFAULT_FOLDER,
-        DATABASE_URL,
-        DATABASE_USER,
-        DATABASE_PASSWORD,
-        AUTO_IMPORT_FOLDER,
-        CONFIDENCE
-    }
-
-
-    private final Map<Key, Property> vars = new HashMap<>();
-    private File file;
-
-
+    /**
+     * Constructs a settings object using settings read from file. If setting is not present in the file, default value is used.
+     * @param file File to read from
+     */
     public Settings(File file) {
         this();
 
@@ -92,6 +72,14 @@ public class Settings {
         }
     }
 
+
+    private final Map<Key, Property> vars = new HashMap<>();
+    private File file;
+
+
+    /**
+     * Constructs a settings object using default settings.
+     */
     public Settings() {
         setBoolean(Key.USE_FILENAME_FROM_URL, true);
         setBoolean(Key.BACKUP_DATABASE, true);
@@ -115,12 +103,21 @@ public class Settings {
         setDouble(Key.CONFIDENCE, 0.95);
     }
 
+    /**
+     * Saves the current settings to a file.
+     * @param file File to write settings to.
+     * @throws FileNotFoundException If file cannot be created when it does not exist.
+     */
     public void save(File file) throws FileNotFoundException {
         this.file = file;
 
         save();
     }
 
+    /**
+     * Saves the current settings to the file stored in this object.
+     * @throws FileNotFoundException If the file cannot be created when it does not exist.
+     */
     public void save() throws FileNotFoundException {
         PrintWriter writer = new PrintWriter(file);
 
@@ -128,8 +125,10 @@ public class Settings {
         writer.println("# " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(Locale.getDefault()).withZone(ZoneId.systemDefault()).format(new Date().toInstant()));
 
         for (Map.Entry<Key, Property> entry : vars.entrySet()) {
+            // Prefix + Delimiter
             writer.print(entry.getKey() + ":");
 
+            // Type
             if (entry.getValue() instanceof BooleanProperty) {
                 writer.print("BOOLEAN");
             } else if (entry.getValue() instanceof StringProperty) {
@@ -140,16 +139,34 @@ public class Settings {
                 writer.print("INTEGER");
             }
 
+            // Delimiter
             writer.print(":");
 
+            // TODO: Sanitize strings
+            // Value
             if (entry.getValue().getValue() != null) {
                 writer.print(entry.getValue().getValue());
             }
 
+            // Newline
             writer.println();
         }
 
         writer.close();
+    }
+
+    /**
+     * Sets a boolean value for the given key.
+     * @param key   Key to store value at.
+     * @param value Value to store
+     */
+    public void setBoolean(Key key, boolean value) {
+        BooleanProperty get = (BooleanProperty) vars.get(key);
+        if (get != null) {
+            get.setValue(value);
+        } else {
+            vars.put(key, new SimpleBooleanProperty(value));
+        }
     }
 
     private static Key keyFromName(String name) {
@@ -160,24 +177,31 @@ public class Settings {
         return null;
     }
 
-    public void setBoolean(Key key, boolean value) {
-        BooleanProperty get = (BooleanProperty) vars.get(key);
-        if (get != null) {
-            get.setValue(value);
-        } else {
-            vars.put(key, new SimpleBooleanProperty(value));
-        }
-    }
+    /**
+     * Sets a string value for the given key.
+     *
+     * @param key   Key to store value at.
+     * @param value Value to store.
+     *
+     * @return True if the string was accepted. False if no change was made because the string is not sanitary.
+     */
+    public boolean setString(Key key, String value) {
+        if (value != null && value.contains("\n")) return false;
 
-    public void setString(Key key, String value) {
         StringProperty get = (StringProperty) vars.get(key);
         if (get != null) {
             get.setValue(value);
         } else {
             vars.put(key, new SimpleStringProperty(value));
         }
+        return true;
     }
 
+    /**
+     * Sets a double value for the given key.
+     * @param key   Key to store value at.
+     * @param value Value to store.
+     */
     public void setDouble(Key key, double value) {
         DoubleProperty get = (DoubleProperty) vars.get(key);
         if (get != null) {
@@ -187,6 +211,11 @@ public class Settings {
         }
     }
 
+    /**
+     * Sets an int value for the given key.
+     * @param key   Key to store value at.
+     * @param value Value to store.
+     */
     public void setInt(Key key, int value) {
         IntegerProperty get = (IntegerProperty) vars.get(key);
         if (get != null) {
@@ -196,24 +225,54 @@ public class Settings {
         }
     }
 
+    /**
+     * Gets the backing property that backs the setting for a key.
+     * @param key Key.
+     * @return The property associated with that key. Null if no default value exists AND no value was set to this key.
+     */
     public Property getProperty(Key key) {
         return vars.get(key);
     }
 
+    /**
+     * Gets a boolean setting for a key.
+     * @param key Key.
+     * @return Value.
+     */
     public boolean getBoolean(Key key) {
         return ((BooleanProperty) vars.get(key)).get();
     }
 
+    /**
+     * Gets a String setting for a key.
+     * @param key Key.
+     * @return Value.
+     */
     public String getString(Key key) {
         return ((StringProperty) vars.get(key)).get();
     }
 
+    /**
+     * Gets a double setting for a key.
+     * @param key Key.
+     * @return Value.
+     */
     public double getDouble(Key key) {
         return ((DoubleProperty) vars.get(key)).get();
     }
 
+    /**
+     * Gets an int setting for a key.
+     * @param key Key.
+     * @return Value.
+     */
     public int getInt(Key key) {
         return ((IntegerProperty) vars.get(key)).get();
     }
+
+    /**
+     * Settings keys
+     */
+    public enum Key {USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, COMBINE_TAGS, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, COMPARE_GREYSCALE, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE}
 
 }

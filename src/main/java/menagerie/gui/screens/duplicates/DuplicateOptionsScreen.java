@@ -211,7 +211,7 @@ public class DuplicateOptionsScreen extends Screen {
     private void compareButtonOnAction() {
         saveSettings();
 
-        final List<SimilarPair> pairs = new ArrayList<>();
+        final List<SimilarPair<MediaItem>> pairs = new ArrayList<>();
         final double confidence = settings.getDouble(Settings.Key.CONFIDENCE);
         final boolean compareGreyscale = settings.getBoolean(Settings.Key.COMPARE_GREYSCALE);
         ProgressScreen ps = new ProgressScreen();
@@ -255,7 +255,7 @@ public class DuplicateOptionsScreen extends Screen {
 
                         final double similarity = ((MediaItem) i1).getSimilarityTo((MediaItem) i2, compareGreyscale);
                         if (similarity >= confidence) {
-                            pairs.add(new SimilarPair((MediaItem) i1, (MediaItem) i2, similarity));
+                            pairs.add(new SimilarPair<>((MediaItem) i1, (MediaItem) i2, similarity));
                         }
                     }
 

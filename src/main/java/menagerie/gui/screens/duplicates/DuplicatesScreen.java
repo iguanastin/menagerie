@@ -38,8 +38,8 @@ public class DuplicatesScreen extends Screen {
     private final Label similarityLabel;
 
     private Menagerie menagerie = null;
-    private List<SimilarPair> pairs = null;
-    private SimilarPair currentPair = null;
+    private List<SimilarPair<MediaItem>> pairs = null;
+    private SimilarPair<MediaItem> currentPair = null;
 
     private boolean deleteFile = true;
 
@@ -74,7 +74,7 @@ public class DuplicatesScreen extends Screen {
             MenuItem select = new MenuItem("Select in explorer");
             ContextMenu cm = new ContextMenu(select);
             select.setOnAction(event1 -> {
-                if (selectListener != null) selectListener.select(currentPair.getImg1());
+                if (selectListener != null) selectListener.select(currentPair.getObject1());
                 cm.hide();
                 close();
             });
@@ -85,7 +85,7 @@ public class DuplicatesScreen extends Screen {
             MenuItem select = new MenuItem("Select in explorer");
             ContextMenu cm = new ContextMenu(select);
             select.setOnAction(event1 -> {
-                if (selectListener != null) selectListener.select(currentPair.getImg2());
+                if (selectListener != null) selectListener.select(currentPair.getObject2());
                 cm.hide();
                 close();
             });
@@ -99,7 +99,7 @@ public class DuplicatesScreen extends Screen {
                     super.updateItem(tag, empty);
 
                     if (tag != null) {
-                        if (currentPair.getImg2().hasTag(tag)) {
+                        if (currentPair.getObject2().hasTag(tag)) {
                             setStyle("-fx-background-color: green;");
                         } else {
                             setStyle("-fx-background-color: red;");
@@ -111,9 +111,9 @@ public class DuplicatesScreen extends Screen {
             };
 
             MenuItem addToOther = new MenuItem("Add to other");
-            addToOther.setOnAction(event -> currentPair.getImg2().addTag(c.getItem()));
+            addToOther.setOnAction(event -> currentPair.getObject2().addTag(c.getItem()));
             MenuItem removeTag = new MenuItem("Remove tag");
-            removeTag.setOnAction(event -> currentPair.getImg1().removeTag(c.getItem()));
+            removeTag.setOnAction(event -> currentPair.getObject1().removeTag(c.getItem()));
             ContextMenu cm = new ContextMenu(addToOther, new SeparatorMenuItem(), removeTag);
             c.setOnContextMenuRequested(event -> cm.show(c, event.getScreenX(), event.getScreenY()));
             return c;
@@ -127,7 +127,7 @@ public class DuplicatesScreen extends Screen {
                     super.updateItem(tag, empty);
 
                     if (tag != null) {
-                        if (currentPair.getImg1().hasTag(tag)) {
+                        if (currentPair.getObject1().hasTag(tag)) {
                             setStyle("-fx-background-color: green;");
                         } else {
                             setStyle("-fx-background-color: red;");
@@ -139,9 +139,9 @@ public class DuplicatesScreen extends Screen {
             };
 
             MenuItem addToOther = new MenuItem("Add to other");
-            addToOther.setOnAction(event -> currentPair.getImg1().addTag(c.getItem()));
+            addToOther.setOnAction(event -> currentPair.getObject1().addTag(c.getItem()));
             MenuItem removeTag = new MenuItem("Remove tag");
-            removeTag.setOnAction(event -> currentPair.getImg2().removeTag(c.getItem()));
+            removeTag.setOnAction(event -> currentPair.getObject2().removeTag(c.getItem()));
             ContextMenu cm = new ContextMenu(addToOther, new SeparatorMenuItem(), removeTag);
             c.setOnContextMenuRequested(event -> cm.show(c, event.getScreenX(), event.getScreenY()));
             return c;
@@ -182,15 +182,15 @@ public class DuplicatesScreen extends Screen {
         // Construct first element
         similarityLabel = new Label("N/A");
         Button combineLeft = new Button("<- Combine tags");
-        combineLeft.setOnAction(event -> currentPair.getImg2().getTags().forEach(tag -> currentPair.getImg1().addTag(tag)));
+        combineLeft.setOnAction(event -> currentPair.getObject2().getTags().forEach(tag -> currentPair.getObject1().addTag(tag)));
         Button combineRight = new Button("Combine tags ->");
-        combineRight.setOnAction(event -> currentPair.getImg1().getTags().forEach(tag -> currentPair.getImg2().addTag(tag)));
+        combineRight.setOnAction(event -> currentPair.getObject1().getTags().forEach(tag -> currentPair.getObject2().addTag(tag)));
         HBox hbc = new HBox(5, combineLeft, similarityLabel, combineRight);
         hbc.setAlignment(Pos.CENTER);
         Button leftDeleteButton = new Button("Delete");
-        leftDeleteButton.setOnAction(event -> deleteItem(currentPair.getImg1(), currentPair.getImg2()));
+        leftDeleteButton.setOnAction(event -> deleteItem(currentPair.getObject1()));
         Button rightDeleteButton = new Button("Delete");
-        rightDeleteButton.setOnAction(event -> deleteItem(currentPair.getImg2(), currentPair.getImg1()));
+        rightDeleteButton.setOnAction(event -> deleteItem(currentPair.getObject2()));
         HBox hbl = new HBox(leftDeleteButton);
         hbl.setAlignment(Pos.CENTER_LEFT);
         HBox hbr = new HBox(rightDeleteButton);
@@ -212,7 +212,7 @@ public class DuplicatesScreen extends Screen {
         setDefaultFocusNode(closeButton);
     }
 
-    public void open(ScreenPane manager, Menagerie menagerie, List<SimilarPair> pairs) {
+    public void open(ScreenPane manager, Menagerie menagerie, List<SimilarPair<MediaItem>> pairs) {
         if (manager == null || menagerie == null || pairs == null || pairs.isEmpty()) return;
 
         this.menagerie = menagerie;
@@ -257,38 +257,38 @@ public class DuplicatesScreen extends Screen {
         }
     }
 
-    private void preview(SimilarPair pair) {
+    private void preview(SimilarPair<MediaItem> pair) {
         if (currentPair != null) {
-            currentPair.getImg1().setTagListener(null);
-            currentPair.getImg2().setTagListener(null);
+            currentPair.getObject1().setTagListener(null);
+            currentPair.getObject2().setTagListener(null);
         }
         currentPair = pair;
 
         if (pair != null) {
-            leftMediaView.preview(pair.getImg1());
-            rightMediaView.preview(pair.getImg2());
+            leftMediaView.preview(pair.getObject1());
+            rightMediaView.preview(pair.getObject2());
 
             PokeListener tagListener = () -> {
                 leftTagList.getItems().clear();
-                leftTagList.getItems().addAll(pair.getImg1().getTags());
+                leftTagList.getItems().addAll(pair.getObject1().getTags());
                 leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
 
                 rightTagList.getItems().clear();
-                rightTagList.getItems().addAll(pair.getImg2().getTags());
+                rightTagList.getItems().addAll(pair.getObject2().getTags());
                 rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
             };
             leftTagList.getItems().clear();
-            leftTagList.getItems().addAll(pair.getImg1().getTags());
+            leftTagList.getItems().addAll(pair.getObject1().getTags());
             leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
-            currentPair.getImg1().setTagListener(tagListener);
+            currentPair.getObject1().setTagListener(tagListener);
 
             rightTagList.getItems().clear();
-            rightTagList.getItems().addAll(pair.getImg2().getTags());
+            rightTagList.getItems().addAll(pair.getObject2().getTags());
             rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
-            currentPair.getImg2().setTagListener(tagListener);
+            currentPair.getObject2().setTagListener(tagListener);
 
-            leftInfoBox.setItem(pair.getImg1());
-            rightInfoBox.setItem(pair.getImg2());
+            leftInfoBox.setItem(pair.getObject1());
+            rightInfoBox.setItem(pair.getObject2());
 
             DecimalFormat df = new DecimalFormat("#.##");
             similarityLabel.setText((pairs.indexOf(pair) + 1) + "/" + pairs.size() + ": " + df.format(pair.getSimilarity() * 100) + "%");
@@ -306,7 +306,7 @@ public class DuplicatesScreen extends Screen {
         }
     }
 
-    private void deleteItem(MediaItem toDelete, MediaItem toKeep) {
+    private void deleteItem(MediaItem toDelete) {
         if (menagerie == null) return;
 
         int index = pairs.indexOf(currentPair);
@@ -315,7 +315,7 @@ public class DuplicatesScreen extends Screen {
 
         //Remove other pairs containing the deleted image
         for (SimilarPair pair : new ArrayList<>(pairs)) {
-            if (toDelete.equals(pair.getImg1()) || toDelete.equals(pair.getImg2())) {
+            if (toDelete.equals(pair.getObject1()) || toDelete.equals(pair.getObject2())) {
                 int i = pairs.indexOf(pair);
                 pairs.remove(pair);
                 if (i < index) {

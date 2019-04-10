@@ -2,7 +2,6 @@ package menagerie.model.search;
 
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
-import menagerie.model.menagerie.Menagerie;
 import menagerie.model.search.rules.InGroupRule;
 import menagerie.model.search.rules.SearchRule;
 
@@ -12,7 +11,6 @@ import java.util.List;
 
 public class Search {
 
-    private final Menagerie menagerie;
     private SearchUpdateListener listener = null;
 
     private final List<SearchRule> rules;
@@ -23,9 +21,8 @@ public class Search {
     private final List<Item> results = new ArrayList<>();
 
 
-    public Search(Menagerie menagerie, List<SearchRule> rules, boolean descending, boolean showGrouped) {
+    public Search(List<SearchRule> rules, boolean descending, boolean showGrouped) {
         if (rules == null) rules = new ArrayList<>();
-        this.menagerie = menagerie;
         this.rules = rules;
         rules.sort(null);
 
@@ -46,10 +43,6 @@ public class Search {
                 return o1.getId() - o2.getId();
             }
         };
-
-        menagerie.registerSearch(this);
-
-        addIfValid(menagerie.getItems());
     }
 
     public void setListener(SearchUpdateListener listener) {
@@ -115,12 +108,6 @@ public class Search {
 
     public void remove(List<Item> images) {
         if (results.removeAll(images) && listener != null) listener.imagesRemoved(images);
-    }
-
-    public void close() {
-        menagerie.closeSearch(this);
-        results.clear();
-        listener = null;
     }
 
 }

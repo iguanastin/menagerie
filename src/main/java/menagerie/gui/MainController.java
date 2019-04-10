@@ -997,10 +997,12 @@ public class MainController {
     private void applySearch(String search, boolean descending, boolean showGrouped) {
         Main.log.info("Searching: \"" + search + "\", descending:" + descending + ", showGrouped:" + showGrouped);
 
-        if (currentSearch != null) currentSearch.close();
+        if (currentSearch != null) menagerie.closeSearch(currentSearch);
         previewItem(null);
 
-        currentSearch = new Search(menagerie, constructRuleSet(search), descending, showGrouped);
+        currentSearch = new Search(constructRuleSet(search), descending, showGrouped);
+        menagerie.registerSearch(currentSearch);
+        currentSearch.addIfValid(menagerie.getItems());
         currentSearch.setListener(new SearchUpdateListener() { // TODO: Use jfx observable list for improved performance?
             @Override
             public void imagesAdded(List<Item> images) {

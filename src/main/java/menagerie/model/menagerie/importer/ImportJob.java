@@ -38,7 +38,7 @@ public class ImportJob {
     private File file = null;
     private MediaItem item = null;
     private MediaItem duplicateOf = null;
-    private List<SimilarPair> similarTo = null;
+    private List<SimilarPair<MediaItem>> similarTo = null;
 
     private volatile boolean needsDownload = false;
     private volatile boolean needsImport = true;
@@ -95,7 +95,7 @@ public class ImportJob {
                     double similarity = ((MediaItem) i).getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
                     if (similarity > settings.getDouble(Settings.Key.CONFIDENCE)) {
                         synchronized (this) {
-                            similarTo.add(new SimilarPair(item, (MediaItem) i, similarity));
+                            similarTo.add(new SimilarPair<>(item, (MediaItem) i, similarity));
                         }
                     }
                 }
@@ -211,7 +211,7 @@ public class ImportJob {
         return duplicateOf;
     }
 
-    public synchronized List<SimilarPair> getSimilarTo() {
+    public synchronized List<SimilarPair<MediaItem>> getSimilarTo() {
         return similarTo;
     }
 

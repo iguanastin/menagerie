@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Item implements Comparable<Item> {
+
     protected final Menagerie menagerie;
     protected final int id;
     private final long dateAdded;
@@ -79,4 +80,5 @@ public abstract class Item implements Comparable<Item> {
     public int compareTo(Item o) {
         return getId() - o.getId();
     }
+
 }
