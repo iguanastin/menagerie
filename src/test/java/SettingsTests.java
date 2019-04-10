@@ -11,7 +11,7 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class SettingsTests {
+class SettingsTests {
 
     @ParameterizedTest(name = "DefaultIsSet {0}")
     @EnumSource(Settings.Key.class)

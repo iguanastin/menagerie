@@ -6,7 +6,7 @@ import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TagTests {
+class TagTests {
 
     @Test
     void createGet() {
@@ -26,6 +26,13 @@ public class TagTests {
     @Test
     void createNullName() {
         assertThrows(NullPointerException.class, () -> new Tag(1, null));
+    }
+
+    @Test
+    void createBadName() {
+        assertThrows(IllegalArgumentException.class, () -> new Tag(1, "tag with spaces"));
+        assertThrows(IllegalArgumentException.class, () -> new Tag(1, "tag with newline\n"));
+        assertThrows(IllegalArgumentException.class, () -> new Tag(1, "tag with backslash\\"));
     }
 
     @Test

@@ -20,16 +20,19 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.*;
 import java.util.logging.Level;
 
+/**
+ * A runnable job that will import a file.
+ */
 public class ImportJob {
 
-    public enum Status {
-        WAITING,
-        IMPORTING,
-        SUCCEEDED,
-        SUCCEEDED_SIMILAR,
-        FAILED_DUPLICATE,
-        FAILED_IMPORT,
-
+    /**
+     * Constructs a job that will download and import a file from the web.
+     *
+     * @param url URL of file to download.
+     */
+    public ImportJob(URL url) {
+        this.url = url;
+        needsDownload = true;
     }
 
     private ImporterThread importer = null;
@@ -52,15 +55,21 @@ public class ImportJob {
     private final Set<ImportJobStatusListener> statusListeners = new HashSet<>();
 
 
-    public ImportJob(URL url) {
-        this.url = url;
-        needsDownload = true;
-    }
-
+    /**
+     * Constructs a job that will import a local file.
+     *
+     * @param file File to import.
+     */
     public ImportJob(File file) {
         this.file = file;
     }
 
+    /**
+     * Synchronously runs this job. Downloads, imports, creates hash, creates historgram, finds duplicates, and finds similar items.
+     *
+     * @param menagerie Menagerie to import into.
+     * @param settings  Application settings to import with.
+     */
     void runJob(Menagerie menagerie, Settings settings) {
         setStatus(Status.IMPORTING);
 
@@ -85,6 +94,13 @@ public class ImportJob {
         setStatus(Status.SUCCEEDED);
     }
 
+    /**
+     * Tries to find similar items already imported and stores similar pairs in {@link #similarTo}
+     *
+     * @param menagerie Menagerie to find similar items in.
+     * @param settings  Application settings to use.
+     * @return True if similar items were found.
+     */
     private boolean trySimilar(Menagerie menagerie, Settings settings) {
         if (needsCheckSimilar && item.getHistogram() != null) {
             synchronized (this) {
@@ -109,6 +125,12 @@ public class ImportJob {
         return false;
     }
 
+    /**
+     * Tries to find a duplicate item in the Menagerie and stores the existing duplicate in {@link #duplicateOf}
+     *
+     * @param menagerie Menagerie to search.
+     * @return True if a duplicate exists.
+     */
     private boolean tryDuplicate(Menagerie menagerie) {
         if (needsCheckDuplicate && item.getMD5() != null) {
             for (Item i : menagerie.getItems()) {
@@ -128,6 +150,9 @@ public class ImportJob {
         return false;
     }
 
+    /**
+     * Tries to construct and store an MD5 hash and a histogram for the item.
+     */
     private void tryHashHist() {
         if (needsHash) {
             item.initializeMD5();
@@ -139,6 +164,12 @@ public class ImportJob {
         }
     }
 
+    /**
+     * Tries to import the file into the Menagerie and store it in {@link #item}
+     *
+     * @param menagerie Menagerie to import into.
+     * @return True if the import failed.
+     */
     private boolean tryImport(Menagerie menagerie) {
         if (needsImport) {
             synchronized (this) {
@@ -154,6 +185,12 @@ public class ImportJob {
         return false;
     }
 
+    /**
+     * Tries to download the file from the web and save it to {@link #file}
+     *
+     * @param settings Application settings to use.
+     * @return True if the download fails.
+     */
     private boolean tryDownload(Settings settings) {
         if (needsDownload) {
             try {
@@ -195,40 +232,67 @@ public class ImportJob {
         return false;
     }
 
+    /**
+     * @return The imported item. Null if not yet imported.
+     */
     public synchronized MediaItem getItem() {
         return item;
     }
 
+    /**
+     * @return The web URL. Null if not imported from web.
+     */
     public synchronized URL getUrl() {
         return url;
     }
 
+    /**
+     * @return The file. Null if not yet downloaded.
+     */
     public synchronized File getFile() {
         return file;
     }
 
+    /**
+     * @return The pre-existing duplicate. Null if not yet checked, or no duplicate found.
+     */
     public synchronized MediaItem getDuplicateOf() {
         return duplicateOf;
     }
 
+    /**
+     * @return The list of similar pairs. Null if not checked.
+     */
     public synchronized List<SimilarPair<MediaItem>> getSimilarTo() {
         return similarTo;
     }
 
+    /**
+     * @return The progress JavaFX Property.
+     */
     public DoubleProperty getProgressProperty() {
         return progressProperty;
     }
 
+    /**
+     * @return The current progress.
+     */
     public double getProgress() {
         return progressProperty.doubleValue();
     }
 
+    /**
+     * @return The status of this job.
+     */
     public Status getStatus() {
         synchronized (statusListeners) {
             return status;
         }
     }
 
+    /**
+     * @param status The new status to set this job as.
+     */
     public void setStatus(Status status) {
         synchronized (statusListeners) {
             this.status = status;
@@ -237,28 +301,48 @@ public class ImportJob {
         }
     }
 
+    /**
+     * @param listener Listens for status changes.
+     */
     public void addStatusListener(ImportJobStatusListener listener) {
         synchronized (statusListeners) {
             statusListeners.add(listener);
         }
     }
 
+    /**
+     * @param listener Listener
+     */
     public void removeStatusListener(ImportJobStatusListener listener) {
         synchronized (statusListeners) {
             statusListeners.remove(listener);
         }
     }
 
-    synchronized void setImporter(ImporterThread importer) {
-        this.importer = importer;
-    }
-
+    /**
+     * @return Importer that this job will use.
+     */
     private synchronized ImporterThread getImporter() {
         return importer;
     }
 
+    /**
+     * @param importer Importer to import with.
+     */
+    synchronized void setImporter(ImporterThread importer) {
+        this.importer = importer;
+    }
+
+    /**
+     * Cancels this job if it has not already been started.
+     */
     public void cancel() {
         if (getStatus() == Status.WAITING) getImporter().cancel(this);
+    }
+
+    public enum Status {
+        WAITING, IMPORTING, SUCCEEDED, SUCCEEDED_SIMILAR, FAILED_DUPLICATE, FAILED_IMPORT,
+
     }
 
 }

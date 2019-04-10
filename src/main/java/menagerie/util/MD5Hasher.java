@@ -15,7 +15,7 @@ import java.util.logging.Level;
  */
 public abstract class MD5Hasher {
 
-    private static MessageDigest md5;
+    private static MessageDigest digest;
 
     /**
      * Reads a file and calculates an MD5 hash representing it.
@@ -25,21 +25,21 @@ public abstract class MD5Hasher {
      * @throws IOException If error occurred when reading file.
      */
     public static byte[] hash(File file) throws IOException {
-        if (file.exists() && getMD5() != null) return getMD5().digest(Files.readAllBytes(file.toPath()));
+        if (file.exists() && getDigest() != null) return getDigest().digest(Files.readAllBytes(file.toPath()));
         return null;
     }
 
-    private static MessageDigest getMD5() {
-        if (md5 == null) {
+    private static MessageDigest getDigest() {
+        if (digest == null) {
             try {
-                md5 = MessageDigest.getInstance("md5");
-                return md5;
+                digest = MessageDigest.getInstance("md5");
+                return digest;
             } catch (NoSuchAlgorithmException e) {
                 Main.log.log(Level.SEVERE, "Unable to initialize MD5 digest", e);
                 return null;
             }
         } else {
-            return md5;
+            return digest;
         }
     }
 
