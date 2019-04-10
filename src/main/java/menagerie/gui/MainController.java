@@ -1088,8 +1088,6 @@ public class MainController {
                 } catch (NumberFormatException e) {
                     Main.log.warning("Failed to convert parameter to long: " + temp);
                 }
-            } else if (arg.startsWith("md5:")) {
-                rules.add(new MD5Rule(arg.substring(arg.indexOf(':') + 1), inverted));
             } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
                 rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1), inverted));
             } else if (arg.startsWith("missing:")) {

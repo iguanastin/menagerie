@@ -9,6 +9,14 @@ import java.util.Date;
  */
 public class DateAddedRule extends SearchRule {
 
+    private final long time;
+    private final Type type;
+
+    public enum Type {
+        LESS_THAN, GREATER_THAN, EQUAL_TO
+    }
+
+
     /**
      * @param type     Type of this rule.
      * @param time     Time to compare item to.
@@ -20,14 +28,6 @@ public class DateAddedRule extends SearchRule {
 
         this.time = time;
         this.type = type;
-    }
-
-    private final long time;
-    private final Type type;
-
-
-    public enum Type {
-        LESS_THAN, GREATER_THAN, EQUAL_TO
     }
 
     @Override
