@@ -9,12 +9,12 @@ import java.util.Date;
  */
 public class DateAddedRule extends SearchRule {
 
-    private final long time;
-    private final Type type;
-
     public enum Type {
         LESS_THAN, GREATER_THAN, EQUAL_TO
     }
+
+    private final long time;
+    private final Type type;
 
 
     /**

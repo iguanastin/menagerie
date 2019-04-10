@@ -21,6 +21,15 @@ import java.util.logging.Level;
 public class Settings {
 
     /**
+     * Settings keys
+     */
+    public enum Key {USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, COMBINE_TAGS, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, COMPARE_GREYSCALE, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE}
+
+    private final Map<Key, Property> vars = new HashMap<>();
+    private File file;
+
+
+    /**
      * Constructs a settings object using settings read from file. If setting is not present in the file, default value is used.
      *
      * @param file File to read from
@@ -72,11 +81,6 @@ public class Settings {
             }
         }
     }
-
-
-    private final Map<Key, Property> vars = new HashMap<>();
-    private File file;
-
 
     /**
      * Constructs a settings object using default settings.
@@ -279,10 +283,5 @@ public class Settings {
     public int getInt(Key key) {
         return ((IntegerProperty) vars.get(key)).get();
     }
-
-    /**
-     * Settings keys
-     */
-    public enum Key {USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, COMBINE_TAGS, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, COMPARE_GREYSCALE, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE}
 
 }

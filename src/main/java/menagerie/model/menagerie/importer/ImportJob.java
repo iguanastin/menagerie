@@ -25,14 +25,9 @@ import java.util.logging.Level;
  */
 public class ImportJob {
 
-    /**
-     * Constructs a job that will download and import a file from the web.
-     *
-     * @param url URL of file to download.
-     */
-    public ImportJob(URL url) {
-        this.url = url;
-        needsDownload = true;
+    public enum Status {
+        WAITING, IMPORTING, SUCCEEDED, SUCCEEDED_SIMILAR, FAILED_DUPLICATE, FAILED_IMPORT,
+
     }
 
     private ImporterThread importer = null;
@@ -55,6 +50,15 @@ public class ImportJob {
     private final Set<ImportJobStatusListener> statusListeners = new HashSet<>();
 
 
+    /**
+     * Constructs a job that will download and import a file from the web.
+     *
+     * @param url URL of file to download.
+     */
+    public ImportJob(URL url) {
+        this.url = url;
+        needsDownload = true;
+    }
     /**
      * Constructs a job that will import a local file.
      *
@@ -92,97 +96,6 @@ public class ImportJob {
         }
 
         setStatus(Status.SUCCEEDED);
-    }
-
-    /**
-     * Tries to find similar items already imported and stores similar pairs in {@link #similarTo}
-     *
-     * @param menagerie Menagerie to find similar items in.
-     * @param settings  Application settings to use.
-     * @return True if similar items were found.
-     */
-    private boolean trySimilar(Menagerie menagerie, Settings settings) {
-        if (needsCheckSimilar && item.getHistogram() != null) {
-            synchronized (this) {
-                similarTo = new ArrayList<>();
-            }
-            for (Item i : menagerie.getItems()) {
-                if (i instanceof MediaItem && !item.equals(i) && ((MediaItem) i).getHistogram() != null) {
-                    double similarity = ((MediaItem) i).getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
-                    if (similarity > settings.getDouble(Settings.Key.CONFIDENCE)) {
-                        synchronized (this) {
-                            similarTo.add(new SimilarPair<>(item, (MediaItem) i, similarity));
-                        }
-                    }
-                }
-            }
-
-            needsCheckSimilar = false;
-            synchronized (this) {
-                return !similarTo.isEmpty();
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Tries to find a duplicate item in the Menagerie and stores the existing duplicate in {@link #duplicateOf}
-     *
-     * @param menagerie Menagerie to search.
-     * @return True if a duplicate exists.
-     */
-    private boolean tryDuplicate(Menagerie menagerie) {
-        if (needsCheckDuplicate && item.getMD5() != null) {
-            for (Item i : menagerie.getItems()) {
-                if (i instanceof MediaItem && !i.equals(item) && ((MediaItem) i).getMD5() != null && ((MediaItem) i).getMD5().equalsIgnoreCase(item.getMD5())) {
-                    synchronized (this) {
-                        duplicateOf = (MediaItem) i;
-                    }
-                    menagerie.removeItems(Collections.singletonList(item), true);
-                    needsCheckDuplicate = false;
-                    needsCheckSimilar = false;
-                    return true;
-                }
-            }
-
-            needsCheckDuplicate = false;
-        }
-        return false;
-    }
-
-    /**
-     * Tries to construct and store an MD5 hash and a histogram for the item.
-     */
-    private void tryHashHist() {
-        if (needsHash) {
-            item.initializeMD5();
-            needsHash = false;
-        }
-        if (needsHist) {
-            item.initializeHistogram();
-            needsHist = false;
-        }
-    }
-
-    /**
-     * Tries to import the file into the Menagerie and store it in {@link #item}
-     *
-     * @param menagerie Menagerie to import into.
-     * @return True if the import failed.
-     */
-    private boolean tryImport(Menagerie menagerie) {
-        if (needsImport) {
-            synchronized (this) {
-                item = menagerie.importFile(file);
-            }
-
-            if (item == null) {
-                return true;
-            } else {
-                needsImport = false;
-            }
-        }
-        return false;
     }
 
     /**
@@ -229,6 +142,97 @@ public class ImportJob {
             }
         }
         progressProperty.set(-1);
+        return false;
+    }
+
+    /**
+     * Tries to import the file into the Menagerie and store it in {@link #item}
+     *
+     * @param menagerie Menagerie to import into.
+     * @return True if the import failed.
+     */
+    private boolean tryImport(Menagerie menagerie) {
+        if (needsImport) {
+            synchronized (this) {
+                item = menagerie.importFile(file);
+            }
+
+            if (item == null) {
+                return true;
+            } else {
+                needsImport = false;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Tries to construct and store an MD5 hash and a histogram for the item.
+     */
+    private void tryHashHist() {
+        if (needsHash) {
+            item.initializeMD5();
+            needsHash = false;
+        }
+        if (needsHist) {
+            item.initializeHistogram();
+            needsHist = false;
+        }
+    }
+
+    /**
+     * Tries to find a duplicate item in the Menagerie and stores the existing duplicate in {@link #duplicateOf}
+     *
+     * @param menagerie Menagerie to search.
+     * @return True if a duplicate exists.
+     */
+    private boolean tryDuplicate(Menagerie menagerie) {
+        if (needsCheckDuplicate && item.getMD5() != null) {
+            for (Item i : menagerie.getItems()) {
+                if (i instanceof MediaItem && !i.equals(item) && ((MediaItem) i).getMD5() != null && ((MediaItem) i).getMD5().equalsIgnoreCase(item.getMD5())) {
+                    synchronized (this) {
+                        duplicateOf = (MediaItem) i;
+                    }
+                    menagerie.removeItems(Collections.singletonList(item), true);
+                    needsCheckDuplicate = false;
+                    needsCheckSimilar = false;
+                    return true;
+                }
+            }
+
+            needsCheckDuplicate = false;
+        }
+        return false;
+    }
+
+    /**
+     * Tries to find similar items already imported and stores similar pairs in {@link #similarTo}
+     *
+     * @param menagerie Menagerie to find similar items in.
+     * @param settings  Application settings to use.
+     * @return True if similar items were found.
+     */
+    private boolean trySimilar(Menagerie menagerie, Settings settings) {
+        if (needsCheckSimilar && item.getHistogram() != null) {
+            synchronized (this) {
+                similarTo = new ArrayList<>();
+            }
+            for (Item i : menagerie.getItems()) {
+                if (i instanceof MediaItem && !item.equals(i) && ((MediaItem) i).getHistogram() != null) {
+                    double similarity = ((MediaItem) i).getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
+                    if (similarity > settings.getDouble(Settings.Key.CONFIDENCE)) {
+                        synchronized (this) {
+                            similarTo.add(new SimilarPair<>(item, (MediaItem) i, similarity));
+                        }
+                    }
+                }
+            }
+
+            needsCheckSimilar = false;
+            synchronized (this) {
+                return !similarTo.isEmpty();
+            }
+        }
         return false;
     }
 
@@ -338,11 +342,6 @@ public class ImportJob {
      */
     public void cancel() {
         if (getStatus() == Status.WAITING) getImporter().cancel(this);
-    }
-
-    public enum Status {
-        WAITING, IMPORTING, SUCCEEDED, SUCCEEDED_SIMILAR, FAILED_DUPLICATE, FAILED_IMPORT,
-
     }
 
 }
