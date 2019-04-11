@@ -103,17 +103,30 @@ public class SlideshowScreen extends Screen {
         setBottom(bp);
     }
 
+    /**
+     * Reverses the order of the items.
+     */
     private void reverse() {
         Collections.reverse(items);
         updateCountLabel();
     }
 
+    /**
+     * Shuffles the order of the items.
+     */
     private void shuffle() {
         Collections.shuffle(items);
         updateCountLabel();
         if (!items.isEmpty()) preview(items.get(0));
     }
 
+    /**
+     * Opens this screen in a manager.
+     *
+     * @param manager   Manager to open in.
+     * @param menagerie Menagerie.
+     * @param items     Items to display.
+     */
     public void open(ScreenPane manager, Menagerie menagerie, List<Item> items) {
         this.items.clear();
         this.items.addAll(items);
@@ -138,10 +151,18 @@ public class SlideshowScreen extends Screen {
         preview(null);
     }
 
+    /**
+     * @return Currently displayed item.
+     */
     public Item getShowing() {
         return showing;
     }
 
+    /**
+     * Attempts to delete or remove the currently displayed item.
+     *
+     * @param deleteFile Delete the file after removing from the Menagerie.
+     */
     public void tryDeleteCurrent(boolean deleteFile) {
         PokeListener onFinish = () -> {
             menagerie.removeItems(Collections.singletonList(getShowing()), deleteFile);
@@ -160,14 +181,17 @@ public class SlideshowScreen extends Screen {
         };
 
         if (deleteFile) {
-            new ConfirmationScreen().open(getManager(), "Delete files", "Permanently delete selected files? (1 file)\n\n" +
-                    "This action CANNOT be undone (files will be deleted)", onFinish, null);
+            new ConfirmationScreen().open(getManager(), "Delete files", "Permanently delete selected files? (1 file)\n\n" + "This action CANNOT be undone (files will be deleted)", onFinish, null);
         } else {
-            new ConfirmationScreen().open(getManager(), "Forget files", "Remove selected files from database? (1 file)\n\n" +
-                    "This action CANNOT be undone", onFinish, null);
+            new ConfirmationScreen().open(getManager(), "Forget files", "Remove selected files from database? (1 file)\n\n" + "This action CANNOT be undone", onFinish, null);
         }
     }
 
+    /**
+     * Displays the given item.
+     *
+     * @param item Item to display.
+     */
     private void preview(Item item) {
         showing = item;
 
@@ -181,6 +205,9 @@ public class SlideshowScreen extends Screen {
         }
     }
 
+    /**
+     * Updates contents of the count label.
+     */
     private void updateCountLabel() {
         if (showing != null) {
             countLabel.setText(String.format("%d/%d", items.indexOf(showing) + 1, items.size()));
@@ -189,6 +216,9 @@ public class SlideshowScreen extends Screen {
         }
     }
 
+    /**
+     * Previews the next item in the list, if there is one.
+     */
     private void previewNext() {
         if (items.isEmpty()) {
             preview(null);
@@ -205,6 +235,9 @@ public class SlideshowScreen extends Screen {
         }
     }
 
+    /**
+     * Previews the previous item in the list, if there is one.
+     */
     private void previewLast() {
         if (items.isEmpty()) {
             preview(null);

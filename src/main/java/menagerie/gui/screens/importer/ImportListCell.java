@@ -136,6 +136,9 @@ public class ImportListCell extends ListCell<ImportJob> {
         }
     }
 
+    /**
+     * Makes this cell show an importing view.
+     */
     private void showImportingView() {
         setGraphic(importingView);
         if (getItem() != null) {
@@ -145,6 +148,9 @@ public class ImportListCell extends ListCell<ImportJob> {
         }
     }
 
+    /**
+     * Makes this cell show a waiting view.
+     */
     private void showWaitingView() {
         setGraphic(waitingView);
         if (getItem() != null) {
@@ -153,6 +159,9 @@ public class ImportListCell extends ListCell<ImportJob> {
         }
     }
 
+    /**
+     * Makes this cell show a hasSimilar view.
+     */
     private void showHasSimilarView() {
         setGraphic(hasSimilarView);
         if (getItem() != null) {
@@ -162,6 +171,9 @@ public class ImportListCell extends ListCell<ImportJob> {
         }
     }
 
+    /**
+     * Makes this cell show a hasDuplicate view.
+     */
     private void showDuplicateView() {
         setGraphic(duplicateView);
         if (getItem() != null) {
@@ -170,6 +182,9 @@ public class ImportListCell extends ListCell<ImportJob> {
         }
     }
 
+    /**
+     * Makes this cell show an error view.
+     */
     private void showFailedView() {
         setGraphic(failedView);
         if (getItem() != null) {

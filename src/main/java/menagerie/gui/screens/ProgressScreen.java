@@ -71,6 +71,14 @@ public class ProgressScreen extends Screen {
         setDefaultFocusNode(cancel);
     }
 
+    /**
+     * Opens this screen in a manager.
+     *
+     * @param manager        Manager to open this screen.
+     * @param titleText      Title bar text.
+     * @param messageText    Message text.
+     * @param cancelListener Listener for the cancel event.
+     */
     public void open(ScreenPane manager, String titleText, String messageText, PokeListener cancelListener) {
         this.cancelListener = null;
         manager.open(this);
@@ -82,6 +90,12 @@ public class ProgressScreen extends Screen {
         setProgress(0, 0);
     }
 
+    /**
+     * Sets the progress.
+     *
+     * @param i     Number of complete operations.
+     * @param total Number of total operations.
+     */
     public void setProgress(int i, int total) {
         count.setText(df.format(100.0 * i / total) + "%");
         progress.setProgress((double) i / total);

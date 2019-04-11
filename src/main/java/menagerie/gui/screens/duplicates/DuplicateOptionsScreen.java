@@ -30,9 +30,7 @@ import java.util.logging.Level;
 public class DuplicateOptionsScreen extends Screen {
 
     private enum Scope {
-        SELECTED,
-        SEARCHED,
-        ALL
+        SELECTED, SEARCHED, ALL
     }
 
     private final Settings settings;
@@ -159,6 +157,15 @@ public class DuplicateOptionsScreen extends Screen {
         duplicateScreen = new DuplicatesScreen();
     }
 
+    /**
+     * Opens this screen in a manager.
+     *
+     * @param manager   Manager to open in.
+     * @param menagerie Menagerie.
+     * @param selected  Set of items that are selected.
+     * @param searched  Set of items that are searched.
+     * @param all       Set of all items.
+     */
     public void open(ScreenPane manager, Menagerie menagerie, List<Item> selected, List<Item> searched, List<Item> all) {
         if (manager == null || menagerie == null || selected == null || searched == null || all == null) return;
         this.menagerie = menagerie;
@@ -169,6 +176,9 @@ public class DuplicateOptionsScreen extends Screen {
         manager.open(this);
     }
 
+    /**
+     * Updates the count labels.
+     */
     private void updateCounts() {
         int firstNum;
         if (compareChoiceBox.getValue() == Scope.SELECTED) {
@@ -193,6 +203,9 @@ public class DuplicateOptionsScreen extends Screen {
         compareCountLabel.setText("~" + firstNum * secondNum + " comparisons");
     }
 
+    /**
+     * Saves the changed settings to the settings object and writes it to file.
+     */
     private void saveSettings() {
         settings.setBoolean(Settings.Key.COMPARE_GREYSCALE, compareGreyscaleCheckBox.isSelected());
         try {
@@ -290,10 +303,19 @@ public class DuplicateOptionsScreen extends Screen {
         confidenceTextField.setText(settings.getDouble(Settings.Key.CONFIDENCE) + "");
     }
 
+    /**
+     * @return The duplicate resolver screen associated with this screen.
+     */
     public DuplicatesScreen getDuplicatesScreen() {
         return duplicateScreen;
     }
 
+    /**
+     * Expands groups so that items are only of type MediaItem.
+     *
+     * @param items Items with potential group items to expand.
+     * @return Set of items containing all MediaItems and elements of expanded groups.
+     */
     private List<Item> expandGroups(List<Item> items) {
         items = new ArrayList<>(items);
         for (int i = 0; i < items.size(); i++) {

@@ -65,16 +65,34 @@ public class IntegerDialogScreen extends Screen {
         setDefaultFocusNode(spinner);
     }
 
+    /**
+     * Confirms this dialog.
+     */
     private void confirm() {
         close();
         if (confirmListener != null) confirmListener.confirmed(spinner.getValue());
     }
 
+    /**
+     * Cancels this dialog.
+     */
     private void cancel() {
         close();
         if (cancelListener != null) cancelListener.poke();
     }
 
+    /**
+     * Opens this screen in a manager.
+     *
+     * @param manager         Manager to open in.
+     * @param title           Title text.
+     * @param message         Message text.
+     * @param min             Min int value.
+     * @param max             Max int value.
+     * @param val             Default value.
+     * @param confirmListener Listener waiting for confirm event.
+     * @param closeListener   Listener waiting for cancel event.
+     */
     public void open(ScreenPane manager, String title, String message, int min, int max, int val, IntegerDialogConfirmListener confirmListener, PokeListener closeListener) {
         manager.open(this);
 

@@ -212,6 +212,13 @@ public class DuplicatesScreen extends Screen {
         setDefaultFocusNode(closeButton);
     }
 
+    /**
+     * Opens this screen in a manager and displays the first pair.
+     *
+     * @param manager   Manager to open in.
+     * @param menagerie Menagerie.
+     * @param pairs     Pairs to view and resolve.
+     */
     public void open(ScreenPane manager, Menagerie menagerie, List<SimilarPair<MediaItem>> pairs) {
         if (manager == null || menagerie == null || pairs == null || pairs.isEmpty()) return;
 
@@ -227,6 +234,9 @@ public class DuplicatesScreen extends Screen {
         manager.open(this);
     }
 
+    /**
+     * Displays the next pair, if there is one.
+     */
     private void previewNext() {
         if (pairs == null || pairs.isEmpty()) return;
 
@@ -242,6 +252,9 @@ public class DuplicatesScreen extends Screen {
         }
     }
 
+    /**
+     * Displays the previous pair, if there is one.
+     */
     private void previewPrev() {
         if (pairs == null || pairs.isEmpty()) return;
 
@@ -257,6 +270,11 @@ public class DuplicatesScreen extends Screen {
         }
     }
 
+    /**
+     * Displays a pair.
+     *
+     * @param pair
+     */
     private void preview(SimilarPair<MediaItem> pair) {
         if (currentPair != null) {
             currentPair.getObject1().setTagListener(null);
@@ -306,6 +324,11 @@ public class DuplicatesScreen extends Screen {
         }
     }
 
+    /**
+     * Attempts to delete an item. WARNING: Deletes the file.
+     *
+     * @param toDelete Item to delete.
+     */
     private void deleteItem(MediaItem toDelete) {
         if (menagerie == null) return;
 
@@ -333,14 +356,23 @@ public class DuplicatesScreen extends Screen {
         }
     }
 
+    /**
+     * @return True if this duplicate screen will delete the file when deleting the duplicate.
+     */
     public boolean isDeleteFile() {
         return deleteFile;
     }
 
+    /**
+     * @param deleteFile Delete the file when deleting duplicates.
+     */
     public void setDeleteFile(boolean deleteFile) {
         this.deleteFile = deleteFile;
     }
 
+    /**
+     * @param selectListener Listener waiting for the user to ask to select an item in the explorer.
+     */
     public void setSelectListener(DuplicatesSelectExplorerListener selectListener) {
         this.selectListener = selectListener;
     }

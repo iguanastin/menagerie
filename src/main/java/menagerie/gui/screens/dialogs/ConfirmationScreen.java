@@ -65,6 +65,15 @@ public class ConfirmationScreen extends Screen {
         setDefaultFocusNode(ok);
     }
 
+    /**
+     * Opens this screen in a manager.
+     *
+     * @param manager        Manager to open in.
+     * @param title          Title text.
+     * @param message        Message text.
+     * @param okListener     Listener waiting for confirm event.
+     * @param cancelListener Listener waiting for cancel event.
+     */
     public void open(ScreenPane manager, String title, String message, PokeListener okListener, PokeListener cancelListener) {
         manager.open(this);
 

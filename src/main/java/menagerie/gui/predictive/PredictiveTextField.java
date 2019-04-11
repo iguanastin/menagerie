@@ -38,6 +38,9 @@ public class PredictiveTextField extends TextField {
         addEventFilter(KeyEvent.KEY_PRESSED, this::keyPressedEventFilter);
     }
 
+    /**
+     * Called when the text has changed.
+     */
     private void textChanged() {
         selectedIndex = -1;
         popup.hide();
@@ -64,6 +67,9 @@ public class PredictiveTextField extends TextField {
         updatePopupPosition();
     }
 
+    /**
+     * Moves the popup to be in the expected position.
+     */
     private void updatePopupPosition() {
         Bounds b = localToScreen(getBoundsInLocal());
         popup.setX(b.getMinX());
@@ -128,6 +134,9 @@ public class PredictiveTextField extends TextField {
         }
     }
 
+    /**
+     * Updates CSS styles of the options.
+     */
     private void updateOptionCSSStyles() {
         for (int i = 0; i < vBox.getChildren().size(); i++) {
             if (i == selectedIndex) {
@@ -138,14 +147,25 @@ public class PredictiveTextField extends TextField {
         }
     }
 
+    /**
+     * @param optionsListener Listener that supplies options, given the partial word.
+     */
     public void setOptionsListener(PredictiveTextFieldOptionsListener optionsListener) {
         this.optionsListener = optionsListener;
     }
 
+    /**
+     * @return Options listener.
+     */
     public PredictiveTextFieldOptionsListener getOptionsListener() {
         return optionsListener;
     }
 
+    /**
+     * Set the popup to be on top of the textField instead of on the bottom.
+     *
+     * @param top On top.
+     */
     public void setTop(boolean top) {
         this.top = top;
     }

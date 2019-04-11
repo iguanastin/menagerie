@@ -59,6 +59,9 @@ public class LogScreen extends Screen {
         setDefaultFocusNode(exit);
     }
 
+    /**
+     * @return The ListView in this screen.
+     */
     public ListView<LogItem> getListView() {
         return listView;
     }

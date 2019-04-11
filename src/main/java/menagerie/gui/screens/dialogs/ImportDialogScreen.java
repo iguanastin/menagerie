@@ -28,6 +28,10 @@ import java.util.Objects;
 
 public class ImportDialogScreen extends Screen {
 
+    private enum Order {
+        Default, Alphabetical, Date_Modified
+    }
+
     private final TextField filesTextField = new TextField();
     private final ChoiceBox<Order> orderChoiceBox = new ChoiceBox<>();
     private final CheckBox recursiveCheckBox = new CheckBox("Recursively import folders");
@@ -184,10 +188,6 @@ public class ImportDialogScreen extends Screen {
         }
 
         close();
-    }
-
-    private enum Order {
-        Default, Alphabetical, Date_Modified
     }
 
 }

@@ -194,10 +194,18 @@ public class SettingsScreen extends Screen {
         setDefaultFocusNode(root);
     }
 
+    /**
+     * Opens this screen in a manager.
+     *
+     * @param manager Manager.
+     */
     public void open(ScreenPane manager) {
         manager.open(this);
     }
 
+    /**
+     * Applies inputs to settings object and saves it.
+     */
     private void applyToSettings() {
         settings.setString(Settings.Key.DEFAULT_FOLDER, defaultFolderTextField.getText());
         settings.setBoolean(Settings.Key.DO_AUTO_IMPORT, autoImportFolderCheckBox.isSelected());

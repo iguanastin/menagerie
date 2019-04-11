@@ -67,6 +67,16 @@ public class TextDialogScreen extends Screen {
         setDefaultFocusNode(textField);
     }
 
+    /**
+     * Opens this screen in a manager.
+     *
+     * @param manager         Manager to open in.
+     * @param title           Title text.
+     * @param message         Message text.
+     * @param text            Default textfield text.
+     * @param confirmListener Listener waiting for confirm event.
+     * @param cancelListener  Listener waiting for cancel event.
+     */
     public void open(ScreenPane manager, String title, String message, String text, TextDialogConfirmListener confirmListener, PokeListener cancelListener) {
         manager.open(this);
 
@@ -78,11 +88,17 @@ public class TextDialogScreen extends Screen {
         this.cancelListener = cancelListener;
     }
 
+    /**
+     * Confirms this dialog.
+     */
     private void confirm() {
         close();
         if (confirmListener != null) confirmListener.confirmed(textField.getText());
     }
 
+    /**
+     * Cancels this dialog.
+     */
     private void cancel() {
         close();
         if (cancelListener != null) cancelListener.poke();

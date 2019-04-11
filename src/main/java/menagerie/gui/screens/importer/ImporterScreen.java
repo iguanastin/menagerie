@@ -121,6 +121,11 @@ public class ImporterScreen extends Screen {
         });
     }
 
+    /**
+     * Removes a job from the list.
+     *
+     * @param job Job to remove.
+     */
     void removeJob(ImportJob job) {
         jobs.remove(job);
         Platform.runLater(() -> listView.getItems().remove(job));
