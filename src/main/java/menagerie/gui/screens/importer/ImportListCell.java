@@ -8,7 +8,12 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import menagerie.model.SimilarPair;
+import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.importer.ImportJob;
+import menagerie.util.listeners.ObjectListener;
+
+import java.util.List;
 
 
 public class ImportListCell extends ListCell<ImportJob> {
@@ -35,7 +40,7 @@ public class ImportListCell extends ListCell<ImportJob> {
     private final BorderPane failedView;
 
 
-    ImportListCell(ImporterScreen screen, ImporterCellDuplicateListener duplicateResolverListener, ImporterCellSelectItemListener selectItemListener) {
+    ImportListCell(ImporterScreen screen, ObjectListener<List<SimilarPair<MediaItem>>> duplicateResolverListener, ObjectListener<MediaItem> selectItemListener) {
         super();
         this.screen = screen;
 
@@ -60,7 +65,7 @@ public class ImportListCell extends ListCell<ImportJob> {
         hasSimilarLabel.setTextOverrun(OverrunStyle.CENTER_WORD_ELLIPSIS);
         hasSimilarResolveButton = new Button("Resolve");
         hasSimilarResolveButton.setOnAction(event -> {
-            duplicateResolverListener.resolveDuplicates(getItem().getSimilarTo());
+            duplicateResolverListener.pass(getItem().getSimilarTo());
             screen.removeJob(getItem());
         });
         Button dismissButton = new Button("Dismiss");
@@ -77,7 +82,7 @@ public class ImportListCell extends ListCell<ImportJob> {
         dismissButton.setOnAction(dismissEventHandler);
         Button showDuplicateButton = new Button("View");
         showDuplicateButton.setOnAction(event -> {
-            selectItemListener.selectItem(getItem().getDuplicateOf());
+            selectItemListener.pass(getItem().getDuplicateOf());
             screen.removeJob(getItem());
         });
         h = new HBox(5, showDuplicateButton, dismissButton);

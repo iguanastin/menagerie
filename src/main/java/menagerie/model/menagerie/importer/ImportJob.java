@@ -9,6 +9,7 @@ import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
+import menagerie.util.listeners.ObjectListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -47,7 +48,7 @@ public class ImportJob {
 
     private final DoubleProperty progressProperty = new SimpleDoubleProperty(-1);
     private volatile Status status = Status.WAITING;
-    private final Set<ImportJobStatusListener> statusListeners = new HashSet<>();
+    private final Set<ObjectListener<Status>> statusListeners = new HashSet<>();
 
 
     /**
@@ -301,14 +302,14 @@ public class ImportJob {
         synchronized (statusListeners) {
             this.status = status;
 
-            statusListeners.forEach(listener -> listener.changed(status));
+            statusListeners.forEach(listener -> listener.pass(status));
         }
     }
 
     /**
      * @param listener Listens for status changes.
      */
-    public void addStatusListener(ImportJobStatusListener listener) {
+    public void addStatusListener(ObjectListener<Status> listener) {
         synchronized (statusListeners) {
             statusListeners.add(listener);
         }
@@ -317,7 +318,7 @@ public class ImportJob {
     /**
      * @param listener Listener
      */
-    public void removeStatusListener(ImportJobStatusListener listener) {
+    public void removeStatusListener(ObjectListener<Status> listener) {
         synchronized (statusListeners) {
             statusListeners.remove(listener);
         }

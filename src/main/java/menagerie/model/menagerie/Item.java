@@ -1,7 +1,7 @@
 package menagerie.model.menagerie;
 
 import menagerie.gui.thumbnail.Thumbnail;
-import menagerie.util.PokeListener;
+import menagerie.util.listeners.PokeListener;
 
 import java.util.ArrayList;
 import java.util.List;

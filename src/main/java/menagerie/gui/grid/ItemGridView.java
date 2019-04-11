@@ -9,6 +9,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.menagerie.Item;
+import menagerie.util.listeners.ObjectListener;
 import org.controlsfx.control.GridView;
 
 import java.util.HashSet;
@@ -24,7 +25,7 @@ public class ItemGridView extends GridView<Item> {
     private final ObservableList<Item> selected = FXCollections.observableArrayList();
     private Item lastSelected = null;
 
-    private final Set<GridSelectionListener> selectionListeners = new HashSet<>();
+    private final Set<ObjectListener<Item>> selectionListeners = new HashSet<>();
 
 
     public ItemGridView() {
@@ -191,7 +192,7 @@ public class ItemGridView extends GridView<Item> {
         }
 
         // Notify selection listener
-        selectionListeners.forEach(listener -> listener.targetSelected(item));
+        selectionListeners.forEach(listener -> listener.pass(item));
     }
 
     /**
@@ -260,7 +261,7 @@ public class ItemGridView extends GridView<Item> {
      * @param listener Listener waiting on selection changes.
      * @return True if successfully added.
      */
-    public boolean addSelectionListener(GridSelectionListener listener) {
+    public boolean addSelectionListener(ObjectListener<Item> listener) {
         return selectionListeners.add(listener);
     }
 
@@ -268,7 +269,7 @@ public class ItemGridView extends GridView<Item> {
      * @param listener Listener waiting on selection changes.
      * @return True if successfully removed.
      */
-    public boolean removeSelectionListener(GridSelectionListener listener) {
+    public boolean removeSelectionListener(ObjectListener<Item> listener) {
         return selectionListeners.remove(listener);
     }
 

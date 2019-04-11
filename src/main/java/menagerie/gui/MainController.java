@@ -32,7 +32,6 @@ import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
-import menagerie.gui.screens.slideshow.SlideshowScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.*;
@@ -40,7 +39,6 @@ import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.Search;
-import menagerie.model.search.SearchUpdateListener;
 import menagerie.model.search.rules.*;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
@@ -156,52 +154,6 @@ public class MainController {
     // ---------------------------------- Initializers -------------------------------
 
     /**
-     * Attempts to resolve the actual path to the database file by java path standards, given a JDBC database path.
-     *
-     * @param databaseURL JDBC style path to database.
-     *
-     * @return Best attempt at resolving the path.
-     */
-    private static File getDatabaseFile(String databaseURL) {
-        String path = databaseURL + ".mv.db";
-        if (path.startsWith("~")) {
-            String temp = System.getProperty("user.home");
-            if (!temp.endsWith("/") && !temp.endsWith("\\")) temp += "/";
-            path = path.substring(1);
-            if (path.startsWith("/") || path.startsWith("\\")) path = path.substring(1);
-
-            path = temp + path;
-        }
-
-        return new File(path);
-    }
-
-    /**
-     * Attempts to resolve a filename conflict caused by a pre-existing file at the same path. Appends an incremented number surrounded by parenthesis to the file if it already exists.
-     *
-     * @param file File to resolve name for.
-     *
-     * @return File pointing to a file that does not exist yet.
-     */
-    public static File resolveDuplicateFilename(File file) {
-        while (file.exists()) {
-            String name = file.getName();
-            if (name.matches(".*\\s\\([0-9]+\\)\\..*")) {
-                int count = Integer.parseInt(name.substring(name.lastIndexOf('(') + 1, name.lastIndexOf(')')));
-                name = name.substring(0, name.lastIndexOf('(') + 1) + (count + 1) + name.substring(name.lastIndexOf(')'));
-            } else {
-                name = name.substring(0, name.lastIndexOf('.')) + " (2)" + name.substring(name.lastIndexOf('.'));
-            }
-
-            String parent = file.getParent();
-            if (!parent.endsWith("/") && !parent.endsWith("\\")) parent += "/";
-            file = new File(parent + name);
-        }
-
-        return file;
-    }
-
-    /**
      * Initializes this controller and elements
      */
     @FXML
@@ -232,26 +184,6 @@ public class MainController {
         if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT))
             startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
 
-    }
-
-    /**
-     * Attempts to back up the database file as specified in the settings object
-     */
-    private void backupDatabase() {
-        try {
-            File dbFile = getDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
-
-            if (dbFile.exists()) {
-                Main.log.info("Backing up database at: " + dbFile);
-                File backupFile = new File(dbFile.getAbsolutePath() + ".bak");
-                Files.copy(dbFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                Main.log.info("Successfully backed up database to: " + backupFile);
-            } else {
-                Main.log.warning(String.format("Cannot backup nonexistent database file at: %s", dbFile));
-            }
-        } catch (IOException e) {
-            Main.log.log(Level.SEVERE, String.format("Failed to backup database at: %s", settings.getString(Settings.Key.DATABASE_URL)), e);
-        }
     }
 
     /**
@@ -930,35 +862,28 @@ public class MainController {
         currentSearch = new Search(constructRuleSet(search), descending, showGrouped);
         menagerie.registerSearch(currentSearch);
         currentSearch.addIfValid(menagerie.getItems());
-        currentSearch.setListener(new SearchUpdateListener() { // TODO: Use jfx observable list for improved performance?
-            @Override
-            public void imagesAdded(List<Item> images) {
-                Platform.runLater(() -> itemGridView.getItems().addAll(0, images));
-            }
+        currentSearch.addItemsAddedListener(items -> Platform.runLater(() -> itemGridView.getItems().addAll(0, items)));
+        currentSearch.addItemsRemovedListener(items -> {
+            Platform.runLater(() -> {
+                final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected()) + 1;
+                int newIndex = oldLastIndex;
+                for (Item image : items) {
+                    final int i = itemGridView.getItems().indexOf(image);
+                    if (i < 0) continue;
 
-            @Override
-            public void imagesRemoved(List<Item> images) {
-                Platform.runLater(() -> {
-                    final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected()) + 1;
-                    int newIndex = oldLastIndex;
-                    for (Item image : images) {
-                        final int i = itemGridView.getItems().indexOf(image);
-                        if (i < 0) continue;
-
-                        if (i < oldLastIndex) {
-                            newIndex--;
-                        }
+                    if (i < oldLastIndex) {
+                        newIndex--;
                     }
+                }
 
-                    itemGridView.getItems().removeAll(images);
-                    if (images.contains(currentlyPreviewing)) previewItem(null);
+                itemGridView.getItems().removeAll(items);
+                if (items.contains(currentlyPreviewing)) previewItem(null);
 
-                    if (!itemGridView.getItems().isEmpty()) {
-                        if (newIndex >= itemGridView.getItems().size()) newIndex = itemGridView.getItems().size() - 1;
-                        itemGridView.setLastSelected(itemGridView.getItems().get(newIndex));
-                    }
-                });
-            }
+                if (!itemGridView.getItems().isEmpty()) {
+                    if (newIndex >= itemGridView.getItems().size()) newIndex = itemGridView.getItems().size() - 1;
+                    itemGridView.setLastSelected(itemGridView.getItems().get(newIndex));
+                }
+            });
         });
 
         itemGridView.clearSelection();
@@ -1139,6 +1064,70 @@ public class MainController {
     }
 
     // ---------------------------------- Compute Utilities -----------------------------
+
+    /**
+     * Attempts to back up the database file as specified in the settings object
+     */
+    private void backupDatabase() {
+        try {
+            File dbFile = getDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
+
+            if (dbFile.exists()) {
+                Main.log.info("Backing up database at: " + dbFile);
+                File backupFile = new File(dbFile.getAbsolutePath() + ".bak");
+                Files.copy(dbFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                Main.log.info("Successfully backed up database to: " + backupFile);
+            } else {
+                Main.log.warning(String.format("Cannot backup nonexistent database file at: %s", dbFile));
+            }
+        } catch (IOException e) {
+            Main.log.log(Level.SEVERE, String.format("Failed to backup database at: %s", settings.getString(Settings.Key.DATABASE_URL)), e);
+        }
+    }
+
+    /**
+     * Attempts to resolve the actual path to the database file by java path standards, given a JDBC database path.
+     *
+     * @param databaseURL JDBC style path to database.
+     * @return Best attempt at resolving the path.
+     */
+    private static File getDatabaseFile(String databaseURL) {
+        String path = databaseURL + ".mv.db";
+        if (path.startsWith("~")) {
+            String temp = System.getProperty("user.home");
+            if (!temp.endsWith("/") && !temp.endsWith("\\")) temp += "/";
+            path = path.substring(1);
+            if (path.startsWith("/") || path.startsWith("\\")) path = path.substring(1);
+
+            path = temp + path;
+        }
+
+        return new File(path);
+    }
+
+    /**
+     * Attempts to resolve a filename conflict caused by a pre-existing file at the same path. Appends an incremented number surrounded by parenthesis to the file if it already exists.
+     *
+     * @param file File to resolve name for.
+     * @return File pointing to a file that does not exist yet.
+     */
+    public static File resolveDuplicateFilename(File file) {
+        while (file.exists()) {
+            String name = file.getName();
+            if (name.matches(".*\\s\\([0-9]+\\)\\..*")) {
+                int count = Integer.parseInt(name.substring(name.lastIndexOf('(') + 1, name.lastIndexOf(')')));
+                name = name.substring(0, name.lastIndexOf('(') + 1) + (count + 1) + name.substring(name.lastIndexOf(')'));
+            } else {
+                name = name.substring(0, name.lastIndexOf('.')) + " (2)" + name.substring(name.lastIndexOf('.'));
+            }
+
+            String parent = file.getParent();
+            if (!parent.endsWith("/") && !parent.endsWith("\\")) parent += "/";
+            file = new File(parent + name);
+        }
+
+        return file;
+    }
 
     /**
      * Starts a folder watcher thread. Kills an active folder watcher thread first, if present.

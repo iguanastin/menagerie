@@ -84,7 +84,7 @@ public class MediaItem extends Item {
                 if (thumb.isLoaded()) {
                     menagerie.getDatabaseUpdater().setThumbnailAsync(getId(), thumb.getImage());
                 } else {
-                    thumb.setImageLoadedListener(image1 -> menagerie.getDatabaseUpdater().setThumbnailAsync(getId(), image1));
+                    thumb.addImageLoadedListener(image1 -> menagerie.getDatabaseUpdater().setThumbnailAsync(getId(), image1));
                 }
             }
         }

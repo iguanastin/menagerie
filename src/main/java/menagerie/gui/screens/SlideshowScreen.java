@@ -1,4 +1,4 @@
-package menagerie.gui.screens.slideshow;
+package menagerie.gui.screens;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -11,13 +11,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import menagerie.gui.ItemInfoBox;
 import menagerie.gui.media.DynamicMediaView;
-import menagerie.gui.screens.Screen;
-import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.ConfirmationScreen;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
-import menagerie.util.PokeListener;
+import menagerie.util.listeners.ObjectListener;
+import menagerie.util.listeners.PokeListener;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -34,7 +33,7 @@ public class SlideshowScreen extends Screen {
     private Menagerie menagerie;
 
 
-    public SlideshowScreen(SlideShowSelectListener selectListener) {
+    public SlideshowScreen(ObjectListener<Item> selectListener) {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.LEFT) {
                 previewLast();
@@ -81,7 +80,7 @@ public class SlideshowScreen extends Screen {
 
         Button select = new Button("Select");
         select.setOnAction(event -> {
-            if (showing != null && selectListener != null) selectListener.select(showing);
+            if (showing != null && selectListener != null) selectListener.pass(showing);
         });
 
         Button close = new Button("Close");

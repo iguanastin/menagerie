@@ -1,4 +1,4 @@
-package menagerie.util;
+package menagerie.util.listeners;
 
 /**
  * Simple listener that passes no values.

@@ -14,7 +14,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
-import menagerie.util.PokeListener;
+import menagerie.util.listeners.ObjectListener;
+import menagerie.util.listeners.PokeListener;
 
 public class TextDialogScreen extends Screen {
 
@@ -22,8 +23,8 @@ public class TextDialogScreen extends Screen {
     private final Label messageLabel = new Label("N/A");
     private final TextField textField = new TextField();
 
-    private TextDialogConfirmListener confirmListener;
     private PokeListener cancelListener;
+    private ObjectListener<String> confirmListener;
 
 
     public TextDialogScreen() {
@@ -77,7 +78,7 @@ public class TextDialogScreen extends Screen {
      * @param confirmListener Listener waiting for confirm event.
      * @param cancelListener  Listener waiting for cancel event.
      */
-    public void open(ScreenPane manager, String title, String message, String text, TextDialogConfirmListener confirmListener, PokeListener cancelListener) {
+    public void open(ScreenPane manager, String title, String message, String text, ObjectListener<String> confirmListener, PokeListener cancelListener) {
         manager.open(this);
 
         titleLabel.setText(title);
@@ -93,7 +94,7 @@ public class TextDialogScreen extends Screen {
      */
     private void confirm() {
         close();
-        if (confirmListener != null) confirmListener.confirmed(textField.getText());
+        if (confirmListener != null) confirmListener.pass(textField.getText());
     }
 
     /**

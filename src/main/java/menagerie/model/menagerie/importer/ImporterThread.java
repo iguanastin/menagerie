@@ -3,6 +3,7 @@ package menagerie.model.menagerie.importer;
 import menagerie.gui.Main;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.Menagerie;
+import menagerie.util.listeners.ObjectListener;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -22,7 +23,7 @@ public class ImporterThread extends Thread {
     private final Settings settings;
     private final BlockingQueue<ImportJob> jobs = new LinkedBlockingQueue<>();
 
-    private final Set<ImporterJobListener> importerListeners = new HashSet<>();
+    private final Set<ObjectListener<ImportJob>> importerListeners = new HashSet<>();
 
 
     public ImporterThread(Menagerie menagerie, Settings settings) {
@@ -70,7 +71,7 @@ public class ImporterThread extends Thread {
         jobs.add(job);
         job.setImporter(this);
         synchronized (importerListeners) {
-            importerListeners.forEach(listener -> listener.jobQueued(job));
+            importerListeners.forEach(listener -> listener.pass(job));
         }
     }
 
@@ -108,7 +109,7 @@ public class ImporterThread extends Thread {
     /**
      * @param listener Listener that listens for jobs being added.
      */
-    public void addImporterListener(ImporterJobListener listener) {
+    public void addImporterListener(ObjectListener<ImportJob> listener) {
         synchronized (importerListeners) {
             importerListeners.add(listener);
         }
@@ -117,7 +118,7 @@ public class ImporterThread extends Thread {
     /**
      * @param listener Listener to remove.
      */
-    public void removeImporterListener(ImporterJobListener listener) {
+    public void removeImporterListener(ObjectListener<ImportJob> listener) {
         synchronized (importerListeners) {
             importerListeners.remove(listener);
         }

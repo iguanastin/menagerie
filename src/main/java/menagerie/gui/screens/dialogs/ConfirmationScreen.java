@@ -12,7 +12,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
-import menagerie.util.PokeListener;
+import menagerie.util.listeners.PokeListener;
 
 public class ConfirmationScreen extends Screen {
 

@@ -15,10 +15,12 @@ import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.model.SimilarPair;
+import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
-import menagerie.util.PokeListener;
+import menagerie.util.listeners.ObjectListener;
+import menagerie.util.listeners.PokeListener;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -43,7 +45,7 @@ public class DuplicatesScreen extends Screen {
 
     private boolean deleteFile = true;
 
-    private DuplicatesSelectExplorerListener selectListener = null;
+    private ObjectListener<Item> selectListener = null;
 
 
     public DuplicatesScreen() {
@@ -74,7 +76,7 @@ public class DuplicatesScreen extends Screen {
             MenuItem select = new MenuItem("Select in explorer");
             ContextMenu cm = new ContextMenu(select);
             select.setOnAction(event1 -> {
-                if (selectListener != null) selectListener.select(currentPair.getObject1());
+                if (selectListener != null) selectListener.pass(currentPair.getObject1());
                 cm.hide();
                 close();
             });
@@ -85,7 +87,7 @@ public class DuplicatesScreen extends Screen {
             MenuItem select = new MenuItem("Select in explorer");
             ContextMenu cm = new ContextMenu(select);
             select.setOnAction(event1 -> {
-                if (selectListener != null) selectListener.select(currentPair.getObject2());
+                if (selectListener != null) selectListener.pass(currentPair.getObject2());
                 cm.hide();
                 close();
             });
@@ -373,7 +375,7 @@ public class DuplicatesScreen extends Screen {
     /**
      * @param selectListener Listener waiting for the user to ask to select an item in the explorer.
      */
-    public void setSelectListener(DuplicatesSelectExplorerListener selectListener) {
+    public void setSelectListener(ObjectListener<Item> selectListener) {
         this.selectListener = selectListener;
     }
 

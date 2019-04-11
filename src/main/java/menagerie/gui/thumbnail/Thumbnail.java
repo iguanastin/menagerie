@@ -3,9 +3,12 @@ package menagerie.gui.thumbnail;
 import javafx.scene.image.Image;
 import menagerie.gui.Main;
 import menagerie.util.Filters;
+import menagerie.util.listeners.ObjectListener;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * JavaFX Image wrapper specifically for loading thumbnails of various types.
@@ -27,8 +30,8 @@ public class Thumbnail {
 
     private boolean loaded = false;
 
-    private ThumbnailImageReadyListener imageReadyListener = null;
-    private ThumbnailImageLoadedListener imageLoadedListener = null;
+    private final Set<ObjectListener<Image>> imageReadyListeners = new HashSet<>();
+    private final Set<ObjectListener<Image>> imageLoadedListeners = new HashSet<>();
 
 
     /**
@@ -53,8 +56,12 @@ public class Thumbnail {
                     public void imageReady(Image image) {
                         Thumbnail.this.image = image;
                         loaded = true;
-                        if (getImageReadyListener() != null) getImageReadyListener().imageReady(image);
-                        if (getImageLoadedListener() != null) getImageLoadedListener().finishedLoading(image);
+                        synchronized (imageReadyListeners) {
+                            imageReadyListeners.forEach(listener -> listener.pass(image));
+                        }
+                        synchronized (imageLoadedListeners) {
+                            imageLoadedListeners.forEach(listener -> listener.pass(image));
+                        }
                     }
 
                     @Override
@@ -87,7 +94,9 @@ public class Thumbnail {
             image.progressProperty().addListener((observable, oldValue, newValue) -> {
                 if (!image.isError() && newValue.doubleValue() == 1.0) {
                     loaded = true;
-                    if (getImageLoadedListener() != null) getImageLoadedListener().finishedLoading(image);
+                    synchronized (imageLoadedListeners) {
+                        imageLoadedListeners.forEach(listener -> listener.pass(image));
+                    }
                 }
             });
         } else {
@@ -95,34 +104,20 @@ public class Thumbnail {
         }
     }
 
-    /**
-     * @return The listener listening for the image to finish loading.
-     */
-    public synchronized ThumbnailImageLoadedListener getImageLoadedListener() {
-        return imageLoadedListener;
+    public boolean addImageReadyListener(ObjectListener<Image> listener) {
+        return imageReadyListeners.add(listener);
     }
 
-    /**
-     * @return The listener listening for the image to be ready to use.
-     */
-    public synchronized ThumbnailImageReadyListener getImageReadyListener() {
-        return imageReadyListener;
+    public boolean addImageLoadedListener(ObjectListener<Image> listener) {
+        return imageLoadedListeners.add(listener);
     }
 
-    /**
-     *
-     * @param imageLoadedListener Image loaded listener.
-     */
-    public synchronized void setImageLoadedListener(ThumbnailImageLoadedListener imageLoadedListener) {
-        this.imageLoadedListener = imageLoadedListener;
+    public boolean removeImageReadyListener(ObjectListener<Image> listener) {
+        return imageReadyListeners.remove(listener);
     }
 
-    /**
-     *
-     * @param imageReadyListener Image ready listener.
-     */
-    public synchronized void setImageReadyListener(ThumbnailImageReadyListener imageReadyListener) {
-        this.imageReadyListener = imageReadyListener;
+    public boolean removeImageLoadedListener(ObjectListener<Image> listener) {
+        return imageLoadedListeners.remove(listener);
     }
 
     /**

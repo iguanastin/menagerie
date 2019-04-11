@@ -4,6 +4,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
@@ -11,6 +12,7 @@ import javafx.scene.text.FontWeight;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
+import menagerie.util.listeners.ObjectListener;
 import org.controlsfx.control.GridCell;
 
 
@@ -27,6 +29,8 @@ public class ImageGridCell extends GridCell<Item> {
 
     private Item lastItem = null;
 
+    private final ObjectListener<Image> imageReadyListener;
+
 
     public ImageGridCell() {
         super();
@@ -42,11 +46,14 @@ public class ImageGridCell extends GridCell<Item> {
         setAlignment(Pos.CENTER);
         setStyle(UNSELECTED_BG_CSS);
 
+        imageReadyListener = view::setImage;
+
     }
 
     @Override
     protected void updateItem(Item item, boolean empty) {
-        if (lastItem != null && lastItem.getThumbnail() != null) lastItem.getThumbnail().setImageReadyListener(null);
+        if (lastItem != null && lastItem.getThumbnail() != null)
+            lastItem.getThumbnail().removeImageReadyListener(imageReadyListener);
         lastItem = item;
 
         if (empty) {
@@ -58,7 +65,7 @@ public class ImageGridCell extends GridCell<Item> {
                     view.setImage(item.getThumbnail().getImage());
                 } else {
                     view.setImage(null);
-                    item.getThumbnail().setImageReadyListener(view::setImage);
+                    item.getThumbnail().addImageReadyListener(imageReadyListener);
                 }
             }
             if (item instanceof MediaItem && ((MediaItem) item).isVideo()) {

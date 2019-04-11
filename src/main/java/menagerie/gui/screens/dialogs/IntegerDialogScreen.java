@@ -11,7 +11,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
-import menagerie.util.PokeListener;
+import menagerie.util.listeners.ObjectListener;
+import menagerie.util.listeners.PokeListener;
 
 public class IntegerDialogScreen extends Screen {
 
@@ -20,7 +21,7 @@ public class IntegerDialogScreen extends Screen {
     private final Label messageLabel = new Label("N/A");
 
     private PokeListener cancelListener = null;
-    private IntegerDialogConfirmListener confirmListener = null;
+    private ObjectListener<Integer> confirmListener = null;
 
 
     public IntegerDialogScreen() {
@@ -70,7 +71,7 @@ public class IntegerDialogScreen extends Screen {
      */
     private void confirm() {
         close();
-        if (confirmListener != null) confirmListener.confirmed(spinner.getValue());
+        if (confirmListener != null) confirmListener.pass(spinner.getValue());
     }
 
     /**
@@ -93,7 +94,7 @@ public class IntegerDialogScreen extends Screen {
      * @param confirmListener Listener waiting for confirm event.
      * @param closeListener   Listener waiting for cancel event.
      */
-    public void open(ScreenPane manager, String title, String message, int min, int max, int val, IntegerDialogConfirmListener confirmListener, PokeListener closeListener) {
+    public void open(ScreenPane manager, String title, String message, int min, int max, int val, ObjectListener<Integer> confirmListener, PokeListener closeListener) {
         manager.open(this);
 
         spinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(min, max, val));
