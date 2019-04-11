@@ -6,12 +6,8 @@ import menagerie.model.menagerie.Menagerie;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 
 public class ImporterThread extends Thread {
@@ -25,11 +21,6 @@ public class ImporterThread extends Thread {
 
     private final Set<ImporterJobListener> importerListeners = new HashSet<>();
 
-    private final Lock loggingLock = new ReentrantLock();
-    private final Timer loggingTimer = new Timer(true);
-    private int importCount = 0;
-    private long lastLog = System.currentTimeMillis();
-
 
     public ImporterThread(Menagerie menagerie, Settings settings) {
         this.menagerie = menagerie;
@@ -38,23 +29,6 @@ public class ImporterThread extends Thread {
 
     @Override
     public void run() {
-
-        loggingTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    loggingLock.lock();
-                    if (importCount > 0) {
-                        Main.log.info(String.format("ImporterThread imported %d items in the last %.2fs", importCount, (System.currentTimeMillis() - lastLog) / 1000.0));
-                        lastLog = System.currentTimeMillis();
-                        importCount = 0;
-                    }
-                } finally {
-                    loggingLock.unlock();
-                }
-            }
-        }, 30000, 30000);
-
         while (running) {
             try {
                 ImportJob job = jobs.take();
@@ -70,13 +44,12 @@ public class ImporterThread extends Thread {
                 }
 
                 if (running) {
+                    String source;
+                    if (job.getUrl() != null) source = job.getUrl().toString();
+                    else source = job.getFile().toString();
+                    Main.log.info(String.format("Importing: %s", source));
+
                     job.runJob(menagerie, settings);
-                    try {
-                        loggingLock.lock();
-                        importCount++;
-                    } finally {
-                        loggingLock.unlock();
-                    }
                 }
             } catch (InterruptedException e) {
                 Main.log.log(Level.WARNING, "Interrupted while importer thread taking job", e);

@@ -377,6 +377,7 @@ public class MainController {
                         item = new LogItem(work.toString());
                     }
                     logScreen.getListView().getItems().add(item);
+                    if (logScreen.getListView().getItems().size() > 1000) logScreen.getListView().getItems().remove(0);
                 });
             }
 
@@ -391,80 +392,6 @@ public class MainController {
             }
         });
     }
-
-    //    private void initExplorerGridCellContextMenu() {
-    //
-    //        MenuItem buildMD5HashMenuItem = new MenuItem("Build MD5 Hash");
-    //        buildMD5HashMenuItem.setOnAction(event1 -> {
-    //            ProgressScreen ps = new ProgressScreen();
-    //            CancellableThread ct = new CancellableThread() {
-    //                @Override
-    //                public void run() {
-    //                    final int total = itemGridView.getSelected().size();
-    //                    int i = 0;
-    //
-    //                    for (Item item : itemGridView.getSelected()) {
-    //                        if (!running) break;
-    //
-    //                        i++;
-    //
-    //                        if (item instanceof MediaItem && ((MediaItem) item).getMD5() == null) {
-    //                            try {
-    //                                ((MediaItem) item).initializeMD5();
-    //                                ((MediaItem) item).commitMD5ToDatabase();
-    //                            } catch (Exception e) {
-    //                                Main.log.log(Level.WARNING, "Error initializing or storing MD5 hash", e);
-    //                            }
-    //                        }
-    //
-    //                        final int finalI = i; // Lambda workaround
-    //                        Platform.runLater(() -> ps.setProgress(finalI, total));
-    //                    }
-    //
-    //                    Platform.runLater(ps::close);
-    //                }
-    //            };
-    //            ps.open(screenPane, "Building MD5s", "Building MD5 hashes for files...", ct::cancel);
-    //            ct.start();
-    //        });
-    //        MenuItem buildHistogramMenuItem = new MenuItem("Build Histogram");
-    //        buildHistogramMenuItem.setOnAction(event1 -> {
-    //            ProgressScreen ps = new ProgressScreen();
-    //            CancellableThread ct = new CancellableThread() {
-    //                @Override
-    //                public void run() {
-    //                    final int total = itemGridView.getSelected().size();
-    //                    int i = 0;
-    //
-    //                    for (Item item : itemGridView.getSelected()) {
-    //                        if (!running) break;
-    //
-    //                        i++;
-    //
-    //                        if (item instanceof MediaItem) {
-    //                            String filename = ((MediaItem) item).getFile().getName().toLowerCase();
-    //                            if (((MediaItem) item).getHistogram() == null && (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp"))) {
-    //                                try {
-    //                                    ((MediaItem) item).initializeHistogram();
-    //                                    ((MediaItem) item).commitHistogramToDatabase();
-    //                                } catch (Exception e) {
-    //                                    Main.log.log(Level.WARNING, "Error initializing or storing histogram", e);
-    //                                }
-    //                            }
-    //                        }
-    //
-    //                        final int finalI = i; // Lambda workaround
-    //                        Platform.runLater(() -> ps.setProgress(finalI, total));
-    //                    }
-    //
-    //                    Platform.runLater(ps::close);
-    //                }
-    //            };
-    //            ps.open(screenPane, "Building Histograms", "Building image histograms for selected files...", ct::cancel);
-    //            ct.start();
-    //        });
-    //
-    //    }
 
     /**
      * Initializes the explorer
