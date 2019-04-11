@@ -2,11 +2,14 @@ package menagerie.model.menagerie.db;
 
 
 import menagerie.gui.Main;
+import menagerie.model.menagerie.Tag;
 
 import java.sql.*;
 import java.util.ArrayList;
 
-
+/**
+ * Utility class for initializing and upgrading the Menagerie database.
+ */
 public class DatabaseVersionUpdater {
 
 
@@ -14,19 +17,28 @@ public class DatabaseVersionUpdater {
     private static final String CREATE_IMGS_TABLE_V1 = "CREATE TABLE imgs(id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, path NVARCHAR(1024) UNIQUE, added LONG NOT NULL, thumbnail BLOB, md5 NVARCHAR(32), histogram OBJECT);";
     private static final String CREATE_TAGGED_TABLE_V1 = "CREATE TABLE tagged(img_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (img_id) REFERENCES imgs(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (img_id, tag_id));";
 
-    private static final int CURRENT_VERSION = 2;
+    /**
+     * Currently accepted version of the database. If version is not this, database should upgrade.
+     */
+    private static final int TARGET_VERSION = 2;
 
 
-    private static class Tag {
-        int id;
-        String name;
-    }
-
-
+    /**
+     * @param db Database
+     * @return True if database is not target version.
+     * @throws SQLException If database query fails.
+     */
     private static boolean outOfDate(Connection db) throws SQLException {
-        return getVersion(db) != CURRENT_VERSION;
+        return getVersion(db) != TARGET_VERSION;
     }
 
+    /**
+     * Attempts to upgrade the database if it is out of date.
+     *
+     * @param db Database
+     * @throws SQLException If the upgrade fails.
+     * @see #outOfDate(Connection)
+     */
     public static void updateDatabase(Connection db) throws SQLException {
         try (Statement s = db.createStatement()) {
             while (outOfDate(db)) {
@@ -90,10 +102,22 @@ public class DatabaseVersionUpdater {
         return version;
     }
 
+    /**
+     * Utility function to initialize tables to the target version.
+     *
+     * @param db Database
+     * @throws SQLException If database initialization fails.
+     */
     private static void initializeTables(Connection db) throws SQLException {
         initializeV1Tables(db);
     }
 
+    /**
+     * Initializes the tables to version 1.
+     *
+     * @param db Database
+     * @throws SQLException If database initialization fails.
+     */
     private static void initializeV1Tables(Connection db) throws SQLException {
         Main.log.info("Initializing v1 tables");
 
@@ -112,6 +136,12 @@ public class DatabaseVersionUpdater {
         }
     }
 
+    /**
+     * Updates version 0 tables to version 1.
+     *
+     * @param db Database
+     * @throws SQLException If database upgrade fails.
+     */
     private static void updateFromV0ToV1(Connection db) throws SQLException {
         Main.log.warning("Database updating from v0 to v1...");
 
@@ -166,14 +196,12 @@ public class DatabaseVersionUpdater {
                     s_getTagID.setNString(1, tagName);
                     ResultSet rs_tag = s_getTagID.executeQuery();
                     rs_tag.next();
-                    tag = new Tag();
-                    tag.name = tagName;
-                    tag.id = rs_tag.getInt("tags.id");
+                    tag = new Tag(rs_tag.getInt("tags.id"), tagName);
                     tags.add(tag);
                 }
 
                 tagImage.setInt(1, rs_img.getInt("id"));
-                tagImage.setInt(2, tag.id);
+                tagImage.setInt(2, tag.getId());
                 try {
                     tagImage.executeUpdate();
                 } catch (SQLException e) {
@@ -202,17 +230,19 @@ public class DatabaseVersionUpdater {
 
     }
 
+    /**
+     * Upgrades version 1 tables to version 2.
+     *
+     * @param db Database
+     * @throws SQLException If database upgrade fails.
+     */
     private static void updateFromV1ToV2(Connection db) throws SQLException {
         Main.log.warning("Database updating from v1 to v2...");
         long t = System.currentTimeMillis();
         try (Statement s = db.createStatement()) {
             Main.log.info("Altering database histogram columns");
             //Update histogram storage
-            s.executeUpdate("ALTER TABLE imgs DROP COLUMN histogram;" +
-                    "ALTER TABLE imgs ADD COLUMN hist_a BLOB;" +
-                    "ALTER TABLE imgs ADD COLUMN hist_r BLOB;" +
-                    "ALTER TABLE imgs ADD COLUMN hist_g BLOB;" +
-                    "ALTER TABLE imgs ADD COLUMN hist_b BLOB;");
+            s.executeUpdate("ALTER TABLE imgs DROP COLUMN histogram;" + "ALTER TABLE imgs ADD COLUMN hist_a BLOB;" + "ALTER TABLE imgs ADD COLUMN hist_r BLOB;" + "ALTER TABLE imgs ADD COLUMN hist_g BLOB;" + "ALTER TABLE imgs ADD COLUMN hist_b BLOB;");
 
             Main.log.info("Updating database version");
             //Update version table
@@ -222,9 +252,14 @@ public class DatabaseVersionUpdater {
         }
     }
 
+    /**
+     * @param tags List of available tags to get from.
+     * @param name Name of tag to get.
+     * @return Tag with given name from list, or null if not present.
+     */
     private static Tag getTagByName(Iterable<Tag> tags, String name) {
         for (Tag tag : tags) {
-            if (tag.name.equalsIgnoreCase(name)) {
+            if (tag.getName().equalsIgnoreCase(name)) {
                 return tag;
             }
         }
@@ -232,6 +267,12 @@ public class DatabaseVersionUpdater {
         return null;
     }
 
+    /**
+     * Drops all tables and data, theoretically leaving the database as clean as when it was created.
+     *
+     * @param db Database
+     * @throws SQLException If database cleaning fails.
+     */
     private static void cleanDatabase(Connection db) throws SQLException {
         Main.log.warning("Cleaning database....");
 

@@ -10,9 +10,12 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 
+/**
+ * A thread that cleanly serializes Menagerie imports as jobs with additional features.
+ */
 public class ImporterThread extends Thread {
 
-    private volatile boolean running = true;
+    private volatile boolean running = false;
     private volatile boolean paused = false;
 
     private final Menagerie menagerie;
@@ -29,6 +32,7 @@ public class ImporterThread extends Thread {
 
     @Override
     public void run() {
+        running = true;
         while (running) {
             try {
                 ImportJob job = jobs.take();
@@ -57,7 +61,12 @@ public class ImporterThread extends Thread {
         }
     }
 
-    public void queue(ImportJob job) {
+    /**
+     * Adds a job to the back of the queue. FIFO.
+     *
+     * @param job Job to add.
+     */
+    public void addJob(ImportJob job) {
         jobs.add(job);
         job.setImporter(this);
         synchronized (importerListeners) {
@@ -65,35 +74,60 @@ public class ImporterThread extends Thread {
         }
     }
 
-    public synchronized void setRunning(boolean running) {
-        this.running = running;
+    /**
+     * Tells this thread to stop running. Does not forcibly stop the thread.
+     */
+    public synchronized void stopRunning() {
+        this.running = false;
     }
 
+    /**
+     * Sets the paused state of this import thread. If a job is already running, the paused state is not queried by this thread until the job finishes.
+     *
+     * @param paused Value
+     */
     public synchronized void setPaused(boolean paused) {
         this.paused = paused;
         notifyAll();
     }
 
+    /**
+     * @return True if this thread is paused.
+     */
     public boolean isPaused() {
         return paused;
     }
 
+    /**
+     * @return True if this thread is running.
+     */
     public boolean isRunning() {
         return running;
     }
 
+    /**
+     * @param listener Listener that listens for jobs being added.
+     */
     public void addImporterListener(ImporterJobListener listener) {
         synchronized (importerListeners) {
             importerListeners.add(listener);
         }
     }
 
+    /**
+     * @param listener Listener to remove.
+     */
     public void removeImporterListener(ImporterJobListener listener) {
         synchronized (importerListeners) {
             importerListeners.remove(listener);
         }
     }
 
+    /**
+     * Cancels a job, if it has not already been consumed/ran.
+     *
+     * @param job Job to remove.
+     */
     public void cancel(ImportJob job) {
         jobs.remove(job);
     }

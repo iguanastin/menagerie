@@ -8,12 +8,13 @@ import uk.co.caprica.vlcj.player.MediaPlayerEventAdapter;
 import uk.co.caprica.vlcj.player.MediaPlayerEventListener;
 import uk.co.caprica.vlcj.player.MediaPlayerFactory;
 
-import java.util.ArrayDeque;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 
+/**
+ * Thread that constructs thumbnails of video files serially using VLCJ.
+ */
 public class VideoThumbnailThread extends Thread {
 
     private static final String[] VLC_THUMBNAILER_ARGS = {"--intf", "dummy", "--vout", "dummy", "--no-audio", "--no-osd", "--no-spu", "--no-stats", "--no-sub-autodetect-file", "--no-disable-screensaver", "--no-snapshot-preview"};
@@ -24,12 +25,20 @@ public class VideoThumbnailThread extends Thread {
     private MediaPlayer mediaPlayer;
 
 
+    /**
+     * Enqueues a job to this thread. FIFO.
+     *
+     * @param job Job to enqueue.
+     */
     public void enqueueJob(VideoThumbnailJob job) {
         synchronized (jobs) {
             jobs.add(job);
         }
     }
 
+    /**
+     * Tells the thread to stop running. If a job is currently in progress, it will complete normally.
+     */
     public void stopRunning() {
         running = false;
     }
@@ -96,6 +105,9 @@ public class VideoThumbnailThread extends Thread {
         }
     }
 
+    /**
+     * Releases the VLCJ resources of this thumbnailer.
+     */
     public void releaseResources() {
         if (mediaPlayer != null) mediaPlayer.release();
         executor.shutdownNow();

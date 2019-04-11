@@ -180,7 +180,7 @@ public class ImportDialogScreen extends Screen {
                 });
             }
 
-            importer.queue(job);
+            importer.addJob(job);
         }
 
         close();

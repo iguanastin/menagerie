@@ -21,6 +21,9 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 
+/**
+ * Menagerie database updater thread. Provides methods for synchronous database updates as well as asynchronous updates.
+ */
 public class DatabaseUpdater extends Thread {
 
     private final PreparedStatement PS_DELETE_IMG;
@@ -87,6 +90,9 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Initializes the logging timer that outputs update counts regularly.
+     */
     private void startLoggingTimer() {
         loggingTimer.schedule(new TimerTask() {
             @Override
@@ -105,10 +111,23 @@ public class DatabaseUpdater extends Thread {
         }, 30000, 30000);
     }
 
+    /**
+     * Enqueues a job to this thread. FIFO.
+     *
+     * @param job Job to enqueue.
+     */
     public void enqueue(Runnable job) {
         queue.add(job);
     }
 
+    /**
+     * Stores a thumbnail in the database.
+     *
+     * @param id        ID of item to update.
+     * @param thumbnail Thumbnail to store.
+     * @throws SQLException If the database update failed.
+     * @throws IOException  If the thumbnail could not be converted to a stream.
+     */
     public void setThumbnail(int id, Image thumbnail) throws SQLException, IOException {
         synchronized (PS_SET_IMG_THUMBNAIL) {
             PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(thumbnail));
@@ -117,6 +136,12 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues a thumbnail to be stored in the database.
+     *
+     * @param id        ID of item to update.
+     * @param thumbnail Thumbnail to store.
+     */
     public void setThumbnailAsync(int id, Image thumbnail) {
         queue.add(() -> {
             try {
@@ -127,6 +152,13 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Stores an MD5 string in the database.
+     *
+     * @param id  ID of item to update.
+     * @param md5 MD5 to store.
+     * @throws SQLException If the database update failed.
+     */
     public void setMD5(int id, String md5) throws SQLException {
         synchronized (PS_SET_IMG_MD5) {
             PS_SET_IMG_MD5.setNString(1, md5);
@@ -135,6 +167,12 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues an MD5 string to be stored in the database.
+     *
+     * @param id  ID of item to update.
+     * @param md5 MD5 to store.
+     */
     public void setMD5Async(int id, String md5) {
         queue.add(() -> {
             try {
@@ -145,6 +183,13 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Stores a histogram in the database.
+     *
+     * @param id   ID of item to update.
+     * @param hist Histogram to store.
+     * @throws SQLException If database update fails.
+     */
     public void setHist(int id, ImageHistogram hist) throws SQLException {
         synchronized (PS_SET_IMG_HISTOGRAM) {
             PS_SET_IMG_HISTOGRAM.setBinaryStream(1, hist.getAlphaAsInputStream());
@@ -156,6 +201,12 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues a histogram to be stored in the database.
+     *
+     * @param id   ID of item to update.
+     * @param hist Histogram to store.
+     */
     public void setHistAsync(int id, ImageHistogram hist) {
         queue.add(() -> {
             try {
@@ -166,6 +217,13 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Stores a path in the database.
+     *
+     * @param id   ID of item to update.
+     * @param path Path to store.
+     * @throws SQLException If database update fails.
+     */
     public void setPath(int id, String path) throws SQLException {
         synchronized (PS_SET_IMG_PATH) {
             PS_SET_IMG_PATH.setNString(1, path);
@@ -174,6 +232,12 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues a path to be stored in the database.
+     *
+     * @param id   ID of item to update.
+     * @param path Path to store.
+     */
     public void setPathAsync(int id, String path) {
         queue.add(() -> {
             try {
@@ -184,6 +248,13 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Tags an item with a tag.
+     *
+     * @param item ID of item.
+     * @param tag  ID of tag.
+     * @throws SQLException If database update fails.
+     */
     public void tagItem(int item, int tag) throws SQLException {
         synchronized (PS_ADD_TAG_TO_IMG) {
             PS_ADD_TAG_TO_IMG.setInt(1, item);
@@ -192,6 +263,12 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues a tag to be added to an item.
+     *
+     * @param item ID of item.
+     * @param tag  ID of tag.
+     */
     public void tagItemAsync(int item, int tag) {
         queue.add(() -> {
             try {
@@ -202,6 +279,13 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Removes a tag from an item.
+     *
+     * @param item ID of item.
+     * @param tag  ID of tag.
+     * @throws SQLException If database update fails.
+     */
     public void untagItem(int item, int tag) throws SQLException {
         synchronized (PS_REMOVE_TAG_FROM_IMG) {
             PS_REMOVE_TAG_FROM_IMG.setInt(1, item);
@@ -210,6 +294,12 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues a tag to be removed from an item.
+     *
+     * @param item ID of item.
+     * @param tag  ID of tag.
+     */
     public void untagItemAsync(int item, int tag) {
         queue.add(() -> {
             try {
@@ -220,6 +310,12 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Removes an item from the database.
+     *
+     * @param id ID of item.
+     * @throws SQLException If database update fails.
+     */
     public void removeItem(int id) throws SQLException {
         synchronized (PS_DELETE_IMG) {
             PS_DELETE_IMG.setInt(1, id);
@@ -227,6 +323,11 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues an item to be removed from the database.
+     *
+     * @param id ID of item.
+     */
     public void removeItemAsync(int id) {
         queue.add(() -> {
             try {
@@ -237,6 +338,13 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Creates a tag in the database.
+     *
+     * @param id   ID of tag.
+     * @param name Name of tag.
+     * @throws SQLException If database update fails.
+     */
     public void createTag(int id, String name) throws SQLException {
         synchronized (PS_CREATE_TAG) {
             PS_CREATE_TAG.setInt(1, id);
@@ -245,6 +353,12 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues a tag to be created in the database.
+     *
+     * @param id   ID of tag.
+     * @param name Name of tag.
+     */
     public void createTagAsync(int id, String name) {
         queue.add(() -> {
             try {
@@ -255,6 +369,12 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Deletes a tag from the database.
+     *
+     * @param id ID of tag.
+     * @throws SQLException If database update fails.
+     */
     public void deleteTag(int id) throws SQLException {
         synchronized (PS_DELETE_TAG) {
             PS_DELETE_TAG.setInt(1, id);
@@ -262,6 +382,11 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues a tag to be deleted from the database.
+     *
+     * @param id ID of tag.
+     */
     public void deleteTagAsync(int id) {
         queue.add(() -> {
             try {
@@ -272,6 +397,12 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Stores a new MediaItem in the database.
+     *
+     * @param media Item to store.
+     * @throws SQLException If database update fails.
+     */
     public void createMedia(MediaItem media) throws SQLException {
         synchronized (PS_CREATE_IMG) {
             PS_CREATE_IMG.setInt(1, media.getId());
@@ -292,6 +423,11 @@ public class DatabaseUpdater extends Thread {
         }
     }
 
+    /**
+     * Queues a MediaItem to be stored in the database.
+     *
+     * @param media Item to store.
+     */
     public void createMediaAsync(MediaItem media) {
         queue.add(() -> {
             try {
@@ -302,6 +438,13 @@ public class DatabaseUpdater extends Thread {
         });
     }
 
+    /**
+     * Gets a thumbnail from the database.
+     *
+     * @param id ID of item.
+     * @return Thumbnail of the item, or null if there is no thumbnail.
+     * @throws SQLException If database update fails.
+     */
     public Thumbnail getThumbnail(int id) throws SQLException {
         synchronized (PS_GET_IMG_THUMBNAIL) {
             PS_GET_IMG_THUMBNAIL.setInt(1, id);
@@ -318,6 +461,9 @@ public class DatabaseUpdater extends Thread {
         return null;
     }
 
+    /**
+     * Cleanly stops this thread by waiting for queued updates to complete. Does not block.
+     */
     public void cleanStop() {
         running = false;
         loggingTimer.cancel();

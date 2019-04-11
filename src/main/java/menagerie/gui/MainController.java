@@ -505,11 +505,11 @@ public class MainController {
 
             if (files != null && !files.isEmpty()) {
                 for (File file : files) {
-                    importer.queue(new ImportJob(file));
+                    importer.addJob(new ImportJob(file));
                 }
             } else if (url != null && !url.isEmpty()) {
                 try {
-                    importer.queue(new ImportJob(new URL(url)));
+                    importer.addJob(new ImportJob(new URL(url)));
                 } catch (MalformedURLException e) {
                     Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
                 }
@@ -1167,7 +1167,7 @@ public class MainController {
                         file = dest;
                     }
 
-                    importer.queue(new ImportJob(file));
+                    importer.addJob(new ImportJob(file));
                 }
             });
             folderWatcherThread.setDaemon(true);
