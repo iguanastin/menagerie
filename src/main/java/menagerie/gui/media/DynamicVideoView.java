@@ -21,6 +21,9 @@ import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Dynamically sized view that shows a video using VLCJ.
+ */
 public class DynamicVideoView extends ImageView {
 
     private static final Set<MediaPlayer> mediaPlayers = new HashSet<>();
@@ -33,7 +36,7 @@ public class DynamicVideoView extends ImageView {
 
     public DynamicVideoView() {
         super();
-//        NativeLibrary.addSearchPath("vlclib", new DefaultWindowsNativeDiscoveryStrategy().discover());
+        //        NativeLibrary.addSearchPath("vlclib", new DefaultWindowsNativeDiscoveryStrategy().discover());
 
         mediaPlayers.add(getMediaPlayer());
 
@@ -56,6 +59,9 @@ public class DynamicVideoView extends ImageView {
         });
     }
 
+    /**
+     * @return The VLCJ media player backing this view.
+     */
     public DirectMediaPlayer getMediaPlayer() {
         return mediaPlayerComponent.getMediaPlayer();
     }
@@ -120,6 +126,9 @@ public class DynamicVideoView extends ImageView {
         }
     }
 
+    /**
+     * Class used to take VLCJ frame data and transfer it to the JFX ImageView.
+     */
     private class CanvasPlayerComponent extends DirectMediaPlayerComponent {
 
         CanvasPlayerComponent() {
@@ -148,17 +157,23 @@ public class DynamicVideoView extends ImageView {
                 mediaPlayer.unlock();
             }
         }
+
     }
 
     private class CanvasBufferFormatCallback implements BufferFormatCallback {
+
         @Override
         public BufferFormat getBufferFormat(int sourceWidth, int sourceHeight) {
             Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
             Platform.runLater(() -> videoSourceRatioProperty.set((float) sourceHeight / (float) sourceWidth));
             return new RV32BufferFormat((int) visualBounds.getWidth(), (int) visualBounds.getHeight());
         }
+
     }
 
+    /**
+     * Releases all VLCJ media players for all DynamicVideoViews. Should only be called when shutting down the application.
+     */
     public static void releaseAllMediaPlayers() {
         mediaPlayers.forEach(MediaPlayer::release);
     }

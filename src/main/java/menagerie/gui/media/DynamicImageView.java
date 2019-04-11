@@ -3,6 +3,9 @@ package menagerie.gui.media;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
+/**
+ * A dynamically sized image view that conforms to the parent node.
+ */
 public class DynamicImageView extends ImageView {
 
 

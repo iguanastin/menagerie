@@ -100,7 +100,7 @@ public class DatabaseUpdater extends Thread {
                 try {
                     loggingLock.lock();
                     if (databaseUpdates > 0) {
-                        Main.log.info(String.format("DatabaseUpdater updated %d times in the last %.2fs", databaseUpdates, (System.currentTimeMillis() - lastLog) / 1000.0));
+                        Main.log.info(String.format("DatabaseUpdater updated %d times in the last %.2fm", databaseUpdates, (System.currentTimeMillis() - lastLog) / 1000.0 / 60.0));
                         lastLog = System.currentTimeMillis();
                         databaseUpdates = 0;
                     }
@@ -108,7 +108,7 @@ public class DatabaseUpdater extends Thread {
                     loggingLock.unlock();
                 }
             }
-        }, 30000, 30000);
+        }, 60000, 60000);
     }
 
     /**

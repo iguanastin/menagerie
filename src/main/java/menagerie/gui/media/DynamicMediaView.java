@@ -4,6 +4,9 @@ import javafx.scene.layout.StackPane;
 import menagerie.gui.Main;
 import menagerie.model.menagerie.MediaItem;
 
+/**
+ * Dynamically sized view that can display images or videos.
+ */
 public class DynamicMediaView extends StackPane {
 
     private DynamicVideoView videoView;
@@ -13,24 +16,30 @@ public class DynamicMediaView extends StackPane {
     public DynamicMediaView() {
         super();
 
-//        videoView = new DynamicVideoView();
+        //        videoView = new DynamicVideoView();
         imageView = new PanZoomImageView();
 
         getChildren().addAll(imageView);
     }
 
-    public boolean preview(MediaItem info) {
-        if (info == null) {
+    /**
+     * Attempts to display a media item. If media item is a video and VLCJ is not loaded, nothing will be displayed.
+     *
+     * @param item Item to display.
+     * @return True if successful, false otherwise.
+     */
+    public boolean preview(MediaItem item) {
+        if (item == null) {
             if (getVideoView() != null) getVideoView().getMediaPlayer().stop();
             getImageView().setImage(null);
             hideAllViews();
-        } else if (info.isImage()) {
+        } else if (item.isImage()) {
             if (getVideoView() != null) getVideoView().getMediaPlayer().stop();
-            getImageView().setImage(info.getImage());
+            getImageView().setImage(item.getImage());
             showImageView();
-        } else if (info.isVideo() && getVideoView() != null) {
+        } else if (item.isVideo() && getVideoView() != null) {
             getImageView().setImage(null);
-            getVideoView().getMediaPlayer().startMedia(info.getFile().getAbsolutePath());
+            getVideoView().getMediaPlayer().startMedia(item.getFile().getAbsolutePath());
             showVideoView();
         } else {
             return false; // Unknown file type, can't preview it
@@ -39,6 +48,9 @@ public class DynamicMediaView extends StackPane {
         return true;
     }
 
+    /**
+     * Hides both the video and the image views, if they exist.
+     */
     private void hideAllViews() {
         getImageView().setDisable(true);
         getImageView().setOpacity(0);
@@ -48,6 +60,9 @@ public class DynamicMediaView extends StackPane {
         }
     }
 
+    /**
+     * Shows the image view.
+     */
     private void showImageView() {
         getImageView().setDisable(false);
         getImageView().setOpacity(1);
@@ -57,6 +72,9 @@ public class DynamicMediaView extends StackPane {
         }
     }
 
+    /**
+     * Shows the video view, if VLCJ is loaded.
+     */
     private void showVideoView() {
         if (getVideoView() != null) {
             getVideoView().setDisable(false);
@@ -66,6 +84,11 @@ public class DynamicMediaView extends StackPane {
         getImageView().setOpacity(0);
     }
 
+    /**
+     * Attempts to get the video view. If VLCJ not loaded and this is the first call to this method, video view will be constructed.
+     *
+     * @return The video view, or null if VLCJ is not loaded.
+     */
     private DynamicVideoView getVideoView() {
         if (!Main.isVlcjLoaded()) return null;
 
@@ -77,30 +100,44 @@ public class DynamicMediaView extends StackPane {
         return videoView;
     }
 
+    /**
+     * @return The image view.
+     */
     private PanZoomImageView getImageView() {
         return imageView;
     }
 
-    public void releaseMediaPlayer() {
-        if (videoView != null) videoView.getMediaPlayer().release();
-    }
-
+    /**
+     * @param mute The mute property for the media player, if the video view exists.
+     */
     public void setMute(boolean mute) {
         if (getVideoView() != null) getVideoView().getMediaPlayer().mute(mute);
     }
 
+    /**
+     * @param repeat The repeat property for the media player, if the video view exists.
+     */
     public void setRepeat(boolean repeat) {
         if (getVideoView() != null) getVideoView().getMediaPlayer().setRepeat(repeat);
     }
 
+    /**
+     * @return True if the video is currently playing.
+     */
     public boolean isPlaying() {
         return getVideoView() != null && getVideoView().getMediaPlayer().isPlaying();
     }
 
+    /**
+     * Pauses the media player. No effect if not playing.
+     */
     public void pause() {
         if (getVideoView() != null) getVideoView().getMediaPlayer().pause();
     }
 
+    /**
+     * Plays the media player. No effect if already playing.
+     */
     public void play() {
         if (getVideoView() != null) getVideoView().getMediaPlayer().play();
     }

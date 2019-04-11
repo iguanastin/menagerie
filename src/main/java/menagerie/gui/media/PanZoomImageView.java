@@ -6,6 +6,9 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 
+/**
+ * An ImageView that dynamically fits to the parent node and implements zooming and panning with the mouse.
+ */
 public class PanZoomImageView extends DynamicImageView {
 
     private static final double MIN_SCALE = 0.05;
@@ -21,6 +24,9 @@ public class PanZoomImageView extends DynamicImageView {
     private boolean draggedThisClick = false;
 
 
+    /**
+     * Empty image view with panning and zooming functionality.
+     */
     public PanZoomImageView() {
         super();
         setPickOnBounds(true);
@@ -84,6 +90,9 @@ public class PanZoomImageView extends DynamicImageView {
         });
     }
 
+    /**
+     * Fits the image to the view at 100% scale if possible. If image is larger than view, scales down to fit whole image in view.
+     */
     private void fitImageToView() {
         deltaX = deltaY = 0;
         scale = 1;
@@ -109,6 +118,9 @@ public class PanZoomImageView extends DynamicImageView {
         }
     }
 
+    /**
+     * Recalculates image viewport.
+     */
     private void updateViewPort() {
         if (getImage() == null || getFitWidth() == 0 || getFitHeight() == 0) return;
 
