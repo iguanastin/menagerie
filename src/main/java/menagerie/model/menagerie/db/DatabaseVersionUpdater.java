@@ -19,11 +19,11 @@ public class DatabaseVersionUpdater {
     private static final String CREATE_IMGS_TABLE_V1 = "CREATE TABLE imgs(id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, path NVARCHAR(1024) UNIQUE, added LONG NOT NULL, thumbnail BLOB, md5 NVARCHAR(32), histogram OBJECT);";
     private static final String CREATE_TAGGED_TABLE_V1 = "CREATE TABLE tagged(img_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (img_id) REFERENCES imgs(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (img_id, tag_id));";
 
-    private static final String CREATE_TAGS_TABLE_V2 = CREATE_TAGS_TABLE_V1;
-    private static final String CREATE_ITEMS_TABLE_V2 = "CREATE TABLE items(id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, added LONG NOT NULL);";
-    private static final String CREATE_TAGGED_TABLE_V2 = "CREATE TABLE tagged(item_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (item_id, tag_id));";
-    private static final String CREATE_GROUPS_TABLE_V2 = "CREATE TABLE groups(id INT NOT NULL PRIMARY KEY, title NVARCHAR(1024));";
-    private static final String CREATE_MEDIA_TABLE_V2 = "CREATE TABLE media(id INT NOT NULL PRIMARY KEY, gid INT, path NVARCHAR(1024) UNIQUE, md5 NVARCHAR(32), thumbnail BLOB, hist_a BLOB, hist_r BLOB, hist_g BLOB, hist_b BLOB, FOREIGN KEY (id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (gid) REFERENCES groups(id) ON DELETE SET NULL);";
+    private static final String CREATE_TAGS_TABLE_V3 = CREATE_TAGS_TABLE_V1;
+    private static final String CREATE_ITEMS_TABLE_V3 = "CREATE TABLE items(id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, added LONG NOT NULL);";
+    private static final String CREATE_TAGGED_TABLE_V3 = "CREATE TABLE tagged(item_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (item_id, tag_id));";
+    private static final String CREATE_GROUPS_TABLE_V3 = "CREATE TABLE groups(id INT NOT NULL PRIMARY KEY, title NVARCHAR(1024));";
+    private static final String CREATE_MEDIA_TABLE_V3 = "CREATE TABLE media(id INT NOT NULL PRIMARY KEY, gid INT, path NVARCHAR(1024) UNIQUE, md5 NVARCHAR(32), thumbnail BLOB, hist_a BLOB, hist_r BLOB, hist_g BLOB, hist_b BLOB, FOREIGN KEY (id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (gid) REFERENCES groups(id) ON DELETE SET NULL);";
 
     /**
      * Currently accepted version of the database. If version is not this, database should upgrade.
@@ -154,15 +154,15 @@ public class DatabaseVersionUpdater {
         Main.log.info("Initializing v3 tables...");
 
         try (Statement s = db.createStatement()) {
-            s.executeUpdate(CREATE_TAGS_TABLE_V2);
+            s.executeUpdate(CREATE_TAGS_TABLE_V3);
             Main.log.info("  Initialized tags table");
-            s.executeUpdate(CREATE_ITEMS_TABLE_V2);
+            s.executeUpdate(CREATE_ITEMS_TABLE_V3);
             Main.log.info("  Initialized items table");
-            s.executeUpdate(CREATE_TAGGED_TABLE_V2);
+            s.executeUpdate(CREATE_TAGGED_TABLE_V3);
             Main.log.info("  Initialized tagged table");
-            s.executeUpdate(CREATE_GROUPS_TABLE_V2);
+            s.executeUpdate(CREATE_GROUPS_TABLE_V3);
             Main.log.info("  Initialized groups table");
-            s.executeUpdate(CREATE_MEDIA_TABLE_V2);
+            s.executeUpdate(CREATE_MEDIA_TABLE_V3);
             Main.log.info("  Initialized media table");
             s.executeUpdate(CREATE_VERSION_TABLE);
             s.executeUpdate("INSERT INTO version(version) VALUES (3);");
@@ -267,10 +267,10 @@ public class DatabaseVersionUpdater {
     }
 
     /**
-     * Upgrades version 1 tables to version 2.
+     * Upgrades version 1 tables and data to version 2.
      *
      * @param db Database
-     * @throws SQLException If database upgrade fails.
+     * @throws SQLException If database upgrade fails part way.
      */
     private static void updateFromV1ToV2(Connection db) throws SQLException {
         Main.log.warning("Database updating from v1 to v2...");
@@ -288,13 +288,38 @@ public class DatabaseVersionUpdater {
         }
     }
 
+    /**
+     * Upgrades version 2 tables and data to version 3.
+     *
+     * @param db Database
+     * @throws SQLException If database upgrade fails part way.
+     */
     private static void updateFromV2ToV3(Connection db) throws SQLException {
         Main.log.warning("Database updating from v2 to v3...");
         long t = System.currentTimeMillis();
         try (Statement s = db.createStatement()) {
-            // TODO
+            Main.log.info("Extracting 'id' and 'added' from 'imgs' to new table 'items'");
+            s.executeUpdate("CREATE TABLE items AS SELECT id, added FROM imgs;");
 
-            Main.log.info("Updating database version");
+            Main.log.info("Removing extraneous 'added' column");
+            s.executeUpdate("ALTER TABLE imgs DROP COLUMN added;");
+
+            Main.log.info("Fixing tag table foreign keys");
+            s.executeUpdate("CREATE TABLE new_tagged(img_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (img_id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (img_id, tag_id)) AS SELECT img_id, tag_id FROM tagged;");
+            s.executeUpdate("DROP TABLE tagged;");
+            s.executeUpdate("ALTER TABLE new_tagged RENAME TO tagged;");
+            s.executeUpdate("ALTER TABLE tagged RENAME COLUMN img_id TO item_id;");
+
+            Main.log.info("Creating groups table");
+            s.executeUpdate(CREATE_GROUPS_TABLE_V3);
+
+            Main.log.info("Renaming 'imgs' to 'media' and adding constraints/columns");
+            s.executeUpdate("ALTER TABLE imgs RENAME TO media;");
+            s.executeUpdate("ALTER TABLE media ADD COLUMN gid INT;");
+            s.executeUpdate("ALTER TABLE media ADD FOREIGN KEY (id) REFERENCES items(id) ON DELETE CASCADE;");
+            s.executeUpdate("ALTER TABLE media ADD FOREIGN KEY (gid) REFERENCES groups(id) ON DELETE SET NULL;");
+
+            Main.log.info("Setting database version");
             s.executeUpdate("INSERT INTO version(version) VALUES (3);");
 
             Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
