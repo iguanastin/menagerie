@@ -100,14 +100,10 @@ public class DuplicatesScreen extends Screen {
                 protected void updateItem(Tag tag, boolean empty) {
                     super.updateItem(tag, empty);
 
-                    if (tag != null) {
-                        if (currentPair.getObject2().hasTag(tag)) {
-                            setStyle("-fx-background-color: green;");
-                        } else {
-                            setStyle("-fx-background-color: red;");
-                        }
-                    } else {
+                    if (tag == null || currentPair.getObject2().hasTag(tag)) {
                         setStyle(null);
+                    } else {
+                        setStyle("-fx-background-color: blue;");
                     }
                 }
             };
@@ -128,14 +124,10 @@ public class DuplicatesScreen extends Screen {
                 protected void updateItem(Tag tag, boolean empty) {
                     super.updateItem(tag, empty);
 
-                    if (tag != null) {
-                        if (currentPair.getObject1().hasTag(tag)) {
-                            setStyle("-fx-background-color: green;");
-                        } else {
-                            setStyle("-fx-background-color: red;");
-                        }
-                    } else {
+                    if (tag == null || currentPair.getObject1().hasTag(tag)) {
                         setStyle(null);
+                    } else {
+                        setStyle("-fx-background-color: blue;");
                     }
                 }
             };
