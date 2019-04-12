@@ -10,7 +10,6 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.stage.Screen;
 import uk.co.caprica.vlcj.component.DirectMediaPlayerComponent;
-import uk.co.caprica.vlcj.player.MediaPlayer;
 import uk.co.caprica.vlcj.player.direct.BufferFormat;
 import uk.co.caprica.vlcj.player.direct.BufferFormatCallback;
 import uk.co.caprica.vlcj.player.direct.DirectMediaPlayer;
@@ -18,52 +17,56 @@ import uk.co.caprica.vlcj.player.direct.format.RV32BufferFormat;
 
 import java.awt.*;
 import java.nio.ByteBuffer;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Dynamically sized view that shows a video using VLCJ.
  */
 public class DynamicVideoView extends ImageView {
 
-    private static final Set<MediaPlayer> mediaPlayers = new HashSet<>();
-
     private final DirectMediaPlayerComponent mediaPlayerComponent = new CanvasPlayerComponent();
     private final WritablePixelFormat<ByteBuffer> pixelFormat = PixelFormat.getByteBgraPreInstance();
     private final FloatProperty videoSourceRatioProperty = new SimpleFloatProperty(0.4f);
     private final WritableImage writableImage;
+
+    private boolean released = false;
 
 
     public DynamicVideoView() {
         super();
         //        NativeLibrary.addSearchPath("vlclib", new DefaultWindowsNativeDiscoveryStrategy().discover());
 
-        mediaPlayers.add(getMediaPlayer());
-
         Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
         writableImage = new WritableImage((int) visualBounds.getWidth(), (int) visualBounds.getHeight());
         setImage(writableImage);
 
         addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
-            if (getMediaPlayer().isPlaying()) {
-                getMediaPlayer().pause();
-            } else {
-                getMediaPlayer().play();
+            if (!released && getMediaPlayer() != null) {
+                if (getMediaPlayer().isPlaying()) {
+                    getMediaPlayer().pause();
+                } else {
+                    getMediaPlayer().play();
+                }
+                event.consume();
             }
-            event.consume();
         });
         addEventHandler(ScrollEvent.SCROLL, event -> {
-            float delta = 10000.0f / getMediaPlayer().getLength();
-            if (event.getDeltaY() < 0) delta = -delta;
-            getMediaPlayer().setPosition(Math.min(0.9999f, Math.max(getMediaPlayer().getPosition() + delta, 0)));
+            if (!released && getMediaPlayer() != null) {
+                float delta = 10000.0f / getMediaPlayer().getLength();
+                if (event.getDeltaY() < 0) delta = -delta;
+                getMediaPlayer().setPosition(Math.min(0.9999f, Math.max(getMediaPlayer().getPosition() + delta, 0)));
+            }
         });
     }
 
     /**
      * @return The VLCJ media player backing this view.
      */
-    public DirectMediaPlayer getMediaPlayer() {
-        return mediaPlayerComponent.getMediaPlayer();
+    private DirectMediaPlayer getMediaPlayer() {
+        if (!released) {
+            return mediaPlayerComponent.getMediaPlayer();
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -73,7 +76,10 @@ public class DynamicVideoView extends ImageView {
 
     @Override
     public double prefWidth(double height) {
-        Dimension d = getMediaPlayer().getVideoDimension();
+        Dimension d = null;
+        if (!released && getMediaPlayer() != null) {
+            d = getMediaPlayer().getVideoDimension();
+        }
         if (d == null) return minWidth(height);
         return d.getWidth();
     }
@@ -90,7 +96,10 @@ public class DynamicVideoView extends ImageView {
 
     @Override
     public double prefHeight(double width) {
-        Dimension d = getMediaPlayer().getVideoDimension();
+        Dimension d = null;
+        if (!released && getMediaPlayer() != null) {
+            d = getMediaPlayer().getVideoDimension();
+        }
         if (d == null) return minHeight(width);
         return d.getHeight();
     }
@@ -108,10 +117,8 @@ public class DynamicVideoView extends ImageView {
     @Override
     public void resize(double width, double height) {
         Dimension d = null;
-        try {
+        if (!released && getMediaPlayer() != null) {
             d = getMediaPlayer().getVideoDimension();
-        } catch (Error ignore) {
-            // Error is thrown when closing application, because mediaplayer is released before this method is called
         }
         if (d == null) {
             setFitWidth(width);
@@ -124,6 +131,42 @@ public class DynamicVideoView extends ImageView {
             setFitWidth(d.getWidth() * scale);
             setFitHeight(d.getHeight() * scale);
         }
+    }
+
+    public void setMute(boolean b) {
+        if (!released && getMediaPlayer() != null) getMediaPlayer().mute(b);
+    }
+
+    public void setRepeat(boolean b) {
+        if (!released && getMediaPlayer() != null) getMediaPlayer().setRepeat(b);
+    }
+
+    public boolean isPlaying() {
+        return !released && getMediaPlayer() != null && getMediaPlayer().isPlaying();
+    }
+
+    public boolean isRepeating() {
+        return !released && getMediaPlayer() != null && getMediaPlayer().getRepeat();
+    }
+
+    public boolean isMuted() {
+        return !released && getMediaPlayer() != null && getMediaPlayer().isMute();
+    }
+
+    public void pause() {
+        if (!released && getMediaPlayer() != null) getMediaPlayer().pause();
+    }
+
+    public void play() {
+        if (!released && getMediaPlayer() != null) getMediaPlayer().play();
+    }
+
+    public void stop() {
+        if (!released && getMediaPlayer() != null) getMediaPlayer().stop();
+    }
+
+    public void startMedia(String path) {
+        if (!released && getMediaPlayer() != null) getMediaPlayer().startMedia(path);
     }
 
     /**
@@ -171,11 +214,12 @@ public class DynamicVideoView extends ImageView {
 
     }
 
-    /**
-     * Releases all VLCJ media players for all DynamicVideoViews. Should only be called when shutting down the application.
-     */
-    public static void releaseAllMediaPlayers() {
-        mediaPlayers.forEach(MediaPlayer::release);
+    public void releaseVLCJ() {
+        if (!released && getMediaPlayer() != null) {
+            getMediaPlayer().stop();
+            getMediaPlayer().release();
+            released = true;
+        }
     }
 
 }

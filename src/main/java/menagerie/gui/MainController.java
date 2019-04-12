@@ -21,7 +21,6 @@ import javafx.stage.Stage;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
-import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
 import menagerie.gui.screens.dialogs.ConfirmationScreen;
@@ -1172,7 +1171,9 @@ public class MainController {
     private void cleanExit(boolean revertDatabase) {
         Main.log.info("Attempting clean exit");
 
-        DynamicVideoView.releaseAllMediaPlayers();
+        previewMediaView.releaseVLCJ();
+        slideshowScreen.releaseVLCJ();
+        duplicateOptionsScreen.releaseVLCJ();
         Thumbnail.getVideoThumbnailThread().releaseResources();
 
         try {

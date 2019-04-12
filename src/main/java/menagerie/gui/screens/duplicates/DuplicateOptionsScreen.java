@@ -327,4 +327,11 @@ public class DuplicateOptionsScreen extends Screen {
         return items;
     }
 
+    /**
+     * Releases all VLCJ resources.
+     */
+    public void releaseVLCJ() {
+        duplicateScreen.releaseVLCJ();
+    }
+
 }

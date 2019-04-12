@@ -390,4 +390,12 @@ public class DuplicatesScreen extends Screen {
         preview(null);
     }
 
+    /**
+     * Releases all VLCJ resources.
+     */
+    public void releaseVLCJ() {
+        leftMediaView.releaseVLCJ();
+        rightMediaView.releaseVLCJ();
+    }
+
 }

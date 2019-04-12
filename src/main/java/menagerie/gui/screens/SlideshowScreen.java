@@ -253,4 +253,11 @@ public class SlideshowScreen extends Screen {
         }
     }
 
+    /**
+     * Releases VLCJ resources.
+     */
+    public void releaseVLCJ() {
+        mediaView.releaseVLCJ();
+    }
+
 }
