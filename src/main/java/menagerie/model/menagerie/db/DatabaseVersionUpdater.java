@@ -12,10 +12,18 @@ import java.util.ArrayList;
  */
 public class DatabaseVersionUpdater {
 
+    private static final String DROP_TABLES = "DROP TABLE IF EXISTS imgs; DROP TABLE IF EXISTS tags; DROP TABLE IF EXISTS tagged; DROP TABLE IF EXISTS version; DROP TABLE IF EXISTS items; DROP TABLE IF EXISTS groups; DROP TABLE IF EXISTS media;";
+    private static final String CREATE_VERSION_TABLE = "CREATE TABLE version(version INT NOT NULL PRIMARY KEY);";
 
     private static final String CREATE_TAGS_TABLE_V1 = "CREATE TABLE tags(id INT PRIMARY KEY AUTO_INCREMENT, name NVARCHAR(128) NOT NULL UNIQUE);";
     private static final String CREATE_IMGS_TABLE_V1 = "CREATE TABLE imgs(id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, path NVARCHAR(1024) UNIQUE, added LONG NOT NULL, thumbnail BLOB, md5 NVARCHAR(32), histogram OBJECT);";
     private static final String CREATE_TAGGED_TABLE_V1 = "CREATE TABLE tagged(img_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (img_id) REFERENCES imgs(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (img_id, tag_id));";
+
+    private static final String CREATE_TAGS_TABLE_V2 = CREATE_TAGS_TABLE_V1;
+    private static final String CREATE_ITEMS_TABLE_V2 = "CREATE TABLE items(id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, added LONG NOT NULL);";
+    private static final String CREATE_TAGGED_TABLE_V2 = "CREATE TABLE tagged(item_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (item_id, tag_id));";
+    private static final String CREATE_GROUPS_TABLE_V2 = "CREATE TABLE groups(id INT NOT NULL PRIMARY KEY, title NVARCHAR(1024));";
+    private static final String CREATE_MEDIA_TABLE_V2 = "CREATE TABLE media(id INT NOT NULL PRIMARY KEY, gid INT, path NVARCHAR(1024) UNIQUE, md5 NVARCHAR(32), thumbnail BLOB, hist_a BLOB, hist_r BLOB, hist_g BLOB, hist_b BLOB, FOREIGN KEY (id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (gid) REFERENCES groups(id) ON DELETE SET NULL);";
 
     /**
      * Currently accepted version of the database. If version is not this, database should upgrade.
@@ -29,7 +37,7 @@ public class DatabaseVersionUpdater {
      * @throws SQLException If database query fails.
      */
     private static boolean outOfDate(Connection db) throws SQLException {
-        return getVersion(db) != TARGET_VERSION;
+        return getVersion(db) < TARGET_VERSION;
     }
 
     /**
@@ -75,31 +83,31 @@ public class DatabaseVersionUpdater {
      * @throws SQLException When database connection is bad or cannot create statement
      */
     private static int getVersion(Connection db) throws SQLException {
-        Statement s = db.createStatement();
+        try (Statement s = db.createStatement()) {
 
-        int version;
-        try {
-            ResultSet rs = s.executeQuery("SELECT TOP 1 version.version FROM version ORDER BY version.version DESC;");
-            if (rs.next()) {
-                version = rs.getInt("version");
-            } else {
-                throw new DatabaseUpdateException("Version table has no version information.");
-            }
-        } catch (SQLException e) {
-            //Database is either version 0 schema or not initialized
+            int version;
             try {
-                s.executeQuery("SELECT TOP 1 * FROM imgs;");
-                // Tables exist for version 0
-                version = 0;
-            } catch (SQLException e2) {
-                // Tables don't exist or are not clean
-                version = -1;
+                ResultSet rs = s.executeQuery("SELECT TOP 1 version.version FROM version ORDER BY version.version DESC;");
+                if (rs.next()) {
+                    version = rs.getInt("version");
+                } else {
+                    throw new DatabaseUpdateException("Version table has no version information.");
+                }
+            } catch (SQLException e) {
+                //Database is either version 0 schema or not initialized
+                try {
+                    s.executeQuery("SELECT TOP 1 * FROM imgs;");
+                    // Tables exist for version 0
+                    version = 0;
+                } catch (SQLException e2) {
+                    // Tables don't exist or are not clean
+                    version = -1;
+                }
             }
+
+            return version;
         }
 
-        s.close();
-
-        return version;
     }
 
     /**
@@ -119,7 +127,7 @@ public class DatabaseVersionUpdater {
      * @throws SQLException If database initialization fails.
      */
     private static void initializeV1Tables(Connection db) throws SQLException {
-        Main.log.info("Initializing v1 tables");
+        Main.log.info("Initializing v1 tables...");
 
         try (Statement s = db.createStatement()) {
             s.executeUpdate(CREATE_IMGS_TABLE_V1);
@@ -128,11 +136,39 @@ public class DatabaseVersionUpdater {
             Main.log.info("  Initialized tags table");
             s.executeUpdate(CREATE_TAGGED_TABLE_V1);
             Main.log.info("  Initialized tagged table");
-            s.executeUpdate("CREATE TABLE version(version INT NOT NULL PRIMARY KEY);");
+            s.executeUpdate(CREATE_VERSION_TABLE);
             s.executeUpdate("INSERT INTO version(version) VALUES (1);");
             Main.log.info("  Initialized version table and inserted current version");
 
             Main.log.info("Finished initializing v1 tables");
+        }
+    }
+
+    /**
+     * Initializes tables to version 3. Expects a clean database to work from.
+     *
+     * @param db Database
+     * @throws SQLException If database initialization fails.
+     */
+    private static void initializeV3Tables(Connection db) throws SQLException {
+        Main.log.info("Initializing v3 tables...");
+
+        try (Statement s = db.createStatement()) {
+            s.executeUpdate(CREATE_TAGS_TABLE_V2);
+            Main.log.info("  Initialized tags table");
+            s.executeUpdate(CREATE_ITEMS_TABLE_V2);
+            Main.log.info("  Initialized items table");
+            s.executeUpdate(CREATE_TAGGED_TABLE_V2);
+            Main.log.info("  Initialized tagged table");
+            s.executeUpdate(CREATE_GROUPS_TABLE_V2);
+            Main.log.info("  Initialized groups table");
+            s.executeUpdate(CREATE_MEDIA_TABLE_V2);
+            Main.log.info("  Initialized media table");
+            s.executeUpdate(CREATE_VERSION_TABLE);
+            s.executeUpdate("INSERT INTO version(version) VALUES (3);");
+            Main.log.info("  Initialized version table and inserted current version");
+
+            Main.log.info("Finished initializing v3 tables");
         }
     }
 
@@ -246,7 +282,20 @@ public class DatabaseVersionUpdater {
 
             Main.log.info("Updating database version");
             //Update version table
-            s.executeUpdate("INSERT INTO version VALUES (2);");
+            s.executeUpdate("INSERT INTO version(version) VALUES (2);");
+
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
+    }
+
+    private static void updateFromV2ToV3(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v2 to v3...");
+        long t = System.currentTimeMillis();
+        try (Statement s = db.createStatement()) {
+            // TODO
+
+            Main.log.info("Updating database version");
+            s.executeUpdate("INSERT INTO version(version) VALUES (3);");
 
             Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
         }
@@ -278,10 +327,7 @@ public class DatabaseVersionUpdater {
 
         try (Statement s = db.createStatement()) {
             Main.log.info("Dropping database tables");
-            s.executeUpdate("DROP TABLE IF EXISTS imgs;");
-            s.executeUpdate("DROP TABLE IF EXISTS tags;");
-            s.executeUpdate("DROP TABLE IF EXISTS tagged;");
-            s.executeUpdate("DROP TABLE IF EXISTS version;");
+            s.executeUpdate(DROP_TABLES);
 
             Main.log.info("Finished cleaning database");
         }
