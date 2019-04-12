@@ -290,7 +290,8 @@ public class MainController {
         Main.log.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {
-                StringBuilder work = new StringBuilder(new Date() + " [" + record.getLevel() + "]: " + record.getMessage());
+                StringBuilder work = new StringBuilder(new Date(record.getMillis()).toString());
+                work.append(" [").append(record.getLevel()).append("]: ").append(record.getMessage());
                 if (record.getThrown() != null) {
                     work.append("\n").append(record.getThrown().toString());
                     for (StackTraceElement e : record.getThrown().getStackTrace()) {

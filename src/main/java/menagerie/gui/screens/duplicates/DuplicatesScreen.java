@@ -267,7 +267,7 @@ public class DuplicatesScreen extends Screen {
     /**
      * Displays a pair.
      *
-     * @param pair
+     * @param pair Pair to display.
      */
     private void preview(SimilarPair<MediaItem> pair) {
         if (currentPair != null) {

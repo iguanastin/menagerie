@@ -12,8 +12,12 @@ import javafx.stage.StageStyle;
 import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.version.LibVlcVersion;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Date;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -25,6 +29,7 @@ public class Main extends Application {
     private static boolean VLCJ_LOADED = false;
 
     public static final Logger log = Logger.getGlobal();
+    private static final String logFilePath = "menagerie.log";
 
 
     /**
@@ -52,16 +57,44 @@ public class Main extends Application {
             }
         }
 
+        // Clear log file
+        if (!new File(logFilePath).delete())
+            Main.log.warning(String.format("Could not clear log file: %s", logFilePath));
+        try {
+            if (!new File(logFilePath).createNewFile())
+                Main.log.warning(String.format("Could not create new log file: %s", logFilePath));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         // Init logger handler
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + t, e));
         log.setUseParentHandlers(false);
         log.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {
+                StringBuilder str = new StringBuilder(new Date(record.getMillis()).toString());
+                str.append(" [").append(record.getLevel()).append("]: ").append(record.getMessage());
+
+                // Print to sout/serr
                 PrintStream s = System.out;
                 if (record.getLevel() == Level.SEVERE) s = System.err;
-                s.println(new Date() + " [" + record.getLevel() + "]: " + record.getMessage());
+                s.println(str.toString());
                 if (record.getThrown() != null) record.getThrown().printStackTrace();
+
+                // Print to file
+                if (record.getThrown() != null) {
+                    str.append("\n").append(record.getThrown().toString());
+                    for (StackTraceElement element : record.getThrown().getStackTrace()) {
+                        str.append("\n    at ").append(element.toString());
+                    }
+                }
+                str.append("\n");
+                try {
+                    Files.write(Paths.get(logFilePath), str.toString().getBytes(), StandardOpenOption.APPEND);
+                } catch (IOException e) {
+                    System.err.println(String.format("Failed to write log to file: %s", logFilePath));
+                }
             }
 
             @Override
