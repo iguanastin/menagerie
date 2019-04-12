@@ -12,6 +12,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.Menagerie;
@@ -37,6 +38,7 @@ public class ImportDialogScreen extends Screen {
     private final CheckBox recursiveCheckBox = new CheckBox("Recursively import folders");
     private final CheckBox tagWithParentCheckBox = new CheckBox("Tag with parent folder name");
     private final CheckBox tagWithTagCheckBox = new CheckBox("Tag with specified tag:");
+    private final CheckBox renameWithHashCheckBox = new CheckBox("Rename file file hash after import");
     private final TextField tagWithTagTextField = new TextField();
     private final ImporterThread importer;
     private final Menagerie menagerie;
@@ -104,7 +106,7 @@ public class ImportDialogScreen extends Screen {
         // Tag on import
         HBox tagHBox = new HBox(5, tagWithTagCheckBox, tagWithTagTextField);
         tagHBox.setAlignment(Pos.CENTER_LEFT);
-        VBox center = new VBox(5, fileHBox, orderHBox, recursiveCheckBox, tagWithParentCheckBox, tagHBox);
+        VBox center = new VBox(5, fileHBox, orderHBox, recursiveCheckBox, tagWithParentCheckBox, renameWithHashCheckBox, tagHBox);
         center.setPadding(new Insets(5));
 
         // ----------------------------------- Bottom --------------------------------------
@@ -169,9 +171,12 @@ public class ImportDialogScreen extends Screen {
             if (tagWithTagCheckBox.isSelected() && tagWithTagTextField.getText() != null && !tagWithTagTextField.getText().isEmpty())
                 tagsToAdd.add(tagWithTagTextField.getText().toLowerCase());
 
-            if (!tagsToAdd.isEmpty()) {
+            final boolean renameToHash = renameWithHashCheckBox.isSelected();
+
+            if (!tagsToAdd.isEmpty() || renameToHash) {
                 job.addStatusListener(status -> {
                     if (status == ImportJob.Status.SUCCEEDED || status == ImportJob.Status.SUCCEEDED_SIMILAR) {
+                        // Add tags
                         for (String tagName : tagsToAdd) {
                             if (tagName.contains(" "))
                                 tagName = tagName.replaceAll("\\s", "_"); // Replace all whitespace
@@ -179,6 +184,16 @@ public class ImportDialogScreen extends Screen {
                             Tag t = menagerie.getTagByName(tagName);
                             if (t == null) t = menagerie.createTag(tagName);
                             job.getItem().addTag(t);
+                        }
+
+                        // Rename to hash
+                        if (renameToHash && job.getItem().getMD5() != null) {
+                            File dest = new File(job.getFile().getParentFile(), job.getItem().getMD5() + job.getFile().getName().substring(job.getFile().getName().lastIndexOf('.')));
+                            if (job.getItem().renameTo(dest)) {
+                                Main.log.info(String.format("Renamed file \"%s\" to \"%s\"", job.getFile().getName(), dest.getName()));
+                            } else {
+                                Main.log.warning(String.format("Failed to rename file \"%s\" to \"%s\"", job.getFile(), dest));
+                            }
                         }
                     }
                 });

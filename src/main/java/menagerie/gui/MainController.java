@@ -94,9 +94,9 @@ public class MainController {
 
     // --------------------------------- Menagerie vars ------------------------------
     /**
-     * Clipboard content object used by this application.
+     * The menagerie this application is using.
      */
-    private final ClipboardContent clipboard = new ClipboardContent();
+    private Menagerie menagerie;
     /**
      * History of tag edit events.
      */
@@ -104,17 +104,9 @@ public class MainController {
 
     // ------------------------------- Explorer screen vars --------------------------
     /**
-     * Settings object used by this application.
+     * Clipboard content object used by this application.
      */
-    private final Settings settings = new Settings(new File("menagerie.settings"));
-    /**
-     * The menagerie this application is using.
-     */
-    private Menagerie menagerie;
-    /**
-     * Importer thread for the menagerie. Main pipeline for adding any new items.
-     */
-    private ImporterThread importer;
+    private final ClipboardContent clipboard = new ClipboardContent();
     /**
      * Current search that is active and being shown in the item grid.
      */
@@ -127,18 +119,26 @@ public class MainController {
      * The last string that was used to edit tags.
      */
     private String lastEditTagString = null;
-
-    // --------------------------------- Threads -------------------------------------
     /**
      * Variable used to track drag status of items from the item grid.
      */
     private boolean itemGridViewDragging = false;
 
-    // ---------------------------------- Settings var -------------------------------
+    // --------------------------------- Threads -------------------------------------
+    /**
+     * Importer thread for the menagerie. Main pipeline for adding any new items.
+     */
+    private ImporterThread importer;
     /**
      * Current folder watcher thread, may be null. Thread monitors a folder for new files and sends them to the importer.
      */
     private FolderWatcherThread folderWatcherThread = null;
+
+    // ---------------------------------- Settings var -------------------------------
+    /**
+     * Settings object used by this application.
+     */
+    private final Settings settings = new Settings(new File("menagerie.settings"));
 
     // ------------------------------ Video preview status ---------------------------
     /**
