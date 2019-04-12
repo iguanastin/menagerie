@@ -252,7 +252,8 @@ public class MainController {
                 folderWatcherThread.stopWatching();
             }
 
-            if (newValue) startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+            if (newValue)
+                startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
         }));
         ((BooleanProperty) settings.getProperty(Settings.Key.MUTE_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
         ((BooleanProperty) settings.getProperty(Settings.Key.REPEAT_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
@@ -338,7 +339,8 @@ public class MainController {
             ImageGridCell c = new ImageGridCell();
             c.setOnDragDetected(event -> {
                 if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
-                    if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem())) itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                    if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem()))
+                        itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
 
                     Dragboard db = c.startDragAndDrop(TransferMode.ANY);
 
@@ -554,7 +556,6 @@ public class MainController {
      * Constructs a context menu for a given set of items. Different combinations of GroupItem and MediaItem will give different context menu items.
      *
      * @param selected Set of items that this context menu with operate on.
-     *
      * @return A context menu ready to be shown for the given set of items.
      */
     private ContextMenu constructGridCellContextMenu(List<Item> selected) {
@@ -686,6 +687,7 @@ public class MainController {
 
     /**
      * Attempts to display an item's media in the preview viewport.
+     *
      * @param item The item to display. Displays nothing when item is a GroupItem.
      */
     private void previewItem(Item item) {
@@ -708,6 +710,7 @@ public class MainController {
 
     /**
      * Opens a dialog asking for user confirmation to forget files from the menagerie without deleting the file.
+     *
      * @param toForget Set of items to forget if user confirms.
      */
     private void forgetFilesDialog(List<Item> toForget) {
@@ -715,14 +718,12 @@ public class MainController {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i) instanceof GroupItem) items.addAll(((GroupItem) items.get(i)).getElements());
         }
-        new ConfirmationScreen().open(screenPane, "Forget files", String.format("Remove selected files from database? (%d files)\n\n" + "This action CANNOT be undone", items.size()), () -> {
-            menagerie.removeItems(items, false);
-            previewItem(null);
-        }, null);
+        new ConfirmationScreen().open(screenPane, "Forget files", String.format("Remove selected files from database? (%d files)\n\n" + "This action CANNOT be undone", items.size()), () -> menagerie.removeItems(items, false), null);
     }
 
     /**
      * Opens a dialog asking for user confirmation to delete files from the menagerie. Will delete files from the local disk.
+     *
      * @param toDelete Set of items to forget and delete if user confirms.
      */
     private void deleteFilesDialog(List<Item> toDelete) {
@@ -730,14 +731,12 @@ public class MainController {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i) instanceof GroupItem) items.addAll(((GroupItem) items.get(i)).getElements());
         }
-        new ConfirmationScreen().open(screenPane, "Delete files", String.format("Permanently delete selected files? (%d files)\n\n" + "This action CANNOT be undone (files will be deleted)", items.size()), () -> {
-            menagerie.removeItems(items, true);
-            previewItem(null);
-        }, null);
+        new ConfirmationScreen().open(screenPane, "Delete files", String.format("Permanently delete selected files? (%d files)\n\n" + "This action CANNOT be undone (files will be deleted)", items.size()), () -> menagerie.removeItems(items, true), null);
     }
 
     /**
      * Opens a dialog asking for user confirmation to ungroup given groups. Items that are not a GroupItem will be ignored.
+     *
      * @param items Set of items to ungroup if user confirms.
      */
     private void ungroupDialog(List<Item> items) {
@@ -748,6 +747,7 @@ public class MainController {
 
     /**
      * Opens a dialog asking for user confirmation to group items into a new group. GroupItems will be merged.
+     *
      * @param toGroup Set of items to group if user confirms.
      */
     private void groupDialog(List<Item> toGroup) {
@@ -782,6 +782,7 @@ public class MainController {
 
     /**
      * Opens a dialog asking for user confirmation to move files to a new folder. All files will be direct children of specified folder after moving.
+     *
      * @param items Set of items to move. Groups will be expanded to include group elements.
      */
     private void moveFilesDialog(List<Item> items) {
@@ -849,6 +850,7 @@ public class MainController {
 
     /**
      * Parses a search string, applies the search, updates grid, registers search listeners, and previews first item.
+     *
      * @param search      Search string to parse rules from.
      * @param descending  Order results in descending order.
      * @param showGrouped Show MediaItems that are in a group.
@@ -863,28 +865,26 @@ public class MainController {
         menagerie.registerSearch(currentSearch);
         currentSearch.addIfValid(menagerie.getItems());
         currentSearch.addItemsAddedListener(items -> Platform.runLater(() -> itemGridView.getItems().addAll(0, items)));
-        currentSearch.addItemsRemovedListener(items -> {
-            Platform.runLater(() -> {
-                final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected()) + 1;
-                int newIndex = oldLastIndex;
-                for (Item image : items) {
-                    final int i = itemGridView.getItems().indexOf(image);
-                    if (i < 0) continue;
+        currentSearch.addItemsRemovedListener(items -> Platform.runLater(() -> {
+            final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected()) + 1;
+            int newIndex = oldLastIndex;
+            for (Item image : items) {
+                final int i = itemGridView.getItems().indexOf(image);
+                if (i < 0) continue;
 
-                    if (i < oldLastIndex) {
-                        newIndex--;
-                    }
+                if (i < oldLastIndex) {
+                    newIndex--;
                 }
+            }
 
-                itemGridView.getItems().removeAll(items);
-                if (items.contains(currentlyPreviewing)) previewItem(null);
+            itemGridView.getItems().removeAll(items);
+            if (items.contains(currentlyPreviewing)) previewItem(null);
 
-                if (!itemGridView.getItems().isEmpty()) {
-                    if (newIndex >= itemGridView.getItems().size()) newIndex = itemGridView.getItems().size() - 1;
-                    itemGridView.setLastSelected(itemGridView.getItems().get(newIndex));
-                }
-            });
-        });
+            if (!itemGridView.getItems().isEmpty()) {
+                if (newIndex >= itemGridView.getItems().size()) newIndex = itemGridView.getItems().size() - 1;
+                itemGridView.select(itemGridView.getItems().get(newIndex), false, false);
+            }
+        }));
 
         itemGridView.clearSelection();
         itemGridView.getItems().clear();
@@ -895,6 +895,7 @@ public class MainController {
 
     /**
      * Parses a search string to create a rule set for a search.
+     *
      * @param str Search string to parse.
      * @return A rule set representing the search string
      */
@@ -998,6 +999,7 @@ public class MainController {
 
     /**
      * Sets the item grid width.
+     *
      * @param n Width of grid in number of cells.
      */
     private void setGridWidth(int n) {
@@ -1009,6 +1011,7 @@ public class MainController {
 
     /**
      * Parses a string and applies tag edits to currently selected items. Opens a confirmation dialog if 100 or more items will be modified by this operation.
+     *
      * @param input Tag edit string.
      */
     private void editTagsOfSelected(String input) {
@@ -1020,10 +1023,13 @@ public class MainController {
         } else {
             new ConfirmationScreen().open(screenPane, "Editting large number of items", "You are attempting to edit " + itemGridView.getSelected().size() + " items. Continue?", () -> editTagsUtility(input), null);
         }
+
+        updateTagList(currentlyPreviewing);
     }
 
     /**
      * Actual workhorse tag editing method. Parses tag edit string, makes changes, and verifies changed items against the search.
+     *
      * @param input Tag edit string.
      */
     private void editTagsUtility(String input) {
@@ -1131,6 +1137,7 @@ public class MainController {
 
     /**
      * Starts a folder watcher thread. Kills an active folder watcher thread first, if present.
+     *
      * @param folder        Target folder to watch for new files.
      * @param moveToDefault Move found files to default folder as specified by settings object.
      */
@@ -1166,6 +1173,7 @@ public class MainController {
 
     /**
      * Cleanly exits the JFX application and releases all threads and resources.
+     *
      * @param revertDatabase Revert database to last backup.
      */
     private void cleanExit(boolean revertDatabase) {
