@@ -109,6 +109,21 @@ public class Main extends Application {
             }
         });
 
+        // Log some simple system info
+        if (Runtime.getRuntime().maxMemory() == Long.MAX_VALUE) {
+            log.info("Max Memory: No limit");
+        } else {
+            log.info(String.format("Max Memory: %.2fGB", Runtime.getRuntime().maxMemory() / 1024.0 / 1024.0 / 1024.0));
+        }
+        log.info(String.format("Processors: %d", Runtime.getRuntime().availableProcessors()));
+        log.info(String.format("Operating System: %s", System.getProperty("os.name")));
+        log.info(String.format("OS Version: %s", System.getProperty("os.version")));
+        log.info(String.format("OS Architecture: %s", System.getProperty("os.arch")));
+        log.info(String.format("Java version: %s", System.getProperty("java.version")));
+        log.info(String.format("Java runtime version: %s", System.getProperty("java.runtime.version")));
+        log.info(String.format("JavaFX version: %s", System.getProperty("javafx.version")));
+        log.info(String.format("JavaFX runtime version: %s", System.getProperty("javafx.runtime.version")));
+
         // Launch application
         log.info("Starting JFX Application...");
         launch(args);
