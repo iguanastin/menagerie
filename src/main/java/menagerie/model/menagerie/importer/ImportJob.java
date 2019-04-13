@@ -97,7 +97,7 @@ public class ImportJob {
             setStatus(Status.FAILED_IMPORT);
             return;
         }
-        if (tryImport(menagerie)) {
+        if (tryImport(menagerie, settings)) {
             setStatus(Status.FAILED_IMPORT);
             return;
         }
@@ -176,10 +176,10 @@ public class ImportJob {
      * @param menagerie Menagerie to import into.
      * @return True if the import failed.
      */
-    private boolean tryImport(Menagerie menagerie) {
+    private boolean tryImport(Menagerie menagerie, Settings settings) {
         if (needsImport) {
             synchronized (this) {
-                item = menagerie.importFile(file);
+                item = menagerie.importFile(file, settings.getBoolean(Settings.Key.TAG_TAGME), settings.getBoolean(Settings.Key.TAG_VIDEO), settings.getBoolean(Settings.Key.TAG_IMAGE));
             }
 
             if (item == null) {

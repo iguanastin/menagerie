@@ -460,25 +460,26 @@ public class MainController {
                     importer.addJob(new ImportJob(file));
                 }
             } else if (url != null && !url.isEmpty()) {
-                String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
-                if (!settings.getBoolean(Settings.Key.USE_FILENAME_FROM_URL) || folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
-                    String filename = url.replaceAll("^.*/", "");
-                    File target;
-                    do {
-                        FileChooser fc = new FileChooser();
-                        fc.setTitle("Save as");
-                        fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
-                        if (folder != null && !folder.isEmpty()) fc.setInitialDirectory(new File(folder));
-                        fc.setInitialFileName(filename);
-
-                        target = fc.showSaveDialog(rootPane.getScene().getWindow());
-
-                        if (target == null) return;
-                    } while (target.exists() || !target.getParentFile().exists());
-                }
-
                 try {
-                    importer.addJob(new ImportJob(new URL(url)));
+                    String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+                    String filename = new URL(url).getPath().replaceAll("^.*/", "");
+                    File target;
+                    if (!settings.getBoolean(Settings.Key.USE_FILENAME_FROM_URL) || folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
+                        do {
+                            FileChooser fc = new FileChooser();
+                            fc.setTitle("Save as");
+                            fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
+                            if (folder != null && !folder.isEmpty()) fc.setInitialDirectory(new File(folder));
+                            fc.setInitialFileName(filename);
+
+                            target = fc.showSaveDialog(rootPane.getScene().getWindow());
+
+                            if (target == null) return;
+                        } while (target.exists() || !target.getParentFile().exists());
+                    } else {
+                        target = resolveDuplicateFilename(new File(folder, filename));
+                    }
+                    importer.addJob(new ImportJob(new URL(url), target));
                 } catch (MalformedURLException e) {
                     Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
                 }

@@ -21,16 +21,15 @@ import java.util.logging.Level;
 public class SettingsScreen extends Screen {
 
     private final TextField defaultFolderTextField;
-
-    private final CheckBox autoImportFolderCheckBox;
-    private final CheckBox autoImportMoveToDefaultCheckBox;
-
+    private final CheckBox autoImportFolderCheckBox = new CheckBox("Auto-import from folder");
+    private final CheckBox autoImportMoveToDefaultCheckBox = new CheckBox("Move from folder to default folder before importing");
     private final TextField importFolderTextField;
-
-    private final CheckBox fileNameFromURLCheckBox;
+    private final CheckBox fileNameFromURLCheckBox = new CheckBox("Automatically use filename from URL when importing from web");
+    private final CheckBox tagWithTagmeCheckBox = new CheckBox("Tag imported items with 'tagme'");
+    private final CheckBox tagWithVideoCheckBox = new CheckBox("Tag imported videos with 'video'");
+    private final CheckBox tagWithImageCheckBox = new CheckBox("Tag imported images with 'image'");
 
     private final TextField confidenceTextField;
-    private final CheckBox combineTagsCheckBox;
     private final CheckBox compareGreyscalesCheckBox;
 
     private final CheckBox muteVideoCheckBox;
@@ -85,8 +84,6 @@ public class SettingsScreen extends Screen {
         h.setAlignment(Pos.CENTER_LEFT);
         rootV.getChildren().add(h);
         rootV.getChildren().add(new Separator());
-        autoImportFolderCheckBox = new CheckBox("Auto-import from folder");
-        autoImportMoveToDefaultCheckBox = new CheckBox("Move from folder to default folder before importing");
         h = new HBox(5, autoImportFolderCheckBox, autoImportMoveToDefaultCheckBox);
         h.setAlignment(Pos.CENTER_LEFT);
         rootV.getChildren().add(h);
@@ -112,8 +109,10 @@ public class SettingsScreen extends Screen {
         h.setAlignment(Pos.CENTER_LEFT);
         h.setPadding(new Insets(0, 0, 0, 25));
         rootV.getChildren().add(h);
-        fileNameFromURLCheckBox = new CheckBox("Automatically use filename from URL when importing from web");
         rootV.getChildren().add(fileNameFromURLCheckBox);
+        rootV.getChildren().add(tagWithTagmeCheckBox);
+        rootV.getChildren().add(tagWithVideoCheckBox);
+        rootV.getChildren().add(tagWithImageCheckBox);
         rootV.getChildren().add(new Separator());
         rootV.getChildren().add(new Label("Duplicate finding:"));
         confidenceTextField = new TextField();
@@ -129,11 +128,10 @@ public class SettingsScreen extends Screen {
             }
         });
         confidenceTextField.setPromptText("0.95 recommended");
-        combineTagsCheckBox = new CheckBox("Combine tags when deleting a duplicate");
         compareGreyscalesCheckBox = new CheckBox("Compare greyscale images (poor accuracy)");
         h = new HBox(5, new Label("Similarity confidence:"), confidenceTextField, new Label("(0.8-1.0)"));
         h.setAlignment(Pos.CENTER_LEFT);
-        VBox v = new VBox(h, combineTagsCheckBox, compareGreyscalesCheckBox);
+        VBox v = new VBox(h, compareGreyscalesCheckBox);
         v.setPadding(new Insets(0, 0, 0, 25));
         rootV.getChildren().add(v);
         rootV.getChildren().add(new Separator());
@@ -212,6 +210,9 @@ public class SettingsScreen extends Screen {
         settings.setBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT, autoImportMoveToDefaultCheckBox.isSelected());
         settings.setString(Settings.Key.AUTO_IMPORT_FOLDER, importFolderTextField.getText());
         settings.setBoolean(Settings.Key.USE_FILENAME_FROM_URL, fileNameFromURLCheckBox.isSelected());
+        settings.setBoolean(Settings.Key.TAG_TAGME, tagWithTagmeCheckBox.isSelected());
+        settings.setBoolean(Settings.Key.TAG_VIDEO, tagWithVideoCheckBox.isSelected());
+        settings.setBoolean(Settings.Key.TAG_IMAGE, tagWithImageCheckBox.isSelected());
         double confidence = 0.95;
         try {
             confidence = Double.parseDouble(confidenceTextField.getText());
@@ -220,7 +221,6 @@ public class SettingsScreen extends Screen {
         } catch (NumberFormatException ignored) {
         }
         settings.setDouble(Settings.Key.CONFIDENCE, confidence);
-        settings.setBoolean(Settings.Key.COMBINE_TAGS, combineTagsCheckBox.isSelected());
         settings.setBoolean(Settings.Key.COMPARE_GREYSCALE, compareGreyscalesCheckBox.isSelected());
         settings.setBoolean(Settings.Key.MUTE_VIDEO, muteVideoCheckBox.isSelected());
         settings.setBoolean(Settings.Key.REPEAT_VIDEO, repeatVideoCheckBox.isSelected());
@@ -248,11 +248,13 @@ public class SettingsScreen extends Screen {
         autoImportMoveToDefaultCheckBox.setSelected(settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
         importFolderTextField.setText(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER));
         fileNameFromURLCheckBox.setSelected(settings.getBoolean(Settings.Key.USE_FILENAME_FROM_URL));
+        tagWithTagmeCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_TAGME));
+        tagWithVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_VIDEO));
+        tagWithImageCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_IMAGE));
         double confidence = settings.getDouble(Settings.Key.CONFIDENCE);
         if (confidence < 0.8) confidence = 0.8;
         else if (confidence > 1) confidence = 1;
         confidenceTextField.setText("" + confidence);
-        combineTagsCheckBox.setSelected(settings.getBoolean(Settings.Key.COMBINE_TAGS));
         compareGreyscalesCheckBox.setSelected(settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
         muteVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.MUTE_VIDEO));
         repeatVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.REPEAT_VIDEO));

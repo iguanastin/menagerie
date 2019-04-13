@@ -177,12 +177,12 @@ public class Menagerie {
      * @param file File to import.
      * @return The MediaItem for the imported file, or null if import failed.
      */
-    public MediaItem importFile(File file) {
+    public MediaItem importFile(File file, boolean tagTagme, boolean tagVideo, boolean tagImage) {
         if (isFilePresent(file)) return null;
 
         MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), file, null, null);
 
-        //Add image and commit to database
+        // Add media and commit to database
         items.add(media);
         nextItemID++;
         try {
@@ -191,12 +191,18 @@ public class Menagerie {
             Main.log.log(Level.SEVERE, "Failed to create media in database: " + media, e);
         }
 
-        //Tag with tagme
-        Tag tagme = getTagByName("tagme");
-        if (tagme == null) tagme = createTag("tagme");
-        media.addTag(tagme);
-
-        if (media.isVideo()) {
+        // Add tags
+        if (tagTagme) {
+            Tag tagme = getTagByName("tagme");
+            if (tagme == null) tagme = createTag("tagme");
+            media.addTag(tagme);
+        }
+        if (tagImage && media.isImage()) {
+            Tag image = getTagByName("image");
+            if (image == null) image = createTag("image");
+            media.addTag(image);
+        }
+        if (tagVideo && media.isVideo()) {
             Tag video = getTagByName("video");
             if (video == null) video = createTag("video");
             media.addTag(video);
