@@ -10,7 +10,7 @@ public class Tag implements Comparable<Tag> {
      * <p>
      * No spaces, no newlines, only common alphanumerical characters and symbols.
      */
-    public static final String NAME_REGEX = "[0-9a-zA-Z!@#$%^&*()\\-_=+\\[\\]{};:'\",./<>?`~]+";
+    public static final String NAME_REGEX = "[0-9a-zA-Z!@#$%^&*()\\-_=+\\[\\]{};:',./<>?`~]+";
 
     private final int id;
     private final String name;

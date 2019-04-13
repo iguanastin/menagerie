@@ -38,7 +38,7 @@ public class ImportDialogScreen extends Screen {
     private final CheckBox recursiveCheckBox = new CheckBox("Recursively import folders");
     private final CheckBox tagWithParentCheckBox = new CheckBox("Tag with parent folder name");
     private final CheckBox tagWithTagCheckBox = new CheckBox("Tag with specified tag:");
-    private final CheckBox renameWithHashCheckBox = new CheckBox("Rename file file hash after import");
+    private final CheckBox renameWithHashCheckBox = new CheckBox("Rename file to hash after import");
     private final TextField tagWithTagTextField = new TextField();
     private final ImporterThread importer;
     private final Menagerie menagerie;
@@ -103,6 +103,7 @@ public class ImportDialogScreen extends Screen {
         orderChoiceBox.getItems().addAll(Order.values());
         orderChoiceBox.getSelectionModel().selectFirst();
         HBox orderHBox = new HBox(5, new Label("Import files in order:"), orderChoiceBox);
+        orderHBox.setAlignment(Pos.CENTER_LEFT);
         // Tag on import
         HBox tagHBox = new HBox(5, tagWithTagCheckBox, tagWithTagTextField);
         tagHBox.setAlignment(Pos.CENTER_LEFT);
