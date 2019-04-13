@@ -18,6 +18,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -34,6 +36,7 @@ public class ImportJob {
     private ImporterThread importer = null;
 
     private URL url = null;
+    private File downloadTo = null;
     private File file = null;
     private MediaItem item = null;
     private MediaItem duplicateOf = null;
@@ -60,6 +63,18 @@ public class ImportJob {
         this.url = url;
         needsDownload = true;
     }
+
+    /**
+     * Constructs a job that will download and import a file from the web into a specified file.
+     *
+     * @param url        URL of file to download.
+     * @param downloadTo File to download URL into.
+     */
+    public ImportJob(URL url, File downloadTo) {
+        this(url);
+        this.downloadTo = downloadTo;
+    }
+
     /**
      * Constructs a job that will import a local file.
      *
@@ -108,16 +123,25 @@ public class ImportJob {
     private boolean tryDownload(Settings settings) {
         if (needsDownload) {
             try {
-                String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
-                if (!folder.endsWith("/") && !folder.endsWith("\\")) folder += "/";
-                String filename = url.getPath().replaceAll("^.*/", "");
-                File target = MainController.resolveDuplicateFilename(new File(folder + filename));
-                //TODO: Deal with case where user input is required for saving the file
+                if (downloadTo == null) {
+                    String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+                    if (folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
+                        Main.log.warning(String.format("Default folder '%s' doesn't exist or isn't a folder", folder));
+                        return true;
+                    }
+                    String filename = url.getPath().replaceAll("^.*/", "");
+
+                    downloadTo = MainController.resolveDuplicateFilename(new File(folder, filename));
+                }
+                if (downloadTo.exists()) {
+                    Main.log.warning(String.format("Attempted to download '%s' into pre-existing file '%s'", url.toString(), downloadTo.toString()));
+                    return true;
+                }
 
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.addRequestProperty("User-Agent", "Mozilla/4.0");
                 ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
-                try (FileOutputStream fos = new FileOutputStream(target)) {
+                try (FileOutputStream fos = new FileOutputStream(downloadTo)) {
                     final long size = conn.getContentLengthLong();
                     final int chunkSize = 4096;
                     for (int i = 0; i < size; i += chunkSize) {
@@ -131,7 +155,7 @@ public class ImportJob {
                 conn.disconnect();
 
                 synchronized (this) {
-                    file = target;
+                    file = downloadTo;
                 }
                 needsDownload = false;
             } catch (RuntimeException e) {

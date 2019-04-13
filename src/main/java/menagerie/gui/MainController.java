@@ -17,7 +17,9 @@ import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
@@ -49,6 +51,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -90,6 +93,9 @@ public class MainController {
     private ImporterScreen importerScreen;
     private LogScreen logScreen;
     private ImportDialogScreen importDialogScreen;
+
+    // --------------------------------- Static vars ---------------------------------
+    private static Window window;
 
     // --------------------------------- Menagerie vars ------------------------------
     /**
@@ -174,6 +180,8 @@ public class MainController {
 
             //Init closeRequest handling on window
             rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
+
+            window = rootPane.getScene().getWindow();
         });
 
         // Apply a default search
@@ -445,6 +453,23 @@ public class MainController {
                     importer.addJob(new ImportJob(file));
                 }
             } else if (url != null && !url.isEmpty()) {
+                String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+                if (!settings.getBoolean(Settings.Key.USE_FILENAME_FROM_URL) || folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
+                    String filename = url.replaceAll("^.*/", "");
+                    File target;
+                    do {
+                        FileChooser fc = new FileChooser();
+                        fc.setTitle("Save as");
+                        fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
+                        if (folder != null && !folder.isEmpty()) fc.setInitialDirectory(new File(folder));
+                        fc.setInitialFileName(filename);
+
+                        target = fc.showSaveDialog(rootPane.getScene().getWindow());
+
+                        if (target == null) return;
+                    } while (target.exists() || !target.getParentFile().exists());
+                }
+
                 try {
                     importer.addJob(new ImportJob(new URL(url)));
                 } catch (MalformedURLException e) {
@@ -1107,6 +1132,10 @@ public class MainController {
         } catch (IOException e) {
             Main.log.log(Level.SEVERE, String.format("Failed to backup database at: %s", settings.getString(Settings.Key.DATABASE_URL)), e);
         }
+    }
+
+    public static Window getWindow() {
+        return window;
     }
 
     /**
