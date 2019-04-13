@@ -252,10 +252,15 @@ public class Menagerie {
      * Creates a new tag in this Menagerie.
      *
      * @param name Name of new tag. Must be unique (case insensitive).
-     * @return The newly created tag, or null if name is not unique.
+     * @return The newly created tag, or null if name is not unique or name is invalid.
      */
     public Tag createTag(String name) {
-        Tag t = new Tag(nextTagID, name);
+        Tag t;
+        try {
+            t = new Tag(nextTagID, name);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
         nextTagID++;
 
         tags.add(t);

@@ -22,10 +22,7 @@ import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.util.Filters;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class ImportDialogScreen extends Screen {
 
@@ -37,9 +34,9 @@ public class ImportDialogScreen extends Screen {
     private final ChoiceBox<Order> orderChoiceBox = new ChoiceBox<>();
     private final CheckBox recursiveCheckBox = new CheckBox("Recursively import folders");
     private final CheckBox tagWithParentCheckBox = new CheckBox("Tag with parent folder name");
-    private final CheckBox tagWithTagCheckBox = new CheckBox("Tag with specified tag:");
+    private final CheckBox tagWithTagsCheckBox = new CheckBox("Tag with (space-separated tags):");
     private final CheckBox renameWithHashCheckBox = new CheckBox("Rename file to hash after import");
-    private final TextField tagWithTagTextField = new TextField();
+    private final TextField tagWithTagsTextField = new TextField();
     private final ImporterThread importer;
     private final Menagerie menagerie;
     private List<File> files = new ArrayList<>();
@@ -63,6 +60,7 @@ public class ImportDialogScreen extends Screen {
 
         // ---------------------------------- Center ---------------------------------------
         // Files option
+        filesTextField.setEditable(false);
         HBox.setHgrow(filesTextField, Priority.ALWAYS);
         Button browseFiles = new Button("Browse Files");
         browseFiles.setOnAction(event -> {
@@ -105,7 +103,8 @@ public class ImportDialogScreen extends Screen {
         HBox orderHBox = new HBox(5, new Label("Import files in order:"), orderChoiceBox);
         orderHBox.setAlignment(Pos.CENTER_LEFT);
         // Tag on import
-        HBox tagHBox = new HBox(5, tagWithTagCheckBox, tagWithTagTextField);
+        HBox.setHgrow(tagWithTagsTextField, Priority.ALWAYS);
+        HBox tagHBox = new HBox(5, tagWithTagsCheckBox, tagWithTagsTextField);
         tagHBox.setAlignment(Pos.CENTER_LEFT);
         VBox center = new VBox(5, fileHBox, orderHBox, recursiveCheckBox, tagWithParentCheckBox, renameWithHashCheckBox, tagHBox);
         center.setPadding(new Insets(5));
@@ -169,8 +168,9 @@ public class ImportDialogScreen extends Screen {
             final List<String> tagsToAdd = new ArrayList<>();
 
             if (tagWithParentCheckBox.isSelected()) tagsToAdd.add(file.getParentFile().getName().toLowerCase());
-            if (tagWithTagCheckBox.isSelected() && tagWithTagTextField.getText() != null && !tagWithTagTextField.getText().isEmpty())
-                tagsToAdd.add(tagWithTagTextField.getText().toLowerCase());
+            if (tagWithTagsCheckBox.isSelected() && tagWithTagsTextField.getText() != null && !tagWithTagsTextField.getText().isEmpty()) {
+                tagsToAdd.addAll(Arrays.asList(tagWithTagsTextField.getText().toLowerCase().split("\\s")));
+            }
 
             final boolean renameToHash = renameWithHashCheckBox.isSelected();
 
@@ -181,6 +181,8 @@ public class ImportDialogScreen extends Screen {
                         for (String tagName : tagsToAdd) {
                             if (tagName.contains(" "))
                                 tagName = tagName.replaceAll("\\s", "_"); // Replace all whitespace
+
+                            if (!tagName.matches(Tag.NAME_REGEX)) continue;
 
                             Tag t = menagerie.getTagByName(tagName);
                             if (t == null) t = menagerie.createTag(tagName);
