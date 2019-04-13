@@ -380,6 +380,9 @@ public class MainController {
                 }
             });
             c.setOnContextMenuRequested(event -> {
+                if (!itemGridView.isSelected(c.getItem())) {
+                    itemGridView.select(c.getItem(), false, false);
+                }
                 constructGridCellContextMenu(itemGridView.getSelected()).show(c, event.getScreenX(), event.getScreenY());
                 event.consume();
             });
@@ -652,6 +655,17 @@ public class MainController {
         }
 
         if (mediaCount > 0) {
+            MenuItem openDefault = new MenuItem("Open");
+            openDefault.setOnAction(event -> {
+                Item last = selected.get(selected.size() - 1);
+                if (last instanceof MediaItem) {
+                    try {
+                        Desktop.getDesktop().open(((MediaItem) last).getFile());
+                    } catch (IOException e) {
+                        Main.log.log(Level.WARNING, "Error opening file with system default program", e);
+                    }
+                }
+            });
             MenuItem explorer = new MenuItem("Open in Explorer");
             explorer.setOnAction(event -> {
                 Item last = selected.get(selected.size() - 1);
@@ -663,7 +677,7 @@ public class MainController {
                     }
                 }
             });
-            cm.getItems().add(explorer);
+            cm.getItems().addAll(openDefault, explorer);
         }
 
         if (groupCount > 0 || mediaCount > 0) cm.getItems().add(new SeparatorMenuItem());
