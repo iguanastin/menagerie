@@ -192,6 +192,12 @@ public class MainController {
         if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT))
             startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
 
+        // Show help screen if setting is set
+        if (settings.getBoolean(Settings.Key.SHOW_HELP_ON_START)) {
+            screenPane.open(helpScreen);
+            settings.setBoolean(Settings.Key.SHOW_HELP_ON_START, false);
+        }
+
     }
 
     /**
