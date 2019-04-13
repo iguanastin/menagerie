@@ -17,7 +17,7 @@ import java.util.List;
  */
 public class PanZoomImageView extends DynamicImageView {
 
-    private static final double[] SCALES = {0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 3, 4, 6, 10, 14};
+    private static final double[] SCALES = {0.1, 0.13, 0.18, 0.24, 0.32, 0.42, 0.56, 0.75, 1, 1.25, 1.56, 1.95, 2.44, 3.05, 3.81, 4.76, 5.95, 7.44, 9.3};
 
     private double deltaX = 0, deltaY = 0;
     private DoubleProperty scale = new SimpleDoubleProperty(1);
