@@ -19,7 +19,9 @@ import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -143,6 +145,8 @@ public class Main extends Application {
         final String css = "/fxml/dark.css";
         final String title = "Menagerie";
 
+        final List<Image> icons = getIcons();
+
         try {
             log.info(String.format("Loading FXML: %s", splash));
             Parent root = FXMLLoader.load(getClass().getResource(splash));
@@ -151,6 +155,7 @@ public class Main extends Application {
 
             stage.initStyle(StageStyle.UNDECORATED);
             stage.setScene(scene);
+            stage.getIcons().addAll(icons);
             stage.show();
         } catch (IOException e) {
             log.log(Level.SEVERE, "Error loading FXML: " + splash, e);
@@ -168,22 +173,7 @@ public class Main extends Application {
                 Stage newStage = new Stage();
                 newStage.setScene(scene);
                 newStage.setTitle(title);
-                try {
-                    newStage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/128.png")));
-                } catch (NullPointerException ignored) {
-                }
-                try {
-                    newStage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/64.png")));
-                } catch (NullPointerException ignored) {
-                }
-                try {
-                    newStage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/32.png")));
-                } catch (NullPointerException ignored) {
-                }
-                try {
-                    newStage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/16.png")));
-                } catch (NullPointerException ignored) {
-                }
+                newStage.getIcons().addAll(icons);
                 newStage.show();
                 stage.close();
             } catch (IOException e) {
@@ -192,6 +182,28 @@ public class Main extends Application {
             }
         });
 
+    }
+
+    private List<Image> getIcons() {
+        List<Image> results = new ArrayList<>();
+        try {
+            results.add(new Image(getClass().getResourceAsStream("/icons/128.png")));
+        } catch (NullPointerException ignored) {
+        }
+        try {
+            results.add(new Image(getClass().getResourceAsStream("/icons/64.png")));
+        } catch (NullPointerException ignored) {
+        }
+        try {
+            results.add(new Image(getClass().getResourceAsStream("/icons/32.png")));
+        } catch (NullPointerException ignored) {
+        }
+        try {
+            results.add(new Image(getClass().getResourceAsStream("/icons/16.png")));
+        } catch (NullPointerException ignored) {
+        }
+
+        return results;
     }
 
 }
