@@ -10,6 +10,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import menagerie.model.menagerie.Tag;
+import menagerie.util.Filters;
 
 public class HelpScreen extends Screen {
 
@@ -57,7 +58,21 @@ public class HelpScreen extends Screen {
 
         VBox v = new VBox(5);
 
-        // TODO
+        Label l = new Label("Welcome to Menagerie, an organizational tool images and videos.\n\nMenagerie is a tag based system that tracks local files on your PC, allowing you organize, search, and view them faster and more efficiently.\n ");
+        l.setWrapText(true);
+        v.getChildren().add(l);
+
+        l = new Label("Features:");
+        l.setFont(boldItalic);
+        v.getChildren().add(l);
+
+        String[] strs = {"- Tagging", "- Searching tags and various properties", String.format("- Support for image formats: %s", String.join(", ", Filters.IMAGE_EXTS)), String.format("- Support for video formats (requires VLC to be installed): %s", String.join(", ", Filters.VIDEO_EXTS)), "- Exact file duplicate detection", "- Image fuzzy duplicate detection", "- Item groups", "- Auto-importing from a folder", "- Dragging and dropping files to and from local disk and web", "- Slideshow viewing", "- Etc."};
+        for (String str : strs) {
+            l = new Label(str);
+            l.setWrapText(true);
+            l.setPadding(left20);
+            v.getChildren().add(l);
+        }
 
         ScrollPane sp = new ScrollPane(v);
         sp.setFitToWidth(true);
