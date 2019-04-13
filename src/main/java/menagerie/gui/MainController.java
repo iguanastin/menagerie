@@ -550,6 +550,55 @@ public class MainController {
         previewMediaView.setRepeat(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
     }
 
+    /**
+     * Applies window properties to the window and starts listeners for changes to update the settings object.
+     */
+    private void initWindowPropertiesAndListeners() {
+        Main.log.info("Initializing window properties and listeners");
+
+        Stage stage = ((Stage) explorerRootPane.getScene().getWindow());
+        stage.setMaximized(settings.getBoolean(Settings.Key.WINDOW_MAXIMIZED));
+        if (settings.getInt(Settings.Key.WINDOW_WIDTH) > 0) {
+            stage.setWidth(settings.getInt(Settings.Key.WINDOW_WIDTH));
+        } else {
+            settings.setInt(Settings.Key.WINDOW_WIDTH, (int) stage.getWidth());
+        }
+        if (settings.getInt(Settings.Key.WINDOW_HEIGHT) > 0) {
+            stage.setHeight(settings.getInt(Settings.Key.WINDOW_HEIGHT));
+        } else {
+            settings.setInt(Settings.Key.WINDOW_HEIGHT, (int) stage.getHeight());
+        }
+        if (settings.getInt(Settings.Key.WINDOW_X) >= 0) {
+            stage.setX(settings.getInt(Settings.Key.WINDOW_X));
+        } else {
+            settings.setInt(Settings.Key.WINDOW_X, (int) stage.getX());
+        }
+        if (settings.getInt(Settings.Key.WINDOW_Y) >= 0) {
+            stage.setY(settings.getInt(Settings.Key.WINDOW_Y));
+        } else {
+            settings.setInt(Settings.Key.WINDOW_Y, (int) stage.getY());
+        }
+
+        //Bind window properties to settings
+        stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.WINDOW_MAXIMIZED, newValue));
+        stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_WIDTH, newValue.intValue()));
+        stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_HEIGHT, newValue.intValue()));
+        stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_X, newValue.intValue()));
+        stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_Y, newValue.intValue()));
+
+        stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                if (previewMediaView.isPlaying()) {
+                    previewMediaView.pause();
+                    playVideoAfterFocusGain = true;
+                }
+            } else if (playVideoAfterFocusGain) {
+                previewMediaView.play();
+                playVideoAfterFocusGain = false;
+            }
+        });
+    }
+
     // ---------------------------------- GUI Action Methods ---------------------------
 
     /**
@@ -637,55 +686,6 @@ public class MainController {
     }
 
     /**
-     * Applies window properties to the window and starts listeners for changes to update the settings object.
-     */
-    private void initWindowPropertiesAndListeners() {
-        Main.log.info("Initializing window properties and listeners");
-
-        Stage stage = ((Stage) explorerRootPane.getScene().getWindow());
-        stage.setMaximized(settings.getBoolean(Settings.Key.WINDOW_MAXIMIZED));
-        if (settings.getInt(Settings.Key.WINDOW_WIDTH) > 0) {
-            stage.setWidth(settings.getInt(Settings.Key.WINDOW_WIDTH));
-        } else {
-            settings.setInt(Settings.Key.WINDOW_WIDTH, (int) stage.getWidth());
-        }
-        if (settings.getInt(Settings.Key.WINDOW_HEIGHT) > 0) {
-            stage.setHeight(settings.getInt(Settings.Key.WINDOW_HEIGHT));
-        } else {
-            settings.setInt(Settings.Key.WINDOW_HEIGHT, (int) stage.getHeight());
-        }
-        if (settings.getInt(Settings.Key.WINDOW_X) >= 0) {
-            stage.setX(settings.getInt(Settings.Key.WINDOW_X));
-        } else {
-            settings.setInt(Settings.Key.WINDOW_X, (int) stage.getX());
-        }
-        if (settings.getInt(Settings.Key.WINDOW_Y) >= 0) {
-            stage.setY(settings.getInt(Settings.Key.WINDOW_Y));
-        } else {
-            settings.setInt(Settings.Key.WINDOW_Y, (int) stage.getY());
-        }
-
-        //Bind window properties to settings
-        stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.WINDOW_MAXIMIZED, newValue));
-        stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_WIDTH, newValue.intValue()));
-        stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_HEIGHT, newValue.intValue()));
-        stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_X, newValue.intValue()));
-        stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_Y, newValue.intValue()));
-
-        stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) {
-                if (previewMediaView.isPlaying()) {
-                    previewMediaView.pause();
-                    playVideoAfterFocusGain = true;
-                }
-            } else if (playVideoAfterFocusGain) {
-                previewMediaView.play();
-                playVideoAfterFocusGain = false;
-            }
-        });
-    }
-
-    /**
      * Attempts to display an item's media in the preview viewport.
      *
      * @param item The item to display. Displays nothing when item is a GroupItem.
@@ -718,6 +718,8 @@ public class MainController {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i) instanceof GroupItem) items.addAll(((GroupItem) items.get(i)).getElements());
         }
+        if (currentlyPreviewing instanceof MediaItem && items.contains(currentlyPreviewing) && ((MediaItem) currentlyPreviewing).isVideo())
+            previewMediaView.stop();
         new ConfirmationScreen().open(screenPane, "Forget files", String.format("Remove selected files from database? (%d files)\n\n" + "This action CANNOT be undone", items.size()), () -> menagerie.removeItems(items, false), null);
     }
 
@@ -731,6 +733,8 @@ public class MainController {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i) instanceof GroupItem) items.addAll(((GroupItem) items.get(i)).getElements());
         }
+        if (currentlyPreviewing instanceof MediaItem && items.contains(currentlyPreviewing) && ((MediaItem) currentlyPreviewing).isVideo())
+            previewMediaView.stop();
         new ConfirmationScreen().open(screenPane, "Delete files", String.format("Permanently delete selected files? (%d files)\n\n" + "This action CANNOT be undone (files will be deleted)", items.size()), () -> menagerie.removeItems(items, true), null);
     }
 

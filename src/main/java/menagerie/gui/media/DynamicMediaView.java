@@ -154,4 +154,8 @@ public class DynamicMediaView extends StackPane {
         }
     }
 
+    public void stop() {
+        if (getVideoView() != null) getVideoView().stop();
+    }
+
 }

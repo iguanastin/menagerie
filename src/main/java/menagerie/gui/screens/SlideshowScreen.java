@@ -179,6 +179,7 @@ public class SlideshowScreen extends Screen {
             }
         };
 
+        mediaView.stop();
         if (deleteFile) {
             new ConfirmationScreen().open(getManager(), "Delete files", "Permanently delete selected files? (1 file)\n\n" + "This action CANNOT be undone (files will be deleted)", onFinish, null);
         } else {

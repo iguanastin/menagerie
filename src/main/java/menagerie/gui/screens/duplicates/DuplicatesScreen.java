@@ -326,6 +326,9 @@ public class DuplicatesScreen extends Screen {
     private void deleteItem(MediaItem toDelete) {
         if (menagerie == null) return;
 
+        if (currentPair.getObject1().equals(toDelete)) leftMediaView.stop();
+        if (currentPair.getObject2().equals(toDelete)) rightMediaView.stop();
+
         int index = pairs.indexOf(currentPair);
 
         menagerie.removeItems(Collections.singletonList(toDelete), isDeleteFile());

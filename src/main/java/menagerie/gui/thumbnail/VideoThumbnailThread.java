@@ -31,9 +31,7 @@ public class VideoThumbnailThread extends Thread {
      * @param job Job to enqueue.
      */
     public void enqueueJob(VideoThumbnailJob job) {
-        synchronized (jobs) {
-            jobs.add(job);
-        }
+        jobs.add(job);
     }
 
     /**
@@ -54,9 +52,7 @@ public class VideoThumbnailThread extends Thread {
         while (running) {
             try {
                 VideoThumbnailJob job;
-                synchronized (jobs) {
-                    job = jobs.take();
-                }
+                job = jobs.take();
 
                 try {
                     final CountDownLatch inPositionLatch = new CountDownLatch(1);
