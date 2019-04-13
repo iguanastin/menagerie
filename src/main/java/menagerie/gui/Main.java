@@ -7,6 +7,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
@@ -122,6 +123,7 @@ public class Main extends Application {
 
     /**
      * JavaFX application start method, called via launch() in main()
+     *
      * @param stage State supplied by JFX
      */
     public void start(Stage stage) {
@@ -166,6 +168,22 @@ public class Main extends Application {
                 Stage newStage = new Stage();
                 newStage.setScene(scene);
                 newStage.setTitle(title);
+                try {
+                    newStage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/128.png")));
+                } catch (NullPointerException ignored) {
+                }
+                try {
+                    newStage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/64.png")));
+                } catch (NullPointerException ignored) {
+                }
+                try {
+                    newStage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/32.png")));
+                } catch (NullPointerException ignored) {
+                }
+                try {
+                    newStage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/16.png")));
+                } catch (NullPointerException ignored) {
+                }
                 newStage.show();
                 stage.close();
             } catch (IOException e) {
