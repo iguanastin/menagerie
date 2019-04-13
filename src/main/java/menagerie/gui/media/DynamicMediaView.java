@@ -32,14 +32,14 @@ public class DynamicMediaView extends StackPane {
     public boolean preview(MediaItem item) {
         if (item == null) {
             if (getVideoView() != null) getVideoView().stop();
-            getImageView().setImage(null);
+            getMediaView().setImage(null);
             hideAllViews();
         } else if (item.isImage()) {
             if (getVideoView() != null) getVideoView().stop();
-            getImageView().setImage(item.getImage());
+            getMediaView().setImage(item.getImage());
             showImageView();
         } else if (item.isVideo() && getVideoView() != null) {
-            getImageView().setImage(null);
+            getMediaView().setImage(null);
             getVideoView().startMedia(item.getFile().getAbsolutePath());
             showVideoView();
         } else {
@@ -53,8 +53,8 @@ public class DynamicMediaView extends StackPane {
      * Hides both the video and the image views, if they exist.
      */
     private void hideAllViews() {
-        getImageView().setDisable(true);
-        getImageView().setOpacity(0);
+        getMediaView().setDisable(true);
+        getMediaView().setOpacity(0);
         if (getVideoView() != null) {
             getVideoView().setDisable(true);
             getVideoView().setOpacity(0);
@@ -65,8 +65,8 @@ public class DynamicMediaView extends StackPane {
      * Shows the image view.
      */
     private void showImageView() {
-        getImageView().setDisable(false);
-        getImageView().setOpacity(1);
+        getMediaView().setDisable(false);
+        getMediaView().setOpacity(1);
         if (getVideoView() != null) {
             getVideoView().setDisable(true);
             getVideoView().setOpacity(0);
@@ -81,8 +81,8 @@ public class DynamicMediaView extends StackPane {
             getVideoView().setDisable(false);
             getVideoView().setOpacity(1);
         }
-        getImageView().setDisable(true);
-        getImageView().setOpacity(0);
+        getMediaView().setDisable(true);
+        getMediaView().setOpacity(0);
     }
 
     /**
@@ -90,7 +90,7 @@ public class DynamicMediaView extends StackPane {
      *
      * @return The video view, or null if VLCJ is not loaded.
      */
-    private DynamicVideoView getVideoView() {
+    public DynamicVideoView getVideoView() {
         if (!Main.isVlcjLoaded()) return null;
 
         if (videoView == null) {
@@ -104,7 +104,7 @@ public class DynamicMediaView extends StackPane {
     /**
      * @return The image view.
      */
-    private PanZoomImageView getImageView() {
+    public PanZoomImageView getMediaView() {
         return imageView;
     }
 

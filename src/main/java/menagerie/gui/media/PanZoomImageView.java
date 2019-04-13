@@ -1,22 +1,26 @@
 package menagerie.gui.media;
 
 import javafx.application.Platform;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * An ImageView that dynamically fits to the parent node and implements zooming and panning with the mouse.
  */
 public class PanZoomImageView extends DynamicImageView {
 
-    private static final double MIN_SCALE = 0.05;
-    private static final double MAX_SCALE = 8;
-    private static final double SCALE_FACTOR = 300;
+    private static final double[] SCALES = {0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 3, 4, 6, 10, 14};
 
     private double deltaX = 0, deltaY = 0;
-    private double scale = 1;
+    private DoubleProperty scale = new SimpleDoubleProperty(1);
 
     private double clickX, clickY;
     private double clickImageX, clickImageY;
@@ -33,8 +37,8 @@ public class PanZoomImageView extends DynamicImageView {
 
         addEventHandler(MouseEvent.MOUSE_DRAGGED, event -> {
             if (event.getButton().equals(MouseButton.PRIMARY)) {
-                deltaX = clickImageX + (clickX - event.getX()) * scale;
-                deltaY = clickImageY + (clickY - event.getY()) * scale;
+                deltaX = clickImageX + (clickX - event.getX()) * scale.get();
+                deltaY = clickImageY + (clickY - event.getY()) * scale.get();
                 updateViewPort();
 
                 draggedThisClick = true;
@@ -53,10 +57,10 @@ public class PanZoomImageView extends DynamicImageView {
         });
         addEventHandler(MouseEvent.MOUSE_RELEASED, event -> {
             if (event.getButton().equals(MouseButton.PRIMARY) && getImage() != null && !draggedThisClick) {
-                double w = getImage().getWidth() / scale;
-                double h = getImage().getHeight() / scale;
+                double w = getImage().getWidth() / scale.get();
+                double h = getImage().getHeight() / scale.get();
                 if (deltaX == 0 && deltaY == 0 && (Math.abs(getFitWidth() - w) < 5 || Math.abs(getFitHeight() - h) < 5)) {
-                    scale = 1;
+                    scale.set(1);
                     updateViewPort();
                 } else {
                     fitImageToView();
@@ -64,10 +68,32 @@ public class PanZoomImageView extends DynamicImageView {
             }
         });
         addEventHandler(ScrollEvent.SCROLL, event -> {
-            scale -= event.getDeltaY() / (SCALE_FACTOR / scale);
-            scale = Math.max(MIN_SCALE, Math.min(scale, MAX_SCALE));
-            updateViewPort();
+            final double fitScale = getFitScale();
+            final List<Double> work = new ArrayList<>();
+            for (double v : SCALES) {
+                work.add(v);
+            }
+            work.add(fitScale);
+            Collections.sort(work);
 
+            if (event.getDeltaY() < 0) {
+                for (double d : work) {
+                    if (d > scale.get()) {
+                        scale.set(d);
+                        break;
+                    }
+                }
+            } else {
+                Collections.reverse(work);
+                for (double d : work) {
+                    if (d < scale.get()) {
+                        scale.set(d);
+                        break;
+                    }
+                }
+            }
+
+            updateViewPort();
             event.consume();
         });
 
@@ -95,17 +121,25 @@ public class PanZoomImageView extends DynamicImageView {
      */
     private void fitImageToView() {
         deltaX = deltaY = 0;
-        scale = 1;
+        scale.set(1);
 
         updateViewPort();
 
-        if (getImage() == null) return;
+        if (getImage() != null) {
+            scale.set(getFitScale());
+            updateViewPort();
+        }
+    }
 
-        scale = getImage().getWidth() / getFitWidth();
-        if (getImage().getHeight() / getFitHeight() > scale) scale = getImage().getHeight() / getFitHeight();
-        if (scale < 1) scale = 1;
+    private double getFitScale() {
+        double s = getImage().getWidth() / getFitWidth();
+        if (getImage().getHeight() / getFitHeight() > s) s = getImage().getHeight() / getFitHeight();
+        if (s < 1) s = 1;
+        return s;
+    }
 
-        updateViewPort();
+    public DoubleProperty getScale() {
+        return scale;
     }
 
     @Override
@@ -124,8 +158,8 @@ public class PanZoomImageView extends DynamicImageView {
     private void updateViewPort() {
         if (getImage() == null || getFitWidth() == 0 || getFitHeight() == 0) return;
 
-        final double fitWidth = getFitWidth() * scale;
-        final double fitHeight = getFitHeight() * scale;
+        final double fitWidth = getFitWidth() * scale.get();
+        final double fitHeight = getFitHeight() * scale.get();
         final double imageWidth = getImage().getWidth();
         final double imageHeight = getImage().getHeight();
 

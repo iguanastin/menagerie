@@ -75,6 +75,7 @@ public class MainController {
     public ItemGridView itemGridView;
     public DynamicMediaView previewMediaView;
     public Label resultCountLabel;
+    public Label explorerZoomLabel;
     public ItemInfoBox itemInfoBox;
     public ListView<Tag> tagListView;
     public PredictiveTextField editTagsTextField;
@@ -573,7 +574,14 @@ public class MainController {
             return results;
         });
 
-        // Init video preview options
+        // Init preview
+        previewMediaView.getMediaView().getScale().addListener((observable, oldValue, newValue) -> {
+            if (newValue.doubleValue() == 1) {
+                explorerZoomLabel.setText(null);
+            } else {
+                explorerZoomLabel.setText(String.format("%d%%", (int) (100 * (1 / newValue.doubleValue()))));
+            }
+        });
         previewMediaView.setMute(settings.getBoolean(Settings.Key.MUTE_VIDEO));
         previewMediaView.setRepeat(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
     }
