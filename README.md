@@ -1,4 +1,6 @@
 # Menagerie
+NOTE: this readme is way old and needs to be updated badly.
+
 An image management tool made in JavaFX as a way to challenge my skills.
 
 Named as a reference to an earlier name for this project and because it sounds *kinda* like "manager-ie"
