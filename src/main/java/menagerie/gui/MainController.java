@@ -25,8 +25,8 @@ import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
 import menagerie.gui.screens.dialogs.ConfirmationScreen;
+import menagerie.gui.screens.dialogs.GroupDialogScreen;
 import menagerie.gui.screens.dialogs.ImportDialogScreen;
-import menagerie.gui.screens.dialogs.TextDialogScreen;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
@@ -88,11 +88,12 @@ public class MainController {
     private TagListScreen tagListScreen;
     private HelpScreen helpScreen;
     private SlideshowScreen slideshowScreen;
-    private DuplicateOptionsScreen duplicateOptionsScreen;
     private SettingsScreen settingsScreen;
     private ImporterScreen importerScreen;
     private LogScreen logScreen;
+    private DuplicateOptionsScreen duplicateOptionsScreen;
     private ImportDialogScreen importDialogScreen;
+    private GroupDialogScreen groupDialogScreen;
 
     // --------------------------------- Menagerie vars ------------------------------
     /**
@@ -226,6 +227,7 @@ public class MainController {
         });
         initLogScreen();
         importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
+        groupDialogScreen = new GroupDialogScreen();
 
         screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
     }
@@ -828,11 +830,10 @@ public class MainController {
                 break;
             }
         }
-        new TextDialogScreen().open(screenPane, "New Group", "Title of new group", title, text -> {
-            GroupItem group = menagerie.createGroup(toGroup, text, settings.getBoolean(Settings.Key.TAG_TAGME));
-            Main.log.info("Created group: " + group);
+        groupDialogScreen.open(screenPane, menagerie, settings, title, toGroup, group -> {
             if (currentSearch.getResults().contains(group)) itemGridView.select(group, false, false);
-        }, null);
+            Main.log.info("Created group: " + group);
+        });
     }
 
     /**
