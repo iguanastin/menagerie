@@ -657,12 +657,13 @@ public class MainController {
 
         ContextMenu cm = new ContextMenu();
 
-        int groupCount = 0, mediaCount = 0;
+        int groupCount = 0, mediaCount = 0, itemsInGroupCount = 0;
         for (Item item : selected) {
             if (item instanceof GroupItem) {
                 groupCount++;
             } else if (item instanceof MediaItem) {
                 mediaCount++;
+                if (((MediaItem) item).inGroup()) itemsInGroupCount++;
             }
         }
 
@@ -671,6 +672,15 @@ public class MainController {
             MenuItem combineGroups = new MenuItem("Combine into Group");
             combineGroups.setOnAction(event -> groupDialog(selected));
             cm.getItems().add(combineGroups);
+        }
+        if (itemsInGroupCount > 0) {
+            MenuItem removeFromGroup = new MenuItem("Remove from group");
+            removeFromGroup.setOnAction(event -> selected.forEach(item -> {
+                if (item instanceof MediaItem && ((MediaItem) item).inGroup()) {
+                    ((MediaItem) item).getGroup().removeItem((MediaItem) item);
+                }
+            }));
+            cm.getItems().add(removeFromGroup);
         }
 
         if (groupCount > 0 || mediaCount > 0) {
