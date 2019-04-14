@@ -1,9 +1,9 @@
 package menagerie.model.search;
 
+import menagerie.gui.Main;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
-import menagerie.model.search.rules.InGroupRule;
-import menagerie.model.search.rules.SearchRule;
+import menagerie.model.search.rules.*;
 import menagerie.util.listeners.ObjectListener;
 
 import java.util.*;
@@ -13,7 +13,7 @@ import java.util.*;
  */
 public class Search {
 
-    private final List<SearchRule> rules;
+    private final List<SearchRule> rules = new ArrayList<>();
     private final boolean showGrouped;
 
     private final Comparator<Item> comparator;
@@ -27,13 +27,13 @@ public class Search {
     /**
      * Constructs a search with given rules.
      *
-     * @param rules       Item rules.
+     * @param search         User input string to parse.
      * @param descending  Sort the results descending.
      * @param showGrouped Show items that are part of a group.
      */
-    public Search(List<SearchRule> rules, boolean descending, boolean showGrouped) {
-        if (rules == null) rules = new ArrayList<>();
-        this.rules = rules;
+    public Search(String search, boolean descending, boolean showGrouped) {
+        if (search != null && !search.isEmpty()) parseRules(search);
+
         rules.sort(null);
 
         // Show grouped items if the search contains an InGroupRule
@@ -54,6 +54,99 @@ public class Search {
                 return o1.getId() - o2.getId();
             }
         };
+    }
+
+    private void parseRules(String search) {
+        for (String arg : search.split("\\s+")) {
+            if (arg == null || arg.isEmpty()) continue;
+
+            boolean inverted = false;
+            if (arg.charAt(0) == '-') {
+                inverted = true;
+                arg = arg.substring(1);
+            }
+
+            if (arg.startsWith("id:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                IDRule.Type type = IDRule.Type.EQUAL_TO;
+                if (temp.startsWith("<")) {
+                    type = IDRule.Type.LESS_THAN;
+                    temp = temp.substring(1);
+                } else if (temp.startsWith(">")) {
+                    type = IDRule.Type.GREATER_THAN;
+                    temp = temp.substring(1);
+                }
+                try {
+                    rules.add(new IDRule(type, Integer.parseInt(temp), inverted));
+                } catch (NumberFormatException e) {
+                    Main.log.warning("Failed to convert parameter to integer: " + temp);
+                }
+            } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                DateAddedRule.Type type = DateAddedRule.Type.EQUAL_TO;
+                if (temp.startsWith("<")) {
+                    type = DateAddedRule.Type.LESS_THAN;
+                    temp = temp.substring(1);
+                } else if (temp.startsWith(">")) {
+                    type = DateAddedRule.Type.GREATER_THAN;
+                    temp = temp.substring(1);
+                }
+                try {
+                    rules.add(new DateAddedRule(type, Long.parseLong(temp), inverted));
+                } catch (NumberFormatException e) {
+                    Main.log.warning("Failed to convert parameter to long: " + temp);
+                }
+            } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
+                rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1), inverted));
+            } else if (arg.startsWith("missing:")) {
+                String type = arg.substring(arg.indexOf(':') + 1);
+                switch (type.toLowerCase()) {
+                    case "md5":
+                        rules.add(new MissingRule(MissingRule.Type.MD5, inverted));
+                        break;
+                    case "file":
+                        rules.add(new MissingRule(MissingRule.Type.FILE, inverted));
+                        break;
+                    case "histogram":
+                    case "hist":
+                        rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
+                        break;
+                    default:
+                        Main.log.warning("Unknown type for missing type: " + type);
+                        break;
+                }
+            } else if (arg.startsWith("type:")) {
+                String type = arg.substring(arg.indexOf(':') + 1);
+                if (type.equalsIgnoreCase("group")) {
+                    rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
+                } else if (type.equalsIgnoreCase("media")) {
+                    rules.add(new TypeRule(TypeRule.Type.MEDIA, inverted));
+                }
+            } else if (arg.startsWith("tags:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                TagCountRule.Type type = TagCountRule.Type.EQUAL_TO;
+                if (temp.startsWith("<")) {
+                    type = TagCountRule.Type.LESS_THAN;
+                    temp = temp.substring(1);
+                } else if (temp.startsWith(">")) {
+                    type = TagCountRule.Type.GREATER_THAN;
+                    temp = temp.substring(1);
+                }
+                try {
+                    rules.add(new TagCountRule(type, Integer.parseInt(temp), inverted));
+                } catch (NumberFormatException e) {
+                    Main.log.warning("Failed to convert parameter to integer: " + temp);
+                }
+            } else if (arg.startsWith("in:")) {
+                try {
+                    rules.add(new InGroupRule(Integer.parseInt(arg.substring(arg.indexOf(':') + 1)), inverted));
+                } catch (NumberFormatException e) {
+                    Main.log.warning("Failed to convert parameter to integer: " + arg.substring(arg.indexOf(':') + 1));
+                }
+            } else {
+                rules.add(new TagRule(arg, inverted));
+            }
+        }
     }
 
     /**

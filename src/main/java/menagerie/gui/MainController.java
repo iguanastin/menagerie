@@ -40,7 +40,6 @@ import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.Search;
-import menagerie.model.search.rules.*;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
@@ -928,7 +927,7 @@ public class MainController {
         if (currentSearch != null) menagerie.unregisterSearch(currentSearch);
         previewItem(null);
 
-        currentSearch = new Search(constructRuleSet(search), descending, showGrouped);
+        currentSearch = new Search(search, descending, showGrouped);
         menagerie.registerSearch(currentSearch);
         currentSearch.addIfValid(menagerie.getItems());
         currentSearch.addItemsAddedListener(items -> Platform.runLater(() -> itemGridView.getItems().addAll(0, items)));
@@ -958,110 +957,6 @@ public class MainController {
         itemGridView.getItems().addAll(currentSearch.getResults());
 
         if (!itemGridView.getItems().isEmpty()) itemGridView.select(itemGridView.getItems().get(0), false, false);
-    }
-
-    /**
-     * Parses a search string to create a rule set for a search.
-     *
-     * @param str Search string to parse.
-     * @return A rule set representing the search string
-     */
-    private List<SearchRule> constructRuleSet(String str) {
-        if (str == null) str = "";
-        List<SearchRule> rules = new ArrayList<>();
-        for (String arg : str.split("\\s+")) {
-            if (arg == null || arg.isEmpty()) continue;
-
-            boolean inverted = false;
-            if (arg.charAt(0) == '-') {
-                inverted = true;
-                arg = arg.substring(1);
-            }
-
-            if (arg.startsWith("id:")) {
-                String temp = arg.substring(arg.indexOf(':') + 1);
-                IDRule.Type type = IDRule.Type.EQUAL_TO;
-                if (temp.startsWith("<")) {
-                    type = IDRule.Type.LESS_THAN;
-                    temp = temp.substring(1);
-                } else if (temp.startsWith(">")) {
-                    type = IDRule.Type.GREATER_THAN;
-                    temp = temp.substring(1);
-                }
-                try {
-                    rules.add(new IDRule(type, Integer.parseInt(temp), inverted));
-                } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to integer: " + temp);
-                }
-            } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
-                String temp = arg.substring(arg.indexOf(':') + 1);
-                DateAddedRule.Type type = DateAddedRule.Type.EQUAL_TO;
-                if (temp.startsWith("<")) {
-                    type = DateAddedRule.Type.LESS_THAN;
-                    temp = temp.substring(1);
-                } else if (temp.startsWith(">")) {
-                    type = DateAddedRule.Type.GREATER_THAN;
-                    temp = temp.substring(1);
-                }
-                try {
-                    rules.add(new DateAddedRule(type, Long.parseLong(temp), inverted));
-                } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to long: " + temp);
-                }
-            } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
-                rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1), inverted));
-            } else if (arg.startsWith("missing:")) {
-                String type = arg.substring(arg.indexOf(':') + 1);
-                switch (type.toLowerCase()) {
-                    case "md5":
-                        rules.add(new MissingRule(MissingRule.Type.MD5, inverted));
-                        break;
-                    case "file":
-                        rules.add(new MissingRule(MissingRule.Type.FILE, inverted));
-                        break;
-                    case "histogram":
-                    case "hist":
-                        rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
-                        break;
-                    default:
-                        Main.log.warning("Unknown type for missing type: " + type);
-                        break;
-                }
-            } else if (arg.startsWith("type:")) {
-                String type = arg.substring(arg.indexOf(':') + 1);
-                if (type.equalsIgnoreCase("group")) {
-                    rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
-                } else if (type.equalsIgnoreCase("media")) {
-                    rules.add(new TypeRule(TypeRule.Type.MEDIA, inverted));
-                }
-            } else if (arg.startsWith("tags:")) {
-                String temp = arg.substring(arg.indexOf(':') + 1);
-                TagCountRule.Type type = TagCountRule.Type.EQUAL_TO;
-                if (temp.startsWith("<")) {
-                    type = TagCountRule.Type.LESS_THAN;
-                    temp = temp.substring(1);
-                } else if (temp.startsWith(">")) {
-                    type = TagCountRule.Type.GREATER_THAN;
-                    temp = temp.substring(1);
-                }
-                try {
-                    rules.add(new TagCountRule(type, Integer.parseInt(temp), inverted));
-                } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to integer: " + temp);
-                }
-            } else if (arg.startsWith("in:")) {
-                try {
-                    rules.add(new InGroupRule(Integer.parseInt(arg.substring(arg.indexOf(':') + 1)), inverted));
-                } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to integer: " + arg.substring(arg.indexOf(':') + 1));
-                }
-            } else {
-                Tag tag = menagerie.getTagByName(arg);
-                if (tag == null) tag = new Tag(-1, arg);
-                rules.add(new TagRule(tag, inverted));
-            }
-        }
-        return rules;
     }
 
     /**

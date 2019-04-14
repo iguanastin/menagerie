@@ -8,14 +8,14 @@ import menagerie.model.menagerie.Tag;
  */
 public class TagRule extends SearchRule {
 
-    private final Tag tag;
+    private final String tag;
 
 
     /**
      * @param tag     Tag to find.
      * @param exclude Negate this rule.
      */
-    public TagRule(Tag tag, boolean exclude) {
+    public TagRule(String tag, boolean exclude) {
         super(exclude);
         priority = 25;
 
@@ -24,16 +24,22 @@ public class TagRule extends SearchRule {
 
     @Override
     public boolean accept(Item item) {
-        if (isInverted()) {
-            return !item.hasTag(tag);
-        } else {
-            return item.hasTag(tag);
+        boolean result = false;
+
+        for (Tag t : item.getTags()) {
+            if (t.getName().equalsIgnoreCase(tag)) {
+                result = true;
+                break;
+            }
         }
+
+        if (isInverted()) result = !result;
+        return result;
     }
 
     @Override
     public String toString() {
-        String result = "Tag Rule: \"" + tag.getName() + "\"";
+        String result = "Tag Rule: \"" + tag + "\"";
         if (isInverted()) result += " [inverted]";
         return result;
     }
