@@ -246,11 +246,7 @@ public class MediaItem extends Item {
         Integer gid = null;
         if (group != null) gid = group.getId();
 
-        try {
-            menagerie.getDatabaseManager().setMediaGID(getId(), gid);
-        } catch (SQLException e) {
-            Main.log.log(Level.SEVERE, String.format("Failed to set GID of media item. ID: %d, GID: %d", getId(), gid), e);
-        }
+        menagerie.getDatabaseManager().setMediaGIDAsync(getId(), gid);
     }
 
     /**

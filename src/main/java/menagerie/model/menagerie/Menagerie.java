@@ -219,8 +219,7 @@ public class Menagerie {
             } else {
                 toDelete.forEach(item -> {
                     if (item.getFile().delete()) {
-                        //TODO: better error handling, preferably send to error list in gui
-                        Main.showErrorMessage("Deletion Error", "Unable to delete file", item.getFile().toString());
+                        Main.log.severe(String.format("Unable to delete file: %s", item.getFile().toString()));
                     }
                 });
                 return;

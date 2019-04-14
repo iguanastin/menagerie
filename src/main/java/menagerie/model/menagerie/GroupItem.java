@@ -47,12 +47,9 @@ public class GroupItem extends Item {
      * @param item Item to remove.
      */
     public void removeItem(MediaItem item) {
-        if (elements.contains(item)) {
-            elements.remove(item);
+        if (elements.remove(item)) {
             item.setGroup(null);
             menagerie.checkItemsStillValidInSearches(Collections.singletonList(item));
-
-            // TODO: Update database
         }
     }
 
@@ -66,8 +63,6 @@ public class GroupItem extends Item {
             iter.remove();
             item.setGroup(null);
             menagerie.checkItemsStillValidInSearches(Collections.singletonList(item));
-
-            // TODO: Update database
         }
     }
 
@@ -84,7 +79,6 @@ public class GroupItem extends Item {
     }
 
     /**
-     *
      * @return The title of this group.
      */
     public synchronized String getTitle() {
@@ -92,7 +86,6 @@ public class GroupItem extends Item {
     }
 
     /**
-     *
      * @return The elements of this group.
      */
     public List<MediaItem> getElements() {
