@@ -40,6 +40,7 @@ import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.Search;
+import menagerie.model.search.SearchHistory;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
@@ -124,6 +125,10 @@ public class MainController {
      * Variable used to track drag status of items from the item grid.
      */
     private boolean itemGridViewDragging = false;
+    /**
+     * Search history stack
+     */
+    private final Stack<SearchHistory> searchHistory = new Stack<>();
 
     // --------------------------------- Threads -------------------------------------
     /**
@@ -924,7 +929,11 @@ public class MainController {
     private void applySearch(String search, boolean descending, boolean showGrouped) {
         Main.log.info("Searching: \"" + search + "\", descending:" + descending + ", showGrouped:" + showGrouped);
 
-        if (currentSearch != null) menagerie.unregisterSearch(currentSearch);
+        if (currentSearch != null) {
+            searchHistory.push(new SearchHistory(currentSearch.getSearchString(), itemGridView.getSelected(), currentSearch.isDescending(), currentSearch.isShowGrouped()));
+
+            menagerie.unregisterSearch(currentSearch);
+        }
         previewItem(null);
 
         currentSearch = new Search(search, descending, showGrouped);
@@ -1316,6 +1325,24 @@ public class MainController {
                     event.consume();
                     break;
             }
+        }
+
+        if (event.getCode() == KeyCode.BACK_SPACE) {
+            if (searchHistory.empty()) {
+                Toolkit.getDefaultToolkit().beep();
+            } else {
+                SearchHistory history = searchHistory.pop();
+
+                listDescendingToggleButton.setSelected(history.isDescending());
+                showGroupedToggleButton.setSelected(history.isShowGrouped());
+                searchTextField.setText(history.getSearch());
+                applySearch(history.getSearch(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+                searchHistory.pop(); // Pop history item that was JUST created.
+
+                itemGridView.clearSelection();
+                history.getSelected().forEach(item -> itemGridView.select(item, true, false));
+            }
+            event.consume();
         }
 
         switch (event.getCode()) {

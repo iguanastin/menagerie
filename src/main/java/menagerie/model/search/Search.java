@@ -15,6 +15,8 @@ public class Search {
 
     private final List<SearchRule> rules = new ArrayList<>();
     private final boolean showGrouped;
+    private final boolean descending;
+    private final String searchString;
 
     private final Comparator<Item> comparator;
 
@@ -32,8 +34,10 @@ public class Search {
      * @param showGrouped Show items that are part of a group.
      */
     public Search(String search, boolean descending, boolean showGrouped) {
-        if (search != null && !search.isEmpty()) parseRules(search);
+        this.descending = descending;
 
+        this.searchString = search;
+        if (search != null && !search.isEmpty()) parseRules(search);
         rules.sort(null);
 
         // Show grouped items if the search contains an InGroupRule
@@ -196,6 +200,18 @@ public class Search {
         return results;
     }
 
+    public String getSearchString() {
+        return searchString;
+    }
+
+    public boolean isDescending() {
+        return descending;
+    }
+
+    public boolean isShowGrouped() {
+        return showGrouped;
+    }
+
     /**
      * @return The comparator being used to sort search results.
      */
@@ -209,8 +225,6 @@ public class Search {
      * @param items Items to attempt to add.
      */
     public void addIfValid(List<Item> items) {
-        if (rules == null) return;
-
         List<Item> toAdd = new ArrayList<>(items);
 
         for (Item item : items) {
@@ -238,8 +252,6 @@ public class Search {
      * @param items Items to check.
      */
     public void recheckWithSearch(List<Item> items) {
-        if (rules == null) return;
-
         List<Item> toRemove = new ArrayList<>();
         List<Item> toAdd = new ArrayList<>();
         for (Item item : items) {
