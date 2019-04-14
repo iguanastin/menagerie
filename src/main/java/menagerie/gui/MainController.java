@@ -815,7 +815,8 @@ public class MainController {
             }
         }
         new TextDialogScreen().open(screenPane, "New Group", "Title of new group", title, text -> {
-            GroupItem group = menagerie.createGroup(toGroup, text);
+            GroupItem group = menagerie.createGroup(toGroup, text, settings.getBoolean(Settings.Key.TAG_TAGME));
+            Main.log.info("Created group: " + group);
             if (currentSearch.getResults().contains(group)) itemGridView.select(group, false, false);
         }, null);
     }

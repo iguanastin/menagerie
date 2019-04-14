@@ -22,13 +22,13 @@ public class DatabaseVersionUpdater {
     private static final String CREATE_TAGS_TABLE_V3 = CREATE_TAGS_TABLE_V1;
     private static final String CREATE_ITEMS_TABLE_V3 = "CREATE TABLE items(id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, added LONG NOT NULL);";
     private static final String CREATE_TAGGED_TABLE_V3 = "CREATE TABLE tagged(item_id INT NOT NULL, tag_id INT NOT NULL, FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY (item_id, tag_id));";
-    private static final String CREATE_GROUPS_TABLE_V3 = "CREATE TABLE groups(id INT NOT NULL PRIMARY KEY, title NVARCHAR(1024));";
+    private static final String CREATE_GROUPS_TABLE_V3 = "CREATE TABLE groups(id INT NOT NULL PRIMARY KEY, title NVARCHAR(1024), FOREIGN KEY (id) REFERENCES items(id) ON DELETE CASCADE);";
     private static final String CREATE_MEDIA_TABLE_V3 = "CREATE TABLE media(id INT NOT NULL PRIMARY KEY, gid INT, path NVARCHAR(1024) UNIQUE, md5 NVARCHAR(32), thumbnail BLOB, hist_a BLOB, hist_r BLOB, hist_g BLOB, hist_b BLOB, FOREIGN KEY (id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (gid) REFERENCES groups(id) ON DELETE SET NULL);";
 
     /**
      * Currently accepted version of the database. If version is not this, database should upgrade.
      */
-    private static final int TARGET_VERSION = 2;
+    private static final int TARGET_VERSION = 3;
 
 
     /**
@@ -68,6 +68,10 @@ public class DatabaseVersionUpdater {
                         updateFromV1ToV2(db);
                         break;
                     case 2:
+                        Main.log.warning("!!! Database needs to update from 2 to 3 !!!");
+                        updateFromV2ToV3(db);
+                        break;
+                    case 3:
                         Main.log.info("Database is up to date");
                         break;
                 }

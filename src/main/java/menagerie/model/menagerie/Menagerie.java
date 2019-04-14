@@ -77,7 +77,7 @@ public class Menagerie {
     public MediaItem importFile(File file, boolean tagTagme, boolean tagVideo, boolean tagImage) {
         if (isFilePresent(file)) return null;
 
-        MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), file, null, null);
+        MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), null, file, null, null);
 
         // Add media and commit to database
         items.add(media);
@@ -86,6 +86,7 @@ public class Menagerie {
             getDatabaseManager().createMedia(media);
         } catch (SQLException e) {
             Main.log.log(Level.SEVERE, "Failed to create media in database: " + media, e);
+            return null;
         }
 
         // Add tags
@@ -118,12 +119,21 @@ public class Menagerie {
      * @param title    Title of the new group.
      * @return The newly created group. Null if title is null or empty, and null if element list is null or empty.
      */
-    public GroupItem createGroup(List<Item> elements, String title) {
+    public GroupItem createGroup(List<Item> elements, String title, boolean tagTagme) {
         if (title == null || title.isEmpty() || elements == null || elements.isEmpty()) return null;
 
         GroupItem group = new GroupItem(this, nextItemID, System.currentTimeMillis(), title);
 
         //TODO: Option to combine tags of elements for group
+
+        nextItemID++;
+        items.add(group);
+        try {
+            getDatabaseManager().createGroup(group);
+        } catch (SQLException e) {
+            Main.log.log(Level.SEVERE, "Error storing group in database: " + group, e);
+            return null;
+        }
 
         for (Item item : elements) {
             if (item instanceof MediaItem && ((MediaItem) item).getGroup() == null) {
@@ -137,16 +147,14 @@ public class Menagerie {
             }
         }
 
-        nextItemID++;
-        items.add(group);
+        if (tagTagme) {
+            Tag tagme = getTagByName("tagme");
+            if (tagme == null) tagme = createTag("tagme");
+            group.addTag(tagme);
+        }
+
+        // Update searches
         checkItemsStillValidInSearches(Collections.singletonList(group));
-
-        // TODO: Store new group in database
-
-        //Tag with tagme
-        Tag tagme = getTagByName("tagme");
-        if (tagme == null) tagme = createTag("tagme");
-        group.addTag(tagme);
 
         return group;
     }
@@ -206,8 +214,7 @@ public class Menagerie {
                     for (int i = 0; i < fa.length; i++) fa[i] = toDelete.get(i).getFile();
                     fu.moveToTrash(fa);
                 } catch (IOException e) {
-                    //TODO: better error handling, preferably send to error list in gui
-                    Main.showErrorMessage("Recycle bin Error", "Unable to send files to recycle bin", toDelete.size() + "");
+                    Main.log.log(Level.SEVERE, String.format("Unable to send %d files to recycle bin", toDelete.size()), e);
                 }
             } else {
                 toDelete.forEach(item -> {
@@ -276,7 +283,6 @@ public class Menagerie {
     }
 
     /**
-     *
      * @return The database updater thread backing this Menagerie.
      */
     public DatabaseManager getDatabaseManager() {
@@ -284,7 +290,6 @@ public class Menagerie {
     }
 
     /**
-     *
      * @param file File to search for.
      * @return True if this file has already been imported into this Menagerie.
      */

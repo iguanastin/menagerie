@@ -42,11 +42,12 @@ public class MediaItem extends Item {
      * @param md5       The MD5 hash of the file.
      * @param histogram The color histogram of the image. (If the media is an image)
      */
-    public MediaItem(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
+    public MediaItem(Menagerie menagerie, int id, long dateAdded, GroupItem group, File file, String md5, ImageHistogram histogram) {
         super(menagerie, id, dateAdded);
         this.file = file;
         this.md5 = md5;
         this.histogram = histogram;
+        this.group = group;
     }
 
     /**
@@ -241,7 +242,15 @@ public class MediaItem extends Item {
      */
     void setGroup(GroupItem group) {
         this.group = group;
-        //TODO update database
+
+        Integer gid = null;
+        if (group != null) gid = group.getId();
+
+        try {
+            menagerie.getDatabaseManager().setMediaGID(getId(), gid);
+        } catch (SQLException e) {
+            Main.log.log(Level.SEVERE, String.format("Failed to set GID of media item. ID: %d, GID: %d", getId(), gid), e);
+        }
     }
 
     /**

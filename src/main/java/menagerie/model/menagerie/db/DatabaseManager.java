@@ -11,10 +11,7 @@ import menagerie.util.ImageInputStreamConverter;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
@@ -28,23 +25,33 @@ import java.util.logging.Level;
  */
 public class DatabaseManager extends Thread {
 
-    private final PreparedStatement PS_DELETE_IMG;
-    private final PreparedStatement PS_CREATE_IMG;
+    // Media
+    private final PreparedStatement PS_CREATE_MEDIA;
+    private final PreparedStatement PS_SET_MEDIA_GID;
+    private final PreparedStatement PS_SET_MEDIA_MD5;
+    private final PreparedStatement PS_SET_MEDIA_PATH;
+    private final PreparedStatement PS_SET_MEDIA_HISTOGRAM;
+    private final PreparedStatement PS_SET_MEDIA_THUMBNAIL;
+    private final PreparedStatement PS_GET_MEDIA_THUMBNAIL;
+    // Groups
+    private final PreparedStatement PS_CREATE_GROUP;
+    // Items
+    private final PreparedStatement PS_CREATE_ITEM;
+    private final PreparedStatement PS_DELETE_ITEM;
+    // Tags
     private final PreparedStatement PS_DELETE_TAG;
     private final PreparedStatement PS_CREATE_TAG;
-    private final PreparedStatement PS_SET_IMG_MD5;
-    private final PreparedStatement PS_SET_IMG_HISTOGRAM;
-    private final PreparedStatement PS_SET_IMG_THUMBNAIL;
-    private final PreparedStatement PS_GET_IMG_THUMBNAIL;
-    private final PreparedStatement PS_ADD_TAG_TO_IMG;
-    private final PreparedStatement PS_REMOVE_TAG_FROM_IMG;
-    private final PreparedStatement PS_SET_IMG_PATH;
+    private final PreparedStatement PS_ADD_TAG_TO_ITEM;
+    private final PreparedStatement PS_REMOVE_TAG_FROM_ITEM;
+    // Counters
     private final PreparedStatement PS_GET_HIGHEST_ITEM_ID;
     private final PreparedStatement PS_GET_HIGHEST_TAG_ID;
+    // Construction
     private final PreparedStatement PS_GET_TAGS;
     private final PreparedStatement PS_GET_MEDIA;
     private final PreparedStatement PS_GET_GROUPS;
     private final PreparedStatement PS_GET_TAGS_FOR_ITEM;
+    // Teardown
     private final PreparedStatement PS_SHUTDOWN_DEFRAG;
 
     private final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
@@ -59,24 +66,33 @@ public class DatabaseManager extends Thread {
     public DatabaseManager(Connection database) throws SQLException {
 
         // ------------------------------------ Init statements -----------------------------------
-        PS_SET_IMG_MD5 = database.prepareStatement("UPDATE imgs SET imgs.md5=? WHERE imgs.id=?;");
-        PS_SET_IMG_HISTOGRAM = database.prepareStatement("UPDATE imgs SET imgs.hist_a=?, imgs.hist_r=?, imgs.hist_g=?, imgs.hist_b=? WHERE imgs.id=?");
-        PS_SET_IMG_THUMBNAIL = database.prepareStatement("UPDATE imgs SET imgs.thumbnail=? WHERE imgs.id=?;");
-        PS_GET_IMG_THUMBNAIL = database.prepareStatement("SELECT imgs.thumbnail FROM imgs WHERE imgs.id=?;");
-        PS_ADD_TAG_TO_IMG = database.prepareStatement("INSERT INTO tagged(img_id, tag_id) VALUES (?, ?);");
-        PS_REMOVE_TAG_FROM_IMG = database.prepareStatement("DELETE FROM tagged WHERE img_id=? AND tag_id=?;");
-        PS_DELETE_IMG = database.prepareStatement("DELETE FROM imgs WHERE imgs.id=?;");
-        PS_CREATE_IMG = database.prepareStatement("INSERT INTO imgs(id, path, added, md5, hist_a, hist_r, hist_g, hist_b) VALUES (?, ?, ?, ?, ?, ?, ?, ?);");
-        PS_DELETE_TAG = database.prepareStatement("DELETE FROM tags WHERE tags.id=?;");
+        // Media
+        PS_CREATE_MEDIA = database.prepareStatement("INSERT INTO media(id, path, md5, hist_a, hist_r, hist_g, hist_b) VALUES (?, ?, ?, ?, ?, ?, ?);");
+        PS_SET_MEDIA_GID = database.prepareStatement("UPDATE media SET gid=? WHERE id=?;");
+        PS_SET_MEDIA_MD5 = database.prepareStatement("UPDATE media SET md5=? WHERE id=?;");
+        PS_SET_MEDIA_PATH = database.prepareStatement("UPDATE media SET path=? WHERE id=?;");
+        PS_SET_MEDIA_HISTOGRAM = database.prepareStatement("UPDATE media SET hist_a=?, hist_r=?, hist_g=?, hist_b=? WHERE id=?");
+        PS_SET_MEDIA_THUMBNAIL = database.prepareStatement("UPDATE media SET thumbnail=? WHERE id=?;");
+        PS_GET_MEDIA_THUMBNAIL = database.prepareStatement("SELECT thumbnail FROM media WHERE id=?;");
+        // Groups
+        PS_CREATE_GROUP = database.prepareStatement("INSERT INTO groups(id, title) VALUES (?, ?);");
+        // Items
+        PS_DELETE_ITEM = database.prepareStatement("DELETE FROM items WHERE id=?;");
+        PS_CREATE_ITEM = database.prepareStatement("INSERT INTO items(id, added) VALUES (?, ?);");
+        // Tags
+        PS_DELETE_TAG = database.prepareStatement("DELETE FROM tags WHERE id=?;");
         PS_CREATE_TAG = database.prepareStatement("INSERT INTO tags(id, name) VALUES (?, ?);");
-        PS_SET_IMG_PATH = database.prepareStatement("UPDATE imgs SET path=? WHERE id=?;");
-        PS_GET_HIGHEST_ITEM_ID = database.prepareStatement("SELECT TOP 1 id FROM imgs ORDER BY id DESC;");
+        PS_ADD_TAG_TO_ITEM = database.prepareStatement("INSERT INTO tagged(item_id, tag_id) VALUES (?, ?);");
+        PS_REMOVE_TAG_FROM_ITEM = database.prepareStatement("DELETE FROM tagged WHERE item_id=? AND tag_id=?;");
+        // Counters
+        PS_GET_HIGHEST_ITEM_ID = database.prepareStatement("SELECT TOP 1 id FROM items ORDER BY id DESC;");
         PS_GET_HIGHEST_TAG_ID = database.prepareStatement("SELECT TOP 1 id FROM tags ORDER BY id DESC;");
+        // Construction
         PS_GET_TAGS = database.prepareStatement("SELECT * FROM tags;");
-        PS_GET_MEDIA = database.prepareStatement("SELECT * FROM imgs;"); // TODO
-        //        PS_GET_GROUPS = database.prepareStatement("SELECT items.id, items.added, groups.title, FROM groups JOIN items ON items.id=groups.id;");
-        PS_GET_GROUPS = database.prepareStatement("SELECT * FROM tags;"); // TODO remove this
-        PS_GET_TAGS_FOR_ITEM = database.prepareStatement("SELECT tagged.tag_id FROM tagged WHERE tagged.img_id=?;"); // TODO
+        PS_GET_MEDIA = database.prepareStatement("SELECT items.id, items.added, media.gid, media.path, media.md5, media.hist_a, media.hist_r, media.hist_g, media.hist_b FROM media JOIN items ON items.id=media.id;");
+        PS_GET_GROUPS = database.prepareStatement("SELECT items.id, items.added, groups.title FROM groups JOIN items ON items.id=groups.id;");
+        PS_GET_TAGS_FOR_ITEM = database.prepareStatement("SELECT tagged.tag_id FROM tagged WHERE tagged.item_id=?;");
+        // Teardown
         PS_SHUTDOWN_DEFRAG = database.prepareStatement("SHUTDOWN DEFRAG;");
     }
 
@@ -146,10 +162,10 @@ public class DatabaseManager extends Thread {
      * @throws IOException  If the thumbnail could not be converted to a stream.
      */
     public void setThumbnail(int id, Image thumbnail) throws SQLException, IOException {
-        synchronized (PS_SET_IMG_THUMBNAIL) {
-            PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(thumbnail));
-            PS_SET_IMG_THUMBNAIL.setInt(2, id);
-            PS_SET_IMG_THUMBNAIL.executeUpdate();
+        synchronized (PS_SET_MEDIA_THUMBNAIL) {
+            PS_SET_MEDIA_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(thumbnail));
+            PS_SET_MEDIA_THUMBNAIL.setInt(2, id);
+            PS_SET_MEDIA_THUMBNAIL.executeUpdate();
         }
     }
 
@@ -177,10 +193,10 @@ public class DatabaseManager extends Thread {
      * @throws SQLException If the database update failed.
      */
     public void setMD5(int id, String md5) throws SQLException {
-        synchronized (PS_SET_IMG_MD5) {
-            PS_SET_IMG_MD5.setNString(1, md5);
-            PS_SET_IMG_MD5.setInt(2, id);
-            PS_SET_IMG_MD5.executeUpdate();
+        synchronized (PS_SET_MEDIA_MD5) {
+            PS_SET_MEDIA_MD5.setNString(1, md5);
+            PS_SET_MEDIA_MD5.setInt(2, id);
+            PS_SET_MEDIA_MD5.executeUpdate();
         }
     }
 
@@ -208,13 +224,13 @@ public class DatabaseManager extends Thread {
      * @throws SQLException If database update fails.
      */
     public void setHist(int id, ImageHistogram hist) throws SQLException {
-        synchronized (PS_SET_IMG_HISTOGRAM) {
-            PS_SET_IMG_HISTOGRAM.setBinaryStream(1, hist.getAlphaAsInputStream());
-            PS_SET_IMG_HISTOGRAM.setBinaryStream(2, hist.getRedAsInputStream());
-            PS_SET_IMG_HISTOGRAM.setBinaryStream(3, hist.getGreenAsInputStream());
-            PS_SET_IMG_HISTOGRAM.setBinaryStream(4, hist.getBlueAsInputStream());
-            PS_SET_IMG_HISTOGRAM.setInt(5, id);
-            PS_SET_IMG_HISTOGRAM.executeUpdate();
+        synchronized (PS_SET_MEDIA_HISTOGRAM) {
+            PS_SET_MEDIA_HISTOGRAM.setBinaryStream(1, hist.getAlphaAsInputStream());
+            PS_SET_MEDIA_HISTOGRAM.setBinaryStream(2, hist.getRedAsInputStream());
+            PS_SET_MEDIA_HISTOGRAM.setBinaryStream(3, hist.getGreenAsInputStream());
+            PS_SET_MEDIA_HISTOGRAM.setBinaryStream(4, hist.getBlueAsInputStream());
+            PS_SET_MEDIA_HISTOGRAM.setInt(5, id);
+            PS_SET_MEDIA_HISTOGRAM.executeUpdate();
         }
     }
 
@@ -242,10 +258,10 @@ public class DatabaseManager extends Thread {
      * @throws SQLException If database update fails.
      */
     public void setPath(int id, String path) throws SQLException {
-        synchronized (PS_SET_IMG_PATH) {
-            PS_SET_IMG_PATH.setNString(1, path);
-            PS_SET_IMG_PATH.setInt(2, id);
-            PS_SET_IMG_PATH.executeUpdate();
+        synchronized (PS_SET_MEDIA_PATH) {
+            PS_SET_MEDIA_PATH.setNString(1, path);
+            PS_SET_MEDIA_PATH.setInt(2, id);
+            PS_SET_MEDIA_PATH.executeUpdate();
         }
     }
 
@@ -273,10 +289,10 @@ public class DatabaseManager extends Thread {
      * @throws SQLException If database update fails.
      */
     public void tagItem(int item, int tag) throws SQLException {
-        synchronized (PS_ADD_TAG_TO_IMG) {
-            PS_ADD_TAG_TO_IMG.setInt(1, item);
-            PS_ADD_TAG_TO_IMG.setInt(2, tag);
-            PS_ADD_TAG_TO_IMG.executeUpdate();
+        synchronized (PS_ADD_TAG_TO_ITEM) {
+            PS_ADD_TAG_TO_ITEM.setInt(1, item);
+            PS_ADD_TAG_TO_ITEM.setInt(2, tag);
+            PS_ADD_TAG_TO_ITEM.executeUpdate();
         }
     }
 
@@ -304,10 +320,10 @@ public class DatabaseManager extends Thread {
      * @throws SQLException If database update fails.
      */
     public void untagItem(int item, int tag) throws SQLException {
-        synchronized (PS_REMOVE_TAG_FROM_IMG) {
-            PS_REMOVE_TAG_FROM_IMG.setInt(1, item);
-            PS_REMOVE_TAG_FROM_IMG.setInt(2, tag);
-            PS_REMOVE_TAG_FROM_IMG.executeUpdate();
+        synchronized (PS_REMOVE_TAG_FROM_ITEM) {
+            PS_REMOVE_TAG_FROM_ITEM.setInt(1, item);
+            PS_REMOVE_TAG_FROM_ITEM.setInt(2, tag);
+            PS_REMOVE_TAG_FROM_ITEM.executeUpdate();
         }
     }
 
@@ -334,9 +350,9 @@ public class DatabaseManager extends Thread {
      * @throws SQLException If database update fails.
      */
     public void removeItem(int id) throws SQLException {
-        synchronized (PS_DELETE_IMG) {
-            PS_DELETE_IMG.setInt(1, id);
-            PS_DELETE_IMG.executeUpdate();
+        synchronized (PS_DELETE_ITEM) {
+            PS_DELETE_ITEM.setInt(1, id);
+            PS_DELETE_ITEM.executeUpdate();
         }
     }
 
@@ -421,22 +437,26 @@ public class DatabaseManager extends Thread {
      * @throws SQLException If database update fails.
      */
     public void createMedia(MediaItem media) throws SQLException {
-        synchronized (PS_CREATE_IMG) {
-            PS_CREATE_IMG.setInt(1, media.getId());
-            PS_CREATE_IMG.setNString(2, media.getFile().getAbsolutePath());
-            PS_CREATE_IMG.setLong(3, media.getDateAdded());
-            PS_CREATE_IMG.setNString(4, media.getMD5());
-            PS_CREATE_IMG.setBinaryStream(5, null);
-            PS_CREATE_IMG.setBinaryStream(6, null);
-            PS_CREATE_IMG.setBinaryStream(7, null);
-            PS_CREATE_IMG.setBinaryStream(8, null);
+        synchronized (PS_CREATE_ITEM) {
+            PS_CREATE_ITEM.setInt(1, media.getId());
+            PS_CREATE_ITEM.setLong(2, media.getDateAdded());
+            PS_CREATE_ITEM.executeUpdate();
+        }
+        synchronized (PS_CREATE_MEDIA) {
+            PS_CREATE_MEDIA.setInt(1, media.getId());
+            PS_CREATE_MEDIA.setNString(2, media.getFile().getAbsolutePath());
+            PS_CREATE_MEDIA.setNString(3, media.getMD5());
+            PS_CREATE_MEDIA.setBinaryStream(4, null);
+            PS_CREATE_MEDIA.setBinaryStream(5, null);
+            PS_CREATE_MEDIA.setBinaryStream(6, null);
+            PS_CREATE_MEDIA.setBinaryStream(7, null);
             if (media.getHistogram() != null) {
-                PS_CREATE_IMG.setBinaryStream(5, media.getHistogram().getAlphaAsInputStream());
-                PS_CREATE_IMG.setBinaryStream(6, media.getHistogram().getRedAsInputStream());
-                PS_CREATE_IMG.setBinaryStream(7, media.getHistogram().getGreenAsInputStream());
-                PS_CREATE_IMG.setBinaryStream(8, media.getHistogram().getBlueAsInputStream());
+                PS_CREATE_MEDIA.setBinaryStream(4, media.getHistogram().getAlphaAsInputStream());
+                PS_CREATE_MEDIA.setBinaryStream(5, media.getHistogram().getRedAsInputStream());
+                PS_CREATE_MEDIA.setBinaryStream(6, media.getHistogram().getGreenAsInputStream());
+                PS_CREATE_MEDIA.setBinaryStream(7, media.getHistogram().getBlueAsInputStream());
             }
-            PS_CREATE_IMG.executeUpdate();
+            PS_CREATE_MEDIA.executeUpdate();
         }
     }
 
@@ -456,6 +476,75 @@ public class DatabaseManager extends Thread {
     }
 
     /**
+     * Stores a new GroupItem in the database.
+     *
+     * @param group Group to store.
+     * @throws SQLException If database update fails.
+     */
+    public void createGroup(GroupItem group) throws SQLException {
+        synchronized (PS_CREATE_ITEM) {
+            PS_CREATE_ITEM.setInt(1, group.getId());
+            PS_CREATE_ITEM.setLong(2, group.getDateAdded());
+            PS_CREATE_ITEM.executeUpdate();
+        }
+        synchronized (PS_CREATE_GROUP) {
+            PS_CREATE_GROUP.setInt(1, group.getId());
+            PS_CREATE_GROUP.setNString(2, group.getTitle());
+            PS_CREATE_GROUP.executeUpdate();
+        }
+    }
+
+    /**
+     * Queues a GroupItem to be stored in the database.
+     *
+     * @param group Group to store.
+     */
+    public void createGroupAsync(GroupItem group) {
+        queue.add(() -> {
+            try {
+                createGroup(group);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, "Failed to create group async: " + group, e);
+            }
+        });
+    }
+
+    /**
+     * Sets the GID (parent group ID) of a media item.
+     *
+     * @param id  ID of media.
+     * @param gid ID of group.
+     * @throws SQLException When database update fails.
+     */
+    public void setMediaGID(int id, Integer gid) throws SQLException {
+        synchronized (PS_SET_MEDIA_GID) {
+            if (gid == null) {
+                PS_SET_MEDIA_GID.setNull(1, Types.INTEGER);
+            } else {
+                PS_SET_MEDIA_GID.setInt(1, gid);
+            }
+            PS_SET_MEDIA_GID.setInt(2, id);
+            PS_SET_MEDIA_GID.executeUpdate();
+        }
+    }
+
+    /**
+     * Queues an update to set the GID of a media item.
+     *
+     * @param id  ID of media.
+     * @param gid ID of group.
+     */
+    public void setMediaGIDAsync(int id, Integer gid) {
+        queue.add(() -> {
+            try {
+                setMediaGID(id, gid);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, String.format("Failed to set media GID async. ID: %d, GID: %d", id, gid), e);
+            }
+        });
+    }
+
+    /**
      * Gets a thumbnail from the database.
      *
      * @param id ID of item.
@@ -463,9 +552,9 @@ public class DatabaseManager extends Thread {
      * @throws SQLException If database query fails.
      */
     public Thumbnail getThumbnail(int id) throws SQLException {
-        synchronized (PS_GET_IMG_THUMBNAIL) {
-            PS_GET_IMG_THUMBNAIL.setInt(1, id);
-            try (ResultSet rs = PS_GET_IMG_THUMBNAIL.executeQuery()) {
+        synchronized (PS_GET_MEDIA_THUMBNAIL) {
+            PS_GET_MEDIA_THUMBNAIL.setInt(1, id);
+            try (ResultSet rs = PS_GET_MEDIA_THUMBNAIL.executeQuery()) {
                 if (rs.next()) {
                     InputStream binaryStream = rs.getBinaryStream(1);
                     if (binaryStream != null) {
@@ -524,8 +613,7 @@ public class DatabaseManager extends Thread {
     public void loadIntoMenagerie(Menagerie menagerie) throws SQLException {
         loadTags(menagerie);
         Main.log.info("Finished loading " + menagerie.getTags().size() + " tags from database");
-        //        loadGroups(menagerie);
-        // TODO load groups
+        loadGroups(menagerie);
         loadMedia(menagerie);
         Main.log.info("Finished loading " + menagerie.getItems().size() + " items from database");
         loadTagsForItems(menagerie);
@@ -578,16 +666,30 @@ public class DatabaseManager extends Thread {
             try (ResultSet rs = PS_GET_MEDIA.executeQuery()) {
                 while (rs.next()) {
                     ImageHistogram histogram = null;
-                    InputStream histAlpha = rs.getBinaryStream("hist_a");
+                    InputStream histAlpha = rs.getBinaryStream("media.hist_a");
                     if (histAlpha != null) {
                         try {
-                            histogram = new ImageHistogram(histAlpha, rs.getBinaryStream("hist_r"), rs.getBinaryStream("hist_g"), rs.getBinaryStream("hist_b"));
+                            histogram = new ImageHistogram(histAlpha, rs.getBinaryStream("media.hist_r"), rs.getBinaryStream("media.hist_g"), rs.getBinaryStream("media.hist_b"));
                         } catch (HistogramReadException e) {
                             Main.log.log(Level.SEVERE, "Histogram failed to load from database", e);
                         }
                     }
 
-                    menagerie.getItems().add(new MediaItem(menagerie, rs.getInt("imgs.id"), rs.getLong("imgs.added"), new File(rs.getNString("imgs.path")), rs.getNString("md5"), histogram));
+                    // Try to get group
+                    int gid = rs.getInt("media.gid");
+                    GroupItem group = null;
+                    if (gid != 0) {
+                        for (Item item : menagerie.getItems()) {
+                            if (item instanceof GroupItem && item.getId() == gid) {
+                                group = (GroupItem) item;
+                                break;
+                            }
+                        }
+                    }
+
+                    MediaItem media = new MediaItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"), group, new File(rs.getNString("media.path")), rs.getNString("media.md5"), histogram);
+                    menagerie.getItems().add(media);
+                    if (group != null) group.getElements().add(media);
                 }
             }
         }

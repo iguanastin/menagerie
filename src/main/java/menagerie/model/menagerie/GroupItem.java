@@ -39,8 +39,6 @@ public class GroupItem extends Item {
         elements.add(item);
         item.setGroup(this);
         menagerie.checkItemsStillValidInSearches(Collections.singletonList(item));
-
-        //TODO: Update database
     }
 
     /**
@@ -83,20 +81,6 @@ public class GroupItem extends Item {
         } else {
             return elements.get(0).getThumbnail();
         }
-    }
-
-    /**
-     * Sets the title of this group.
-     *
-     * @param title New title
-     */
-    public synchronized void setTitle(String title) {
-        if (this.title.equals(title)) return;
-
-        this.title = title;
-        menagerie.checkItemsStillValidInSearches(Collections.singletonList(this));
-
-        //TODO: Update database
     }
 
     /**
