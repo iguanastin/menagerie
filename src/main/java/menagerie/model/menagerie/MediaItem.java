@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.sql.SQLException;
+import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 
 /**
@@ -114,8 +115,24 @@ public class MediaItem extends Item {
         if (img == null) {
             img = new Image(file.toURI().toString());
             image = new WeakReference<>(img);
-        } else if (img.isBackgroundLoading() && img.getProgress() != 1) {
-            img = new Image(file.toURI().toString()); // TODO: Use a CountDownLatch?
+        } else if (img.isBackgroundLoading() && img.getProgress() != 1 && !img.isError()) {
+            CountDownLatch latch = new CountDownLatch(1);
+            Image finalImg = img;
+            img.progressProperty().addListener((observable, oldValue, newValue) -> {
+                if (finalImg.isError() || newValue.equals(1)) {
+                    latch.countDown();
+                }
+            });
+            try {
+                latch.await();
+            } catch (InterruptedException ignored) {
+            }
+
+            if (img.isError()) {
+                img = new Image(file.toURI().toString());
+            } else {
+                return img;
+            }
         }
         return img;
     }
