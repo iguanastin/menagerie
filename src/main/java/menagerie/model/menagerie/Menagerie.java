@@ -2,15 +2,12 @@ package menagerie.model.menagerie;
 
 import com.sun.jna.platform.FileUtils;
 import menagerie.gui.Main;
-import menagerie.model.menagerie.db.DatabaseUpdater;
-import menagerie.model.menagerie.histogram.HistogramReadException;
-import menagerie.model.menagerie.histogram.ImageHistogram;
+import menagerie.model.menagerie.db.DatabaseManager;
 import menagerie.model.search.Search;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.sql.*;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -18,14 +15,6 @@ import java.util.logging.Level;
  * Menagerie system. Contains items, manages database.
  */
 public class Menagerie {
-
-    // ----------------------------- Constants ------------------------------------
-
-    private static final String SQL_GET_TAGS = "SELECT tags.* FROM tags;";
-    private static final String SQL_GET_IMGS = "SELECT imgs.* FROM imgs;";
-    private static final String SQL_GET_IMG_TAGS = "SELECT tagged.tag_id FROM tagged JOIN imgs ON tagged.img_id=imgs.id WHERE imgs.id=?;";
-    private static final String SQL_GET_HIGHEST_IMG_ID = "SELECT TOP 1 imgs.id FROM imgs ORDER BY imgs.id DESC;";
-    private static final String SQL_GET_HIGHEST_TAG_ID = "SELECT TOP 1 tags.id FROM tags ORDER BY tags.id DESC;";
 
     // ------------------------------ Variables -----------------------------------
 
@@ -35,8 +24,7 @@ public class Menagerie {
     private int nextItemID;
     private int nextTagID;
 
-    private final Connection database;
-    private final DatabaseUpdater databaseUpdater;
+    private final DatabaseManager databaseManager;
 
     private final List<Search> activeSearches = new ArrayList<>();
 
@@ -44,22 +32,19 @@ public class Menagerie {
     /**
      * Constructs a Menagerie. Starts a database updater thread, loads tags and media info from database, prunes database.
      *
-     * @param database Database to back this menagerie. Expected to be in the current schema.
+     * @param databaseManager Database manager to back this menagerie.
      * @throws SQLException If any errors occur in database loading/prep.
      */
-    public Menagerie(Connection database) throws SQLException {
-        this.database = database;
-
-        databaseUpdater = new DatabaseUpdater(database);
-        databaseUpdater.setDaemon(true);
-        databaseUpdater.start();
+    public Menagerie(DatabaseManager databaseManager) throws SQLException {
+        this.databaseManager = databaseManager;
 
         // Load data from database
-        loadTagsFromDatabase();
-        loadMediaFromDatabase();
+        databaseManager.loadIntoMenagerie(this);
+
         clearUnusedTags();
 
-        initializeIdCounters();
+        nextItemID = databaseManager.getHighestItemID() + 1;
+        nextTagID = databaseManager.getHighestTagID() + 1;
     }
 
     /**
@@ -78,95 +63,7 @@ public class Menagerie {
             if (!usedTags.contains(t.getId())) {
                 Main.log.info("Deleting unused tag: " + t);
                 tags.remove(t);
-                getDatabaseUpdater().deleteTag(t.getId());
-            }
-        }
-    }
-
-    /**
-     * Initializes ID counters used for creating new items and tags.
-     *
-     * @throws SQLException If any error occurs in the database.
-     */
-    private void initializeIdCounters() throws SQLException {
-        try (Statement s = database.createStatement()) {
-            try (ResultSet rs = s.executeQuery(SQL_GET_HIGHEST_IMG_ID)) {
-                if (rs.next()) {
-                    nextItemID = rs.getInt("id") + 1;
-                } else {
-                    nextItemID = 1;
-                }
-                rs.close();
-
-                try (ResultSet rs2 = s.executeQuery(SQL_GET_HIGHEST_TAG_ID)) {
-                    if (rs2.next()) {
-                        nextTagID = rs2.getInt("id") + 1;
-                    } else {
-                        nextTagID = 1;
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Loads all media items from the database into MediaItems.
-     *
-     * @throws SQLException If any error occurs in the database.
-     */
-    private void loadMediaFromDatabase() throws SQLException {
-        try (Statement s = database.createStatement()) {
-            try (ResultSet rs = s.executeQuery(SQL_GET_IMGS)) {
-                while (rs.next()) {
-                    ImageHistogram hist = null;
-
-                    InputStream histAlpha = rs.getBinaryStream("hist_a");
-                    if (histAlpha != null) {
-                        try {
-                            hist = new ImageHistogram(histAlpha, rs.getBinaryStream("hist_r"), rs.getBinaryStream("hist_g"), rs.getBinaryStream("hist_b"));
-                        } catch (HistogramReadException e) {
-                            Main.log.log(Level.SEVERE, "Histogram failed to load from database", e);
-                        }
-                    }
-
-                    MediaItem media = new MediaItem(this, rs.getInt("id"), rs.getLong("added"), new File(rs.getNString("path")), rs.getNString("md5"), hist);
-                    items.add(media);
-
-                    PreparedStatement ps = database.prepareStatement(SQL_GET_IMG_TAGS);
-                    ps.setInt(1, media.getId());
-                    ResultSet tagRS = ps.executeQuery();
-
-                    while (tagRS.next()) {
-                        Tag tag = getTagByID(tagRS.getInt("tag_id"));
-                        if (tag != null) {
-                            tag.incrementFrequency();
-                            media.getTags().add(tag);
-                        } else {
-                            Main.log.warning("Major issue, tag wasn't loaded in but somehow still exists in the database: " + tagRS.getInt("tag_id"));
-                        }
-                    }
-
-                    ps.close();
-                }
-
-                Main.log.info("Finished loading " + items.size() + " images from database");
-            }
-        }
-    }
-
-    /**
-     * Loads all tags from the database.
-     *
-     * @throws SQLException If any error occurs in the database.
-     */
-    private void loadTagsFromDatabase() throws SQLException {
-        try (Statement s = database.createStatement()) {
-            try (ResultSet rs = s.executeQuery(SQL_GET_TAGS)) {
-                while (rs.next()) {
-                    tags.add(new Tag(rs.getInt("id"), rs.getNString("name")));
-                }
-
-                Main.log.info("Finished loading " + tags.size() + " tags from database");
+                getDatabaseManager().deleteTag(t.getId());
             }
         }
     }
@@ -186,7 +83,7 @@ public class Menagerie {
         items.add(media);
         nextItemID++;
         try {
-            getDatabaseUpdater().createMedia(media);
+            getDatabaseManager().createMedia(media);
         } catch (SQLException e) {
             Main.log.log(Level.SEVERE, "Failed to create media in database: " + media, e);
         }
@@ -271,7 +168,7 @@ public class Menagerie {
 
         tags.add(t);
 
-        getDatabaseUpdater().createTagAsync(t.getId(), t.getName());
+        getDatabaseManager().createTagAsync(t.getId(), t.getName());
 
         return t;
     }
@@ -297,7 +194,7 @@ public class Menagerie {
                     ((GroupItem) item).removeAll();
                 }
 
-                getDatabaseUpdater().removeItemAsync(item.getId());
+                getDatabaseManager().removeItemAsync(item.getId());
             }
         }
 
@@ -339,7 +236,7 @@ public class Menagerie {
      * @param id ID of tag to find.
      * @return Tag with given ID, or null if none exist.
      */
-    private Tag getTagByID(int id) {
+    public Tag getTagByID(int id) {
         for (Tag t : tags) {
             if (t.getId() == id) return t;
         }
@@ -382,16 +279,8 @@ public class Menagerie {
      *
      * @return The database updater thread backing this Menagerie.
      */
-    public DatabaseUpdater getDatabaseUpdater() {
-        return databaseUpdater;
-    }
-
-    /**
-     *
-     * @return The database backing this menagerie.
-     */
-    public Connection getDatabase() {
-        return database;
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
     }
 
     /**

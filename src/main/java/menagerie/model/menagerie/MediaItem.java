@@ -41,7 +41,7 @@ public class MediaItem extends Item {
      * @param md5       The MD5 hash of the file.
      * @param histogram The color histogram of the image. (If the media is an image)
      */
-    MediaItem(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
+    public MediaItem(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
         super(menagerie, id, dateAdded);
         this.file = file;
         this.md5 = md5;
@@ -66,7 +66,7 @@ public class MediaItem extends Item {
         if (thumbnail != null) thumb = thumbnail.get();
         if (thumb == null) {
             try {
-                thumb = menagerie.getDatabaseUpdater().getThumbnail(getId());
+                thumb = menagerie.getDatabaseManager().getThumbnail(getId());
                 if (thumb != null) thumbnail = new SoftReference<>(thumb);
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, "Failed to get thumbnail from database: " + getId(), e);
@@ -82,9 +82,9 @@ public class MediaItem extends Item {
 
             if (thumb != null) {
                 if (thumb.isLoaded()) {
-                    menagerie.getDatabaseUpdater().setThumbnailAsync(getId(), thumb.getImage());
+                    menagerie.getDatabaseManager().setThumbnailAsync(getId(), thumb.getImage());
                 } else {
-                    thumb.addImageLoadedListener(image1 -> menagerie.getDatabaseUpdater().setThumbnailAsync(getId(), image1));
+                    thumb.addImageLoadedListener(image1 -> menagerie.getDatabaseManager().setThumbnailAsync(getId(), image1));
                 }
             }
         }
@@ -158,7 +158,7 @@ public class MediaItem extends Item {
 
         try {
             md5 = HexBin.encode(MD5Hasher.hash(getFile()));
-            menagerie.getDatabaseUpdater().setMD5Async(getId(), md5);
+            menagerie.getDatabaseManager().setMD5Async(getId(), md5);
         } catch (IOException e) {
             Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
         }
@@ -171,7 +171,7 @@ public class MediaItem extends Item {
         if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
             try {
                 histogram = new ImageHistogram(getImageSynchronously());
-                menagerie.getDatabaseUpdater().setHistAsync(getId(), histogram);
+                menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
             } catch (HistogramReadException e) {
                 Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
             }
@@ -193,7 +193,7 @@ public class MediaItem extends Item {
             file = dest;
 
             try {
-                menagerie.getDatabaseUpdater().setPath(getId(), file.getAbsolutePath());
+                menagerie.getDatabaseManager().setPath(getId(), file.getAbsolutePath());
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, "Failed to update new path to file", e);
             }

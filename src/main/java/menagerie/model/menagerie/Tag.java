@@ -60,7 +60,7 @@ public class Tag implements Comparable<Tag> {
     /**
      * Increments the frequency of usage.
      */
-    void incrementFrequency() {
+    public void incrementFrequency() {
         frequency++;
     }
 

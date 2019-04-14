@@ -24,7 +24,7 @@ public class GroupItem extends Item {
      * @param dateAdded Date this item was added to the Menagerie.
      * @param title     Title of this group.
      */
-    GroupItem(Menagerie menagerie, int id, long dateAdded, String title) {
+    public GroupItem(Menagerie menagerie, int id, long dateAdded, String title) {
         super(menagerie, id, dateAdded);
         this.title = title;
     }

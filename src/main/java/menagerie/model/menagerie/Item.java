@@ -25,7 +25,7 @@ public abstract class Item implements Comparable<Item> {
      * @param id        Unique ID of this item.
      * @param dateAdded Date this item was added to the Menagerie.
      */
-    Item(Menagerie menagerie, int id, long dateAdded) {
+    public Item(Menagerie menagerie, int id, long dateAdded) {
         this.menagerie = menagerie;
         this.id = id;
         this.dateAdded = dateAdded;
@@ -82,7 +82,7 @@ public abstract class Item implements Comparable<Item> {
         tags.add(t);
         t.incrementFrequency();
 
-        menagerie.getDatabaseUpdater().tagItemAsync(id, t.getId());
+        menagerie.getDatabaseManager().tagItemAsync(id, t.getId());
 
         if (tagListener != null) tagListener.poke();
 
@@ -101,7 +101,7 @@ public abstract class Item implements Comparable<Item> {
         tags.remove(t);
         t.decrementFrequency();
 
-        menagerie.getDatabaseUpdater().untagItemAsync(id, t.getId());
+        menagerie.getDatabaseManager().untagItemAsync(id, t.getId());
 
         if (tagListener != null) tagListener.poke();
 

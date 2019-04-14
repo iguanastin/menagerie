@@ -3,10 +3,12 @@ package menagerie.model.menagerie.db;
 import javafx.scene.image.Image;
 import menagerie.gui.Main;
 import menagerie.gui.thumbnail.Thumbnail;
-import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.*;
+import menagerie.model.menagerie.histogram.HistogramReadException;
 import menagerie.model.menagerie.histogram.ImageHistogram;
 import menagerie.util.ImageInputStreamConverter;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
@@ -24,7 +26,7 @@ import java.util.logging.Level;
 /**
  * Menagerie database updater thread. Provides methods for synchronous database updates as well as asynchronous updates.
  */
-public class DatabaseUpdater extends Thread {
+public class DatabaseManager extends Thread {
 
     private final PreparedStatement PS_DELETE_IMG;
     private final PreparedStatement PS_CREATE_IMG;
@@ -37,6 +39,13 @@ public class DatabaseUpdater extends Thread {
     private final PreparedStatement PS_ADD_TAG_TO_IMG;
     private final PreparedStatement PS_REMOVE_TAG_FROM_IMG;
     private final PreparedStatement PS_SET_IMG_PATH;
+    private final PreparedStatement PS_GET_HIGHEST_ITEM_ID;
+    private final PreparedStatement PS_GET_HIGHEST_TAG_ID;
+    private final PreparedStatement PS_GET_TAGS;
+    private final PreparedStatement PS_GET_MEDIA;
+    private final PreparedStatement PS_GET_GROUPS;
+    private final PreparedStatement PS_GET_TAGS_FOR_ITEM;
+    private final PreparedStatement PS_SHUTDOWN_DEFRAG;
 
     private final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
     private volatile boolean running = false;
@@ -47,7 +56,7 @@ public class DatabaseUpdater extends Thread {
     private long lastLog = System.currentTimeMillis();
 
 
-    public DatabaseUpdater(Connection database) throws SQLException {
+    public DatabaseManager(Connection database) throws SQLException {
 
         // ------------------------------------ Init statements -----------------------------------
         PS_SET_IMG_MD5 = database.prepareStatement("UPDATE imgs SET imgs.md5=? WHERE imgs.id=?;");
@@ -61,6 +70,14 @@ public class DatabaseUpdater extends Thread {
         PS_DELETE_TAG = database.prepareStatement("DELETE FROM tags WHERE tags.id=?;");
         PS_CREATE_TAG = database.prepareStatement("INSERT INTO tags(id, name) VALUES (?, ?);");
         PS_SET_IMG_PATH = database.prepareStatement("UPDATE imgs SET path=? WHERE id=?;");
+        PS_GET_HIGHEST_ITEM_ID = database.prepareStatement("SELECT TOP 1 id FROM imgs ORDER BY id DESC;");
+        PS_GET_HIGHEST_TAG_ID = database.prepareStatement("SELECT TOP 1 id FROM tags ORDER BY id DESC;");
+        PS_GET_TAGS = database.prepareStatement("SELECT * FROM tags;");
+        PS_GET_MEDIA = database.prepareStatement("SELECT * FROM imgs;"); // TODO
+        //        PS_GET_GROUPS = database.prepareStatement("SELECT items.id, items.added, groups.title, FROM groups JOIN items ON items.id=groups.id;");
+        PS_GET_GROUPS = database.prepareStatement("SELECT * FROM tags;"); // TODO remove this
+        PS_GET_TAGS_FOR_ITEM = database.prepareStatement("SELECT tagged.tag_id FROM tagged WHERE tagged.img_id=?;"); // TODO
+        PS_SHUTDOWN_DEFRAG = database.prepareStatement("SHUTDOWN DEFRAG;");
     }
 
     @Override
@@ -100,7 +117,7 @@ public class DatabaseUpdater extends Thread {
                 try {
                     loggingLock.lock();
                     if (databaseUpdates > 0) {
-                        Main.log.info(String.format("DatabaseUpdater updated %d times in the last %.2fm", databaseUpdates, (System.currentTimeMillis() - lastLog) / 1000.0 / 60.0));
+                        Main.log.info(String.format("DatabaseManager updated %d times in the last %.2fm", databaseUpdates, (System.currentTimeMillis() - lastLog) / 1000.0 / 60.0));
                         lastLog = System.currentTimeMillis();
                         databaseUpdates = 0;
                     }
@@ -443,14 +460,14 @@ public class DatabaseUpdater extends Thread {
      *
      * @param id ID of item.
      * @return Thumbnail of the item, or null if there is no thumbnail.
-     * @throws SQLException If database update fails.
+     * @throws SQLException If database query fails.
      */
     public Thumbnail getThumbnail(int id) throws SQLException {
         synchronized (PS_GET_IMG_THUMBNAIL) {
             PS_GET_IMG_THUMBNAIL.setInt(1, id);
             try (ResultSet rs = PS_GET_IMG_THUMBNAIL.executeQuery()) {
                 if (rs.next()) {
-                    InputStream binaryStream = rs.getBinaryStream("thumbnail");
+                    InputStream binaryStream = rs.getBinaryStream(1);
                     if (binaryStream != null) {
                         return new Thumbnail(ImageInputStreamConverter.imageFromInputStream(binaryStream));
                     }
@@ -459,6 +476,157 @@ public class DatabaseUpdater extends Thread {
         }
 
         return null;
+    }
+
+    /**
+     * Finds the highest item ID value.
+     *
+     * @return Highest ID value, or 0 if none.
+     * @throws SQLException If database query fails.
+     */
+    public int getHighestItemID() throws SQLException {
+        synchronized (PS_GET_HIGHEST_ITEM_ID) {
+            try (ResultSet rs = PS_GET_HIGHEST_ITEM_ID.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Finds the highest tag ID value.
+     *
+     * @return Highest ID value, or 0 if none.
+     * @throws SQLException If database query fails.
+     */
+    public int getHighestTagID() throws SQLException {
+        synchronized (PS_GET_HIGHEST_TAG_ID) {
+            try (ResultSet rs = PS_GET_HIGHEST_TAG_ID.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Loads tags, groups, and media into a menagerie from the database.
+     * <p>
+     * WARNING: Very expensive operation, should only be called once.
+     *
+     * @param menagerie Menagerie to load objects into.
+     */
+    public void loadIntoMenagerie(Menagerie menagerie) throws SQLException {
+        loadTags(menagerie);
+        Main.log.info("Finished loading " + menagerie.getTags().size() + " tags from database");
+        //        loadGroups(menagerie);
+        // TODO load groups
+        loadMedia(menagerie);
+        Main.log.info("Finished loading " + menagerie.getItems().size() + " items from database");
+        loadTagsForItems(menagerie);
+        Main.log.info("Finished loading tags for " + menagerie.getItems().size() + " items from database");
+    }
+
+    /**
+     * Loads all tags from the database.
+     * <p>
+     * WARNING: This call is expensive and should only be called once per Menagerie environment.
+     *
+     * @param menagerie Menagerie to load tags into.
+     * @throws SQLException When database query fails.
+     */
+    private void loadTags(Menagerie menagerie) throws SQLException {
+        synchronized (PS_GET_TAGS) {
+            try (ResultSet rs = PS_GET_TAGS.executeQuery()) {
+                while (rs.next()) {
+                    menagerie.getTags().add(new Tag(rs.getInt("id"), rs.getNString("name")));
+                }
+            }
+        }
+    }
+
+    /**
+     * Loads all groups from the database.
+     * <p>
+     * WARNING: This call is very expensive and should only be called once.
+     *
+     * @param menagerie Menagerie to load tags into.
+     * @throws SQLException When database query fails.
+     */
+    private void loadGroups(Menagerie menagerie) throws SQLException {
+        synchronized (PS_GET_GROUPS) {
+            try (ResultSet rs = PS_GET_GROUPS.executeQuery()) {
+                while (rs.next()) {
+                    menagerie.getItems().add(new GroupItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"), rs.getNString("groups.title")));
+                }
+            }
+        }
+    }
+
+    /**
+     * Loads media items from the database.
+     * <p>
+     * WARNING: This call is very expensive and should only be called once.
+     */
+    private void loadMedia(Menagerie menagerie) throws SQLException {
+        synchronized (PS_GET_MEDIA) {
+            try (ResultSet rs = PS_GET_MEDIA.executeQuery()) {
+                while (rs.next()) {
+                    ImageHistogram histogram = null;
+                    InputStream histAlpha = rs.getBinaryStream("hist_a");
+                    if (histAlpha != null) {
+                        try {
+                            histogram = new ImageHistogram(histAlpha, rs.getBinaryStream("hist_r"), rs.getBinaryStream("hist_g"), rs.getBinaryStream("hist_b"));
+                        } catch (HistogramReadException e) {
+                            Main.log.log(Level.SEVERE, "Histogram failed to load from database", e);
+                        }
+                    }
+
+                    menagerie.getItems().add(new MediaItem(menagerie, rs.getInt("imgs.id"), rs.getLong("imgs.added"), new File(rs.getNString("imgs.path")), rs.getNString("md5"), histogram));
+                }
+            }
+        }
+    }
+
+    /**
+     * Loads tags for items from the database.
+     *
+     * @param menagerie Menagerie environment to work in.
+     * @throws SQLException If database query fails.
+     */
+    private void loadTagsForItems(Menagerie menagerie) throws SQLException {
+        for (Item item : menagerie.getItems()) {
+            synchronized (PS_GET_TAGS_FOR_ITEM) {
+                PS_GET_TAGS_FOR_ITEM.setInt(1, item.getId());
+                try (ResultSet rs = PS_GET_TAGS_FOR_ITEM.executeQuery()) {
+                    while (rs.next()) {
+                        Tag tag = menagerie.getTagByID(rs.getInt("tag_id"));
+                        if (tag != null) {
+                            tag.incrementFrequency();
+                            item.getTags().add(tag);
+                        } else {
+                            Main.log.warning("Major issue, tag wasn't loaded in but somehow still exists in the database: " + rs.getInt("tag_id"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Shuts down the database and runs a defrag operation to compress database file size.
+     *
+     * @throws SQLException If exception occurs.
+     */
+    public void shutdownDefrag() throws SQLException {
+        synchronized (PS_SHUTDOWN_DEFRAG) {
+            PS_SHUTDOWN_DEFRAG.executeUpdate();
+        }
     }
 
     /**

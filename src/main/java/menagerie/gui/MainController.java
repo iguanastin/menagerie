@@ -19,7 +19,6 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.stage.Window;
 import menagerie.gui.grid.ImageGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
@@ -36,6 +35,7 @@ import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.*;
+import menagerie.model.menagerie.db.DatabaseManager;
 import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
@@ -56,7 +56,6 @@ import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 import java.util.*;
 import java.util.logging.Handler;
@@ -94,9 +93,6 @@ public class MainController {
     private ImporterScreen importerScreen;
     private LogScreen logScreen;
     private ImportDialogScreen importDialogScreen;
-
-    // --------------------------------- Static vars ---------------------------------
-    private static Window window;
 
     // --------------------------------- Menagerie vars ------------------------------
     /**
@@ -181,8 +177,6 @@ public class MainController {
 
             //Init closeRequest handling on window
             rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
-
-            window = rootPane.getScene().getWindow();
         });
 
         // Apply a default search
@@ -242,8 +236,12 @@ public class MainController {
             Main.log.info("Verifying/updating database");
             DatabaseVersionUpdater.updateDatabase(db);
 
+            DatabaseManager dbManager = new DatabaseManager(db);
+            dbManager.setDaemon(true);
+            dbManager.start();
+
             Main.log.info("Initializing Menagerie");
-            menagerie = new Menagerie(db);
+            menagerie = new Menagerie(dbManager);
 
             Main.log.info("Starting importer thread");
             importer = new ImporterThread(menagerie, settings);
@@ -1149,10 +1147,6 @@ public class MainController {
         }
     }
 
-    public static Window getWindow() {
-        return window;
-    }
-
     /**
      * Attempts to resolve the actual path to the database file by java path standards, given a JDBC database path.
      *
@@ -1255,9 +1249,7 @@ public class MainController {
         new Thread(() -> {
             try {
                 Main.log.info("Attempting to shut down Menagerie database and defragment the file");
-                try (Statement s = menagerie.getDatabase().createStatement()) {
-                    s.executeUpdate("SHUTDOWN DEFRAG;");
-                }
+                menagerie.getDatabaseManager().shutdownDefrag();
                 Main.log.info("Done defragging database file");
 
                 if (revertDatabase) {
@@ -1364,7 +1356,7 @@ public class MainController {
                     event.consume();
                     break;
                 case Q:
-                    menagerie.getDatabaseUpdater().enqueue(() -> cleanExit(false));
+                    menagerie.getDatabaseManager().enqueue(() -> cleanExit(false));
                     event.consume();
                     break;
                 case S:
