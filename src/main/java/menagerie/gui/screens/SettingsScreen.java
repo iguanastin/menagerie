@@ -10,6 +10,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import menagerie.gui.Main;
 import menagerie.model.Settings;
@@ -20,27 +21,31 @@ import java.util.logging.Level;
 
 public class SettingsScreen extends Screen {
 
-    private final TextField defaultFolderTextField;
+    private static final Insets ALL5 = new Insets(5);
+    private static final Insets LEFT20 = new Insets(0, 0, 0, 20);
+    private static final Font BOLD_ITALIC = new Font("System Bold Italic", 12);
+
+    private final TextField defaultFolderTextField = new TextField();
     private final CheckBox autoImportFolderCheckBox = new CheckBox("Auto-import from folder");
-    private final CheckBox autoImportMoveToDefaultCheckBox = new CheckBox("Move from folder to default folder before importing");
-    private final TextField importFolderTextField;
+    private final CheckBox autoImportMoveToDefaultCheckBox = new CheckBox("Move to default folder before importing");
+    private final TextField importFolderTextField = new TextField();
     private final CheckBox fileNameFromURLCheckBox = new CheckBox("Automatically use filename from URL when importing from web");
     private final CheckBox tagWithTagmeCheckBox = new CheckBox("Tag imported items with 'tagme'");
     private final CheckBox tagWithVideoCheckBox = new CheckBox("Tag imported videos with 'video'");
     private final CheckBox tagWithImageCheckBox = new CheckBox("Tag imported images with 'image'");
 
-    private final TextField confidenceTextField;
-    private final CheckBox compareGreyscalesCheckBox;
+    private final TextField confidenceTextField = new TextField();
+    private final CheckBox compareGreyscalesCheckBox = new CheckBox("Compare greyscale images (poor accuracy)");
 
     private final CheckBox muteVideoCheckBox;
     private final CheckBox repeatVideoCheckBox;
 
     private final ChoiceBox<Integer> gridWidthChoiceBox;
 
-    private final TextField databaseURLTextField;
-    private final TextField databaseUserTextField;
-    private final TextField databasePasswordTextField;
-    private final CheckBox backupDatabaseCheckBox;
+    private final TextField databaseURLTextField = new TextField();
+    private final TextField databaseUserTextField = new TextField();
+    private final TextField databasePasswordTextField = new TextField();
+    private final CheckBox backupDatabaseCheckBox = new CheckBox("Backup database on launch");
 
 
     private final Settings settings;
@@ -58,14 +63,23 @@ public class SettingsScreen extends Screen {
             }
         });
 
+        Label l = new Label("Settings");
+        l.setPadding(ALL5);
+        Button exit = new Button("X");
+        exit.setOnAction(event -> close());
+        BorderPane top = new BorderPane(null, null, exit, new Separator(), l);
+
         // ----------------------- Center ------------------------------
         VBox rootV = new VBox(5);
-        rootV.setPadding(new Insets(5));
+        rootV.setPadding(ALL5);
         ScrollPane center = new ScrollPane(rootV);
         center.setFitToWidth(true);
-        rootV.getChildren().add(new Label("Settings:"));
-        rootV.getChildren().add(new Separator());
-        defaultFolderTextField = new TextField();
+
+        l = new Label("Importing");
+        l.setFont(BOLD_ITALIC);
+        VBox v = new VBox(5);
+        v.setPadding(LEFT20);
+        rootV.getChildren().addAll(l, v);
         defaultFolderTextField.setEditable(false);
         defaultFolderTextField.setPromptText("Folder will be asked for when saving");
         HBox.setHgrow(defaultFolderTextField, Priority.ALWAYS);
@@ -82,12 +96,12 @@ public class SettingsScreen extends Screen {
         });
         HBox h = new HBox(5, new Label("Default Folder:"), defaultFolderTextField, browse);
         h.setAlignment(Pos.CENTER_LEFT);
-        rootV.getChildren().add(h);
-        rootV.getChildren().add(new Separator());
-        h = new HBox(5, autoImportFolderCheckBox, autoImportMoveToDefaultCheckBox);
-        h.setAlignment(Pos.CENTER_LEFT);
-        rootV.getChildren().add(h);
-        importFolderTextField = new TextField();
+        v.getChildren().add(h);
+
+        v.getChildren().add(autoImportFolderCheckBox);
+        VBox v2 = new VBox(5, autoImportMoveToDefaultCheckBox);
+        v2.setPadding(LEFT20);
+        v.getChildren().add(v2);
         importFolderTextField.setPromptText("Folder to auto-import images from");
         importFolderTextField.setEditable(false);
         HBox.setHgrow(importFolderTextField, Priority.ALWAYS);
@@ -102,20 +116,18 @@ public class SettingsScreen extends Screen {
                 importFolderTextField.setText(result.getAbsolutePath());
             }
         });
-        autoImportMoveToDefaultCheckBox.disableProperty().bind(autoImportFolderCheckBox.selectedProperty().not());
-        importFolderTextField.disableProperty().bind(autoImportFolderCheckBox.selectedProperty().not());
-        browse.disableProperty().bind(autoImportFolderCheckBox.selectedProperty().not());
+        v2.disableProperty().bind(autoImportFolderCheckBox.selectedProperty().not());
         h = new HBox(5, new Label("Import from:"), importFolderTextField, browse);
         h.setAlignment(Pos.CENTER_LEFT);
-        h.setPadding(new Insets(0, 0, 0, 25));
-        rootV.getChildren().add(h);
-        rootV.getChildren().add(fileNameFromURLCheckBox);
-        rootV.getChildren().add(tagWithTagmeCheckBox);
-        rootV.getChildren().add(tagWithVideoCheckBox);
-        rootV.getChildren().add(tagWithImageCheckBox);
-        rootV.getChildren().add(new Separator());
-        rootV.getChildren().add(new Label("Duplicate finding:"));
-        confidenceTextField = new TextField();
+        v2.getChildren().add(h);
+        v.getChildren().add(fileNameFromURLCheckBox);
+        v.getChildren().add(tagWithTagmeCheckBox);
+        v.getChildren().add(tagWithVideoCheckBox);
+        v.getChildren().add(tagWithImageCheckBox);
+
+        l = new Label("Duplicate finding");
+        l.setFont(BOLD_ITALIC);
+        rootV.getChildren().addAll(new Separator(), l);
         confidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
                 try {
@@ -128,41 +140,44 @@ public class SettingsScreen extends Screen {
             }
         });
         confidenceTextField.setPromptText("0.95 recommended");
-        compareGreyscalesCheckBox = new CheckBox("Compare greyscale images (poor accuracy)");
-        h = new HBox(5, new Label("Similarity confidence:"), confidenceTextField, new Label("(0.8-1.0)"));
+        h = new HBox(5, new Label("Confidence:"), confidenceTextField, new Label("(0.8-1.0)"));
         h.setAlignment(Pos.CENTER_LEFT);
-        VBox v = new VBox(h, compareGreyscalesCheckBox);
-        v.setPadding(new Insets(0, 0, 0, 25));
+        v = new VBox(5, h, compareGreyscalesCheckBox);
+        v.setPadding(LEFT20);
         rootV.getChildren().add(v);
-        rootV.getChildren().add(new Separator());
-        rootV.getChildren().add(new Label("Video:"));
+
+        l = new Label("Video viewing");
+        l.setFont(BOLD_ITALIC);
+        rootV.getChildren().addAll(new Separator(), l);
         muteVideoCheckBox = new CheckBox("Mute video preview");
         repeatVideoCheckBox = new CheckBox("Repeat video preview");
         v = new VBox(5, muteVideoCheckBox, repeatVideoCheckBox);
-        v.setPadding(new Insets(0, 0, 0, 25));
+        v.setPadding(LEFT20);
         rootV.getChildren().add(v);
-        rootV.getChildren().add(new Separator());
+
+        l = new Label("Explorer Grid");
+        l.setFont(BOLD_ITALIC);
+        rootV.getChildren().addAll(new Separator(), l);
         gridWidthChoiceBox = new ChoiceBox<>();
         gridWidthChoiceBox.getItems().addAll(2, 3, 4, 5, 6);
         h = new HBox(5, new Label("Grid width:"), gridWidthChoiceBox);
         h.setAlignment(Pos.CENTER_LEFT);
+        h.setPadding(LEFT20);
         rootV.getChildren().add(h);
-        rootV.getChildren().add(new Separator());
-        rootV.getChildren().add(new Label("Database (changes will be applied on restart):"));
-        databaseURLTextField = new TextField();
+
+        l = new Label("Database (changes applied on restart)");
+        l.setFont(BOLD_ITALIC);
+        rootV.getChildren().addAll(new Separator(), l);
         HBox.setHgrow(databaseURLTextField, Priority.ALWAYS);
         HBox h1 = new HBox(5, new Label("URL:"), databaseURLTextField);
         h1.setAlignment(Pos.CENTER_LEFT);
-        databaseUserTextField = new TextField();
-        HBox.setHgrow(databaseUserTextField, Priority.ALWAYS);
+        databaseUserTextField.setPromptText("None");
         HBox h2 = new HBox(5, new Label("User:"), databaseUserTextField);
         h2.setAlignment(Pos.CENTER_LEFT);
-        databasePasswordTextField = new TextField();
-        HBox.setHgrow(databasePasswordTextField, Priority.ALWAYS);
+        databasePasswordTextField.setPromptText("None");
         HBox h3 = new HBox(5, new Label("Password:"), databasePasswordTextField);
-        backupDatabaseCheckBox = new CheckBox("Backup database on launch");
         v = new VBox(5, h1, h2, h3, backupDatabaseCheckBox);
-        v.setPadding(new Insets(0, 0, 0, 25));
+        v.setPadding(LEFT20);
         rootV.getChildren().add(v);
 
         // ------------------------- Bottom -----------------------------
@@ -178,7 +193,7 @@ public class SettingsScreen extends Screen {
         bottom.setAlignment(Pos.CENTER_RIGHT);
 
         // -------------------------- Root --------------------------------
-        BorderPane root = new BorderPane(center, null, null, bottom, null);
+        BorderPane root = new BorderPane(center, top, null, bottom, null);
         root.setStyle("-fx-background-color: -fx-base;");
         root.setPrefSize(700, 600);
         root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
@@ -189,7 +204,7 @@ public class SettingsScreen extends Screen {
         setPadding(new Insets(25));
         setCenter(root);
 
-        setDefaultFocusNode(root);
+        setDefaultFocusNode(cancel);
     }
 
     /**
