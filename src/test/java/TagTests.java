@@ -36,11 +36,6 @@ class TagTests {
     }
 
     @Test
-    void createNegativeID() {
-        assertThrows(IllegalArgumentException.class, () -> new Tag(-1, "tag"));
-    }
-
-    @Test
     void testFrequency() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         Tag t = new Tag(1, "tag");
 

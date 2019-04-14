@@ -28,7 +28,6 @@ public class Tag implements Comparable<Tag> {
      */
     public Tag(int id, String name) {
         if (name == null) throw new NullPointerException("Name cannot be null");
-        if (id < 0) throw new IllegalArgumentException("ID must be >= 0");
         if (!name.matches(NAME_REGEX))
             throw new IllegalArgumentException(String.format("Name must match regex: \"%s\"", NAME_REGEX));
 

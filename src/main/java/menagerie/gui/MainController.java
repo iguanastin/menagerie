@@ -1421,6 +1421,13 @@ public class MainController {
             case ALT:
                 event.consume(); // Workaround for alt-tabbing correctly
                 break;
+            case ENTER:
+                if (itemGridView.getSelected().size() == 1 && itemGridView.getSelected().get(0) instanceof GroupItem) {
+                    searchTextField.setText("in:" + itemGridView.getSelected().get(0).getId());
+                    applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+                }
+                event.consume();
+                break;
         }
     }
 
