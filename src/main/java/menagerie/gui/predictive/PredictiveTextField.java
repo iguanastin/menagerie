@@ -14,6 +14,9 @@ import java.util.List;
 
 public class PredictiveTextField extends TextField {
 
+    private static final String SELECTED_CSS = "-fx-background-color: derive(-fx-accent, 50%);";
+    private static final String SELECTED_UNFOCUSED_CSS = "-fx-background-color: -fx-accent;";
+
     private PredictiveTextFieldOptionsListener optionsListener;
 
     private final Popup popup = new Popup();
@@ -140,9 +143,11 @@ public class PredictiveTextField extends TextField {
     private void updateOptionCSSStyles() {
         for (int i = 0; i < vBox.getChildren().size(); i++) {
             if (i == selectedIndex) {
-                vBox.getChildren().get(i).setStyle("-fx-background-color: derive(-fx-accent, 100%);");
+                vBox.getChildren().get(i).setStyle(SELECTED_CSS);
+            } else if (selectedIndex < 0 && ((i == 0 && !top) || (i == vBox.getChildren().size() - 1 && top))) {
+                vBox.getChildren().get(i).setStyle(SELECTED_UNFOCUSED_CSS);
             } else {
-                vBox.getChildren().get(i).setStyle("-fx-background-color: -fx-base;");
+                vBox.getChildren().get(i).setStyle(null);
             }
         }
     }
