@@ -63,7 +63,11 @@ public class PredictiveTextField extends TextField {
         if (top) Collections.reverse(options);
 
         vBox.getChildren().clear();
-        options.forEach(str -> vBox.getChildren().add(new Label(str)));
+        options.forEach(str -> {
+            Label label = new Label(str);
+            label.setOnMouseClicked(event -> acceptOption(str));
+            vBox.getChildren().add(label);
+        });
         updateOptionCSSStyles();
 
         popup.show(this, 0, 0);
@@ -119,22 +123,26 @@ public class PredictiveTextField extends TextField {
                     }
 
                     if (selectedIndex >= 0) {
-                        if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
-                            setText(((Label) vBox.getChildren().get(selectedIndex)).getText() + " ");
-                        } else {
-                            String temp = getText().substring(0, getText().lastIndexOf(' ') + 1);
-                            setText(temp + ((Label) vBox.getChildren().get(selectedIndex)).getText() + " ");
-                        }
-
-                        positionCaret(getText().length() + 1);
-
-                        popup.hide();
+                        acceptOption(((Label) vBox.getChildren().get(selectedIndex)).getText());
 
                         if (event.getCode() == KeyCode.TAB) event.consume();
                     }
                     break;
             }
         }
+    }
+
+    private void acceptOption(String option) {
+        if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
+            setText(option + " ");
+        } else {
+            String temp = getText().substring(0, getText().lastIndexOf(' ') + 1);
+            setText(temp + option + " ");
+        }
+
+        positionCaret(getText().length() + 1);
+
+        popup.hide();
     }
 
     /**
