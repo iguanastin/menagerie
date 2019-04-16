@@ -32,22 +32,38 @@ public class MediaItem extends Item {
     private WeakReference<Image> image;
 
     private GroupItem group;
+    private int pageIndex;
 
 
     /**
-     * @param menagerie The Menagerie this item belongs to.
-     * @param id        The unique ID of this item.
-     * @param dateAdded The date this item was added to the Menagerie.
-     * @param file      The file this item points to.
-     * @param md5       The MD5 hash of the file.
-     * @param histogram The color histogram of the image. (If the media is an image)
+     * @param menagerie Menagerie this item belongs to.
+     * @param id        Unique ID of this item.
+     * @param dateAdded Date this item was added.
+     * @param pageIndex Index of this item within its parent group.
+     * @param group     Parent group containing this item.
+     * @param file      File this item points to.
+     * @param md5       MD5 hash of the file.
+     * @param histogram Color histogram of the image. (If the media is an image)
      */
-    public MediaItem(Menagerie menagerie, int id, long dateAdded, GroupItem group, File file, String md5, ImageHistogram histogram) {
+    public MediaItem(Menagerie menagerie, int id, long dateAdded, int pageIndex, GroupItem group, File file, String md5, ImageHistogram histogram) {
         super(menagerie, id, dateAdded);
         this.file = file;
         this.md5 = md5;
         this.histogram = histogram;
         this.group = group;
+        this.pageIndex = pageIndex;
+    }
+
+    /**
+     * Constructs a bare bones media item.
+     *
+     * @param menagerie Menagerie this item belongs to.
+     * @param id        Unique ID of this item.
+     * @param dateAdded Date this item was added.
+     * @param file      File this item points to.
+     */
+    public MediaItem(Menagerie menagerie, int id, long dateAdded, File file) {
+        this(menagerie, id, dateAdded, 0, null, file, null, null);
     }
 
     /**
@@ -261,6 +277,18 @@ public class MediaItem extends Item {
      */
     public GroupItem getGroup() {
         return group;
+    }
+
+    public int getPageIndex() {
+        return pageIndex;
+    }
+
+    public void setPageIndex(int pageIndex) {
+        if (this.pageIndex == pageIndex) return;
+
+        this.pageIndex = pageIndex;
+
+        menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
     }
 
     @Override

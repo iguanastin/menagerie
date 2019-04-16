@@ -31,6 +31,7 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_SET_MEDIA_MD5;
     private final PreparedStatement PS_SET_MEDIA_PATH;
     private final PreparedStatement PS_SET_MEDIA_HISTOGRAM;
+    private final PreparedStatement PS_SET_MEDIA_PAGE;
     private final PreparedStatement PS_SET_MEDIA_THUMBNAIL;
     private final PreparedStatement PS_GET_MEDIA_THUMBNAIL;
     // Groups
@@ -43,6 +44,9 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_CREATE_TAG;
     private final PreparedStatement PS_ADD_TAG_TO_ITEM;
     private final PreparedStatement PS_REMOVE_TAG_FROM_ITEM;
+    private final PreparedStatement PS_ADD_TAG_NOTE;
+    private final PreparedStatement PS_REMOVE_TAG_NOTE;
+    private final PreparedStatement PS_SET_TAG_COLOR;
     // Counters
     private final PreparedStatement PS_GET_HIGHEST_ITEM_ID;
     private final PreparedStatement PS_GET_HIGHEST_TAG_ID;
@@ -51,6 +55,7 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_GET_MEDIA;
     private final PreparedStatement PS_GET_GROUPS;
     private final PreparedStatement PS_GET_TAGS_FOR_ITEM;
+    private final PreparedStatement PS_GET_TAG_NOTES;
     // Teardown
     private final PreparedStatement PS_SHUTDOWN_DEFRAG;
 
@@ -72,6 +77,7 @@ public class DatabaseManager extends Thread {
         PS_SET_MEDIA_MD5 = database.prepareStatement("UPDATE media SET md5=? WHERE id=?;");
         PS_SET_MEDIA_PATH = database.prepareStatement("UPDATE media SET path=? WHERE id=?;");
         PS_SET_MEDIA_HISTOGRAM = database.prepareStatement("UPDATE media SET hist_a=?, hist_r=?, hist_g=?, hist_b=? WHERE id=?");
+        PS_SET_MEDIA_PAGE = database.prepareStatement("UPDATE media SET page=? WHERE id=?;");
         PS_SET_MEDIA_THUMBNAIL = database.prepareStatement("UPDATE media SET thumbnail=? WHERE id=?;");
         PS_GET_MEDIA_THUMBNAIL = database.prepareStatement("SELECT thumbnail FROM media WHERE id=?;");
         // Groups
@@ -84,14 +90,18 @@ public class DatabaseManager extends Thread {
         PS_CREATE_TAG = database.prepareStatement("INSERT INTO tags(id, name) VALUES (?, ?);");
         PS_ADD_TAG_TO_ITEM = database.prepareStatement("INSERT INTO tagged(item_id, tag_id) VALUES (?, ?);");
         PS_REMOVE_TAG_FROM_ITEM = database.prepareStatement("DELETE FROM tagged WHERE item_id=? AND tag_id=?;");
+        PS_ADD_TAG_NOTE = database.prepareStatement("INSERT INTO tag_notes(tag_id, note) VALUES (?, ?);");
+        PS_REMOVE_TAG_NOTE = database.prepareStatement("DELETE TOP 1 FROM tag_notes WHERE tag_id=? AND note LIKE ?;");
+        PS_SET_TAG_COLOR = database.prepareStatement("UPDATE tags SET color=? WHERE id=?;");
         // Counters
         PS_GET_HIGHEST_ITEM_ID = database.prepareStatement("SELECT TOP 1 id FROM items ORDER BY id DESC;");
         PS_GET_HIGHEST_TAG_ID = database.prepareStatement("SELECT TOP 1 id FROM tags ORDER BY id DESC;");
         // Construction
         PS_GET_TAGS = database.prepareStatement("SELECT * FROM tags;");
-        PS_GET_MEDIA = database.prepareStatement("SELECT items.id, items.added, media.gid, media.path, media.md5, media.hist_a, media.hist_r, media.hist_g, media.hist_b FROM media JOIN items ON items.id=media.id;");
+        PS_GET_MEDIA = database.prepareStatement("SELECT items.id, items.added, media.gid, media.page, media.path, media.md5, media.hist_a, media.hist_r, media.hist_g, media.hist_b FROM media JOIN items ON items.id=media.id;");
         PS_GET_GROUPS = database.prepareStatement("SELECT items.id, items.added, groups.title FROM groups JOIN items ON items.id=groups.id;");
         PS_GET_TAGS_FOR_ITEM = database.prepareStatement("SELECT tagged.tag_id FROM tagged WHERE tagged.item_id=?;");
+        PS_GET_TAG_NOTES = database.prepareStatement("SELECT * FROM tag_notes;");
         // Teardown
         PS_SHUTDOWN_DEFRAG = database.prepareStatement("SHUTDOWN DEFRAG;");
     }
@@ -545,6 +555,130 @@ public class DatabaseManager extends Thread {
     }
 
     /**
+     * Sets the page index of a media item.
+     *
+     * @param id   ID of media item.
+     * @param page Page index to set.
+     * @throws SQLException If database update fails.
+     */
+    public void setMediaPage(int id, int page) throws SQLException {
+        synchronized (PS_SET_MEDIA_PAGE) {
+            PS_SET_MEDIA_PAGE.setInt(1, page);
+            PS_SET_MEDIA_PAGE.setInt(2, id);
+            PS_SET_MEDIA_PAGE.executeUpdate();
+        }
+    }
+
+    /**
+     * Queues an update to set the page index of a media item.
+     *
+     * @param id   ID of media item.
+     * @param page Page index to set.
+     */
+    public void setMediaPageAsync(int id, int page) {
+        queue.add(() -> {
+            try {
+                setMediaPage(id, page);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, String.format("Failed to set media page index. ID: %d, Page: %d", id, page), e);
+            }
+        });
+    }
+
+    /**
+     * Inserts a note into the tag_notes table.
+     *
+     * @param id   ID of tag note is attached to.
+     * @param note The note.
+     * @throws SQLException When database update fails.
+     */
+    public void addTagNote(int id, String note) throws SQLException {
+        synchronized (PS_ADD_TAG_NOTE) {
+            PS_ADD_TAG_NOTE.setInt(1, id);
+            PS_ADD_TAG_NOTE.setNString(2, note);
+            PS_ADD_TAG_NOTE.executeUpdate();
+        }
+    }
+
+    /**
+     * Queues a note to be inserted into the tag_notes table.
+     *
+     * @param id   ID of tag note is attached to.
+     * @param note The note.
+     */
+    public void addTagNoteAsync(int id, String note) {
+        queue.add(() -> {
+            try {
+                addTagNote(id, note);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, String.format("Failed to insert tag note. Tag ID: %d, Note: \"%s\"", id, note), e);
+            }
+        });
+    }
+
+    /**
+     * Deletes a note from the tag_notes table.
+     *
+     * @param id   ID of tag note is attached to.
+     * @param note The note.
+     * @throws SQLException If database update fails.
+     */
+    public void removeTagNote(int id, String note) throws SQLException {
+        synchronized (PS_REMOVE_TAG_NOTE) {
+            PS_REMOVE_TAG_NOTE.setInt(1, id);
+            PS_REMOVE_TAG_NOTE.setNString(2, note);
+            PS_REMOVE_TAG_NOTE.executeUpdate();
+        }
+    }
+
+    /**
+     * Queues a tag note to be deleted.
+     *
+     * @param id   ID of tag.
+     * @param note The note.
+     */
+    public void removeTagNoteAsync(int id, String note) {
+        queue.add(() -> {
+            try {
+                removeTagNote(id, note);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, String.format("Failed to remove tag note. Tag ID: %d, Note: \"%s\"", id, note), e);
+            }
+        });
+    }
+
+    /**
+     * Sets the color of a tag.
+     *
+     * @param id    ID of tag.
+     * @param color Color to set.
+     * @throws SQLException If database update fails.
+     */
+    public void setTagColor(int id, String color) throws SQLException {
+        synchronized (PS_SET_TAG_COLOR) {
+            PS_SET_TAG_COLOR.setNString(1, color);
+            PS_SET_TAG_COLOR.setInt(2, id);
+            PS_SET_TAG_COLOR.executeUpdate();
+        }
+    }
+
+    /**
+     * Queues a color to be set for a tag.
+     *
+     * @param id    ID of tag to update.
+     * @param color Color to set.
+     */
+    public void setTagColorAsync(int id, String color) {
+        queue.add(() -> {
+            try {
+                setTagColor(id, color);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, String.format("Failed to set tag color: ID: %d, Color: %s", id, color), e);
+            }
+        });
+    }
+
+    /**
      * Gets a thumbnail from the database.
      *
      * @param id ID of item.
@@ -613,11 +747,35 @@ public class DatabaseManager extends Thread {
     public void loadIntoMenagerie(Menagerie menagerie) throws SQLException {
         loadTags(menagerie);
         Main.log.info("Finished loading " + menagerie.getTags().size() + " tags from database");
+        loadTagNotes(menagerie);
+        Main.log.info("Finished loading all tag notes into tags from database");
         loadGroups(menagerie);
         loadMedia(menagerie);
         Main.log.info("Finished loading " + menagerie.getItems().size() + " items from database");
         loadTagsForItems(menagerie);
         Main.log.info("Finished loading tags for " + menagerie.getItems().size() + " items from database");
+    }
+
+    /**
+     * Loads all tag notes into their tags.
+     *
+     * @param menagerie Menagerie to load tag notes into.
+     * @throws SQLException When database query fails.
+     */
+    private void loadTagNotes(Menagerie menagerie) throws SQLException {
+        synchronized (PS_GET_TAG_NOTES) {
+            try (ResultSet rs = PS_GET_TAG_NOTES.executeQuery()) {
+                while (rs.next()) {
+                    Tag tag = menagerie.getTagByID(rs.getInt("tag_id"));
+
+                    if (tag != null) {
+                        tag.getNotes().add(rs.getNString("note"));
+                    } else {
+                        Main.log.severe(String.format("Tag with id %d does not exist, but exists in tag_notes", rs.getInt("tag_id")));
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -632,7 +790,7 @@ public class DatabaseManager extends Thread {
         synchronized (PS_GET_TAGS) {
             try (ResultSet rs = PS_GET_TAGS.executeQuery()) {
                 while (rs.next()) {
-                    menagerie.getTags().add(new Tag(rs.getInt("id"), rs.getNString("name")));
+                    menagerie.getTags().add(new Tag(menagerie, rs.getInt("id"), rs.getNString("name"), rs.getNString("color")));
                 }
             }
         }
@@ -687,7 +845,7 @@ public class DatabaseManager extends Thread {
                         }
                     }
 
-                    MediaItem media = new MediaItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"), group, new File(rs.getNString("media.path")), rs.getNString("media.md5"), histogram);
+                    MediaItem media = new MediaItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"), rs.getInt("media.page"), group, new File(rs.getNString("media.path")), rs.getNString("media.md5"), histogram);
                     menagerie.getItems().add(media);
                     if (group != null) group.getElements().add(media);
                 }

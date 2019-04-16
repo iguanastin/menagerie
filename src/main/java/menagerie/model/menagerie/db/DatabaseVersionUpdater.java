@@ -25,10 +25,12 @@ public class DatabaseVersionUpdater {
     private static final String CREATE_GROUPS_TABLE_V3 = "CREATE TABLE groups(id INT NOT NULL PRIMARY KEY, title NVARCHAR(1024), FOREIGN KEY (id) REFERENCES items(id) ON DELETE CASCADE);";
     private static final String CREATE_MEDIA_TABLE_V3 = "CREATE TABLE media(id INT NOT NULL PRIMARY KEY, gid INT, path NVARCHAR(1024) UNIQUE, md5 NVARCHAR(32), thumbnail BLOB, hist_a BLOB, hist_r BLOB, hist_g BLOB, hist_b BLOB, FOREIGN KEY (id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (gid) REFERENCES groups(id) ON DELETE SET NULL);";
 
+    private static final String CREATE_TAG_NOTES_TABLE_V4 = "CREATE TABLE tag_notes(tag_id INT, note NVARCHAR(1024), FOREIGN KEY (tag_id) REFERENCES tags(id));";
+
     /**
      * Currently accepted version of the database. If version is not this, database should upgrade.
      */
-    private static final int TARGET_VERSION = 3;
+    private static final int TARGET_VERSION = 4;
 
 
     /**
@@ -48,33 +50,34 @@ public class DatabaseVersionUpdater {
      * @see #outOfDate(Connection)
      */
     public static void updateDatabase(Connection db) throws SQLException {
-        try (Statement s = db.createStatement()) {
-            while (outOfDate(db)) {
-                int version = getVersion(db);
+        while (outOfDate(db)) {
+            int version = getVersion(db);
 
-                Main.log.info("Found database version: " + version);
+            Main.log.info("Found database version: " + version);
 
-                switch (version) {
-                    case -1:
-                        cleanDatabase(db);
-                        initializeTables(db);
-                        break;
-                    case 0:
-                        Main.log.warning("!!! Database needs to update from 0 to 1 !!!");
-                        updateFromV0ToV1(db);
-                        break;
-                    case 1:
-                        Main.log.warning("!!! Database needs to update from 1 to 2 !!!");
-                        updateFromV1ToV2(db);
-                        break;
-                    case 2:
-                        Main.log.warning("!!! Database needs to update from 2 to 3 !!!");
-                        updateFromV2ToV3(db);
-                        break;
-                    case 3:
-                        Main.log.info("Database is up to date");
-                        break;
-                }
+            switch (version) {
+                case -1:
+                    cleanDatabase(db);
+                    initializeTables(db);
+                    break;
+                case 0:
+                    Main.log.warning("!!! Database needs to update from v0 to v1 !!!");
+                    updateFromV0ToV1(db);
+                    break;
+                case 1:
+                    Main.log.warning("!!! Database needs to update from v1 to v2 !!!");
+                    updateFromV1ToV2(db);
+                    break;
+                case 2:
+                    Main.log.warning("!!! Database needs to update from v2 to v3 !!!");
+                    updateFromV2ToV3(db);
+                    break;
+                case 3:
+                    Main.log.warning("!!! Database needs to update from v3 to v4 !!!");
+                    updateFromV3ToV4(db);
+                case 4:
+                    Main.log.info("Database is up to date");
+                    break;
             }
         }
     }
@@ -121,7 +124,7 @@ public class DatabaseVersionUpdater {
      * @throws SQLException If database initialization fails.
      */
     private static void initializeTables(Connection db) throws SQLException {
-        initializeV1Tables(db);
+        initializeV3Tables(db);
     }
 
     /**
@@ -236,7 +239,7 @@ public class DatabaseVersionUpdater {
                     s_getTagID.setNString(1, tagName);
                     ResultSet rs_tag = s_getTagID.executeQuery();
                     rs_tag.next();
-                    tag = new Tag(rs_tag.getInt("tags.id"), tagName);
+                    tag = new Tag(null, rs_tag.getInt("tags.id"), tagName, null);
                     tags.add(tag);
                 }
 
@@ -325,6 +328,26 @@ public class DatabaseVersionUpdater {
 
             Main.log.info("Setting database version");
             s.executeUpdate("INSERT INTO version(version) VALUES (3);");
+
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
+    }
+
+    private static void updateFromV3ToV4(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v3 to v4...");
+        long t = System.currentTimeMillis();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Adding media page column");
+            s.executeUpdate("ALTER TABLE media ADD COLUMN page INT NOT NULL DEFAULT 0;");
+
+            Main.log.info("Creating 'tag_notes' table");
+            s.executeUpdate(CREATE_TAG_NOTES_TABLE_V4);
+
+            Main.log.info("Adding 'color' column to 'tags' table");
+            s.executeUpdate("ALTER TABLE tags ADD COLUMN color NVARCHAR(32);");
+
+            Main.log.info("Setting database version");
+            s.executeUpdate("INSERT INTO version(version) VALUES (4)");
 
             Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
         }

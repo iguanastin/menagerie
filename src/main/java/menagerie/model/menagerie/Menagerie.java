@@ -77,7 +77,7 @@ public class Menagerie {
     public MediaItem importFile(File file, boolean tagTagme, boolean tagVideo, boolean tagImage) {
         if (isFilePresent(file)) return null;
 
-        MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), null, file, null, null);
+        MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), 0, null, file, null, null);
 
         // Add media and commit to database
         items.add(media);
@@ -124,8 +124,6 @@ public class Menagerie {
 
         GroupItem group = new GroupItem(this, nextItemID, System.currentTimeMillis(), title);
 
-        //TODO: Option to combine tags of elements for group
-
         nextItemID++;
         items.add(group);
         try {
@@ -168,7 +166,7 @@ public class Menagerie {
     public Tag createTag(String name) {
         Tag t;
         try {
-            t = new Tag(nextTagID, name);
+            t = new Tag(this, nextTagID, name, null);
         } catch (IllegalArgumentException e) {
             return null;
         }

@@ -1,5 +1,8 @@
 package menagerie.model.menagerie;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * A simple Tag class.
  */
@@ -12,8 +15,12 @@ public class Tag implements Comparable<Tag> {
      */
     public static final String NAME_REGEX = "[0-9a-zA-Z!@#$%^&*()\\-_=+\\[\\]{};:',./<>?`~]+";
 
+    private final Menagerie menagerie;
+
     private final int id;
     private final String name;
+    private List<String> notes = new ArrayList<>();
+    private String colorCSS = null;
 
     private int frequency = 0;
 
@@ -26,13 +33,15 @@ public class Tag implements Comparable<Tag> {
      * @param id   ID of this tag. Must be unique within a Menagerie.
      * @param name Tag's name. Will be converted to lowercase.
      */
-    public Tag(int id, String name) {
+    public Tag(Menagerie menagerie, int id, String name, String colorCSS) {
+        this.menagerie = menagerie;
         if (name == null) throw new NullPointerException("Name cannot be null");
         if (!name.matches(NAME_REGEX))
             throw new IllegalArgumentException(String.format("Name must match regex: \"%s\"", NAME_REGEX));
 
         this.id = id;
         this.name = name.toLowerCase();
+        this.colorCSS = colorCSS;
     }
 
     /**
@@ -68,6 +77,34 @@ public class Tag implements Comparable<Tag> {
      */
     void decrementFrequency() {
         frequency--;
+    }
+
+    public List<String> getNotes() {
+        return notes;
+    }
+
+    public String getColorCSS() {
+        return colorCSS;
+    }
+
+    public void setColorCSS(String colorCSS) {
+        if (this.colorCSS.equals(colorCSS)) return;
+
+        this.colorCSS = colorCSS;
+
+        menagerie.getDatabaseManager().setTagColorAsync(getId(), colorCSS);
+    }
+
+    public void addNote(String note) {
+        notes.add(note);
+
+        menagerie.getDatabaseManager().addTagNoteAsync(getId(), note);
+    }
+
+    public void removeNote(String note) {
+        if (notes.remove(note)) {
+            menagerie.getDatabaseManager().removeTagNoteAsync(getId(), note);
+        }
     }
 
     @Override

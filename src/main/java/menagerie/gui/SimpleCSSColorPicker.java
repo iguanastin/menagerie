@@ -1,0 +1,47 @@
+package menagerie.gui;
+
+import javafx.geometry.Insets;
+import javafx.scene.control.Button;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import menagerie.util.listeners.ObjectListener;
+
+public class SimpleCSSColorPicker extends HBox {
+
+    private ObjectListener<String> colorPickedListener = null;
+
+
+    public SimpleCSSColorPicker() {
+        setSpacing(5);
+        setPadding(new Insets(5));
+
+        String[] cssArray = {"blue", "cyan", "green", "yellow", "orange", "red", "pink", "violet"};
+
+        for (String css : cssArray) {
+            Button b = new Button();
+            b.prefWidthProperty().bind(b.prefHeightProperty());
+            b.setOnAction(event -> confirmedColor(css));
+            b.setStyle(String.format("-fx-base: %s;", css));
+            getChildren().add(b);
+        }
+
+        TextField textField = new TextField();
+        textField.setPromptText("Default");
+        textField.setOnAction(event -> confirmedColor(textField.getText()));
+        getChildren().add(textField);
+    }
+
+    public SimpleCSSColorPicker(ObjectListener<String> colorPickedListener) {
+        this();
+        setColorPickedListener(colorPickedListener);
+    }
+
+    private void setColorPickedListener(ObjectListener<String> colorPickedListener) {
+        this.colorPickedListener = colorPickedListener;
+    }
+
+    private void confirmedColor(String css) {
+        if (colorPickedListener != null) colorPickedListener.pass(css);
+    }
+
+}
