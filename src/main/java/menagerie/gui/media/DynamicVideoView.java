@@ -6,6 +6,7 @@ import javafx.beans.property.FloatProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.*;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.stage.Screen;
@@ -41,10 +42,14 @@ public class DynamicVideoView extends ImageView {
 
         addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             if (!released && getMediaPlayer() != null) {
-                if (getMediaPlayer().isPlaying()) {
-                    getMediaPlayer().pause();
-                } else {
-                    getMediaPlayer().play();
+                if (event.getButton() == MouseButton.PRIMARY) {
+                    if (getMediaPlayer().isPlaying()) {
+                        getMediaPlayer().pause();
+                    } else {
+                        getMediaPlayer().play();
+                    }
+                } else if (event.getButton() == MouseButton.SECONDARY) {
+                    getMediaPlayer().mute(!getMediaPlayer().isMute());
                 }
                 event.consume();
             }
