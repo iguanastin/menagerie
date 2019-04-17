@@ -287,6 +287,8 @@ public class MainController {
         tagListScreen.setCellFactory(param -> {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
+                MenuItem i0 = new MenuItem("Add note");
+                i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
                 MenuItem i1 = new MenuItem("Search this tag");
                 i1.setOnAction(event1 -> {
                     searchTextField.setText(c.getItem().getName());
@@ -294,8 +296,16 @@ public class MainController {
                     tagListScreen.close();
                     applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
                 });
-                ContextMenu m = new ContextMenu(i1);
+                ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1);
                 m.show(c, event.getScreenX(), event.getScreenY());
+            });
+            final TagListPopup popup = new TagListPopup(color -> c.updateTextColor());
+            popup.setAutoHide(true);
+            c.setOnMouseClicked(event -> {
+                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
+                    popup.setTag(c.getItem());
+                    popup.show(c, event.getScreenX(), event.getScreenY());
+                }
             });
             return c;
         });
