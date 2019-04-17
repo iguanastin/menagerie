@@ -4,6 +4,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import menagerie.model.menagerie.Tag;
 
 public class TagListCell extends ListCell<Tag> {
@@ -40,11 +42,11 @@ public class TagListCell extends ListCell<Tag> {
 
     void updateTextColor() {
         if (isEmpty() || getItem() == null || getItem().getColorCSS() == null) {
-            nameLabel.setStyle(null);
-            countLabel.setStyle(null);
+            nameLabel.setTextFill(Color.WHITE);
+            countLabel.setTextFill(Color.WHITE);
         } else {
-            nameLabel.setStyle(String.format("-fx-text-fill: %s;", getItem().getColorCSS()));
-            countLabel.setStyle(String.format("-fx-text-fill: %s;", getItem().getColorCSS()));
+            nameLabel.setTextFill(Paint.valueOf(getItem().getColorCSS()));
+            countLabel.setTextFill(Paint.valueOf(getItem().getColorCSS()));
         }
     }
 
