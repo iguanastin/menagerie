@@ -45,7 +45,11 @@ public class TagListPopup extends Popup {
                     try {
                         Desktop.getDesktop().browse(new URI(c.getItem()));
                     } catch (IOException | URISyntaxException e) {
-                        Main.log.log(Level.SEVERE, String.format("Exception when opening \"%s\" in browser", c.getItem()), e);
+                        try {
+                            Desktop.getDesktop().browse(new URI("https://" + c.getItem()));
+                        } catch (IOException | URISyntaxException e2) {
+                            Main.log.log(Level.SEVERE, String.format("Exception when opening \"%s\" in browser", c.getItem()), e2);
+                        }
                     }
                 }
             });
