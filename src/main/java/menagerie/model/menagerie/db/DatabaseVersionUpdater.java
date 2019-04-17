@@ -26,15 +26,12 @@ public class DatabaseVersionUpdater {
     private static final String CREATE_MEDIA_TABLE_V3 = "CREATE TABLE media(id INT NOT NULL PRIMARY KEY, gid INT, path NVARCHAR(1024) UNIQUE, md5 NVARCHAR(32), thumbnail BLOB, hist_a BLOB, hist_r BLOB, hist_g BLOB, hist_b BLOB, FOREIGN KEY (id) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (gid) REFERENCES groups(id) ON DELETE SET NULL);";
 
     private static final String CREATE_TAG_NOTES_TABLE_V4 = "CREATE TABLE tag_notes(tag_id INT, note NVARCHAR(1024), FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE);";
-    // # tag_notes foreign key on delete cascade fix
-    // CREATE TABLE tag_notes2(tag_id INT, note NVARCHAR(1024), FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE) AS SELECT tag_id, note FROM tag_notes;
-    // DROP TABLE tag_notes;
-    // ALTER TABLE tag_notes2 RENAME TO tag_notes;
+
 
     /**
      * Currently accepted version of the database. If version is not this, database should upgrade.
      */
-    private static final int TARGET_VERSION = 4;
+    private static final int TARGET_VERSION = 5;
 
 
     /**
@@ -80,6 +77,9 @@ public class DatabaseVersionUpdater {
                     Main.log.warning("!!! Database needs to update from v3 to v4 !!!");
                     updateFromV3ToV4(db);
                 case 4:
+                    Main.log.warning("!!! Database needs to update from v4 to v5 !!!");
+                    updateFromV4ToV5(db);
+                case 5:
                     Main.log.info("Database is up to date");
                     break;
             }
@@ -352,6 +352,22 @@ public class DatabaseVersionUpdater {
 
             Main.log.info("Setting database version");
             s.executeUpdate("INSERT INTO version(version) VALUES (4)");
+
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
+    }
+
+    private static void updateFromV4ToV5(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v4 to v5...");
+        long t = System.currentTimeMillis();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Fixing 'tag_notes' foreign key");
+            s.executeUpdate("CREATE TABLE tag_notes2(tag_id INT, note NVARCHAR(1024), FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE) AS SELECT tag_id, note FROM tag_notes;");
+            s.executeUpdate("DROP TABLE tag_notes;");
+            s.executeUpdate("ALTER TABLE tag_notes2 RENAME TO tag_notes;");
+
+            Main.log.info("Setting database version");
+            s.executeUpdate("INSERT INTO version(version) VALUES (5);");
 
             Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
         }
