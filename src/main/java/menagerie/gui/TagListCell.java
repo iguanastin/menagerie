@@ -23,26 +23,29 @@ public class TagListCell extends ListCell<Tag> {
 
     @Override
     protected void updateItem(Tag tag, boolean empty) {
+        super.updateItem(tag, empty);
+
         if (empty) {
             nameLabel.setText(null);
             countLabel.setText(null);
             setTooltip(null);
-            nameLabel.setStyle(null);
-            countLabel.setStyle(null);
         } else {
             nameLabel.setText(tag.getName());
             countLabel.setText("(" + tag.getFrequency() + ")");
             setTooltip(new Tooltip("(ID: " + tag.getId() + ") " + tag.getName()));
-            if (tag.getColorCSS() == null) {
-                nameLabel.setStyle(null);
-                countLabel.setStyle(null);
-            } else {
-                nameLabel.setStyle(String.format("-fx-text-fill: %s;", tag.getColorCSS()));
-                countLabel.setStyle(String.format("-fx-text-fill: %s;", tag.getColorCSS()));
-            }
         }
 
-        super.updateItem(tag, empty);
+        updateTextColor();
+    }
+
+    void updateTextColor() {
+        if (isEmpty() || getItem() == null || getItem().getColorCSS() == null) {
+            nameLabel.setStyle(null);
+            countLabel.setStyle(null);
+        } else {
+            nameLabel.setStyle(String.format("-fx-text-fill: %s;", getItem().getColorCSS()));
+            countLabel.setStyle(String.format("-fx-text-fill: %s;", getItem().getColorCSS()));
+        }
     }
 
 }

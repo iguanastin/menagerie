@@ -27,6 +27,7 @@ import menagerie.gui.screens.*;
 import menagerie.gui.screens.dialogs.ConfirmationScreen;
 import menagerie.gui.screens.dialogs.GroupDialogScreen;
 import menagerie.gui.screens.dialogs.ImportDialogScreen;
+import menagerie.gui.screens.dialogs.TextDialogScreen;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
@@ -496,6 +497,8 @@ public class MainController {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
                 if (c.getItem() != null) {
+                    MenuItem i0 = new MenuItem("Add note");
+                    i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
                     MenuItem i1 = new MenuItem("Add to search");
                     i1.setOnAction(event1 -> {
                         searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
@@ -517,10 +520,20 @@ public class MainController {
 
                         tagEditHistory.push(new TagEditEvent(null, removed));
                     });
-                    ContextMenu m = new ContextMenu(i1, i2, new SeparatorMenuItem(), i3);
+                    ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1, i2, new SeparatorMenuItem(), i3);
                     m.show(c, event.getScreenX(), event.getScreenY());
                 }
             });
+
+            final TagListPopup popup = new TagListPopup(color -> c.updateTextColor());
+            popup.setAutoHide(true);
+            c.setOnMouseClicked(event -> {
+                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
+                    popup.setTag(c.getItem());
+                    popup.show(c, event.getScreenX(), event.getScreenY());
+                }
+            });
+
             return c;
         });
 

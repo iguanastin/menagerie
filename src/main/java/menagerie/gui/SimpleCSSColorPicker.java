@@ -11,13 +11,11 @@ public class SimpleCSSColorPicker extends HBox {
     private ObjectListener<String> colorPickedListener = null;
 
 
-    public SimpleCSSColorPicker() {
+    public SimpleCSSColorPicker(String[] colors) {
         setSpacing(5);
         setPadding(new Insets(5));
 
-        String[] cssArray = {"blue", "cyan", "green", "yellow", "orange", "red", "pink", "violet"};
-
-        for (String css : cssArray) {
+        for (String css : colors) {
             Button b = new Button();
             b.prefWidthProperty().bind(b.prefHeightProperty());
             b.setOnAction(event -> confirmedColor(css));
@@ -31,12 +29,12 @@ public class SimpleCSSColorPicker extends HBox {
         getChildren().add(textField);
     }
 
-    public SimpleCSSColorPicker(ObjectListener<String> colorPickedListener) {
-        this();
+    public SimpleCSSColorPicker(String[] colors, ObjectListener<String> colorPickedListener) {
+        this(colors);
         setColorPickedListener(colorPickedListener);
     }
 
-    private void setColorPickedListener(ObjectListener<String> colorPickedListener) {
+    void setColorPickedListener(ObjectListener<String> colorPickedListener) {
         this.colorPickedListener = colorPickedListener;
     }
 

@@ -20,7 +20,7 @@ public class Tag implements Comparable<Tag> {
     private final int id;
     private final String name;
     private List<String> notes = new ArrayList<>();
-    private String colorCSS = null;
+    private String colorCSS;
 
     private int frequency = 0;
 
@@ -87,12 +87,21 @@ public class Tag implements Comparable<Tag> {
         return colorCSS;
     }
 
-    public void setColorCSS(String colorCSS) {
-        if (this.colorCSS.equals(colorCSS)) return;
+    public boolean setColorCSS(String colorCSS) {
+        if (colorCSS != null && colorCSS.isEmpty()) colorCSS = null;
+        if (this.colorCSS == null) {
+            if (colorCSS == null) {
+                return false;
+            }
+        } else if (this.colorCSS.equals(colorCSS)) {
+            return false;
+        }
 
         this.colorCSS = colorCSS;
 
         menagerie.getDatabaseManager().setTagColorAsync(getId(), colorCSS);
+
+        return true;
     }
 
     public void addNote(String note) {
@@ -101,10 +110,13 @@ public class Tag implements Comparable<Tag> {
         menagerie.getDatabaseManager().addTagNoteAsync(getId(), note);
     }
 
-    public void removeNote(String note) {
+    public boolean removeNote(String note) {
         if (notes.remove(note)) {
             menagerie.getDatabaseManager().removeTagNoteAsync(getId(), note);
+            return true;
         }
+
+        return false;
     }
 
     @Override
