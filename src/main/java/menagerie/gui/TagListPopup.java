@@ -32,7 +32,7 @@ public class TagListPopup extends Popup {
     public TagListPopup(ObjectListener<String> colorListener) {
         this.colorListener = colorListener;
 
-        VBox v = new VBox(5, nameLabel, new Separator(), noteListView, new Separator(), colorPicker);
+        VBox v = new VBox(5, nameLabel, new Separator(), colorPicker, new Separator(), noteListView);
         v.setStyle("-fx-background-color: -fx-base;");
         v.setPadding(new Insets(5));
         v.setEffect(new DropShadow());
@@ -74,6 +74,11 @@ public class TagListPopup extends Popup {
 
         noteListView.getItems().clear();
         noteListView.getItems().addAll(tag.getNotes());
+        if (noteListView.getItems().isEmpty()) {
+            noteListView.setMaxHeight(20);
+        } else {
+            noteListView.setMaxHeight(300);
+        }
 
         nameLabel.setText(tag.getName());
 
