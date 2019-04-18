@@ -25,7 +25,7 @@ public class TagEditEvent {
     /**
      * Undo this event by adding back tags that were removed and removing tags that were added. Item's tags should be as they were before the event that created this record occurred.
      */
-    public void reverseAction() {
+    public void revertAction() {
         for (Map.Entry<Item, List<Tag>> entry : added.entrySet()) {
             entry.getValue().forEach(entry.getKey()::removeTag);
         }

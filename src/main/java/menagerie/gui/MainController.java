@@ -1325,7 +1325,7 @@ public class MainController {
                         TagEditEvent peek = tagEditHistory.peek();
                         new ConfirmationScreen().open(screenPane, "Undo last tag edit?", "Tags were added to " + peek.getAdded().keySet().size() + " items.\nTags were removed from " + peek.getRemoved().keySet().size() + " others.", () -> {
                             TagEditEvent pop = tagEditHistory.pop();
-                            pop.reverseAction();
+                            pop.revertAction();
 
                             List<Item> list = new ArrayList<>();
                             pop.getAdded().keySet().forEach(item -> {
