@@ -128,6 +128,8 @@ public class PredictiveTextField extends TextField {
                         if (event.getCode() == KeyCode.TAB) event.consume();
                     }
                     break;
+                default:
+                    break;
             }
         }
     }

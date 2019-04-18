@@ -1348,6 +1348,8 @@ public class MainController {
                     logButton.setStyle(null);
                     event.consume();
                     break;
+                default:
+                    break;
             }
         }
 
@@ -1411,6 +1413,8 @@ public class MainController {
                 editTagsTextField.setText(null);
                 itemGridView.requestFocus();
                 event.consume();
+                break;
+            default:
                 break;
         }
     }

@@ -82,7 +82,7 @@ public class MediaItem extends Item {
     public Thumbnail getThumbnail() {
         Thumbnail thumb = null;
         if (thumbnail != null) thumb = thumbnail.get();
-        if (thumb == null && canStoreToDatabase()) {
+        if (thumb == null && connectedToDatabase()) {
             try {
                 thumb = menagerie.getDatabaseManager().getThumbnail(getId());
                 if (thumb != null) thumbnail = new SoftReference<>(thumb);
@@ -98,7 +98,7 @@ public class MediaItem extends Item {
 
             thumbnail = new SoftReference<>(thumb);
 
-            if (thumb != null && canStoreToDatabase()) {
+            if (thumb != null && connectedToDatabase()) {
                 if (thumb.isLoaded()) {
                     menagerie.getDatabaseManager().setThumbnailAsync(getId(), thumb.getImage());
                 } else {
@@ -192,7 +192,7 @@ public class MediaItem extends Item {
 
         try {
             md5 = HexBin.encode(MD5Hasher.hash(getFile()));
-            if (canStoreToDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);
+            if (connectedToDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);
         } catch (IOException e) {
             Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
         }
@@ -205,7 +205,7 @@ public class MediaItem extends Item {
         if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
             try {
                 histogram = new ImageHistogram(getImageSynchronously());
-                if (canStoreToDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
+                if (connectedToDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
             } catch (HistogramReadException e) {
                 Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
             }
@@ -219,6 +219,7 @@ public class MediaItem extends Item {
      * @return True if successful.
      */
     public boolean renameTo(File dest) {
+        if (getFile() == null || dest == null) return false;
         if (file.equals(dest)) return true;
 
         boolean succeeded = file.renameTo(dest);
@@ -226,7 +227,7 @@ public class MediaItem extends Item {
         if (succeeded) {
             file = dest;
 
-            if (canStoreToDatabase()) {
+            if (connectedToDatabase()) {
                 try {
                     menagerie.getDatabaseManager().setPath(getId(), file.getAbsolutePath());
                 } catch (SQLException e) {
@@ -264,7 +265,7 @@ public class MediaItem extends Item {
         Integer gid = null;
         if (group != null) gid = group.getId();
 
-        if (canStoreToDatabase()) menagerie.getDatabaseManager().setMediaGIDAsync(getId(), gid);
+        if (connectedToDatabase()) menagerie.getDatabaseManager().setMediaGIDAsync(getId(), gid);
     }
 
     /**
@@ -300,12 +301,12 @@ public class MediaItem extends Item {
 
         this.pageIndex = pageIndex;
 
-        if (canStoreToDatabase()) menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
+        if (connectedToDatabase()) menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
     }
 
     @Override
     public String toString() {
-        return "Image (" + getId() + ") \"" + getFile().getAbsolutePath() + "\"";
+        return "Image (" + getId() + ") \"" + getFile() + "\"";
     }
 
 }

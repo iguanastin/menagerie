@@ -78,7 +78,7 @@ public abstract class Item implements Comparable<Item> {
         tags.add(t);
         t.incrementFrequency();
 
-        if (canStoreToDatabase()) menagerie.getDatabaseManager().tagItemAsync(id, t.getId());
+        if (connectedToDatabase()) menagerie.getDatabaseManager().tagItemAsync(id, t.getId());
 
         if (tagListener != null) tagListener.poke();
 
@@ -97,7 +97,7 @@ public abstract class Item implements Comparable<Item> {
         tags.remove(t);
         t.decrementFrequency();
 
-        if (canStoreToDatabase()) menagerie.getDatabaseManager().untagItemAsync(id, t.getId());
+        if (connectedToDatabase()) menagerie.getDatabaseManager().untagItemAsync(id, t.getId());
 
         if (tagListener != null) tagListener.poke();
 
@@ -114,7 +114,7 @@ public abstract class Item implements Comparable<Item> {
     /**
      * @return True if this item is connected to a Menagerie with a database.
      */
-    protected boolean canStoreToDatabase() {
+    protected boolean connectedToDatabase() {
         return menagerie != null && menagerie.getDatabaseManager() != null;
     }
 

@@ -226,13 +226,14 @@ class GroupItemTests {
         GroupItem g = new GroupItem(null, 1, 0, "group");
         assertNull(g.getThumbnail());
 
-        MediaItem m = new MediaItem(null, 1, 0, null);
-        g.addItem(m);
+        MediaItem m1 = new MediaItem(null, 1, 0, null);
+        g.addItem(m1);
 
-        assertEquals(m.getThumbnail(), g.getThumbnail());
+        assertEquals(m1.getThumbnail(), g.getThumbnail());
 
-        g.removeItem(m);
-        //        MediaItem m2 = new MediaItem(null, 1, 0, new File("white.png")); // TODO get real path to test resource
+        // Not possible because it requires the JavaFX thread to load images.
+        //        g.removeItem(m1);
+        //        MediaItem m2 = new MediaItem(null, 1, 0, new File("src/test/resources/white.png").getAbsoluteFile());
         //        g.addItem(m2);
         //        assertEquals(m2.getThumbnail(), g.getThumbnail());
     }

@@ -82,6 +82,9 @@ public class DatabaseVersionUpdater {
                 case 5:
                     Main.log.info("Database is up to date");
                     break;
+                default:
+                    Main.log.severe("Database is of unexpected version: " + version);
+                    break;
             }
         }
     }
@@ -97,8 +100,7 @@ public class DatabaseVersionUpdater {
         try (Statement s = db.createStatement()) {
 
             int version;
-            try {
-                ResultSet rs = s.executeQuery("SELECT TOP 1 version.version FROM version ORDER BY version.version DESC;");
+            try (ResultSet rs = s.executeQuery("SELECT TOP 1 version.version FROM version ORDER BY version.version DESC;")) {
                 if (rs.next()) {
                     version = rs.getInt("version");
                 } else {
@@ -106,8 +108,7 @@ public class DatabaseVersionUpdater {
                 }
             } catch (SQLException e) {
                 //Database is either version 0 schema or not initialized
-                try {
-                    s.executeQuery("SELECT TOP 1 * FROM imgs;");
+                try (ResultSet ignore = s.executeQuery("SELECT TOP 1 * FROM imgs;")) {
                     // Tables exist for version 0
                     version = 0;
                 } catch (SQLException e2) {

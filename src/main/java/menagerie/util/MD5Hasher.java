@@ -25,7 +25,8 @@ public abstract class MD5Hasher {
      * @throws IOException If error occurred when reading file.
      */
     public static byte[] hash(File file) throws IOException {
-        if (file.exists() && getDigest() != null) return getDigest().digest(Files.readAllBytes(file.toPath()));
+        if (file != null && file.exists() && getDigest() != null)
+            return getDigest().digest(Files.readAllBytes(file.toPath()));
         return null;
     }
 
