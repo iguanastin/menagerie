@@ -41,12 +41,12 @@ public class TagListCell extends ListCell<Tag> {
     }
 
     void updateTextColor() {
-        if (isEmpty() || getItem() == null || getItem().getColorCSS() == null) {
+        if (isEmpty() || getItem() == null || getItem().getColor() == null) {
             nameLabel.setTextFill(Color.WHITE);
             countLabel.setTextFill(Color.WHITE);
         } else {
-            nameLabel.setTextFill(Paint.valueOf(getItem().getColorCSS()));
-            countLabel.setTextFill(Paint.valueOf(getItem().getColorCSS()));
+            nameLabel.setTextFill(Paint.valueOf(getItem().getColor()));
+            countLabel.setTextFill(Paint.valueOf(getItem().getColor()));
         }
     }
 

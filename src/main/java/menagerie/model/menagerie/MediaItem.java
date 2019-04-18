@@ -82,7 +82,7 @@ public class MediaItem extends Item {
     public Thumbnail getThumbnail() {
         Thumbnail thumb = null;
         if (thumbnail != null) thumb = thumbnail.get();
-        if (thumb == null) {
+        if (thumb == null && canStoreToDatabase()) {
             try {
                 thumb = menagerie.getDatabaseManager().getThumbnail(getId());
                 if (thumb != null) thumbnail = new SoftReference<>(thumb);
@@ -90,7 +90,7 @@ public class MediaItem extends Item {
                 Main.log.log(Level.SEVERE, "Failed to get thumbnail from database: " + getId(), e);
             }
         }
-        if (thumb == null) {
+        if (thumb == null && file != null) {
             try {
                 thumb = new Thumbnail(file);
             } catch (IOException ignore) {
@@ -98,7 +98,7 @@ public class MediaItem extends Item {
 
             thumbnail = new SoftReference<>(thumb);
 
-            if (thumb != null) {
+            if (thumb != null && canStoreToDatabase()) {
                 if (thumb.isLoaded()) {
                     menagerie.getDatabaseManager().setThumbnailAsync(getId(), thumb.getImage());
                 } else {
@@ -192,7 +192,7 @@ public class MediaItem extends Item {
 
         try {
             md5 = HexBin.encode(MD5Hasher.hash(getFile()));
-            menagerie.getDatabaseManager().setMD5Async(getId(), md5);
+            if (canStoreToDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);
         } catch (IOException e) {
             Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
         }
@@ -205,7 +205,7 @@ public class MediaItem extends Item {
         if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
             try {
                 histogram = new ImageHistogram(getImageSynchronously());
-                menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
+                if (canStoreToDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
             } catch (HistogramReadException e) {
                 Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
             }
@@ -226,10 +226,12 @@ public class MediaItem extends Item {
         if (succeeded) {
             file = dest;
 
-            try {
-                menagerie.getDatabaseManager().setPath(getId(), file.getAbsolutePath());
-            } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to update new path to file", e);
+            if (canStoreToDatabase()) {
+                try {
+                    menagerie.getDatabaseManager().setPath(getId(), file.getAbsolutePath());
+                } catch (SQLException e) {
+                    Main.log.log(Level.SEVERE, "Failed to update new path to file", e);
+                }
             }
         }
 
@@ -262,7 +264,7 @@ public class MediaItem extends Item {
         Integer gid = null;
         if (group != null) gid = group.getId();
 
-        menagerie.getDatabaseManager().setMediaGIDAsync(getId(), gid);
+        if (canStoreToDatabase()) menagerie.getDatabaseManager().setMediaGIDAsync(getId(), gid);
     }
 
     /**
@@ -279,16 +281,26 @@ public class MediaItem extends Item {
         return group;
     }
 
+    /**
+     * @return The index this item is in within the parent group.
+     */
     public int getPageIndex() {
         return pageIndex;
     }
 
-    public void setPageIndex(int pageIndex) {
+    /**
+     * Sets the index of this item.
+     * <p>
+     * This method does not change ordering in the parent group, and should only be used by the group as a utility.
+     *
+     * @param pageIndex Index to set to.
+     */
+    void setPageIndex(int pageIndex) {
         if (this.pageIndex == pageIndex) return;
 
         this.pageIndex = pageIndex;
 
-        menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
+        if (canStoreToDatabase()) menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
     }
 
     @Override

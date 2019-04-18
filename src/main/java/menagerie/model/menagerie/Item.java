@@ -39,7 +39,6 @@ public abstract class Item implements Comparable<Item> {
     }
 
     /**
-     *
      * @return The unique ID of this item.
      */
     public int getId() {
@@ -47,13 +46,11 @@ public abstract class Item implements Comparable<Item> {
     }
 
     /**
-     *
      * @return The thumbnail of this item. May be null.
      */
     public abstract Thumbnail getThumbnail();
 
     /**
-     *
      * @return The tags this item is tagged with.
      */
     public List<Tag> getTags() {
@@ -61,7 +58,6 @@ public abstract class Item implements Comparable<Item> {
     }
 
     /**
-     *
      * @param t Tag to find.
      * @return True if this item has the tag.
      */
@@ -82,7 +78,7 @@ public abstract class Item implements Comparable<Item> {
         tags.add(t);
         t.incrementFrequency();
 
-        menagerie.getDatabaseManager().tagItemAsync(id, t.getId());
+        if (canStoreToDatabase()) menagerie.getDatabaseManager().tagItemAsync(id, t.getId());
 
         if (tagListener != null) tagListener.poke();
 
@@ -101,7 +97,7 @@ public abstract class Item implements Comparable<Item> {
         tags.remove(t);
         t.decrementFrequency();
 
-        menagerie.getDatabaseManager().untagItemAsync(id, t.getId());
+        if (canStoreToDatabase()) menagerie.getDatabaseManager().untagItemAsync(id, t.getId());
 
         if (tagListener != null) tagListener.poke();
 
@@ -109,11 +105,17 @@ public abstract class Item implements Comparable<Item> {
     }
 
     /**
-     *
      * @param tagListener Listener that is notified when tags are added or removed.
      */
     public void setTagListener(PokeListener tagListener) {
         this.tagListener = tagListener;
+    }
+
+    /**
+     * @return True if this item is connected to a Menagerie with a database.
+     */
+    protected boolean canStoreToDatabase() {
+        return menagerie != null && menagerie.getDatabaseManager() != null;
     }
 
     @Override

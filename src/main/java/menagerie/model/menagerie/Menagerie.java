@@ -152,7 +152,7 @@ public class Menagerie {
         }
 
         // Update searches
-        checkItemsStillValidInSearches(Collections.singletonList(group));
+        refreshInSearches(Collections.singletonList(group));
 
         return group;
     }
@@ -268,7 +268,7 @@ public class Menagerie {
      *
      * @param items Items to check.
      */
-    public void checkItemsStillValidInSearches(List<Item> items) {
+    public void refreshInSearches(List<Item> items) {
         activeSearches.forEach(search -> search.recheckWithSearch(items));
     }
 

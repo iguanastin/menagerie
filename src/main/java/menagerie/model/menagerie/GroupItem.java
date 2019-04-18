@@ -33,12 +33,19 @@ public class GroupItem extends Item {
      * Adds an item to this group. If the item is currently in another group, it is removed from that group first.
      *
      * @param item Item to add.
+     * @return True if successful. False if item is already in this group.
      */
-    public void addItem(MediaItem item) {
+    public boolean addItem(MediaItem item) {
+        if (elements.contains(item)) return false;
+
         if (item.inGroup()) item.getGroup().removeItem(item);
+
         elements.add(item);
         item.setGroup(this);
-        menagerie.checkItemsStillValidInSearches(Collections.singletonList(item));
+
+        updateIndices();
+        if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(item));
+        return true;
     }
 
     /**
@@ -46,11 +53,15 @@ public class GroupItem extends Item {
      *
      * @param item Item to remove.
      */
-    public void removeItem(MediaItem item) {
+    public boolean removeItem(MediaItem item) {
         if (elements.remove(item)) {
             item.setGroup(null);
-            menagerie.checkItemsStillValidInSearches(Collections.singletonList(item));
+            updateIndices();
+            if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(item));
+            return true;
         }
+
+        return false;
     }
 
     /**
@@ -62,7 +73,41 @@ public class GroupItem extends Item {
             MediaItem item = iter.next();
             iter.remove();
             item.setGroup(null);
-            menagerie.checkItemsStillValidInSearches(Collections.singletonList(item));
+            if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(item));
+        }
+    }
+
+    /**
+     * Moves elements to a specific place in the elements list.
+     *
+     * @param list         List of elements to move. Must all be items in this group.
+     * @param anchor       Anchor element to move relative to. Must not be in list of items to move.
+     * @param beforeAnchor Moves the elements before the anchor instead of after it.
+     * @return True if successfully moved.
+     */
+    public boolean moveElements(List<MediaItem> list, MediaItem anchor, boolean beforeAnchor) {
+        if (list.contains(anchor) || !elements.contains(anchor) || !elements.containsAll(list)) return false;
+
+        elements.removeAll(list);
+
+        int anchorIndex = elements.indexOf(anchor);
+        if (!beforeAnchor) anchorIndex++;
+        for (int i = 0; i < list.size(); i++) {
+            elements.add(anchorIndex + i, list.get(i));
+        }
+
+        updateIndices();
+        return true;
+    }
+
+    /**
+     * Checks all elements and updates their page index if not synced.
+     */
+    private void updateIndices() {
+        for (int i = 0; i < elements.size(); i++) {
+            if (elements.get(i).getPageIndex() != i) {
+                elements.get(i).setPageIndex(i);
+            }
         }
     }
 

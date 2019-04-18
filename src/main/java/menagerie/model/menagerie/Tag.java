@@ -79,15 +79,27 @@ public class Tag implements Comparable<Tag> {
         frequency--;
     }
 
+    /**
+     * @return This tag's user defined notes.
+     */
     public List<String> getNotes() {
         return notes;
     }
 
-    public String getColorCSS() {
+    /**
+     * @return The color of this tag.
+     */
+    public String getColor() {
         return colorCSS;
     }
 
-    public boolean setColorCSS(String colorCSS) {
+    /**
+     * Sets the color of this tag.
+     *
+     * @param colorCSS A string that can be interpreted as a JavaFX color.
+     * @return True if the property changed because of this call.
+     */
+    public boolean setColor(String colorCSS) {
         if (colorCSS != null && colorCSS.isEmpty()) colorCSS = null;
         if (this.colorCSS == null) {
             if (colorCSS == null) {
@@ -99,24 +111,42 @@ public class Tag implements Comparable<Tag> {
 
         this.colorCSS = colorCSS;
 
-        menagerie.getDatabaseManager().setTagColorAsync(getId(), colorCSS);
+        if (canStoreToDatabase()) menagerie.getDatabaseManager().setTagColorAsync(getId(), colorCSS);
 
         return true;
     }
 
+    /**
+     * Adds a note to this tag.
+     *
+     * @param note Note to add.
+     */
     public void addNote(String note) {
         notes.add(note);
 
-        menagerie.getDatabaseManager().addTagNoteAsync(getId(), note);
+        if (canStoreToDatabase()) menagerie.getDatabaseManager().addTagNoteAsync(getId(), note);
     }
 
+    /**
+     * Removes a note from this tag.
+     *
+     * @param note Note to remove.
+     * @return True if the note was removed.
+     */
     public boolean removeNote(String note) {
         if (notes.remove(note)) {
-            menagerie.getDatabaseManager().removeTagNoteAsync(getId(), note);
+            if (canStoreToDatabase()) menagerie.getDatabaseManager().removeTagNoteAsync(getId(), note);
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * @return True if this item is connected to a Menagerie with a database.
+     */
+    private boolean canStoreToDatabase() {
+        return menagerie != null && menagerie.getDatabaseManager() != null;
     }
 
     @Override

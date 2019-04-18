@@ -1,4 +1,5 @@
-import menagerie.model.SimilarPair;
+package menagerie.model;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

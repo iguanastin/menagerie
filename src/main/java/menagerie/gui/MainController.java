@@ -981,7 +981,7 @@ public class MainController {
 
             if (!itemGridView.getItems().isEmpty()) {
                 if (newIndex >= itemGridView.getItems().size()) newIndex = itemGridView.getItems().size() - 1;
-                itemGridView.select(itemGridView.getItems().get(newIndex), false, false);
+                if (newIndex >= 0) itemGridView.select(itemGridView.getItems().get(newIndex), false, false);
             }
         }));
 
@@ -1058,7 +1058,7 @@ public class MainController {
         }
 
         if (!changed.isEmpty()) {
-            menagerie.checkItemsStillValidInSearches(changed);
+            menagerie.refreshInSearches(changed);
 
             tagEditHistory.push(new TagEditEvent(added, removed));
         }
@@ -1334,7 +1334,7 @@ public class MainController {
                             pop.getRemoved().keySet().forEach(item -> {
                                 if (!list.contains(item)) list.add(item);
                             });
-                            menagerie.checkItemsStillValidInSearches(list);
+                            menagerie.refreshInSearches(list);
                         }, null);
                     }
                     event.consume();

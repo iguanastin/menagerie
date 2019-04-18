@@ -70,7 +70,7 @@ public class TagListPopup extends Popup {
         this.tag = tag;
 
         colorPicker.setColorPickedListener(color -> {
-            if (tag.setColorCSS(color)) {
+            if (tag.setColor(color)) {
                 setNameLabelColor(color);
                 if (colorListener != null) colorListener.pass(color);
             }
@@ -86,7 +86,7 @@ public class TagListPopup extends Popup {
 
         nameLabel.setText(tag.getName());
 
-        setNameLabelColor(tag.getColorCSS());
+        setNameLabelColor(tag.getColor());
     }
 
     private void setNameLabelColor(String color) {
