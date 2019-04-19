@@ -19,7 +19,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import menagerie.gui.grid.ImageGridCell;
+import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.predictive.PredictiveTextField;
@@ -553,7 +553,7 @@ public class MainController {
     private void initItemGridView() {
         itemGridView.addSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
         itemGridView.setCellFactory(param -> {
-            ImageGridCell c = new ImageGridCell();
+            ItemGridCell c = new ItemGridCell();
             c.setOnDragDetected(event -> {
                 if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
                     if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem()))
@@ -591,7 +591,7 @@ public class MainController {
                 event.consume();
             });
             c.setOnDragOver(event -> {
-                if (event.getGestureSource() instanceof ImageGridCell && currentSearch instanceof GroupSearch && !event.getGestureSource().equals(c)) {
+                if (event.getGestureSource() instanceof ItemGridCell && currentSearch instanceof GroupSearch && !event.getGestureSource().equals(c)) {
                     event.acceptTransferModes(TransferMode.ANY);
                 }
             });
@@ -733,6 +733,11 @@ public class MainController {
         }
 
         // More than one group or at least one media item
+        if (groupCount == 1 && selected.size() == 1) {
+            MenuItem reverse = new MenuItem("Reverse element order");
+            reverse.setOnAction(event -> ((GroupItem) selected.get(0)).reverseElements());
+            cm.getItems().add(reverse);
+        }
         if (groupCount > 1 || mediaCount > 0) {
             MenuItem combineGroups = new MenuItem("Combine into Group");
             combineGroups.setOnAction(event -> groupDialog(selected));

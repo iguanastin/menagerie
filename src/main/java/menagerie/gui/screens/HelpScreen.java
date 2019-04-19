@@ -229,7 +229,7 @@ public class HelpScreen extends Screen {
         l.setFont(BOLD_ITALIC);
         v.getChildren().addAll(new Separator(), l);
 
-        String[] strs = new String[]{"LEGEND:", "  (___) = Optional ___", "  [___] = Required ___", "  | = Or", " ", "[TAG]", "-[RULE]", "id:(<|>)[INT]", "[time|date]:(<|>)[LONG]", "[path|file]:[STRING]", "missing:[md5|hist|histogram|file]", "type:[group|media]", "tags:(<|>)[INT]", "in:[INT]"};
+        String[] strs = new String[]{"LEGEND:", "  (___) = Optional ___", "  [___] = Required ___", "  | = Or", " ", "[TAG]", "-[RULE]", "id:(<|>)[INT]", "[time|date]:(<|>)[LONG]", "[path|file]:[STRING]", "missing:[md5|hist|histogram|file]", "type:[group|media]", "tags:(<|>)[INT]"};
         for (String str : strs) {
             l = new Label(str);
             l.setPadding(LEFT20);

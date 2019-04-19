@@ -16,7 +16,7 @@ import menagerie.util.listeners.ObjectListener;
 import org.controlsfx.control.GridCell;
 
 
-public class ImageGridCell extends GridCell<Item> {
+public class ItemGridCell extends GridCell<Item> {
 
     private static final String UNSELECTED_BG_CSS = "-fx-background-color: -grid-cell-unselected-color";
     private static final String SELECTED_BG_CSS = "-fx-background-color: -grid-cell-selected-color";
@@ -24,25 +24,30 @@ public class ImageGridCell extends GridCell<Item> {
     private static final Font largeFont = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 28);
     private static final Font smallFont = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 14);
 
-    private final ImageView view;
-    private final Label label;
+    private final ImageView view = new ImageView();
+    private final Label centerLabel = new Label();
+    private final Label bottomRightLabel = new Label();
 
     private Item lastItem = null;
 
     private final ObjectListener<Image> imageReadyListener;
 
 
-    public ImageGridCell() {
+    public ItemGridCell() {
         super();
         this.getStyleClass().add("image-grid-cell");
 
-        view = new ImageView();
-        label = new Label();
-        label.setPadding(new Insets(5));
-        label.setFont(largeFont);
-        label.setEffect(new DropShadow());
-        label.setWrapText(true);
-        setGraphic(new StackPane(view, label));
+        centerLabel.setPadding(new Insets(5));
+        centerLabel.setFont(largeFont);
+        centerLabel.setEffect(new DropShadow());
+        centerLabel.setWrapText(true);
+
+        bottomRightLabel.setPadding(new Insets(2));
+        bottomRightLabel.setFont(smallFont);
+        bottomRightLabel.setEffect(new DropShadow());
+        StackPane.setAlignment(bottomRightLabel, Pos.BOTTOM_RIGHT);
+
+        setGraphic(new StackPane(view, centerLabel, bottomRightLabel));
         setAlignment(Pos.CENTER);
         setStyle(UNSELECTED_BG_CSS);
 
@@ -58,7 +63,8 @@ public class ImageGridCell extends GridCell<Item> {
 
         if (empty) {
             view.setImage(null);
-            label.setText(null);
+            centerLabel.setText(null);
+            bottomRightLabel.setText(null);
         } else {
             if (item.getThumbnail() != null) {
                 if (item.getThumbnail().getImage() != null) {
@@ -68,12 +74,22 @@ public class ImageGridCell extends GridCell<Item> {
                     item.getThumbnail().addImageReadyListener(imageReadyListener);
                 }
             }
-            if (item instanceof MediaItem && ((MediaItem) item).isVideo()) {
-                label.setText("Video");
-                label.setFont(largeFont);
+            if (item instanceof MediaItem) {
+                if (((MediaItem) item).isVideo()) {
+                    centerLabel.setText("Video");
+                    centerLabel.setFont(largeFont);
+                } else {
+                    centerLabel.setText(null);
+                }
+                if (((MediaItem) item).inGroup()) {
+                    bottomRightLabel.setText(((MediaItem) item).getPageIndex() + "");
+                } else {
+                    bottomRightLabel.setText(null);
+                }
             } else if (item instanceof GroupItem) {
-                label.setText(((GroupItem) item).getTitle());
-                label.setFont(smallFont);
+                centerLabel.setText(((GroupItem) item).getTitle());
+                centerLabel.setFont(smallFont);
+                bottomRightLabel.setText(((GroupItem) item).getElements().size() + "");
             }
         }
 

@@ -101,6 +101,15 @@ public class GroupItem extends Item {
     }
 
     /**
+     * Reverses the order of elements in this group.
+     */
+    public void reverseElements() {
+        Collections.reverse(elements);
+
+        updateIndices();
+    }
+
+    /**
      * Checks all elements and updates their page index if not synced.
      */
     private void updateIndices() {
