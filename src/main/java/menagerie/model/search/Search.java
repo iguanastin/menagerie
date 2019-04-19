@@ -283,4 +283,11 @@ public class Search {
         if (results.removeAll(items)) itemsRemovedListeners.forEach(listener -> listener.pass(items));
     }
 
+    public boolean isGroupSearch() {
+        for (SearchRule rule : rules) {
+            if (rule instanceof InGroupRule) return true;
+        }
+        return false;
+    }
+
 }

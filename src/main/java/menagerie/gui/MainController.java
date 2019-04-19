@@ -69,19 +69,21 @@ public class MainController {
     public StackPane rootPane;
 
     public BorderPane explorerRootPane;
+    public MenuBar menuBar;
+    public PredictiveTextField searchTextField;
+    public PredictiveTextField editTagsTextField;
     public ToggleButton listDescendingToggleButton;
     public ToggleButton showGroupedToggleButton;
-    public PredictiveTextField searchTextField;
     public ItemGridView itemGridView;
     public DynamicMediaView previewMediaView;
-    public Label resultCountLabel;
-    public Label explorerZoomLabel;
     public ItemInfoBox itemInfoBox;
     public ListView<Tag> tagListView;
-    public PredictiveTextField editTagsTextField;
-    public MenuBar menuBar;
+    public Label resultCountLabel;
+    public Label explorerZoomLabel;
+    public Label scopeLabel;
     public Button importsButton;
     public Button logButton;
+    public Button backButton;
 
     public ScreenPane screenPane;
 
@@ -115,6 +117,10 @@ public class MainController {
      * Current search that is active and being shown in the item grid.
      */
     private Search currentSearch = null;
+    /**
+     * Scope of the search, independent of search rules.
+     */
+    private GroupItem searchScope = null;
     /**
      * Item that is currently being displayed in the preview viewport.
      */
@@ -364,89 +370,7 @@ public class MainController {
         setGridWidth(settings.getInt(Settings.Key.GRID_WIDTH));
 
         // Init image grid
-        itemGridView.addSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
-        itemGridView.setCellFactory(param -> {
-            ImageGridCell c = new ImageGridCell();
-            c.setOnDragDetected(event -> {
-                if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
-                    if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem()))
-                        itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
-
-                    Dragboard db = c.startDragAndDrop(TransferMode.ANY);
-
-                    for (Item item : itemGridView.getSelected()) {
-                        if (item instanceof MediaItem) {
-                            String filename = ((MediaItem) item).getFile().getName().toLowerCase();
-                            if (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")) {
-                                if (item.getThumbnail().isLoaded()) {
-                                    db.setDragView(item.getThumbnail().getImage());
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    List<File> files = new ArrayList<>();
-                    itemGridView.getSelected().forEach(item -> {
-                        if (item instanceof MediaItem) files.add(((MediaItem) item).getFile());
-                        else if (item instanceof GroupItem)
-                            ((GroupItem) item).getElements().forEach(mediaItem -> files.add(mediaItem.getFile()));
-                    });
-                    clipboard.putFiles(files);
-                    db.setContent(clipboard);
-
-                    itemGridViewDragging = true;
-                    event.consume();
-                }
-            });
-            c.setOnDragDone(event -> {
-                itemGridViewDragging = false;
-                event.consume();
-            });
-            c.setOnMouseReleased(event -> {
-                if (!itemGridViewDragging && event.getButton() == MouseButton.PRIMARY) {
-                    itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
-                    event.consume();
-                }
-            });
-            c.setOnContextMenuRequested(event -> {
-                if (!itemGridView.isSelected(c.getItem())) {
-                    itemGridView.select(c.getItem(), false, false);
-                }
-                constructGridCellContextMenu(itemGridView.getSelected()).show(c, event.getScreenX(), event.getScreenY());
-                event.consume();
-            });
-            c.setOnMouseClicked(event -> {
-                if (c.getItem() instanceof GroupItem && event.getButton() == MouseButton.PRIMARY && event.getClickCount() > 1) {
-                    searchTextField.setText("in:" + c.getItem().getId());
-                    applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
-                }
-            });
-            return c;
-        });
-        itemGridView.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.DELETE) {
-                if (event.isControlDown()) {
-                    forgetFilesDialog(itemGridView.getSelected());
-                } else {
-                    deleteFilesDialog(itemGridView.getSelected());
-                }
-                event.consume();
-            } else if (event.getCode() == KeyCode.G && event.isControlDown()) {
-                groupDialog(itemGridView.getSelected());
-            } else if (event.getCode() == KeyCode.U && event.isControlDown()) {
-                ungroupDialog(itemGridView.getSelected());
-            }
-        });
-        itemGridView.getSelected().addListener((ListChangeListener<? super Item>) c -> resultCountLabel.setText(itemGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
-        itemGridView.getItems().addListener((ListChangeListener<? super Item>) c -> {
-            while (c.next()) {
-                if (c.getAddedSize() > 0) {
-                    itemGridView.getItems().sort(currentSearch.getComparator());
-                    break;
-                }
-            }
-        });
+        initItemGridView();
 
         // Init drag/drop handlers
         explorerRootPane.disabledProperty().addListener((observable, oldValue, newValue) -> {
@@ -463,8 +387,8 @@ public class MainController {
         explorerRootPane.setOnDragOver(event -> {
             if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
                 event.acceptTransferModes(TransferMode.ANY);
+                event.consume();
             }
-            event.consume();
         });
         explorerRootPane.setOnDragDropped(event -> {
             List<File> files = event.getDragboard().getFiles();
@@ -618,6 +542,112 @@ public class MainController {
         });
         previewMediaView.setMute(settings.getBoolean(Settings.Key.MUTE_VIDEO));
         previewMediaView.setRepeat(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
+    }
+
+    /**
+     * Initializes listeners and etc. of the itemGridView
+     */
+    private void initItemGridView() {
+        itemGridView.addSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
+        itemGridView.setCellFactory(param -> {
+            ImageGridCell c = new ImageGridCell();
+            c.setOnDragDetected(event -> {
+                if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
+                    if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem()))
+                        itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+
+                    Dragboard db = c.startDragAndDrop(TransferMode.ANY);
+
+                    for (Item item : itemGridView.getSelected()) {
+                        if (item instanceof MediaItem) {
+                            String filename = ((MediaItem) item).getFile().getName().toLowerCase();
+                            if (filename.endsWith(".png") || filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".bmp")) {
+                                if (item.getThumbnail().isLoaded()) {
+                                    db.setDragView(item.getThumbnail().getImage());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    List<File> files = new ArrayList<>();
+                    itemGridView.getSelected().forEach(item -> {
+                        if (item instanceof MediaItem) files.add(((MediaItem) item).getFile());
+                        else if (item instanceof GroupItem)
+                            ((GroupItem) item).getElements().forEach(mediaItem -> files.add(mediaItem.getFile()));
+                    });
+                    clipboard.putFiles(files);
+                    db.setContent(clipboard);
+
+                    itemGridViewDragging = true;
+                    event.consume();
+                }
+            });
+            c.setOnDragDone(event -> {
+                itemGridViewDragging = false;
+                event.consume();
+            });
+            c.setOnDragOver(event -> {
+                if (event.getGestureSource() instanceof ImageGridCell && currentSearch.isGroupSearch() && !event.getGestureSource().equals(c)) {
+                    event.acceptTransferModes(TransferMode.ANY);
+                }
+            });
+            c.setOnDragDropped(event -> {
+                if (!itemGridView.getSelected().isEmpty()) {
+                    List<MediaItem> list = new ArrayList<>();
+                    itemGridView.getSelected().forEach(item -> list.add((MediaItem) item));
+
+                    boolean before = false;
+                    if (c.sceneToLocal(event.getSceneX(), event.getSceneY()).getX() < Thumbnail.THUMBNAIL_SIZE / 2)
+                        before = true;
+                    if (((MediaItem) c.getItem()).getGroup().moveElements(list, (MediaItem) c.getItem(), before)) {
+                        event.consume();
+                    }
+                }
+            });
+            c.setOnMouseReleased(event -> {
+                if (!itemGridViewDragging && event.getButton() == MouseButton.PRIMARY) {
+                    itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                    event.consume();
+                }
+            });
+            c.setOnContextMenuRequested(event -> {
+                if (!itemGridView.isSelected(c.getItem())) {
+                    itemGridView.select(c.getItem(), false, false);
+                }
+                constructGridCellContextMenu(itemGridView.getSelected()).show(c, event.getScreenX(), event.getScreenY());
+                event.consume();
+            });
+            c.setOnMouseClicked(event -> {
+                if (c.getItem() instanceof GroupItem && event.getButton() == MouseButton.PRIMARY && event.getClickCount() > 1) {
+                    explorerOpenGroup((GroupItem) c.getItem());
+                }
+            });
+            return c;
+        });
+        itemGridView.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.DELETE) {
+                if (event.isControlDown()) {
+                    forgetFilesDialog(itemGridView.getSelected());
+                } else {
+                    deleteFilesDialog(itemGridView.getSelected());
+                }
+                event.consume();
+            } else if (event.getCode() == KeyCode.G && event.isControlDown()) {
+                groupDialog(itemGridView.getSelected());
+            } else if (event.getCode() == KeyCode.U && event.isControlDown()) {
+                ungroupDialog(itemGridView.getSelected());
+            }
+        });
+        itemGridView.getSelected().addListener((ListChangeListener<? super Item>) c -> resultCountLabel.setText(itemGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
+        itemGridView.getItems().addListener((ListChangeListener<? super Item>) c -> {
+            while (c.next()) {
+                if (c.getAddedSize() > 0) {
+                    itemGridView.getItems().sort(currentSearch.getComparator());
+                    break;
+                }
+            }
+        });
     }
 
     /**
@@ -944,6 +974,31 @@ public class MainController {
     }
 
     /**
+     * Attempts to revert to the previous search.
+     */
+    private void explorerGoBack() {
+        if (searchHistory.empty()) {
+            Toolkit.getDefaultToolkit().beep();
+        } else {
+            SearchHistory history = searchHistory.pop();
+
+            listDescendingToggleButton.setSelected(history.isDescending());
+            showGroupedToggleButton.setSelected(history.isShowGrouped());
+            searchTextField.setText(history.getSearch());
+            applySearch(history.getSearch(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+            searchHistory.pop(); // Pop history item that was JUST created by the new search.
+
+            itemGridView.clearSelection();
+            history.getSelected().forEach(item -> itemGridView.select(item, true, false));
+        }
+    }
+
+    private void explorerOpenGroup(GroupItem group) {
+        searchTextField.setText("in:" + group.getId());
+        applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+    }
+
+    /**
      * Parses a search string, applies the search, updates grid, registers search listeners, and previews first item.
      *
      * @param search      Search string to parse rules from.
@@ -954,7 +1009,7 @@ public class MainController {
         Main.log.info("Searching: \"" + search + "\", descending:" + descending + ", showGrouped:" + showGrouped);
 
         if (currentSearch != null) {
-            searchHistory.push(new SearchHistory(currentSearch.getSearchString(), itemGridView.getSelected(), currentSearch.isDescending(), currentSearch.isShowGrouped()));
+            searchHistory.push(new SearchHistory(currentSearch.getSearchString(), searchScope, itemGridView.getSelected(), currentSearch.isDescending(), currentSearch.isShowGrouped()));
 
             menagerie.unregisterSearch(currentSearch);
         }
@@ -1280,6 +1335,11 @@ public class MainController {
         event.consume();
     }
 
+    public void backButtonOnAction(ActionEvent event) {
+        explorerGoBack();
+        event.consume();
+    }
+
     // ---------------------------------- Key Event Handlers -------------------------------
 
     public void explorerRootPaneOnKeyPressed(KeyEvent event) {
@@ -1351,41 +1411,26 @@ public class MainController {
                 default:
                     break;
             }
-        }
-
-        if (event.getCode() == KeyCode.BACK_SPACE) {
-            if (searchHistory.empty()) {
-                Toolkit.getDefaultToolkit().beep();
-            } else {
-                SearchHistory history = searchHistory.pop();
-
-                listDescendingToggleButton.setSelected(history.isDescending());
-                showGroupedToggleButton.setSelected(history.isShowGrouped());
-                searchTextField.setText(history.getSearch());
-                applySearch(history.getSearch(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
-                searchHistory.pop(); // Pop history item that was JUST created.
-
-                itemGridView.clearSelection();
-                history.getSelected().forEach(item -> itemGridView.select(item, true, false));
+        } else {
+            switch (event.getCode()) {
+                case ESCAPE:
+                    itemGridView.requestFocus();
+                    event.consume();
+                    break;
+                case ALT:
+                    event.consume(); // Workaround for alt-tabbing correctly
+                    break;
+                case ENTER:
+                    if (itemGridView.getSelected().size() == 1 && itemGridView.getSelected().get(0) instanceof GroupItem) {
+                        explorerOpenGroup((GroupItem) itemGridView.getSelected().get(0));
+                    }
+                    event.consume();
+                    break;
+                case BACK_SPACE:
+                    explorerGoBack();
+                    event.consume();
+                    break;
             }
-            event.consume();
-        }
-
-        switch (event.getCode()) {
-            case ESCAPE:
-                itemGridView.requestFocus();
-                event.consume();
-                break;
-            case ALT:
-                event.consume(); // Workaround for alt-tabbing correctly
-                break;
-            case ENTER:
-                if (itemGridView.getSelected().size() == 1 && itemGridView.getSelected().get(0) instanceof GroupItem) {
-                    searchTextField.setText("in:" + itemGridView.getSelected().get(0).getId());
-                    applySearch(searchTextField.getText(), listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
-                }
-                event.consume();
-                break;
         }
     }
 
