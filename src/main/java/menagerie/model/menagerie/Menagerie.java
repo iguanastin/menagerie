@@ -107,7 +107,7 @@ public class Menagerie {
         }
 
         //Update active searches
-        activeSearches.forEach(search -> search.addIfValid(Collections.singletonList(media)));
+        activeSearches.forEach(search -> search.refreshSearch(Collections.singletonList(media)));
 
         return media;
     }
@@ -196,7 +196,7 @@ public class Menagerie {
                 removed.add(item);
                 if (deleteFiles && item instanceof MediaItem) toDelete.add((MediaItem) item);
                 if (item instanceof GroupItem) {
-                    activeSearches.forEach(search -> search.recheckWithSearch(new ArrayList<Item>(((GroupItem) item).getElements())));
+                    activeSearches.forEach(search -> search.refreshSearch(new ArrayList<Item>(((GroupItem) item).getElements())));
                     ((GroupItem) item).removeAll();
                 }
 
@@ -269,7 +269,7 @@ public class Menagerie {
      * @param items Items to check.
      */
     public void refreshInSearches(List<Item> items) {
-        activeSearches.forEach(search -> search.recheckWithSearch(items));
+        activeSearches.forEach(search -> search.refreshSearch(items));
     }
 
     /**

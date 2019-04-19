@@ -18,12 +18,12 @@ public class Search {
     private final boolean descending;
     private final String searchString;
 
-    private final Comparator<Item> comparator;
-
     private final List<Item> results = new ArrayList<>();
 
-    private Set<ObjectListener<List<Item>>> itemsAddedListeners = new HashSet<>();
-    private Set<ObjectListener<List<Item>>> itemsRemovedListeners = new HashSet<>();
+    protected Comparator<Item> comparator;
+
+    protected Set<ObjectListener<List<Item>>> itemsAddedListeners = new HashSet<>();
+    protected Set<ObjectListener<List<Item>>> itemsRemovedListeners = new HashSet<>();
 
 
     /**
@@ -35,21 +35,11 @@ public class Search {
      */
     public Search(String search, boolean descending, boolean showGrouped) {
         this.descending = descending;
-
+        this.showGrouped = showGrouped;
         this.searchString = search;
+
         if (search != null && !search.isEmpty()) parseRules(search);
         rules.sort(null);
-
-        // Show grouped items if the search contains an InGroupRule
-        if (!showGrouped) {
-            for (SearchRule rule : rules) {
-                if (rule instanceof InGroupRule) {
-                    showGrouped = true;
-                    break;
-                }
-            }
-        }
-        this.showGrouped = showGrouped;
 
         comparator = (o1, o2) -> {
             if (descending) {
@@ -60,7 +50,7 @@ public class Search {
         };
     }
 
-    private void parseRules(String search) {
+    protected void parseRules(String search) {
         for (String arg : search.split("\\s+")) {
             if (arg == null || arg.isEmpty()) continue;
 
@@ -119,7 +109,7 @@ public class Search {
                         Main.log.warning("Unknown type for missing type: " + type);
                         break;
                 }
-            } else if (arg.startsWith("type:")) {
+            } else if (arg.startsWith("type:") || arg.startsWith("is:")) {
                 String type = arg.substring(arg.indexOf(':') + 1);
                 if (type.equalsIgnoreCase("group")) {
                     rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
@@ -140,12 +130,6 @@ public class Search {
                     rules.add(new TagCountRule(type, Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
                     Main.log.warning("Failed to convert parameter to integer: " + temp);
-                }
-            } else if (arg.startsWith("in:")) {
-                try {
-                    rules.add(new InGroupRule(Integer.parseInt(arg.substring(arg.indexOf(':') + 1)), inverted));
-                } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to integer: " + arg.substring(arg.indexOf(':') + 1));
                 }
             } else {
                 rules.add(new TagRule(arg, inverted));
@@ -220,58 +204,41 @@ public class Search {
     }
 
     /**
-     * Adds all the accepted items in the given list to this search. Ignores items that do not fit the rules of this search.
-     *
-     * @param items Items to attempt to add.
-     */
-    public void addIfValid(List<Item> items) {
-        List<Item> toAdd = new ArrayList<>(items);
-
-        for (Item item : items) {
-            if (item instanceof MediaItem && ((MediaItem) item).getGroup() != null && !showGrouped) {
-                toAdd.remove(item);
-            } else {
-                for (SearchRule rule : rules) {
-                    if (!rule.accept(item)) {
-                        toAdd.remove(item);
-                        break;
-                    }
-                }
-            }
-        }
-
-        boolean changed = results.addAll(toAdd);
-        results.sort(getComparator());
-
-        if (changed) itemsAddedListeners.forEach(listener -> listener.pass(toAdd));
-    }
-
-    /**
      * Checks items to see if they need to be removed from or added to this search.
      *
-     * @param items Items to check.
+     * @param check Items to check.
      */
-    public void recheckWithSearch(List<Item> items) {
+    public void refreshSearch(List<Item> check) {
         List<Item> toRemove = new ArrayList<>();
         List<Item> toAdd = new ArrayList<>();
-        for (Item item : items) {
-            if (item instanceof MediaItem && ((MediaItem) item).getGroup() != null && !showGrouped) {
-                toRemove.add(item);
-            } else {
-                for (SearchRule rule : rules) {
-                    if (!rule.accept(item)) {
-                        toRemove.add(item);
-                        break;
-                    }
+        for (Item item : check) {
+            if (isItemValid(item)) {
+                if (!results.contains(item)) {
+                    toAdd.add(item);
                 }
-            }
-
-            if (!results.contains(item) && !toRemove.contains(item)) {
-                toAdd.add(item);
+            } else {
+                toRemove.add(item);
             }
         }
+
+        sort();
+
         if (results.removeAll(toRemove)) itemsRemovedListeners.forEach(listener -> listener.pass(toRemove));
         if (results.addAll(toAdd)) itemsAddedListeners.forEach(listener -> listener.pass(toAdd));
+    }
+
+    protected boolean isItemValid(Item item) {
+        if (item instanceof MediaItem && ((MediaItem) item).getGroup() != null && !showGrouped) {
+            return false;
+        } else {
+            for (SearchRule rule : rules) {
+                if (!rule.accept(item)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -283,11 +250,8 @@ public class Search {
         if (results.removeAll(items)) itemsRemovedListeners.forEach(listener -> listener.pass(items));
     }
 
-    public boolean isGroupSearch() {
-        for (SearchRule rule : rules) {
-            if (rule instanceof InGroupRule) return true;
-        }
-        return false;
+    public void sort() {
+        results.sort(getComparator());
     }
 
 }
