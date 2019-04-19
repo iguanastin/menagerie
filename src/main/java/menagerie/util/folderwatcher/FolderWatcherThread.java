@@ -2,11 +2,10 @@ package menagerie.util.folderwatcher;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.util.Objects;
 
 public class FolderWatcherThread extends Thread {
 
-    private boolean running = false;
+    private volatile boolean running = false;
 
     private final long timeout;
     private final File watchFolder;
@@ -14,6 +13,14 @@ public class FolderWatcherThread extends Thread {
 
     private final FolderWatcherListener listener;
 
+    /**
+     * Constructs a folder watcher thread.
+     *
+     * @param watchFolder Target folder to watch for files.
+     * @param filter      Filter to reduce results.
+     * @param timeout     Time between file checks.
+     * @param listener    Listener to notify when files are found.
+     */
     public FolderWatcherThread(File watchFolder, FileFilter filter, long timeout, FolderWatcherListener listener) {
         this.watchFolder = watchFolder;
         this.filter = filter;
@@ -21,13 +28,12 @@ public class FolderWatcherThread extends Thread {
         this.listener = listener;
     }
 
-    private synchronized boolean isRunning() {
-        return running;
-    }
-
-    public synchronized void stopWatching() {
+    /**
+     * Tell thread to stop watching for files. Does not forcibly stop the thread.
+     */
+    public void stopWatching() {
         running = false;
-        notifyAll();
+        notify();
     }
 
     @Override
@@ -36,11 +42,11 @@ public class FolderWatcherThread extends Thread {
 
         running = true;
 
-        while (isRunning()) {
+        while (running) {
             File folder = watchFolder;
             if (folder.exists() && folder.isDirectory()) {
-                File[] files = Objects.requireNonNull(folder.listFiles(filter));
-                if (files.length > 0) listener.foundNewFiles(files);
+                File[] files = folder.listFiles(filter);
+                if (files != null && files.length > 0) listener.foundNewFiles(files);
             }
 
             try {

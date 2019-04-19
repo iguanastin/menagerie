@@ -3,14 +3,23 @@ package menagerie.gui.thumbnail;
 import javafx.scene.image.Image;
 import menagerie.gui.Main;
 import menagerie.util.Filters;
+import menagerie.util.listeners.ObjectListener;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 
+/**
+ * JavaFX Image wrapper specifically for loading thumbnails of various types.
+ */
 public class Thumbnail {
 
     // ------------------------------- Constants -----------------------------------------
 
+    /**
+     * Vertical and horizontal maximum size of thumbnails.
+     */
     public static final int THUMBNAIL_SIZE = 150;
 
     private static final VideoThumbnailThread videoThumbnailThread = new VideoThumbnailThread();
@@ -21,12 +30,18 @@ public class Thumbnail {
 
     private boolean loaded = false;
 
-    private ThumbnailImageReadyListener imageReadyListener = null;
-    private ThumbnailImageLoadedListener imageLoadedListener = null;
+    private final Set<ObjectListener<Image>> imageReadyListeners = new HashSet<>();
+    private final Set<ObjectListener<Image>> imageLoadedListeners = new HashSet<>();
 
 
+    /**
+     * Constructs a thumbnail for a file and begins loading it.
+     *
+     * @param file A media file that is accepted by the {@link Filters}
+     * @throws IOException If file is not accepted by the {@link Filters}
+     */
     public Thumbnail(File file) throws IOException {
-        if (Main.VLCJ_LOADED && !videoThumbnailThread.isAlive()) {
+        if (Main.isVlcjLoaded() && !videoThumbnailThread.isAlive()) {
             videoThumbnailThread.setDaemon(true);
             videoThumbnailThread.start();
         }
@@ -38,15 +53,19 @@ public class Thumbnail {
             if (videoThumbnailThread.isAlive()) {
                 videoThumbnailThread.enqueueJob(new VideoThumbnailJob() {
                     @Override
-                    void imageReady(Image image) {
+                    public void imageReady(Image image) {
                         Thumbnail.this.image = image;
                         loaded = true;
-                        if (getImageReadyListener() != null) getImageReadyListener().imageReady(image);
-                        if (getImageLoadedListener() != null) getImageLoadedListener().finishedLoading(image);
+                        synchronized (imageReadyListeners) {
+                            imageReadyListeners.forEach(listener -> listener.pass(image));
+                        }
+                        synchronized (imageLoadedListeners) {
+                            imageLoadedListeners.forEach(listener -> listener.pass(image));
+                        }
                     }
 
                     @Override
-                    File getFile() {
+                    public File getFile() {
                         return file;
                     }
                 });
@@ -56,18 +75,28 @@ public class Thumbnail {
         }
     }
 
+    /**
+     * Wraps a thumbnail around an existing image.
+     *
+     * @param image Image to wrap.
+     */
     public Thumbnail(Image image) {
         this.image = image;
 
         registerListenersToImage();
     }
 
+    /**
+     * Registers imageLoaded listeners if image has not finished loading yet.
+     */
     private void registerListenersToImage() {
         if (image.isBackgroundLoading() && image.getProgress() != 1.0) {
             image.progressProperty().addListener((observable, oldValue, newValue) -> {
                 if (!image.isError() && newValue.doubleValue() == 1.0) {
                     loaded = true;
-                    if (getImageLoadedListener() != null) getImageLoadedListener().finishedLoading(image);
+                    synchronized (imageLoadedListeners) {
+                        imageLoadedListeners.forEach(listener -> listener.pass(image));
+                    }
                 }
             });
         } else {
@@ -75,26 +104,42 @@ public class Thumbnail {
         }
     }
 
-    public synchronized ThumbnailImageLoadedListener getImageLoadedListener() {
-        return imageLoadedListener;
+    public boolean addImageReadyListener(ObjectListener<Image> listener) {
+        return imageReadyListeners.add(listener);
     }
 
-    public synchronized ThumbnailImageReadyListener getImageReadyListener() {
-        return imageReadyListener;
+    public boolean addImageLoadedListener(ObjectListener<Image> listener) {
+        return imageLoadedListeners.add(listener);
     }
 
-    public synchronized void setImageLoadedListener(ThumbnailImageLoadedListener imageLoadedListener) {
-        this.imageLoadedListener = imageLoadedListener;
+    public boolean removeImageReadyListener(ObjectListener<Image> listener) {
+        return imageReadyListeners.remove(listener);
     }
 
-    public synchronized void setImageReadyListener(ThumbnailImageReadyListener imageReadyListener) {
-        this.imageReadyListener = imageReadyListener;
+    public boolean removeImageLoadedListener(ObjectListener<Image> listener) {
+        return imageLoadedListeners.remove(listener);
     }
 
+    /**
+     *
+     * @return The Thumbnailer that creates thumbnails for video files.
+     */
+    public static VideoThumbnailThread getVideoThumbnailThread() {
+        return videoThumbnailThread;
+    }
+
+    /**
+     *
+     * @return This thumbnail's image.
+     */
     public synchronized Image getImage() {
         return image;
     }
 
+    /**
+     *
+     * @return True if the image has been completely loaded.
+     */
     public synchronized boolean isLoaded() {
         return loaded;
     }

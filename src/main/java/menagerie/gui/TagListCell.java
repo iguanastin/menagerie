@@ -4,6 +4,8 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import menagerie.model.menagerie.Tag;
 
 public class TagListCell extends ListCell<Tag> {
@@ -33,6 +35,18 @@ public class TagListCell extends ListCell<Tag> {
             nameLabel.setText(tag.getName());
             countLabel.setText("(" + tag.getFrequency() + ")");
             setTooltip(new Tooltip("(ID: " + tag.getId() + ") " + tag.getName()));
+        }
+
+        updateTextColor();
+    }
+
+    void updateTextColor() {
+        if (isEmpty() || getItem() == null || getItem().getColor() == null) {
+            nameLabel.setTextFill(Color.WHITE);
+            countLabel.setTextFill(Color.WHITE);
+        } else {
+            nameLabel.setTextFill(Paint.valueOf(getItem().getColor()));
+            countLabel.setTextFill(Paint.valueOf(getItem().getColor()));
         }
     }
 

@@ -1,5 +1,6 @@
 package menagerie.gui.screens.importer;
 
+import javafx.application.Platform;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -11,11 +12,13 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import menagerie.gui.screens.Screen;
+import menagerie.model.SimilarPair;
+import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
+import menagerie.util.listeners.ObjectListener;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class ImporterScreen extends Screen {
@@ -25,17 +28,19 @@ public class ImporterScreen extends Screen {
 
     private final List<ImportJob> jobs = new ArrayList<>();
 
-    private final ImporterScreenCountListener countListener;
+    private final ObjectListener<Integer> countListener;
 
 
-    public ImporterScreen(ImporterThread importerThread, ImporterCellDuplicateListener duplicateResolverListener, ImporterCellSelectItemListener selectItemListener, ImporterScreenCountListener countListener) {
+    public ImporterScreen(ImporterThread importerThread, ObjectListener<List<SimilarPair<MediaItem>>> duplicateResolverListener, ObjectListener<MediaItem> selectItemListener, ObjectListener<Integer> countListener) {
         this.countListener = countListener;
 
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
+                event.consume();
             } else if (event.getCode() == KeyCode.N && event.isControlDown()) {
                 close();
+                event.consume();
             }
         });
 
@@ -48,6 +53,15 @@ public class ImporterScreen extends Screen {
         top.setPadding(new Insets(0, 0, 0, 5));
 
         listView = new ListView<>();
+        listView.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ESCAPE) {
+                close();
+                event.consume();
+            } else if (event.getCode() == KeyCode.N && event.isControlDown()) {
+                close();
+                event.consume();
+            }
+        });
 
         Button playPauseButton = new Button("Pause");
         playPauseButton.setOnAction(event -> {
@@ -61,14 +75,14 @@ public class ImporterScreen extends Screen {
         countLabel = new Label("0");
         Button cancelAllButton = new Button("Cancel All");
         cancelAllButton.setOnAction(event -> {
-            Iterator<ImportJob> iter = listView.getItems().iterator();
-            while (iter.hasNext()) {
-                ImportJob job = iter.next();
+            jobs.forEach(job -> {
                 if (job.getStatus() == ImportJob.Status.WAITING) {
                     job.cancel();
-                    iter.remove();
+                    listView.getItems().remove(job);
                 }
-            }
+            });
+
+            if (countListener != null) countListener.pass(jobs.size());
         });
         BorderPane bottom = new BorderPane(countLabel, null, playPauseButton, null, cancelAllButton);
         bottom.setPadding(new Insets(5));
@@ -97,7 +111,7 @@ public class ImporterScreen extends Screen {
             job.addStatusListener(status -> {
                 if (status == ImportJob.Status.SUCCEEDED) {
                     removeJob(job);
-                    countListener.changed(jobs.size());
+                    countListener.pass(jobs.size());
                 } else {
                     listView.getChildrenUnmodifiable().forEach(node -> {
                         if (node instanceof ImportListCell) {
@@ -106,14 +120,19 @@ public class ImporterScreen extends Screen {
                     });
                 }
             });
-            if (countListener != null) countListener.changed(jobs.size());
+            if (countListener != null) countListener.pass(jobs.size());
         });
     }
 
+    /**
+     * Removes a job from the list.
+     *
+     * @param job Job to remove.
+     */
     void removeJob(ImportJob job) {
         jobs.remove(job);
-        listView.getItems().remove(job);
-        if (countListener != null) countListener.changed(jobs.size());
+        Platform.runLater(() -> listView.getItems().remove(job));
+        if (countListener != null) countListener.pass(jobs.size());
     }
 
 }

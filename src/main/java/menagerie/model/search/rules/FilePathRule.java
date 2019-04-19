@@ -1,13 +1,20 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Item;
+import menagerie.model.menagerie.MediaItem;
 
+/**
+ * Rule that checks if the item's file path contains a string.
+ */
 public class FilePathRule extends SearchRule {
 
     private final String text;
 
 
+    /**
+     * @param text     String to find in item's file path. Case sensitive.
+     * @param inverted Negate the rule.
+     */
     public FilePathRule(String text, boolean inverted) {
         super(inverted);
         this.text = text;

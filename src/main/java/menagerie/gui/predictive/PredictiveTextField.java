@@ -4,6 +4,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
@@ -12,6 +13,9 @@ import java.util.Collections;
 import java.util.List;
 
 public class PredictiveTextField extends TextField {
+
+    private static final String SELECTED_CSS = "-fx-background-color: derive(-fx-accent, 50%);";
+    private static final String SELECTED_UNFOCUSED_CSS = "-fx-background-color: -fx-accent;";
 
     private PredictiveTextFieldOptionsListener optionsListener;
 
@@ -37,6 +41,9 @@ public class PredictiveTextField extends TextField {
         addEventFilter(KeyEvent.KEY_PRESSED, this::keyPressedEventFilter);
     }
 
+    /**
+     * Called when the text has changed.
+     */
     private void textChanged() {
         selectedIndex = -1;
         popup.hide();
@@ -56,13 +63,20 @@ public class PredictiveTextField extends TextField {
         if (top) Collections.reverse(options);
 
         vBox.getChildren().clear();
-        options.forEach(str -> vBox.getChildren().add(new Label(str)));
+        options.forEach(str -> {
+            Label label = new Label(str);
+            label.setOnMouseClicked(event -> acceptOption(str));
+            vBox.getChildren().add(label);
+        });
         updateOptionCSSStyles();
 
         popup.show(this, 0, 0);
         updatePopupPosition();
     }
 
+    /**
+     * Moves the popup to be in the expected position.
+     */
     private void updatePopupPosition() {
         Bounds b = localToScreen(getBoundsInLocal());
         popup.setX(b.getMinX());
@@ -100,45 +114,73 @@ public class PredictiveTextField extends TextField {
                     break;
                 case SPACE:
                 case ENTER:
-                    if (event.isControlDown()) {
-                        if (top) selectedIndex = vBox.getChildren().size() - 1;
-                        else selectedIndex = 0;
-                    }
-                    if (selectedIndex >= 0) {
-                        if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
-                            setText(((Label) vBox.getChildren().get(selectedIndex)).getText() + " ");
-                        } else {
-                            String temp = getText().substring(0, getText().lastIndexOf(' ') + 1);
-                            setText(temp + ((Label) vBox.getChildren().get(selectedIndex)).getText() + " ");
+                case TAB:
+                    if (selectedIndex < 0) {
+                        if (event.isControlDown() || event.getCode() == KeyCode.TAB) {
+                            if (top) selectedIndex = vBox.getChildren().size() - 1;
+                            else selectedIndex = 0;
                         }
-
-                        positionCaret(getText().length() + 1);
-
-                        popup.hide();
                     }
+
+                    if (selectedIndex >= 0) {
+                        acceptOption(((Label) vBox.getChildren().get(selectedIndex)).getText());
+
+                        if (event.getCode() == KeyCode.TAB) event.consume();
+                    }
+                    break;
+                default:
                     break;
             }
         }
     }
 
+    private void acceptOption(String option) {
+        if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
+            setText(option + " ");
+        } else {
+            String temp = getText().substring(0, getText().lastIndexOf(' ') + 1);
+            setText(temp + option + " ");
+        }
+
+        positionCaret(getText().length() + 1);
+
+        popup.hide();
+    }
+
+    /**
+     * Updates CSS styles of the options.
+     */
     private void updateOptionCSSStyles() {
         for (int i = 0; i < vBox.getChildren().size(); i++) {
             if (i == selectedIndex) {
-                vBox.getChildren().get(i).setStyle("-fx-background-color: derive(-fx-accent, 100%);");
+                vBox.getChildren().get(i).setStyle(SELECTED_CSS);
+            } else if (selectedIndex < 0 && ((i == 0 && !top) || (i == vBox.getChildren().size() - 1 && top))) {
+                vBox.getChildren().get(i).setStyle(SELECTED_UNFOCUSED_CSS);
             } else {
-                vBox.getChildren().get(i).setStyle("-fx-background-color: -fx-base;");
+                vBox.getChildren().get(i).setStyle(null);
             }
         }
     }
 
+    /**
+     * @param optionsListener Listener that supplies options, given the partial word.
+     */
     public void setOptionsListener(PredictiveTextFieldOptionsListener optionsListener) {
         this.optionsListener = optionsListener;
     }
 
+    /**
+     * @return Options listener.
+     */
     public PredictiveTextFieldOptionsListener getOptionsListener() {
         return optionsListener;
     }
 
+    /**
+     * Set the popup to be on top of the textField instead of on the bottom.
+     *
+     * @param top On top.
+     */
     public void setTop(boolean top) {
         this.top = top;
     }

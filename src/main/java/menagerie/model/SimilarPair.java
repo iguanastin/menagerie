@@ -1,29 +1,55 @@
 package menagerie.model;
 
-import menagerie.model.menagerie.MediaItem;
+/**
+ * An object representing a pair and their similarity.
+ *
+ * @param <T> Object type.
+ */
+public class SimilarPair<T> {
 
-public class SimilarPair {
-
-    private final MediaItem img1, img2;
+    private final T obj1, obj2;
     private final double similarity;
 
 
-    public SimilarPair(MediaItem img1, MediaItem img2, double similarity) {
-        this.img1 = img1;
-        this.img2 = img2;
+    /**
+     * Constructs a similar pair.
+     *
+     * @param obj1       First object.
+     * @param obj2       Second object.
+     * @param similarity Similarity of the two objects. [0.0-1.0]
+     * @throws NullPointerException     When obj1 or obj2 is null.
+     * @throws IllegalArgumentException When similarity is outside of range [0.0-1.0]
+     */
+    public SimilarPair(T obj1, T obj2, double similarity) {
+        if (obj1 == null || obj2 == null) throw new NullPointerException("Objects must not be null");
+        if (obj1.equals(obj2)) throw new IllegalArgumentException("Objects must not be equal");
+        if (similarity < 0 || similarity > 1)
+            throw new IllegalArgumentException("Similarity must be between 0 and 1, inclusive");
+
+        this.obj1 = obj1;
+        this.obj2 = obj2;
         this.similarity = similarity;
     }
 
+    /**
+     * @return The similarity between the pair as a percentage. [0.0-1.0]
+     */
     public double getSimilarity() {
         return similarity;
     }
 
-    public MediaItem getImg1() {
-        return img1;
+    /**
+     * @return The first object.
+     */
+    public T getObject1() {
+        return obj1;
     }
 
-    public MediaItem getImg2() {
-        return img2;
+    /**
+     * @return The second object.
+     */
+    public T getObject2() {
+        return obj2;
     }
 
 }

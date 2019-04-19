@@ -2,22 +2,24 @@ package menagerie.model.menagerie;
 
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
+import menagerie.gui.Main;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.menagerie.histogram.HistogramReadException;
 import menagerie.model.menagerie.histogram.ImageHistogram;
 import menagerie.util.Filters;
-import menagerie.util.ImageInputStreamConverter;
 import menagerie.util.MD5Hasher;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Date;
+import java.util.concurrent.CountDownLatch;
+import java.util.logging.Level;
 
+/**
+ * A Menagerie item representing a media file of some form. Image and video.
+ */
 public class MediaItem extends Item {
 
     // -------------------------------- Variables ------------------------------------
@@ -29,38 +31,66 @@ public class MediaItem extends Item {
     private SoftReference<Thumbnail> thumbnail;
     private WeakReference<Image> image;
 
+    private GroupItem group;
+    private int pageIndex;
 
-    public MediaItem(Menagerie menagerie, int id, long dateAdded, File file, String md5, ImageHistogram histogram) {
+
+    /**
+     * @param menagerie Menagerie this item belongs to.
+     * @param id        Unique ID of this item.
+     * @param dateAdded Date this item was added.
+     * @param pageIndex Index of this item within its parent group.
+     * @param group     Parent group containing this item.
+     * @param file      File this item points to.
+     * @param md5       MD5 hash of the file.
+     * @param histogram Color histogram of the image. (If the media is an image)
+     */
+    public MediaItem(Menagerie menagerie, int id, long dateAdded, int pageIndex, GroupItem group, File file, String md5, ImageHistogram histogram) {
         super(menagerie, id, dateAdded);
         this.file = file;
         this.md5 = md5;
         this.histogram = histogram;
+        this.group = group;
+        this.pageIndex = pageIndex;
     }
 
+    /**
+     * Constructs a bare bones media item.
+     *
+     * @param menagerie Menagerie this item belongs to.
+     * @param id        Unique ID of this item.
+     * @param dateAdded Date this item was added.
+     * @param file      File this item points to.
+     */
+    public MediaItem(Menagerie menagerie, int id, long dateAdded, File file) {
+        this(menagerie, id, dateAdded, 0, null, file, null, null);
+    }
+
+    /**
+     * @return The file of this item.
+     */
     public File getFile() {
         return file;
     }
 
+    /**
+     * Creates a thumbnail if one does not already exist.
+     *
+     * @return The thumbnail of this media.
+     */
     @Override
     public Thumbnail getThumbnail() {
         Thumbnail thumb = null;
         if (thumbnail != null) thumb = thumbnail.get();
-        if (thumb == null) {
+        if (thumb == null && connectedToDatabase()) {
             try {
-                menagerie.PS_GET_IMG_THUMBNAIL.setInt(1, id);
-                ResultSet rs = menagerie.PS_GET_IMG_THUMBNAIL.executeQuery();
-                if (rs.next()) {
-                    InputStream binaryStream = rs.getBinaryStream("thumbnail");
-                    if (binaryStream != null) {
-                        thumb = new Thumbnail(ImageInputStreamConverter.imageFromInputStream(binaryStream));
-                        thumbnail = new SoftReference<>(thumb);
-                    }
-                }
+                thumb = menagerie.getDatabaseManager().getThumbnail(getId());
+                if (thumb != null) thumbnail = new SoftReference<>(thumb);
             } catch (SQLException e) {
-                e.printStackTrace();
+                Main.log.log(Level.SEVERE, "Failed to get thumbnail from database: " + getId(), e);
             }
         }
-        if (thumb == null) {
+        if (thumb == null && file != null) {
             try {
                 thumb = new Thumbnail(file);
             } catch (IOException ignore) {
@@ -68,26 +98,11 @@ public class MediaItem extends Item {
 
             thumbnail = new SoftReference<>(thumb);
 
-            if (thumb != null) {
-                final Thumbnail finalThumb = thumb;
-                Runnable update = () -> {
-                    try {
-                        menagerie.PS_SET_IMG_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(finalThumb.getImage()));
-                        menagerie.PS_SET_IMG_THUMBNAIL.setInt(2, id);
-                        menagerie.PS_SET_IMG_THUMBNAIL.executeUpdate();
-                    } catch (SQLException | IOException e) {
-                        e.printStackTrace();
-                    }
-                };
-
+            if (thumb != null && connectedToDatabase()) {
                 if (thumb.isLoaded()) {
-                    menagerie.getUpdateQueue().enqueueUpdate(update);
-                    menagerie.getUpdateQueue().commit();
+                    menagerie.getDatabaseManager().setThumbnailAsync(getId(), thumb.getImage());
                 } else {
-                    thumb.setImageLoadedListener(image1 -> {
-                        menagerie.getUpdateQueue().enqueueUpdate(update);
-                        menagerie.getUpdateQueue().commit();
-                    });
+                    thumb.addImageLoadedListener(image1 -> menagerie.getDatabaseManager().setThumbnailAsync(getId(), image1));
                 }
             }
         }
@@ -95,6 +110,9 @@ public class MediaItem extends Item {
         return thumb;
     }
 
+    /**
+     * @return The full size image, if this item represents an image.
+     */
     public Image getImage() {
         Image img = null;
         if (image != null) img = image.get();
@@ -105,87 +123,103 @@ public class MediaItem extends Item {
         return img;
     }
 
-    private Image getImageAsync() {
+    /**
+     * @return The full size image, guaranteed to be loaded.
+     */
+    private Image getImageSynchronously() {
         Image img = null;
         if (image != null) img = image.get();
         if (img == null) {
             img = new Image(file.toURI().toString());
             image = new WeakReference<>(img);
-        } else if (img.isBackgroundLoading() && img.getProgress() != 1) {
-            img = new Image(file.toURI().toString());
+        } else if (img.isBackgroundLoading() && img.getProgress() != 1 && !img.isError()) {
+            CountDownLatch latch = new CountDownLatch(1);
+            Image finalImg = img;
+            img.progressProperty().addListener((observable, oldValue, newValue) -> {
+                if (finalImg.isError() || newValue.equals(1)) {
+                    latch.countDown();
+                }
+            });
+            try {
+                latch.await();
+            } catch (InterruptedException ignored) {
+            }
+
+            if (img.isError()) {
+                img = new Image(file.toURI().toString());
+            } else {
+                return img;
+            }
         }
         return img;
     }
 
+    /**
+     * @return The MD5 hash string of the file.
+     */
     public String getMD5() {
         return md5;
     }
 
+    /**
+     * @return The color histogram of the image. Null if this file is not an image.
+     */
     public ImageHistogram getHistogram() {
         return histogram;
     }
 
+    /**
+     * @return True if the file is accepted by the image file filter.
+     * @see Filters
+     */
     public boolean isImage() {
         return Filters.IMAGE_NAME_FILTER.accept(file);
     }
 
+    /**
+     * @return True if the file is accepted by the video file filter.
+     * @see Filters
+     */
     public boolean isVideo() {
         return Filters.VIDEO_NAME_FILTER.accept(file);
     }
 
+    /**
+     * Computes the MD5 of the file. No operation if MD5 already exists.
+     */
     public void initializeMD5() {
         if (md5 != null) return;
 
         try {
             md5 = HexBin.encode(MD5Hasher.hash(getFile()));
+            if (connectedToDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);
         } catch (IOException e) {
-            e.printStackTrace();
+            Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
         }
     }
 
-    public void commitMD5ToDatabase() {
-        if (md5 == null) return;
-
-        menagerie.getUpdateQueue().enqueueUpdate(() -> {
-            try {
-                menagerie.PS_SET_IMG_MD5.setNString(1, md5);
-                menagerie.PS_SET_IMG_MD5.setInt(2, id);
-                menagerie.PS_SET_IMG_MD5.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        });
-        menagerie.getUpdateQueue().commit();
-
-    }
-
+    /**
+     * Computes the color histogram of the image. No operation if file is not an image, or is a GIF image.
+     */
     public void initializeHistogram() {
-        try {
-            histogram = new ImageHistogram(getImageAsync());
-        } catch (HistogramReadException e) {
-            // A comment to make the warning of an empty catch block go away
+        if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
+            try {
+                histogram = new ImageHistogram(getImageSynchronously());
+                if (connectedToDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
+            } catch (HistogramReadException e) {
+                Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
+            }
         }
     }
 
-    public void commitHistogramToDatabase() {
-        if (histogram == null) return;
-
-        menagerie.getUpdateQueue().enqueueUpdate(() -> {
-            try {
-                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(1, histogram.getAlphaAsInputStream());
-                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(2, histogram.getRedAsInputStream());
-                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(3, histogram.getGreenAsInputStream());
-                menagerie.PS_SET_IMG_HISTOGRAM.setBinaryStream(4, histogram.getBlueAsInputStream());
-                menagerie.PS_SET_IMG_HISTOGRAM.setInt(5, id);
-                menagerie.PS_SET_IMG_HISTOGRAM.executeUpdate();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        });
-
-    }
-
+    /**
+     * Renames a file to a new location on the local disk. Safe operation to maintain the file without losing track of it.
+     *
+     * @param dest Destination file to rename this file to.
+     * @return True if successful.
+     */
     public boolean renameTo(File dest) {
+        if (getFile() == null || dest == null) return false;
         if (file.equals(dest)) return true;
 
         boolean succeeded = file.renameTo(dest);
@@ -193,26 +227,28 @@ public class MediaItem extends Item {
         if (succeeded) {
             file = dest;
 
-            menagerie.getUpdateQueue().enqueueUpdate(() -> {
+            if (connectedToDatabase()) {
                 try {
-                    menagerie.PS_SET_IMG_PATH.setNString(1, file.getAbsolutePath());
-                    menagerie.PS_SET_IMG_PATH.setInt(2, id);
-                    menagerie.PS_SET_IMG_PATH.executeUpdate();
+                    menagerie.getDatabaseManager().setPath(getId(), file.getAbsolutePath());
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    Main.log.log(Level.SEVERE, "Failed to update new path to file", e);
                 }
-            });
-            menagerie.getUpdateQueue().commit();
+            }
         }
 
         return succeeded;
     }
 
+    /**
+     * @param other                     Target to compare with.
+     * @param compareBlackAndWhiteHists Compare black and white images. Poor accuracy.
+     * @return Similarity to another image. 1 if MD5 hashes match, [0.0-1.0] if histograms exist, 0 otherwise.
+     */
     public double getSimilarityTo(MediaItem other, boolean compareBlackAndWhiteHists) {
         if (md5 != null && md5.equals(other.getMD5())) {
             return 1.0;
         } else if (histogram != null && other.getHistogram() != null) {
-            if (compareBlackAndWhiteHists || (!histogram.isBlackAndWhite() && !other.getHistogram().isBlackAndWhite())) {
+            if (compareBlackAndWhiteHists || (histogram.isColorful() && other.getHistogram().isColorful())) {
                 return histogram.getSimilarity(other.getHistogram());
             }
         }
@@ -220,9 +256,57 @@ public class MediaItem extends Item {
         return 0;
     }
 
+    /**
+     * @param group The new parent group of this item.
+     */
+    void setGroup(GroupItem group) {
+        this.group = group;
+
+        Integer gid = null;
+        if (group != null) gid = group.getId();
+
+        if (connectedToDatabase()) menagerie.getDatabaseManager().setMediaGIDAsync(getId(), gid);
+    }
+
+    /**
+     * @return True if this item has a parent group.
+     */
+    public boolean inGroup() {
+        return group != null;
+    }
+
+    /**
+     * @return The parent group of this item. Null if none.
+     */
+    public GroupItem getGroup() {
+        return group;
+    }
+
+    /**
+     * @return The index this item is in within the parent group.
+     */
+    public int getPageIndex() {
+        return pageIndex;
+    }
+
+    /**
+     * Sets the index of this item.
+     * <p>
+     * This method does not change ordering in the parent group, and should only be used by the group as a utility.
+     *
+     * @param pageIndex Index to set to.
+     */
+    void setPageIndex(int pageIndex) {
+        if (this.pageIndex == pageIndex) return;
+
+        this.pageIndex = pageIndex;
+
+        if (connectedToDatabase()) menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
+    }
+
     @Override
     public String toString() {
-        return "Image (" + getId() + ") \"" + getFile().getAbsolutePath() + "\" - " + new Date(getDateAdded());
+        return "Image (" + getId() + ") \"" + getFile() + "\"";
     }
 
 }

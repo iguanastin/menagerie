@@ -102,6 +102,12 @@ public class TagListScreen extends Screen {
         setDefaultFocusNode(searchField);
     }
 
+    /**
+     * Opens the screen in a manager with a set of tags.
+     *
+     * @param manager Manager.
+     * @param tags    Tags to display.
+     */
     public void open(ScreenPane manager, List<Tag> tags) {
         manager.open(this);
 
@@ -120,13 +126,22 @@ public class TagListScreen extends Screen {
             case "Name":
                 listView.getItems().sort(Comparator.comparing(Tag::getName));
                 break;
+            default:
+                listView.getItems().sort(Comparator.comparing(Tag::getName));
+                break;
         }
     }
 
+    /**
+     * @return The tags that are currently being displayed.
+     */
     public ObservableList<Tag> getTags() {
         return tags;
     }
 
+    /**
+     * @param value Cell factory for the list view.
+     */
     public void setCellFactory(Callback<ListView<Tag>, ListCell<Tag>> value) {
         listView.setCellFactory(value);
     }

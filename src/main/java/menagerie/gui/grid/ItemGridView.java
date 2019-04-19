@@ -9,16 +9,23 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.menagerie.Item;
+import menagerie.util.listeners.ObjectListener;
 import org.controlsfx.control.GridView;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class ItemGridView extends GridView<Item> {
 
+    /**
+     * Border depth of cells.
+     */
     public static final int CELL_BORDER = 4;
 
     private final ObservableList<Item> selected = FXCollections.observableArrayList();
     private Item lastSelected = null;
 
-    private GridSelectionListener selectionListener = null;
+    private final Set<ObjectListener<Item>> selectionListeners = new HashSet<>();
 
 
     public ItemGridView() {
@@ -47,6 +54,9 @@ public class ItemGridView extends GridView<Item> {
         initOnKeyPressed();
     }
 
+    /**
+     * Initializes all the key event handling.
+     */
     private void initOnKeyPressed() {
         addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (getItems().isEmpty()) return;
@@ -58,8 +68,7 @@ public class ItemGridView extends GridView<Item> {
                     event.consume();
                     break;
                 case RIGHT:
-                    if (index < getItems().size() - 1)
-                        select(getItems().get(index + 1), event.isControlDown(), event.isShiftDown());
+                    if (index < getItems().size() - 1) select(getItems().get(index + 1), event.isControlDown(), event.isShiftDown());
                     event.consume();
                     break;
                 case DOWN:
@@ -122,15 +131,30 @@ public class ItemGridView extends GridView<Item> {
         });
     }
 
+    /**
+     * @return The number of columns.
+     */
     private int getRowLength() {
         return (int) Math.floor((getWidth() - 18) / (Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
     }
 
+    /**
+     * @return The number of rows visible at a time.
+     */
     private int getPageLength() {
         return (int) Math.floor(getHeight() / (Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2 + getHorizontalCellSpacing() * 2));
     }
 
+    /**
+     * Selects an item.
+     *
+     * @param item      Item to select.
+     * @param ctrlDown  Add selected item to selection.
+     * @param shiftDown Add items from first selected to item.
+     */
     public void select(Item item, boolean ctrlDown, boolean shiftDown) {
+        if (!getItems().contains(item)) return;
+
         if (ctrlDown) {
             if (isSelected(item)) {
                 selected.remove(item);
@@ -168,9 +192,15 @@ public class ItemGridView extends GridView<Item> {
         }
 
         // Notify selection listener
-        if (selectionListener != null) selectionListener.targetSelected(item);
+        selectionListeners.forEach(listener -> listener.pass(item));
     }
 
+    /**
+     * Selects a first, last, and every item between the two.
+     *
+     * @param first First item.
+     * @param last  Last item.
+     */
     private void selectRange(Item first, Item last) {
         selected.clear();
         final int start = getItems().indexOf(first);
@@ -186,6 +216,9 @@ public class ItemGridView extends GridView<Item> {
         }
     }
 
+    /**
+     * @return The first item in the selection list.
+     */
     private Item getFirstSelected() {
         if (selected.isEmpty()) {
             return null;
@@ -194,27 +227,55 @@ public class ItemGridView extends GridView<Item> {
         }
     }
 
+    /**
+     * @return The most recently selected item.
+     */
     public Item getLastSelected() {
         return lastSelected;
     }
 
+    /**
+     * @return The list of selected items.
+     */
     public ObservableList<Item> getSelected() {
         return selected;
     }
 
+    /**
+     * Clear the selection list.
+     */
     public void clearSelection() {
         selected.clear();
         updateCellSelectionCSS();
     }
 
-    public boolean isSelected(Item img) {
-        return selected.contains(img);
+    /**
+     * @param item Item to check.
+     * @return True if the item is selected in this grid.
+     */
+    public boolean isSelected(Item item) {
+        return selected.contains(item);
     }
 
-    public void setSelectionListener(GridSelectionListener selectionListener) {
-        this.selectionListener = selectionListener;
+    /**
+     * @param listener Listener waiting on selection changes.
+     * @return True if successfully added.
+     */
+    public boolean addSelectionListener(ObjectListener<Item> listener) {
+        return selectionListeners.add(listener);
     }
 
+    /**
+     * @param listener Listener waiting on selection changes.
+     * @return True if successfully removed.
+     */
+    public boolean removeSelectionListener(ObjectListener<Item> listener) {
+        return selectionListeners.remove(listener);
+    }
+
+    /**
+     * Updates the CSS of all cells. Shouldn't have to do this, but the library doesn't follow the JavaFX standard.
+     */
     private void updateCellSelectionCSS() {
         for (Node n : getChildren()) {
             if (n instanceof VirtualFlow) {
@@ -224,6 +285,9 @@ public class ItemGridView extends GridView<Item> {
         }
     }
 
+    /**
+     * @param item Sets the last selected variable.
+     */
     public void setLastSelected(Item item) {
         lastSelected = item;
     }

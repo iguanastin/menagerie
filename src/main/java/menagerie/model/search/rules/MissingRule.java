@@ -1,19 +1,24 @@
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Item;
+import menagerie.model.menagerie.MediaItem;
 
+/**
+ * Rule that searches for missing attributes.
+ */
 public class MissingRule extends SearchRule {
 
     public enum Type {
-        MD5,
-        FILE,
-        HISTOGRAM
+        MD5, FILE, HISTOGRAM
     }
 
     private final Type type;
 
 
+    /**
+     * @param type     Type of missing attribute.
+     * @param inverted Negate this rule.
+     */
     public MissingRule(Type type, boolean inverted) {
         super(inverted);
         this.type = type;
