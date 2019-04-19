@@ -737,6 +737,12 @@ public class MainController {
             MenuItem reverse = new MenuItem("Reverse element order");
             reverse.setOnAction(event -> ((GroupItem) selected.get(0)).reverseElements());
             cm.getItems().add(reverse);
+            MenuItem elementTags = new MenuItem("Sync element tags to group");
+            elementTags.setOnAction(event -> {
+                GroupItem group = (GroupItem) selected.get(0);
+                group.getElements().forEach(item -> item.getTags().forEach(group::addTag));
+            });
+            cm.getItems().add(elementTags);
         }
         if (groupCount > 1 || mediaCount > 0) {
             MenuItem combineGroups = new MenuItem("Combine into Group");
