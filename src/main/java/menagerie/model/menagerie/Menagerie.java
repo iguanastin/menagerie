@@ -119,7 +119,7 @@ public class Menagerie {
      * @param title    Title of the new group.
      * @return The newly created group. Null if title is null or empty, and null if element list is null or empty.
      */
-    public GroupItem createGroup(List<Item> elements, String title, boolean tagTagme) {
+    public GroupItem createGroup(List<Item> elements, String title, boolean tagTagme, boolean combineElementTags) {
         if (title == null || title.isEmpty() || elements == null || elements.isEmpty()) return null;
 
         GroupItem group = new GroupItem(this, nextItemID, System.currentTimeMillis(), title);
@@ -138,6 +138,7 @@ public class Menagerie {
                 group.addItem((MediaItem) item);
             } else if (item instanceof GroupItem) {
                 List<MediaItem> e = new ArrayList<>(((GroupItem) item).getElements());
+                item.getTags().forEach(group::addTag);
                 removeItems(Collections.singletonList(item), false);
                 e.forEach(group::addItem);
             } else {
@@ -149,6 +150,9 @@ public class Menagerie {
             Tag tagme = getTagByName("tagme");
             if (tagme == null) tagme = createTag("tagme");
             group.addTag(tagme);
+        }
+        if (combineElementTags) {
+            group.getElements().forEach(item -> item.getTags().forEach(group::addTag));
         }
 
         // Update searches

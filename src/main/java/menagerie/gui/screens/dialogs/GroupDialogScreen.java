@@ -114,9 +114,7 @@ public class GroupDialogScreen extends Screen {
         close();
 
         if (menagerie != null && settings != null && toGroup != null && !toGroup.isEmpty()) {
-            GroupItem group = menagerie.createGroup(toGroup, textField.getText(), settings.getBoolean(Settings.Key.TAG_TAGME));
-            if (elementTagsCheckBox.isSelected())
-                group.getElements().forEach(item -> item.getTags().forEach(group::addTag));
+            GroupItem group = menagerie.createGroup(toGroup, textField.getText(), settings.getBoolean(Settings.Key.TAG_TAGME), elementTagsCheckBox.isSelected());
             if (groupListener != null) groupListener.pass(group);
         }
     }

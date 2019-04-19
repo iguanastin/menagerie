@@ -895,8 +895,10 @@ public class MainController {
             }
         }
         groupDialogScreen.open(screenPane, menagerie, settings, title, toGroup, group -> {
-            if (currentSearch.getResults().contains(group)) itemGridView.select(group, false, false);
             Main.log.info("Created group: " + group);
+            Platform.runLater(() -> {
+                if (currentSearch.getResults().contains(group)) itemGridView.select(group, false, false);
+            });
         });
     }
 
