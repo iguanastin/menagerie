@@ -42,7 +42,7 @@ public class Main extends Application {
      * @param header  Header of the alert
      * @param content Content of the alert
      */
-    public static void showErrorMessage(String title, String header, String content) {
+    static void showErrorMessage(String title, String header, String content) {
         Alert a = new Alert(Alert.AlertType.ERROR);
         a.setTitle(title);
         a.setHeaderText(header);

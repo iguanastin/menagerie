@@ -169,7 +169,6 @@ public class MainController {
      */
     @FXML
     public void initialize() {
-
         // Backup database
         if (settings.getBoolean(Settings.Key.BACKUP_DATABASE)) backupDatabase();
 
@@ -1023,7 +1022,13 @@ public class MainController {
             if (searchHistory.isEmpty()) backButton.setDisable(true);
 
             itemGridView.clearSelection();
-            history.getSelected().forEach(item -> itemGridView.select(item, true, false));
+            //            history.getSelected().forEach(item -> itemGridView.select(item, true, false));
+            itemGridView.getSelected().addAll(history.getSelected());
+            if (history.getSelected() != null && !history.getSelected().isEmpty()) {
+                // Unselect and reselect last item
+                itemGridView.select(history.getSelected().get(history.getSelected().size() - 1), true, false);
+                itemGridView.select(history.getSelected().get(history.getSelected().size() - 1), true, false);
+            }
         }
     }
 
