@@ -944,6 +944,8 @@ public class MainController {
 
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("Move files to folder...");
+        String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+        if (folder != null && !folder.isEmpty()) dc.setInitialDirectory(new File(folder));
         File result = dc.showDialog(rootPane.getScene().getWindow());
 
         if (result != null) {

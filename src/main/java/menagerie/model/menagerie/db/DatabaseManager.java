@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
+import java.util.Comparator;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
@@ -751,9 +752,23 @@ public class DatabaseManager extends Thread {
         Main.log.info("Finished loading all tag notes into tags from database");
         loadGroups(menagerie);
         loadMedia(menagerie);
+        sortGroupElements(menagerie);
         Main.log.info("Finished loading " + menagerie.getItems().size() + " items from database");
         loadTagsForItems(menagerie);
         Main.log.info("Finished loading tags for " + menagerie.getItems().size() + " items from database");
+    }
+
+    /**
+     * Sort group elements so they're aligned with their page indices.
+     *
+     * @param menagerie Menagerie to sort groups in.
+     */
+    private void sortGroupElements(Menagerie menagerie) {
+        for (Item item : menagerie.getItems()) {
+            if (item instanceof GroupItem) {
+                ((GroupItem) item).getElements().sort(Comparator.comparingInt(MediaItem::getPageIndex));
+            }
+        }
     }
 
     /**
