@@ -217,6 +217,46 @@ class GroupItemTests {
     }
 
     @Test
+    void setTitle() {
+        GroupItem g = new GroupItem(null, 1, 1, "Group name 1");
+
+        final String expected = "New group name";
+        g.setTitle(expected);
+        assertEquals(expected, g.getTitle());
+
+        g.setTitle(null);
+        assertNull(g.getTitle());
+    }
+
+    @Test
+    void reverse() {
+        GroupItem g = new GroupItem(null, 1, 1, "group");
+
+        MediaItem m1 = new MediaItem(null, 2, 1, null);
+        MediaItem m2 = new MediaItem(null, 3, 1, null);
+        MediaItem m3 = new MediaItem(null, 4, 1, null);
+        g.addItem(m1);
+        g.addItem(m2);
+        g.addItem(m3);
+
+        assertEquals(m1, g.getElements().get(0));
+        assertEquals(m2, g.getElements().get(1));
+        assertEquals(m3, g.getElements().get(2));
+        assertEquals(0, m1.getPageIndex());
+        assertEquals(1, m2.getPageIndex());
+        assertEquals(2, m3.getPageIndex());
+
+        g.reverseElements();
+
+        assertEquals(m3, g.getElements().get(0));
+        assertEquals(m2, g.getElements().get(1));
+        assertEquals(m1, g.getElements().get(2));
+        assertEquals(0, m3.getPageIndex());
+        assertEquals(1, m2.getPageIndex());
+        assertEquals(2, m1.getPageIndex());
+    }
+
+    @Test
     void toStringDoesNotThrow() {
         assertDoesNotThrow(() -> new GroupItem(null, 1, 0, "group").toString());
     }

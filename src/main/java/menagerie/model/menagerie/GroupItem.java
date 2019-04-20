@@ -145,8 +145,6 @@ public class GroupItem extends Item {
      * @param str New title.
      */
     public void setTitle(String str) {
-        if (str.equals(title)) return;
-
         title = str;
 
         if (connectedToDatabase()) menagerie.getDatabaseManager().setGroupTitleAsync(getId(), title);
