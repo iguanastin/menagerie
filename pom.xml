@@ -6,7 +6,7 @@
 
     <groupId>men.age.rie</groupId>
     <artifactId>menagerie</artifactId>
-    <version>1.4</version>
+    <version>1.5</version>
 
     <build>
         <plugins>
