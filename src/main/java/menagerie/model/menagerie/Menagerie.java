@@ -294,7 +294,7 @@ public class Menagerie {
      * @param file File to search for.
      * @return True if this file has already been imported into this Menagerie.
      */
-    private boolean isFilePresent(File file) {
+    public boolean isFilePresent(File file) {
         for (Item item : items) {
             if (item instanceof MediaItem && ((MediaItem) item).getFile().equals(file)) return true;
         }

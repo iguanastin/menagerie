@@ -149,6 +149,10 @@ public class ImportDialogScreen extends Screen {
                 files.remove(i);
                 i--;
             }
+            if (menagerie.isFilePresent(file)) {
+                files.remove(i);
+                i--;
+            }
         }
 
         switch (orderChoiceBox.getValue()) {
