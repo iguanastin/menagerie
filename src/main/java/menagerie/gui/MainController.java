@@ -836,8 +836,8 @@ public class MainController {
             if (!previewMediaView.preview((MediaItem) item)) {
                 Main.log.warning("Failed to preview file: " + ((MediaItem) item).getFile());
             }
-        } else {
-            previewMediaView.preview(null);
+        } else if (item instanceof GroupItem) {
+            previewMediaView.preview(((GroupItem) item).getElements().get(0));
         }
 
         updateTagList(item);
