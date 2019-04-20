@@ -599,6 +599,7 @@ public class MainController {
                 if (!itemGridView.getSelected().isEmpty()) {
                     List<MediaItem> list = new ArrayList<>();
                     itemGridView.getSelected().forEach(item -> list.add((MediaItem) item));
+                    list.sort(Comparator.comparingInt(MediaItem::getPageIndex));
 
                     boolean before = false;
                     if (c.sceneToLocal(event.getSceneX(), event.getSceneY()).getX() < Thumbnail.THUMBNAIL_SIZE / 2)
