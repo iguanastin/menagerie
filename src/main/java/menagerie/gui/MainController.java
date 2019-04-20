@@ -804,13 +804,13 @@ public class MainController {
             cm.getItems().addAll(openDefault, explorer);
         }
 
-        if (groupCount > 0 || mediaCount > 0) cm.getItems().add(new SeparatorMenuItem());
-        if (groupCount > 0) {
-            MenuItem ungroup = new MenuItem("Ungroup");
-            ungroup.setOnAction(event -> ungroupDialog(selected));
-            cm.getItems().add(ungroup);
-        }
-        if (mediaCount > 0) {
+        if (groupCount > 0 || mediaCount > 0) {
+            cm.getItems().add(new SeparatorMenuItem());
+            if (groupCount > 0) {
+                MenuItem ungroup = new MenuItem("Ungroup");
+                ungroup.setOnAction(event -> ungroupDialog(selected));
+                cm.getItems().add(ungroup);
+            }
             MenuItem forget = new MenuItem("Forget files");
             forget.setOnAction(event -> forgetFilesDialog(selected));
             forget.setStyle("-fx-text-fill: red;");
