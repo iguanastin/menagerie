@@ -40,6 +40,7 @@ public class ImportDialogScreen extends Screen {
     private final ImporterThread importer;
     private final Menagerie menagerie;
     private List<File> files = new ArrayList<>();
+    private File lastFolder = null;
 
     public ImportDialogScreen(Settings settings, Menagerie menagerie, ImporterThread importer) {
         this.menagerie = menagerie;
@@ -48,6 +49,17 @@ public class ImportDialogScreen extends Screen {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
+                event.consume();
+            } else if (event.getCode() == KeyCode.O && event.isControlDown()) {
+                if (event.isShiftDown()) {
+                    browseFoldersDialog(settings);
+                } else {
+                    browseFilesDialog(settings);
+                }
+                event.consume();
+            } else if (event.getCode() == KeyCode.ENTER) {
+                importOnAction();
+                event.consume();
             }
         });
 
@@ -63,39 +75,9 @@ public class ImportDialogScreen extends Screen {
         filesTextField.setEditable(false);
         HBox.setHgrow(filesTextField, Priority.ALWAYS);
         Button browseFiles = new Button("Browse Files");
-        browseFiles.setOnAction(event -> {
-            FileChooser fc = new FileChooser();
-            fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
-            fc.setTitle("Import files...");
-            if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null) {
-                File f = new File(settings.getString(Settings.Key.DEFAULT_FOLDER));
-                if (f.isDirectory()) fc.setInitialDirectory(f);
-            }
-            List<File> result = fc.showOpenMultipleDialog(getScene().getWindow());
-            if (result != null && !result.isEmpty()) {
-                files = new ArrayList<>(result);
-                if (files.size() > 1) {
-                    filesTextField.setText(String.format("%d files", files.size()));
-                } else {
-                    filesTextField.setText(files.get(0).toString());
-                }
-            }
-        });
+        browseFiles.setOnAction(event -> browseFilesDialog(settings));
         Button browseFolders = new Button("Browse Folders");
-        browseFolders.setOnAction(event -> {
-            DirectoryChooser dc = new DirectoryChooser();
-            dc.setTitle("Import folder...");
-            if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null) {
-                File f = new File(settings.getString(Settings.Key.DEFAULT_FOLDER));
-                if (f.isDirectory()) dc.setInitialDirectory(f);
-            }
-            File folder = dc.showDialog(getScene().getWindow());
-            if (folder != null) {
-                files = new ArrayList<>();
-                files.add(folder);
-                filesTextField.setText(folder.toString());
-            }
-        });
+        browseFolders.setOnAction(event -> browseFoldersDialog(settings));
         HBox fileHBox = new HBox(5, filesTextField, browseFiles, browseFolders);
         // Order option
         orderChoiceBox.getItems().addAll(Order.values());
@@ -104,6 +86,8 @@ public class ImportDialogScreen extends Screen {
         orderHBox.setAlignment(Pos.CENTER_LEFT);
         // Tag on import
         HBox.setHgrow(tagWithTagsTextField, Priority.ALWAYS);
+        tagWithTagsCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> tagWithTagsTextField.setDisable(!newValue));
+        tagWithTagsTextField.setDisable(true);
         HBox tagHBox = new HBox(5, tagWithTagsCheckBox, tagWithTagsTextField);
         tagHBox.setAlignment(Pos.CENTER_LEFT);
         VBox center = new VBox(5, fileHBox, orderHBox, recursiveCheckBox, tagWithParentCheckBox, renameWithHashCheckBox, tagHBox);
@@ -128,7 +112,47 @@ public class ImportDialogScreen extends Screen {
         setCenter(root);
         setPadding(new Insets(25));
 
-        setDefaultFocusNode(cancel);
+        setDefaultFocusNode(accept);
+    }
+
+    private void browseFoldersDialog(Settings settings) {
+        DirectoryChooser dc = new DirectoryChooser();
+        dc.setTitle("Import folder...");
+        if (lastFolder != null) {
+            dc.setInitialDirectory(lastFolder);
+        } else if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null) {
+            File f = new File(settings.getString(Settings.Key.DEFAULT_FOLDER));
+            if (f.isDirectory()) dc.setInitialDirectory(f);
+        }
+        File folder = dc.showDialog(getScene().getWindow());
+        if (folder != null) {
+            files = new ArrayList<>();
+            files.add(folder);
+            lastFolder = folder.getParentFile();
+            filesTextField.setText(folder.toString());
+        }
+    }
+
+    private void browseFilesDialog(Settings settings) {
+        FileChooser fc = new FileChooser();
+        fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
+        fc.setTitle("Import files...");
+
+        if (lastFolder != null) {
+            fc.setInitialDirectory(lastFolder);
+        } else if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null) {
+            File f = new File(settings.getString(Settings.Key.DEFAULT_FOLDER));
+            if (f.isDirectory()) fc.setInitialDirectory(f);
+        }
+        List<File> result = fc.showOpenMultipleDialog(getScene().getWindow());
+        if (result != null && !result.isEmpty()) {
+            files = new ArrayList<>(result);
+            if (files.size() > 1) {
+                filesTextField.setText(String.format("%d files", files.size()));
+            } else {
+                filesTextField.setText(files.get(0).toString());
+            }
+        }
     }
 
     @Override
