@@ -744,6 +744,14 @@ public class MainController {
             MenuItem reverse = new MenuItem("Reverse element order");
             reverse.setOnAction(event -> ((GroupItem) selected.get(0)).reverseElements());
             cm.getItems().add(reverse);
+            MenuItem rename = new MenuItem("Rename group");
+            rename.setOnAction(event -> {
+                String title = ((GroupItem) selected.get(0)).getTitle();
+                new TextDialogScreen().open(screenPane, "Rename group", "Current: " + title, title, newTitle -> {
+                    ((GroupItem) selected.get(0)).setTitle(newTitle);
+                }, null);
+            });
+            cm.getItems().add(rename);
             cm.getItems().add(new SeparatorMenuItem());
         }
         if (groupCount > 1 || mediaCount > 0) {

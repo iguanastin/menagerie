@@ -140,6 +140,20 @@ public class GroupItem extends Item {
     }
 
     /**
+     * Sets the title of this group.
+     *
+     * @param str New title.
+     */
+    public void setTitle(String str) {
+        if (str.equals(title)) return;
+
+        title = str;
+
+        if (connectedToDatabase()) menagerie.getDatabaseManager().setGroupTitleAsync(getId(), title);
+        if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(this));
+    }
+
+    /**
      * @return The elements of this group.
      */
     public List<MediaItem> getElements() {

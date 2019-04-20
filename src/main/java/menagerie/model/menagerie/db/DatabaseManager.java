@@ -37,6 +37,7 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_GET_MEDIA_THUMBNAIL;
     // Groups
     private final PreparedStatement PS_CREATE_GROUP;
+    private final PreparedStatement PS_SET_GROUP_TITLE;
     // Items
     private final PreparedStatement PS_CREATE_ITEM;
     private final PreparedStatement PS_DELETE_ITEM;
@@ -83,6 +84,7 @@ public class DatabaseManager extends Thread {
         PS_GET_MEDIA_THUMBNAIL = database.prepareStatement("SELECT thumbnail FROM media WHERE id=?;");
         // Groups
         PS_CREATE_GROUP = database.prepareStatement("INSERT INTO groups(id, title) VALUES (?, ?);");
+        PS_SET_GROUP_TITLE = database.prepareStatement("UPDATE groups SET title=? WHERE id=?;");
         // Items
         PS_DELETE_ITEM = database.prepareStatement("DELETE FROM items WHERE id=?;");
         PS_CREATE_ITEM = database.prepareStatement("INSERT INTO items(id, added) VALUES (?, ?);");
@@ -582,6 +584,36 @@ public class DatabaseManager extends Thread {
                 setMediaPage(id, page);
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, String.format("Failed to set media page index. ID: %d, Page: %d", id, page), e);
+            }
+        });
+    }
+
+    /**
+     * Sets the title of a group.
+     *
+     * @param id    ID of group.
+     * @param title Title to set to.
+     */
+    public void setGroupTitle(int id, String title) throws SQLException {
+        synchronized (PS_SET_GROUP_TITLE) {
+            PS_SET_GROUP_TITLE.setNString(1, title);
+            PS_SET_GROUP_TITLE.setInt(2, id);
+            PS_SET_GROUP_TITLE.executeUpdate();
+        }
+    }
+
+    /**
+     * Queues an update to set the title of a group.
+     *
+     * @param id    ID of group.
+     * @param title Title to set.
+     */
+    public void setGroupTitleAsync(int id, String title) {
+        queue.add(() -> {
+            try {
+                setGroupTitle(id, title);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, "Failed to set group title. ID: " + id + ", Title: " + title, e);
             }
         });
     }
