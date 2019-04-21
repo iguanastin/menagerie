@@ -8,7 +8,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.Menagerie;
@@ -27,22 +27,26 @@ import java.util.logging.Level;
 
 public class SplashController {
 
-    public AnchorPane rootPane;
+    public StackPane rootPane;
+    public ImageView backgroundImageView;
     public Label titleLabel;
     public Label statusLabel;
 
     private final List<Image> icons;
+    private final Image splashBackground;
 
 
-    public SplashController(List<Image> icons) {
+    public SplashController(List<Image> icons, Image splashBackground) {
         this.icons = icons;
+        this.splashBackground = splashBackground;
     }
 
     @FXML
     public void initialize() {
+        backgroundImageView.setImage(splashBackground);
 
         // Set graphic
-        titleLabel.setGraphicTextGap(20);
+        titleLabel.setGraphicTextGap(10);
         for (Image icon : icons) {
             if (icon.getWidth() == 64) {
                 titleLabel.setGraphic(new ImageView(icon));

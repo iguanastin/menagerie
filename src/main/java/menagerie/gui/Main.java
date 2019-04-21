@@ -35,6 +35,7 @@ public class Main extends Application {
     private static final String logFilePath = "menagerie.log";
 
     private static final String SPLASH_FXML = "/fxml/splash.fxml";
+    private static final String SPLASH_BACKGROUND = "/splash.jpg";
     static final String MAIN_FXML = "/fxml/main.fxml";
     static final String CSS = "/fxml/dark.css";
     static final String MAIN_TITLE = "Menagerie";
@@ -173,7 +174,7 @@ public class Main extends Application {
 
             log.info("Loading FXML: " + SPLASH_FXML);
             FXMLLoader loader = new FXMLLoader(getClass().getResource(SPLASH_FXML));
-            loader.setControllerFactory(param -> new SplashController(icons));
+            loader.setControllerFactory(param -> new SplashController(icons, new Image(SPLASH_BACKGROUND)));
             Parent root = loader.load();
             Scene scene = new Scene(root);
             scene.getStylesheets().add(CSS);
