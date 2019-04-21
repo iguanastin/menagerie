@@ -29,63 +29,48 @@ public class DatabaseVersionUpdater {
 
 
     /**
-     * Currently accepted version of the database. If version is not this, database should upgrade.
-     */
-    private static final int TARGET_VERSION = 5;
-
-
-    /**
-     * @param db Database
-     * @return True if database is not target version.
-     * @throws SQLException If database query fails.
-     */
-    private static boolean outOfDate(Connection db) throws SQLException {
-        return getVersion(db) < TARGET_VERSION;
-    }
-
-    /**
      * Attempts to upgrade the database if it is out of date.
      *
      * @param db Database
      * @throws SQLException If the upgrade fails.
-     * @see #outOfDate(Connection)
      */
     public static void updateDatabase(Connection db) throws SQLException {
-        while (outOfDate(db)) {
-            int version = getVersion(db);
+        int version = getVersion(db);
 
-            Main.log.info("Found database version: " + version);
+        Main.log.info("Found database version: " + version);
 
-            switch (version) {
-                case -1:
-                    cleanDatabase(db);
-                    initializeTables(db);
-                    break;
-                case 0:
-                    Main.log.warning("!!! Database needs to update from v0 to v1 !!!");
-                    updateFromV0ToV1(db);
-                    break;
-                case 1:
-                    Main.log.warning("!!! Database needs to update from v1 to v2 !!!");
-                    updateFromV1ToV2(db);
-                    break;
-                case 2:
-                    Main.log.warning("!!! Database needs to update from v2 to v3 !!!");
-                    updateFromV2ToV3(db);
-                    break;
-                case 3:
-                    Main.log.warning("!!! Database needs to update from v3 to v4 !!!");
-                    updateFromV3ToV4(db);
-                case 4:
-                    Main.log.warning("!!! Database needs to update from v4 to v5 !!!");
-                    updateFromV4ToV5(db);
-                case 5:
-                    Main.log.info("Database is up to date");
-                    break;
-                default:
-                    Main.log.severe("Database is of unexpected version: " + version);
-                    break;
-            }
+        switch (version) {
+            case -1:
+                cleanDatabase(db);
+                initializeTables(db);
+                break;
+            case 0:
+                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+                updateFromV0ToV1(db);
+                version++;
+            case 1:
+                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+                updateFromV1ToV2(db);
+                version++;
+            case 2:
+                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+                updateFromV2ToV3(db);
+                version++;
+            case 3:
+                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+                updateFromV3ToV4(db);
+                version++;
+            case 4:
+                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+                updateFromV4ToV5(db);
+                version++;
+            case 5:
+                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+                updateFromV5ToV6(db);
+                version++;
+            case 6:
+                Main.log.info("Database is up to date");
+                break;
         }
     }
 
@@ -369,6 +354,20 @@ public class DatabaseVersionUpdater {
 
             Main.log.info("Setting database version");
             s.executeUpdate("INSERT INTO version(version) VALUES (5);");
+
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
+    }
+
+    private static void updateFromV5ToV6(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v5 to v6...");
+        long t = System.currentTimeMillis();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Adding 'no_similar' column to 'media'");
+            s.executeUpdate("ALTER TABLE media ADD COLUMN no_similar BOOL NOT NULL DEFAULT FALSE;");
+
+            Main.log.info("Setting database version");
+            s.executeUpdate("INSERT INTO version(version) VALUES (6);");
 
             Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
         }

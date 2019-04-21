@@ -36,7 +36,7 @@ public class GroupSearch extends Search {
     @Override
     protected boolean isItemValid(Item item) {
         if (item instanceof MediaItem) {
-            if (!((MediaItem) item).inGroup() || !((MediaItem) item).getGroup().equals(group)) {
+            if (!((MediaItem) item).isInGroup() || !((MediaItem) item).getGroup().equals(group)) {
                 return false;
             }
         } else {

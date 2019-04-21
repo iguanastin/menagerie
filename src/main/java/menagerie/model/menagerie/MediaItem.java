@@ -23,6 +23,9 @@ import java.util.logging.Level;
  */
 public class MediaItem extends Item {
 
+    public static final double MIN_CONFIDENCE = 0.9;
+    public static final double MAX_CONFIDENCE = 1.0;
+
     // -------------------------------- Variables ------------------------------------
 
     private File file;
@@ -34,25 +37,28 @@ public class MediaItem extends Item {
 
     private GroupItem group;
     private int pageIndex;
+    private boolean noSimilar;
 
 
     /**
-     * @param menagerie Menagerie this item belongs to.
-     * @param id        Unique ID of this item.
-     * @param dateAdded Date this item was added.
-     * @param pageIndex Index of this item within its parent group.
-     * @param group     Parent group containing this item.
-     * @param file      File this item points to.
-     * @param md5       MD5 hash of the file.
-     * @param histogram Color histogram of the image. (If the media is an image)
+     * @param menagerie    Menagerie this item belongs to.
+     * @param id           Unique ID of this item.
+     * @param dateAdded    Date this item was added.
+     * @param pageIndex    Index of this item within its parent group.
+     * @param hasNoSimilar This item has no similar items with the weakest confidence.
+     * @param group        Parent group containing this item.
+     * @param file         File this item points to.
+     * @param md5          MD5 hash of the file.
+     * @param histogram    Color histogram of the image. (If the media is an image)
      */
-    public MediaItem(Menagerie menagerie, int id, long dateAdded, int pageIndex, GroupItem group, File file, String md5, ImageHistogram histogram) {
+    public MediaItem(Menagerie menagerie, int id, long dateAdded, int pageIndex, boolean hasNoSimilar, GroupItem group, File file, String md5, ImageHistogram histogram) {
         super(menagerie, id, dateAdded);
         this.file = file;
         this.md5 = md5;
         this.histogram = histogram;
         this.group = group;
         this.pageIndex = pageIndex;
+        this.noSimilar = hasNoSimilar;
     }
 
     /**
@@ -64,7 +70,7 @@ public class MediaItem extends Item {
      * @param file      File this item points to.
      */
     public MediaItem(Menagerie menagerie, int id, long dateAdded, File file) {
-        this(menagerie, id, dateAdded, 0, null, file, null, null);
+        this(menagerie, id, dateAdded, 0, false, null, file, null, null);
     }
 
     /**
@@ -163,10 +169,52 @@ public class MediaItem extends Item {
     }
 
     /**
+     * Computes the MD5 of the file. No operation if MD5 already exists.
+     */
+    public void initializeMD5() {
+        if (md5 != null) return;
+
+        try {
+            md5 = HexBin.encode(MD5Hasher.hash(getFile()));
+            if (hasDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);
+        } catch (IOException e) {
+            Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
+        }
+    }
+
+    /**
      * @return The color histogram of the image. Null if this file is not an image.
      */
     public ImageHistogram getHistogram() {
         return histogram;
+    }
+
+    /**
+     * Computes the color histogram of the image. No operation if file is not an image, or is a GIF image.
+     */
+    public void initializeHistogram() {
+        if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
+            try {
+                histogram = new ImageHistogram(getImageSynchronously());
+                if (hasDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
+            } catch (HistogramReadException e) {
+                Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
+            }
+        }
+    }
+
+    /**
+     * @return The parent group of this item. Null if none.
+     */
+    public GroupItem getGroup() {
+        return group;
+    }
+
+    /**
+     * @return The index this item is in within the parent group.
+     */
+    public int getPageIndex() {
+        return pageIndex;
     }
 
     /**
@@ -186,31 +234,17 @@ public class MediaItem extends Item {
     }
 
     /**
-     * Computes the MD5 of the file. No operation if MD5 already exists.
+     * @return True if this item has no similar items with the weakest confidence.
      */
-    public void initializeMD5() {
-        if (md5 != null) return;
-
-        try {
-            md5 = HexBin.encode(MD5Hasher.hash(getFile()));
-            if (hasDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);
-        } catch (IOException e) {
-            Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
-        }
+    public boolean hasNoSimilar() {
+        return noSimilar;
     }
 
     /**
-     * Computes the color histogram of the image. No operation if file is not an image, or is a GIF image.
+     * @return True if this item has a parent group.
      */
-    public void initializeHistogram() {
-        if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
-            try {
-                histogram = new ImageHistogram(getImageSynchronously());
-                if (hasDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
-            } catch (HistogramReadException e) {
-                Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
-            }
-        }
+    public boolean isInGroup() {
+        return group != null;
     }
 
     /**
@@ -241,7 +275,7 @@ public class MediaItem extends Item {
     }
 
     /**
-     * @param other                     Target to compare with.
+     * @param other Target to compare with.
      * @return Similarity to another image. 1 if MD5 hashes match, [0.0-1.0] if histograms exist, 0 otherwise.
      */
     public double getSimilarityTo(MediaItem other) {
@@ -267,27 +301,6 @@ public class MediaItem extends Item {
     }
 
     /**
-     * @return True if this item has a parent group.
-     */
-    public boolean inGroup() {
-        return group != null;
-    }
-
-    /**
-     * @return The parent group of this item. Null if none.
-     */
-    public GroupItem getGroup() {
-        return group;
-    }
-
-    /**
-     * @return The index this item is in within the parent group.
-     */
-    public int getPageIndex() {
-        return pageIndex;
-    }
-
-    /**
      * Sets the index of this item.
      * <p>
      * This method does not change ordering in the parent group, and should only be used by the group as a utility.
@@ -300,6 +313,17 @@ public class MediaItem extends Item {
         this.pageIndex = pageIndex;
 
         if (hasDatabase()) menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
+    }
+
+    /**
+     * Sets the flag for this item signifying that there are no items in the database that are similar to this with the weakest confidence.
+     *
+     * @param b Has no similar items.
+     */
+    public void setHasNoSimilar(boolean b) {
+        if (noSimilar != b && hasDatabase()) getDatabase().setMediaNoSimilarAsync(getId(), b);
+
+        noSimilar = b;
     }
 
     /**

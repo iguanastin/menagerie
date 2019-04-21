@@ -1,5 +1,6 @@
 package menagerie.gui.taglist;
 
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -14,8 +15,20 @@ public class TagListCell extends ListCell<Tag> {
     private final Label countLabel = new Label();
     private final Label nameLabel = new Label();
 
-    private final ChangeListener<String> colorListener = (observable, oldValue, newValue) -> setTextColor(newValue);
-    private final ChangeListener<Number> frequencyListener = (observable, oldValue, newValue) -> setFrequency(newValue.intValue());
+    private final ChangeListener<String> colorListener = (observable, oldValue, newValue) -> {
+        if (Platform.isFxApplicationThread()) {
+            setTextColor(newValue);
+        } else {
+            Platform.runLater(() -> setTextColor(newValue));
+        }
+    };
+    private final ChangeListener<Number> frequencyListener = (observable, oldValue, newValue) -> {
+        if (Platform.isFxApplicationThread()) {
+            setFrequency(newValue.intValue());
+        } else {
+            Platform.runLater(() -> setFrequency(newValue.intValue()));
+        }
+    };
 
 
     public TagListCell() {

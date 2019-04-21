@@ -265,9 +265,16 @@ public class ImportJob {
             }
             final double confidence = settings.getDouble(Settings.Key.CONFIDENCE);
             final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
+            boolean anyMinimallySimilar = false;
             for (Item i : menagerie.getItems()) {
                 if (i instanceof MediaItem && !item.equals(i) && ((MediaItem) i).getHistogram() != null) {
                     double similarity = ((MediaItem) i).getSimilarityTo(item);
+
+                    if (!anyMinimallySimilar && similarity > MediaItem.MIN_CONFIDENCE) {
+                        anyMinimallySimilar = true;
+                        if (((MediaItem) i).hasNoSimilar()) ((MediaItem) i).setHasNoSimilar(false);
+                    }
+
                     if (similarity >= confidenceSquare || (similarity >= confidence && item.getHistogram().isColorful() && ((MediaItem) i).getHistogram().isColorful())) {
                         synchronized (this) {
                             similarTo.add(new SimilarPair<>(item, (MediaItem) i, similarity));
@@ -275,6 +282,8 @@ public class ImportJob {
                     }
                 }
             }
+
+            if (!anyMinimallySimilar) item.setHasNoSimilar(true);
 
             needsCheckSimilar = false;
             synchronized (this) {

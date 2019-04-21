@@ -113,10 +113,12 @@
                               text="Revert to backup"/>
                 </Menu>
                 <Menu mnemonicParsing="false" text="Edit">
+                    <MenuItem mnemonicParsing="false" onAction="#settingsMenuButtonOnAction" text="Settings"/>
+                    <SeparatorMenuItem/>
                     <MenuItem mnemonicParsing="false" onAction="#pruneFileLessMenuButtonOnAction"
                               text="Prune file-less items"/>
-                    <SeparatorMenuItem/>
-                    <MenuItem mnemonicParsing="false" onAction="#settingsMenuButtonOnAction" text="Settings"/>
+                    <MenuItem mnemonicParsing="false" onAction="#buildSimilarityCacheMenuButtonOnAction"
+                              text="Build similarity cache"/>
                 </Menu>
                 <Menu mnemonicParsing="false" text="View">
                     <Menu mnemonicParsing="false" text="Slideshow">

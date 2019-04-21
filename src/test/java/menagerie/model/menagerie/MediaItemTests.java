@@ -24,14 +24,16 @@ class MediaItemTests {
         assertEquals(file, m1.getFile());
 
         final int pageIndex = 5;
+        final boolean noSimilar = true;
         final GroupItem group = new GroupItem(null, 2, 1, "group");
         final String md5 = "f9e2cb7b1b1436182d16b29d81b6bf78";
-        MediaItem m2 = new MediaItem(null, 1, 1, pageIndex, group, file, md5, null);
+        MediaItem m2 = new MediaItem(null, 1, 1, pageIndex, noSimilar, group, file, md5, null);
 
         assertEquals(pageIndex, m2.getPageIndex());
         assertEquals(group, m2.getGroup());
         assertEquals(file, m2.getFile());
         assertEquals(md5, m2.getMD5());
+        assertEquals(noSimilar, m2.hasNoSimilar());
     }
 
     @Test

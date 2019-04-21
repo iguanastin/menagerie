@@ -29,6 +29,8 @@ import java.util.logging.Level;
 
 public class DuplicateOptionsScreen extends Screen {
 
+    private static final double DEFAULT_CONFIDENCE = 0.95;
+
     private enum Scope {
         SELECTED, SEARCHED, ALL
     }
@@ -108,19 +110,20 @@ public class DuplicateOptionsScreen extends Screen {
 
         contents.getChildren().add(includeGroupElementsCheckBox);
 
-        confidenceTextField.setPromptText("0.8-1.0");
+        confidenceTextField.setPromptText(MediaItem.MIN_CONFIDENCE + "-" + MediaItem.MAX_CONFIDENCE);
         confidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
                 try {
                     double value = Double.parseDouble(confidenceTextField.getText());
-                    if (value < 0.8) confidenceTextField.setText("0.8");
-                    else if (value > 1) confidenceTextField.setText("1");
+                    if (value < MediaItem.MIN_CONFIDENCE) confidenceTextField.setText("" + MediaItem.MIN_CONFIDENCE);
+                    else if (value > MediaItem.MAX_CONFIDENCE)
+                        confidenceTextField.setText("" + MediaItem.MAX_CONFIDENCE);
                 } catch (NumberFormatException e) {
-                    confidenceTextField.setText("0.95");
+                    confidenceTextField.setText("" + DEFAULT_CONFIDENCE);
                 }
             }
         });
-        confidenceTextField.setTooltip(new Tooltip("Similarity confidence: (0.8-1.0)"));
+        confidenceTextField.setTooltip(new Tooltip("Similarity confidence: (" + MediaItem.MIN_CONFIDENCE + "-" + MediaItem.MAX_CONFIDENCE + ")"));
         h = new HBox(5, new Label("Confidence:"), confidenceTextField);
         h.setAlignment(Pos.CENTER_LEFT);
         contents.getChildren().add(h);
@@ -231,6 +234,8 @@ public class DuplicateOptionsScreen extends Screen {
                 }
                 if (includeGroupElementsCheckBox.isSelected()) {
                     compare = expandGroups(compare);
+                } else {
+                    compare = new ArrayList<>(compare);
                 }
                 List<Item> to = all;
                 if (toChoiceBox.getValue() == Scope.SELECTED) {
@@ -244,6 +249,9 @@ public class DuplicateOptionsScreen extends Screen {
                     to = new ArrayList<>(to);
                 }
 
+                compare.removeIf(item -> !(item instanceof MediaItem) || ((MediaItem) item).hasNoSimilar());
+                to.removeIf(item -> !(item instanceof MediaItem) || ((MediaItem) item).hasNoSimilar());
+
                 final int ffs = compare.size();
                 Platform.runLater(() -> ps.setProgress(0, ffs));
 
@@ -256,6 +264,7 @@ public class DuplicateOptionsScreen extends Screen {
                     }
 
                     if (!(i1 instanceof MediaItem)) continue;
+                    if (((MediaItem) i1).hasNoSimilar()) continue;
 
                     // Ensures no comparing to self
                     to.remove(i1);
@@ -263,6 +272,7 @@ public class DuplicateOptionsScreen extends Screen {
                     // Find duplicates of i1
                     for (Item i2 : to) {
                         if (!(i2 instanceof MediaItem)) continue;
+                        if (((MediaItem) i2).hasNoSimilar()) continue;
 
                         final double similarity = ((MediaItem) i1).getSimilarityTo((MediaItem) i2);
                         if (similarity >= confidenceSquare || (similarity >= confidence && ((MediaItem) i1).getHistogram().isColorful() && ((MediaItem) i2).getHistogram().isColorful())) {
@@ -290,6 +300,7 @@ public class DuplicateOptionsScreen extends Screen {
             ct.cancel();
             close();
         });
+        ct.setDaemon(true);
         ct.start();
     }
 

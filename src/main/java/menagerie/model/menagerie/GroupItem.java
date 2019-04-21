@@ -37,7 +37,7 @@ public class GroupItem extends Item {
     public boolean addItem(MediaItem item) {
         if (elements.contains(item)) return false;
 
-        if (item.inGroup()) item.getGroup().removeItem(item);
+        if (item.isInGroup()) item.getGroup().removeItem(item);
 
         elements.add(item);
         item.setGroup(this);

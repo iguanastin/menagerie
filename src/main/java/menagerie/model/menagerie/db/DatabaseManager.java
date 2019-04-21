@@ -35,6 +35,7 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_SET_MEDIA_PAGE;
     private final PreparedStatement PS_SET_MEDIA_THUMBNAIL;
     private final PreparedStatement PS_GET_MEDIA_THUMBNAIL;
+    private final PreparedStatement PS_SET_MEDIA_NOSIMILAR;
     // Groups
     private final PreparedStatement PS_CREATE_GROUP;
     private final PreparedStatement PS_SET_GROUP_TITLE;
@@ -86,6 +87,7 @@ public class DatabaseManager extends Thread {
         PS_SET_MEDIA_PAGE = database.prepareStatement("UPDATE media SET page=? WHERE id=?;");
         PS_SET_MEDIA_THUMBNAIL = database.prepareStatement("UPDATE media SET thumbnail=? WHERE id=?;");
         PS_GET_MEDIA_THUMBNAIL = database.prepareStatement("SELECT thumbnail FROM media WHERE id=?;");
+        PS_SET_MEDIA_NOSIMILAR = database.prepareStatement("UPDATE media SET no_similar=? WHERE id=?;");
         // Groups
         PS_CREATE_GROUP = database.prepareStatement("INSERT INTO groups(id, title) VALUES (?, ?);");
         PS_SET_GROUP_TITLE = database.prepareStatement("UPDATE groups SET title=? WHERE id=?;");
@@ -106,7 +108,7 @@ public class DatabaseManager extends Thread {
         // Construction
         PS_GET_TAGS = database.prepareStatement("SELECT * FROM tags;");
         PS_GET_TAG_COUNT = database.prepareStatement("SELECT count(*) FROM tags;");
-        PS_GET_MEDIA = database.prepareStatement("SELECT items.id, items.added, media.gid, media.page, media.path, media.md5, media.hist_a, media.hist_r, media.hist_g, media.hist_b FROM media JOIN items ON items.id=media.id;");
+        PS_GET_MEDIA = database.prepareStatement("SELECT items.id, items.added, media.gid, media.page, media.no_similar, media.path, media.md5, media.hist_a, media.hist_r, media.hist_g, media.hist_b FROM media JOIN items ON items.id=media.id;");
         PS_GET_GROUPS = database.prepareStatement("SELECT items.id, items.added, groups.title FROM groups JOIN items ON items.id=groups.id;");
         PS_GET_ITEM_COUNT = database.prepareStatement("SELECT count(*) FROM items;");
         PS_GET_TAGS_FOR_ITEM = database.prepareStatement("SELECT tagged.tag_id FROM tagged WHERE tagged.item_id=?;");
@@ -722,6 +724,37 @@ public class DatabaseManager extends Thread {
     }
 
     /**
+     * Sets the flag of a media item signifying it has no similar items with the weakest confidence.
+     *
+     * @param id ID of media.
+     * @param b  noSimilar value.
+     * @throws SQLException When database update fails.
+     */
+    public void setMediaNoSimilar(int id, boolean b) throws SQLException {
+        synchronized (PS_SET_MEDIA_NOSIMILAR) {
+            PS_SET_MEDIA_NOSIMILAR.setBoolean(1, b);
+            PS_SET_MEDIA_NOSIMILAR.setInt(2, id);
+            PS_SET_MEDIA_NOSIMILAR.executeUpdate();
+        }
+    }
+
+    /**
+     * Queues a value to be set for the media no_similar flag.
+     *
+     * @param id ID of media.
+     * @param b  Flag.
+     */
+    public void setMediaNoSimilarAsync(int id, boolean b) {
+        queue.add(() -> {
+            try {
+                setMediaNoSimilar(id, b);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, "Failed to set media no_similar. ID: " + id + ", no_similar: " + b, e);
+            }
+        });
+    }
+
+    /**
      * Gets a thumbnail from the database.
      *
      * @param id ID of item.
@@ -922,7 +955,7 @@ public class DatabaseManager extends Thread {
                         }
                     }
 
-                    MediaItem media = new MediaItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"), rs.getInt("media.page"), group, new File(rs.getNString("media.path")), rs.getNString("media.md5"), histogram);
+                    MediaItem media = new MediaItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"), rs.getInt("media.page"), rs.getBoolean("media.no_similar"), group, new File(rs.getNString("media.path")), rs.getNString("media.md5"), histogram);
                     menagerie.getItems().add(media);
                     if (group != null) group.getElements().add(media);
 

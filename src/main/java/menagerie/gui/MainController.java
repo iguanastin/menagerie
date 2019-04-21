@@ -201,6 +201,8 @@ public class MainController {
     public MainController(Menagerie menagerie, Settings settings) {
         this.menagerie = menagerie;
         this.settings = settings;
+
+        if (settings.getDouble(Settings.Key.CONFIDENCE) < 0.9) settings.setDouble(Settings.Key.CONFIDENCE, 0.9);
     }
 
     // ---------------------------------- Initializers -------------------------------
@@ -767,7 +769,7 @@ public class MainController {
                 groupCount++;
             } else if (item instanceof MediaItem) {
                 mediaCount++;
-                if (((MediaItem) item).inGroup()) itemsInGroupCount++;
+                if (((MediaItem) item).isInGroup()) itemsInGroupCount++;
             }
         }
 
@@ -800,7 +802,7 @@ public class MainController {
         if (itemsInGroupCount > 0) {
             MenuItem removeFromGroup = new MenuItem("Remove from group");
             removeFromGroup.setOnAction(event -> selected.forEach(item -> {
-                if (item instanceof MediaItem && ((MediaItem) item).inGroup()) {
+                if (item instanceof MediaItem && ((MediaItem) item).isInGroup()) {
                     ((MediaItem) item).getGroup().removeItem((MediaItem) item);
                 }
             }));
@@ -1343,6 +1345,56 @@ public class MainController {
             }
         };
         ps.open(screenPane, "Pruning Items", "Finding and pruning items that have become detached from their file...", ct::cancel);
+        ct.setDaemon(true);
+        ct.start();
+
+        event.consume();
+    }
+
+    public void buildSimilarityCacheMenuButtonOnAction(ActionEvent event) {
+        ProgressScreen ps = new ProgressScreen();
+        CancellableThread ct = new CancellableThread() {
+            @Override
+            public void run() {
+                final int total = menagerie.getItems().size();
+                int count = 0;
+
+                for (int i = 0; i < menagerie.getItems().size(); i++) {
+                    if (!(menagerie.getItems().get(i) instanceof MediaItem)) continue;
+                    MediaItem i1 = (MediaItem) menagerie.getItems().get(i);
+                    if (i1.getHistogram() == null || i1.hasNoSimilar()) continue;
+
+                    boolean hasSimilar = false;
+                    for (int j = 0; j < menagerie.getItems().size(); j++) {
+                        if (i == j) continue;
+                        if (!(menagerie.getItems().get(j) instanceof MediaItem)) continue;
+                        MediaItem i2 = (MediaItem) menagerie.getItems().get(j);
+                        if (i2.getHistogram() == null || i2.hasNoSimilar()) continue;
+
+                        double similarity = i1.getSimilarityTo(i2);
+                        if (similarity >= MediaItem.MIN_CONFIDENCE) {
+                            hasSimilar = true;
+                            break;
+                        }
+                    }
+
+                    if (i1.getId() == 48295) System.out.println(hasSimilar);
+
+                    if (!hasSimilar) {
+                        count++;
+                        i1.setHasNoSimilar(true);
+                    }
+
+                    final int finalI = i;
+                    Platform.runLater(() -> ps.setProgress(finalI, total));
+                }
+
+                System.out.println(count);
+                Platform.runLater(ps::close);
+            }
+        };
+        ps.open(screenPane, "Building similarity cache", "Caching items that have no possible similar items", ct::cancel);
+        ct.setDaemon(true);
         ct.start();
 
         event.consume();

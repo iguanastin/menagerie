@@ -81,7 +81,7 @@ public class ItemGridCell extends GridCell<Item> {
                 } else {
                     centerLabel.setText(null);
                 }
-                if (((MediaItem) item).inGroup()) {
+                if (((MediaItem) item).isInGroup()) {
                     bottomRightLabel.setText(((MediaItem) item).getPageIndex() + "");
                 } else {
                     bottomRightLabel.setText(null);

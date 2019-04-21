@@ -76,7 +76,7 @@ public class Menagerie {
     public MediaItem importFile(File file) {
         if (isFilePresent(file)) return null;
 
-        MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), 0, null, file, null, null);
+        MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), file);
 
         // Add media and commit to database
         items.add(media);

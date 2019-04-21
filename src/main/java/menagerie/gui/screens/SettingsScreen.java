@@ -20,11 +20,16 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.logging.Level;
 
+import static menagerie.model.menagerie.MediaItem.MAX_CONFIDENCE;
+import static menagerie.model.menagerie.MediaItem.MIN_CONFIDENCE;
+
 public class SettingsScreen extends Screen {
 
     private static final Insets ALL5 = new Insets(5);
     private static final Insets LEFT20 = new Insets(0, 0, 0, 20);
     private static final Font BOLD_ITALIC = new Font("System Bold Italic", 12);
+
+    private static final double DEFAULT_CONFIDENCE = 0.95;
 
     private final TextField defaultFolderTextField = new TextField();
     private final CheckBox autoImportFolderCheckBox = new CheckBox("Auto-import from folder");
@@ -132,15 +137,15 @@ public class SettingsScreen extends Screen {
             if (!newValue) {
                 try {
                     double value = Double.parseDouble(confidenceTextField.getText());
-                    if (value < 0.8) confidenceTextField.setText("0.8");
-                    else if (value > 1) confidenceTextField.setText("1");
+                    if (value < MIN_CONFIDENCE) confidenceTextField.setText("" + MIN_CONFIDENCE);
+                    else if (value > MAX_CONFIDENCE) confidenceTextField.setText("" + MAX_CONFIDENCE);
                 } catch (NumberFormatException e) {
-                    confidenceTextField.setText("0.95");
+                    confidenceTextField.setText("" + DEFAULT_CONFIDENCE);
                 }
             }
         });
-        confidenceTextField.setPromptText("0.95 recommended");
-        h = new HBox(5, new Label("Confidence:"), confidenceTextField, new Label("(0.8-1.0)"));
+        confidenceTextField.setPromptText(DEFAULT_CONFIDENCE + " recommended");
+        h = new HBox(5, new Label("Confidence:"), confidenceTextField, new Label("(" + MIN_CONFIDENCE + "-" + MAX_CONFIDENCE + ")"));
         h.setAlignment(Pos.CENTER_LEFT);
         h.setPadding(LEFT20);
         rootV.getChildren().add(h);
@@ -235,11 +240,11 @@ public class SettingsScreen extends Screen {
         settings.setBoolean(Settings.Key.TAG_TAGME, tagWithTagmeCheckBox.isSelected());
         settings.setBoolean(Settings.Key.TAG_VIDEO, tagWithVideoCheckBox.isSelected());
         settings.setBoolean(Settings.Key.TAG_IMAGE, tagWithImageCheckBox.isSelected());
-        double confidence = 0.95;
+        double confidence = DEFAULT_CONFIDENCE;
         try {
             confidence = Double.parseDouble(confidenceTextField.getText());
-            if (confidence < 0.8) confidence = 0.8;
-            else if (confidence > 1) confidence = 1;
+            if (confidence < MIN_CONFIDENCE) confidence = MIN_CONFIDENCE;
+            else if (confidence > MAX_CONFIDENCE) confidence = MAX_CONFIDENCE;
         } catch (NumberFormatException ignored) {
         }
         settings.setDouble(Settings.Key.CONFIDENCE, confidence);
@@ -273,8 +278,8 @@ public class SettingsScreen extends Screen {
         tagWithVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_VIDEO));
         tagWithImageCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_IMAGE));
         double confidence = settings.getDouble(Settings.Key.CONFIDENCE);
-        if (confidence < 0.8) confidence = 0.8;
-        else if (confidence > 1) confidence = 1;
+        if (confidence < MIN_CONFIDENCE) confidence = MIN_CONFIDENCE;
+        else if (confidence > MAX_CONFIDENCE) confidence = MAX_CONFIDENCE;
         confidenceTextField.setText("" + confidence);
         muteVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.MUTE_VIDEO));
         repeatVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
