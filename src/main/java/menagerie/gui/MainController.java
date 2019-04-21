@@ -24,10 +24,7 @@ import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
-import menagerie.gui.screens.dialogs.ConfirmationScreen;
-import menagerie.gui.screens.dialogs.GroupDialogScreen;
-import menagerie.gui.screens.dialogs.ImportDialogScreen;
-import menagerie.gui.screens.dialogs.TextDialogScreen;
+import menagerie.gui.screens.dialogs.*;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
@@ -1313,6 +1310,41 @@ public class MainController {
 
     public void importFilesMenuButtonOnAction(ActionEvent event) {
         screenPane.open(importDialogScreen);
+        event.consume();
+    }
+
+    public void pruneFileLessMenuButtonOnAction(ActionEvent event) {
+        ProgressScreen ps = new ProgressScreen();
+        CancellableThread ct = new CancellableThread() {
+            @Override
+            public void run() {
+                final int total = menagerie.getItems().size();
+                int i = 0;
+
+                List<Item> toDelete = new ArrayList<>();
+
+                for (Item item : menagerie.getItems()) {
+                    if (!running) break;
+                    i++;
+
+                    if (item instanceof MediaItem && !((MediaItem) item).getFile().exists()) {
+                        toDelete.add(item);
+                    }
+
+                    final int finalI = i;
+                    Platform.runLater(() -> ps.setProgress(finalI, total));
+                }
+
+                menagerie.forgetItems(toDelete);
+                Platform.runLater(() -> {
+                    ps.close();
+                    new AlertDialogScreen().open(screenPane, "Pruning complete", toDelete.size() + " file-less items pruned.", null);
+                });
+            }
+        };
+        ps.open(screenPane, "Pruning Items", "Finding and pruning items that have become detached from their file...", ct::cancel);
+        ct.start();
+
         event.consume();
     }
 

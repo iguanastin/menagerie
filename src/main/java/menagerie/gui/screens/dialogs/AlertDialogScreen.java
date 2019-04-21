@@ -41,6 +41,7 @@ public class AlertDialogScreen extends Screen {
         BorderPane top = new BorderPane(null, null, exit, new Separator(), titleLabel);
 
         // Center
+        messageLabel.setPadding(new Insets(5));
         BorderPane.setAlignment(messageLabel, Pos.CENTER_LEFT);
 
         // Bottom

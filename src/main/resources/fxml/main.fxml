@@ -113,6 +113,9 @@
                               text="Revert to backup"/>
                 </Menu>
                 <Menu mnemonicParsing="false" text="Edit">
+                    <MenuItem mnemonicParsing="false" onAction="#pruneFileLessMenuButtonOnAction"
+                              text="Prune file-less items"/>
+                    <SeparatorMenuItem/>
                     <MenuItem mnemonicParsing="false" onAction="#settingsMenuButtonOnAction" text="Settings"/>
                 </Menu>
                 <Menu mnemonicParsing="false" text="View">
