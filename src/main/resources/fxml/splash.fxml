@@ -1,11 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.layout.BorderPane?>
-
-
-<BorderPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.121">
-   <center>
-      <Label text="Menagerie starting up..." BorderPane.alignment="CENTER" />
-   </center>
-</BorderPane>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<AnchorPane fx:id="rootPane" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.172-ea"
+            xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.SplashController">
+    <VBox alignment="CENTER" layoutX="100.0" spacing="20" AnchorPane.bottomAnchor="100.0">
+        <Label text="Menagerie v1.5" BorderPane.alignment="CENTER">
+            <font>
+                <Font size="18.0"/>
+            </font>
+        </Label>
+        <VBox alignment="CENTER">
+            <ProgressBar prefWidth="400.0"/>
+            <Label fx:id="statusLabel" text="Loading...">
+                <font>
+                    <Font name="System Italic" size="12.0"/>
+                </font>
+            </Label>
+        </VBox>
+    </VBox>
+</AnchorPane>

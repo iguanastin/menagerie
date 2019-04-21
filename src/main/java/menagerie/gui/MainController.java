@@ -37,7 +37,6 @@ import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.db.DatabaseManager;
-import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.GroupSearch;
@@ -55,8 +54,6 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.*;
@@ -149,7 +146,7 @@ public class MainController {
     /**
      * Settings object used by this application.
      */
-    private final Settings settings = new Settings(new File("menagerie.settings"));
+    private final Settings settings;
 
     // ------------------------------ Video preview status ---------------------------
     /**
@@ -162,6 +159,13 @@ public class MainController {
     private boolean playVideoAfterExplorerEnabled = false;
 
 
+    // --------------------------------- Constructor ---------------------------------
+
+    public MainController(Menagerie menagerie, Settings settings) {
+        this.menagerie = menagerie;
+        this.settings = settings;
+    }
+
     // ---------------------------------- Initializers -------------------------------
 
     /**
@@ -169,11 +173,9 @@ public class MainController {
      */
     @FXML
     public void initialize() {
-        // Backup database
-        if (settings.getBoolean(Settings.Key.BACKUP_DATABASE)) backupDatabase();
 
         // Initialize the menagerie
-        initMenagerie();
+        initImporterThread();
 
         // Init screens
         initScreens();
@@ -236,31 +238,31 @@ public class MainController {
     }
 
     /**
-     * Initializes menagerie threads and objects
+     * Initializes menagerie importer thread.
      */
-    private void initMenagerie() {
-        try {
-            Main.log.info("Connecting to database: " + settings.getString(Settings.Key.DATABASE_URL) + " - " + settings.getString(Settings.Key.DATABASE_USER) + "/" + settings.getString(Settings.Key.DATABASE_PASSWORD));
-            Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getString(Settings.Key.DATABASE_URL), settings.getString(Settings.Key.DATABASE_USER), settings.getString(Settings.Key.DATABASE_PASSWORD));
-            Main.log.info("Verifying/updating database");
-            DatabaseVersionUpdater.updateDatabase(db);
+    private void initImporterThread() {
+        //        try {
+        //            Main.log.info("Connecting to database: " + settings.getString(Settings.Key.DATABASE_URL) + " - " + settings.getString(Settings.Key.DATABASE_USER) + "/" + settings.getString(Settings.Key.DATABASE_PASSWORD));
+        //            Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getString(Settings.Key.DATABASE_URL), settings.getString(Settings.Key.DATABASE_USER), settings.getString(Settings.Key.DATABASE_PASSWORD));
+        //            Main.log.info("Verifying/updating database");
+        //            DatabaseVersionUpdater.updateDatabase(db);
+        //
+        //            DatabaseManager dbManager = new DatabaseManager(db);
+        //            dbManager.setDaemon(true);
+        //            dbManager.start();
+        //
+        //            Main.log.info("Initializing Menagerie");
+        //            menagerie = new Menagerie(dbManager);
 
-            DatabaseManager dbManager = new DatabaseManager(db);
-            dbManager.setDaemon(true);
-            dbManager.start();
-
-            Main.log.info("Initializing Menagerie");
-            menagerie = new Menagerie(dbManager);
-
-            Main.log.info("Starting importer thread");
-            importer = new ImporterThread(menagerie, settings);
-            importer.setDaemon(true);
-            importer.start();
-        } catch (SQLException e) {
-            Main.log.log(Level.SEVERE, "Error connecting to or verifying database", e);
-            Main.showErrorMessage("Database Error", "Error when connecting to or verifying database", e.getLocalizedMessage());
-            Platform.exit();
-        }
+        Main.log.info("Starting importer thread");
+        importer = new ImporterThread(menagerie, settings);
+        importer.setDaemon(true);
+        importer.start();
+        //        } catch (SQLException e) {
+        //            Main.log.log(Level.SEVERE, "Error connecting to or verifying database", e);
+        //            Main.showErrorMessage("Database Error", "Error when connecting to or verifying database", e.getLocalizedMessage());
+        //            Platform.exit();
+        //        }
     }
 
     /**
@@ -1177,46 +1179,6 @@ public class MainController {
     // ---------------------------------- Compute Utilities -----------------------------
 
     /**
-     * Attempts to back up the database file as specified in the settings object
-     */
-    private void backupDatabase() {
-        try {
-            File dbFile = getDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
-
-            if (dbFile.exists()) {
-                Main.log.info("Backing up database at: " + dbFile);
-                File backupFile = new File(dbFile.getAbsolutePath() + ".bak");
-                Files.copy(dbFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                Main.log.info("Successfully backed up database to: " + backupFile);
-            } else {
-                Main.log.warning(String.format("Cannot backup nonexistent database file at: %s", dbFile));
-            }
-        } catch (IOException e) {
-            Main.log.log(Level.SEVERE, String.format("Failed to backup database at: %s", settings.getString(Settings.Key.DATABASE_URL)), e);
-        }
-    }
-
-    /**
-     * Attempts to resolve the actual path to the database file by java path standards, given a JDBC database path.
-     *
-     * @param databaseURL JDBC style path to database.
-     * @return Best attempt at resolving the path.
-     */
-    private static File getDatabaseFile(String databaseURL) {
-        String path = databaseURL + ".mv.db";
-        if (path.startsWith("~")) {
-            String temp = System.getProperty("user.home");
-            if (!temp.endsWith("/") && !temp.endsWith("\\")) temp += "/";
-            path = path.substring(1);
-            if (path.startsWith("/") || path.startsWith("\\")) path = path.substring(1);
-
-            path = temp + path;
-        }
-
-        return new File(path);
-    }
-
-    /**
      * Attempts to resolve a filename conflict caused by a pre-existing file at the same path. Appends an incremented number surrounded by parenthesis to the file if it already exists.
      *
      * @param file File to resolve name for.
@@ -1302,7 +1264,7 @@ public class MainController {
                 Main.log.info("Done defragging database file");
 
                 if (revertDatabase) {
-                    File database = getDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
+                    File database = DatabaseManager.resolveDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
                     File backup = new File(database + ".bak");
                     Main.log.warning(String.format("Reverting to last backup database: %s", backup.toString()));
                     try {
@@ -1375,7 +1337,7 @@ public class MainController {
     }
 
     public void revertDatabaseMenuButtonOnAction(ActionEvent event) {
-        File database = getDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
+        File database = DatabaseManager.resolveDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
         File backup = new File(database + ".bak");
         if (backup.exists()) {
             new ConfirmationScreen().open(screenPane, "Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> cleanExit(true), null);

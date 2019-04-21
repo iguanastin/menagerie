@@ -34,6 +34,12 @@ public class Main extends Application {
     public static final Logger log = Logger.getGlobal();
     private static final String logFilePath = "menagerie.log";
 
+    private static final String SPLASH_FXML = "/fxml/splash.fxml";
+    static final String MAIN_FXML = "/fxml/main.fxml";
+    static final String CSS = "/fxml/dark.css";
+    static final String MAIN_TITLE = "Menagerie";
+    static final String SETTINGS_PATH = "menagerie.settings";
+
 
     /**
      * Creates and shows a JFX alert.
@@ -144,59 +150,44 @@ public class Main extends Application {
      * @param stage State supplied by JFX
      */
     public void start(Stage stage) {
+        log.config("Splash FXML: " + SPLASH_FXML);
+        log.config("Main FXML: " + MAIN_FXML);
+        log.config("Main Title: " + MAIN_TITLE);
+        log.config("CSS: " + CSS);
+        log.config("Settings path: " + SETTINGS_PATH);
+
         try {
             NativeLibrary.addSearchPath("libvlc", new DefaultWindowsNativeDiscoveryStrategy().discover());
             log.config("Loaded LibVLC Version: " + LibVlcVersion.getVersion());
 
             VLCJ_LOADED = true;
         } catch (Throwable e) {
-            log.log(Level.WARNING, "Error loading vlcj", e);
+            log.log(Level.WARNING, "Error loading LibVLC", e);
 
             VLCJ_LOADED = false;
         }
 
-        final String splash = "/fxml/splash.fxml";
-        final String fxml = "/fxml/main.fxml";
-        final String css = "/fxml/dark.css";
-        final String title = "Menagerie";
-
-        final List<Image> icons = getIcons();
 
         try {
-            log.info(String.format("Loading FXML: %s", splash));
-            Parent root = FXMLLoader.load(getClass().getResource(splash));
+            final List<Image> icons = getIcons();
+
+            log.info("Loading FXML: " + SPLASH_FXML);
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(SPLASH_FXML));
+            loader.setControllerFactory(param -> new SplashController(icons));
+            Parent root = loader.load();
             Scene scene = new Scene(root);
-            scene.getStylesheets().add(css);
+            scene.getStylesheets().add(CSS);
 
             stage.initStyle(StageStyle.UNDECORATED);
             stage.setScene(scene);
             stage.getIcons().addAll(icons);
             stage.show();
         } catch (IOException e) {
-            log.log(Level.SEVERE, "Error loading FXML: " + splash, e);
-            showErrorMessage("Error", "Unable to load FXML: " + splash, e.getLocalizedMessage());
+            log.log(Level.SEVERE, "Error loading FXML: " + SPLASH_FXML, e);
+            showErrorMessage("Error", "Unable to load FXML: " + SPLASH_FXML + ", see log for more details", e.getLocalizedMessage());
+            Platform.exit();
+            System.exit(1);
         }
-
-        Platform.runLater(() -> {
-            try {
-                log.info(String.format("Loading FXML: %s", fxml));
-                FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
-                Parent root = loader.load();
-                Scene scene = new Scene(root);
-                scene.getStylesheets().add(css);
-
-                Stage newStage = new Stage();
-                newStage.setScene(scene);
-                newStage.setTitle(title);
-                newStage.getIcons().addAll(icons);
-                newStage.show();
-                stage.close();
-            } catch (IOException e) {
-                log.log(Level.SEVERE, "Failed to load FXML: " + fxml, e);
-                System.exit(1);
-            }
-        });
-
     }
 
     private List<Image> getIcons() {
