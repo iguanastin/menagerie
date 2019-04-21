@@ -13,6 +13,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import menagerie.gui.Main;
+import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.model.Settings;
 
 import java.io.File;
@@ -183,8 +184,16 @@ public class SettingsScreen extends Screen {
         // ------------------------- Bottom -----------------------------
         Button accept = new Button("Accept");
         accept.setOnAction(event -> {
-            applyToSettings();
-            close();
+            final boolean defaultFolderEmpty = defaultFolderTextField.getText() == null || defaultFolderTextField.getText().isEmpty();
+
+            if (defaultFolderEmpty && autoImportMoveToDefaultCheckBox.isSelected()) {
+                new AlertDialogScreen().open(getManager(), "Error", "Cannot move to default after auto-import if default folder is not specified.", null);
+            } else if (defaultFolderEmpty && fileNameFromURLCheckBox.isSelected()) {
+                new AlertDialogScreen().open(getManager(), "Error", "Cannot use filename from web if default folder is not specified.", null);
+            } else {
+                applyToSettings();
+                close();
+            }
         });
         Button cancel = new Button("Cancel");
         cancel.setOnAction(event -> close());
