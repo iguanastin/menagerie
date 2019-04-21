@@ -263,10 +263,12 @@ public class ImportJob {
             synchronized (this) {
                 similarTo = new ArrayList<>();
             }
+            final double confidence = settings.getDouble(Settings.Key.CONFIDENCE);
+            final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
             for (Item i : menagerie.getItems()) {
                 if (i instanceof MediaItem && !item.equals(i) && ((MediaItem) i).getHistogram() != null) {
-                    double similarity = ((MediaItem) i).getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
-                    if (similarity > settings.getDouble(Settings.Key.CONFIDENCE)) {
+                    double similarity = ((MediaItem) i).getSimilarityTo(item);
+                    if (similarity >= confidenceSquare || (similarity >= confidence && item.getHistogram().isColorful() && ((MediaItem) i).getHistogram().isColorful())) {
                         synchronized (this) {
                             similarTo.add(new SimilarPair<>(item, (MediaItem) i, similarity));
                         }

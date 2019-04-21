@@ -242,16 +242,13 @@ public class MediaItem extends Item {
 
     /**
      * @param other                     Target to compare with.
-     * @param compareBlackAndWhiteHists Compare black and white images. Poor accuracy.
      * @return Similarity to another image. 1 if MD5 hashes match, [0.0-1.0] if histograms exist, 0 otherwise.
      */
-    public double getSimilarityTo(MediaItem other, boolean compareBlackAndWhiteHists) {
+    public double getSimilarityTo(MediaItem other) {
         if (md5 != null && md5.equals(other.getMD5())) {
             return 1.0;
         } else if (histogram != null && other.getHistogram() != null) {
-            if (compareBlackAndWhiteHists || (histogram.isColorful() && other.getHistogram().isColorful())) {
-                return histogram.getSimilarity(other.getHistogram());
-            }
+            return histogram.getSimilarity(other.getHistogram());
         }
 
         return 0;

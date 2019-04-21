@@ -107,18 +107,18 @@ class MediaItemTests {
         MediaItem m2 = new MediaItem(null, 2, 1, WHITE_IMAGE_FILE);
         MediaItem m3 = new MediaItem(null, 3, 1, BLACK_IMAGE_FILE);
 
-        assertEquals(0, m1.getSimilarityTo(m2, false));
-        assertEquals(0, m1.getSimilarityTo(m3, false));
+        assertEquals(0, m1.getSimilarityTo(m2));
+        assertEquals(0, m1.getSimilarityTo(m3));
 
         m1.initializeMD5();
-        assertEquals(0, m1.getSimilarityTo(m2, false));
+        assertEquals(0, m1.getSimilarityTo(m2));
 
         m2.initializeMD5();
-        assertEquals(1, m1.getSimilarityTo(m2, false));
-        assertEquals(1, m2.getSimilarityTo(m1, false));
+        assertEquals(1, m1.getSimilarityTo(m2));
+        assertEquals(1, m2.getSimilarityTo(m1));
 
         m3.initializeMD5();
-        assertEquals(0, m1.getSimilarityTo(m3, false));
+        assertEquals(0, m1.getSimilarityTo(m3));
     }
 
     @Test

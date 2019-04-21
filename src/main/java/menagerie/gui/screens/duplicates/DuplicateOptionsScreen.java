@@ -37,10 +37,10 @@ public class DuplicateOptionsScreen extends Screen {
 
     private final DuplicatesScreen duplicateScreen;
 
-    private final Label compareCountLabel, firstCountLabel, secondCoundLabel;
-    private final ChoiceBox<Scope> compareChoiceBox, toChoiceBox;
-    private final CheckBox compareGreyscaleCheckBox;
-    private final TextField confidenceTextField;
+    private final Label compareCountLabel = new Label("~N/A comparisons"), firstCountLabel = new Label("0"), secondCountLabel = new Label("0");
+    private final ChoiceBox<Scope> compareChoiceBox = new ChoiceBox<>(), toChoiceBox = new ChoiceBox<>();
+    private final TextField confidenceTextField = new TextField();
+    private final CheckBox includeGroupElementsCheckBox = new CheckBox("Include group elements");
 
     private List<Item> selected = null, searched = null, all = null;
     private Menagerie menagerie = null;
@@ -66,18 +66,15 @@ public class DuplicateOptionsScreen extends Screen {
         VBox contents = new VBox(5);
         contents.setPadding(new Insets(5));
 
-        compareChoiceBox = new ChoiceBox<>();
         compareChoiceBox.getItems().addAll(Scope.SELECTED, Scope.SEARCHED, Scope.ALL);
         compareChoiceBox.getSelectionModel().selectFirst();
         Label l1 = new Label("Compare:");
-        firstCountLabel = new Label("0");
         HBox h = new HBox(5, l1, compareChoiceBox, firstCountLabel);
         h.setAlignment(Pos.CENTER_LEFT);
         contents.getChildren().add(h);
 
         Label l2 = new Label("To:");
         l2.minWidthProperty().bind(l1.widthProperty());
-        toChoiceBox = new ChoiceBox<>();
         toChoiceBox.getItems().addAll(Scope.SELECTED, Scope.SEARCHED, Scope.ALL);
         toChoiceBox.getSelectionModel().selectFirst();
         toChoiceBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> updateCounts());
@@ -105,16 +102,12 @@ public class DuplicateOptionsScreen extends Screen {
 
             updateCounts();
         });
-        secondCoundLabel = new Label("0");
-        h = new HBox(5, l2, toChoiceBox, secondCoundLabel);
+        h = new HBox(5, l2, toChoiceBox, secondCountLabel);
         h.setAlignment(Pos.CENTER_LEFT);
         contents.getChildren().add(h);
 
-        compareGreyscaleCheckBox = new CheckBox("Compare greyscale images");
-        compareGreyscaleCheckBox.setTooltip(new Tooltip("Comparing greyscale images is wildly inaccurate"));
-        contents.getChildren().add(compareGreyscaleCheckBox);
+        contents.getChildren().add(includeGroupElementsCheckBox);
 
-        confidenceTextField = new TextField();
         confidenceTextField.setPromptText("0.8-1.0");
         confidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
@@ -134,7 +127,6 @@ public class DuplicateOptionsScreen extends Screen {
 
         VBox center = new VBox(5, header, new Separator(), contents);
 
-        compareCountLabel = new Label("~N/A comparisons");
         Button compare = new Button("Compare");
         compare.setOnAction(event -> compareButtonOnAction());
         Button cancel = new Button("Cancel");
@@ -169,9 +161,9 @@ public class DuplicateOptionsScreen extends Screen {
     public void open(ScreenPane manager, Menagerie menagerie, List<Item> selected, List<Item> searched, List<Item> all) {
         if (manager == null || menagerie == null || selected == null || searched == null || all == null) return;
         this.menagerie = menagerie;
-        this.selected = expandGroups(selected);
-        this.searched = expandGroups(searched);
-        this.all = expandGroups(all);
+        this.selected = selected;
+        this.searched = searched;
+        this.all = all;
 
         manager.open(this);
     }
@@ -198,7 +190,7 @@ public class DuplicateOptionsScreen extends Screen {
         } else {
             secondNum = all.size();
         }
-        secondCoundLabel.setText(secondNum + "");
+        secondCountLabel.setText(secondNum + "");
 
         compareCountLabel.setText("~" + firstNum * secondNum + " comparisons");
     }
@@ -207,7 +199,6 @@ public class DuplicateOptionsScreen extends Screen {
      * Saves the changed settings to the settings object and writes it to file.
      */
     private void saveSettings() {
-        settings.setBoolean(Settings.Key.COMPARE_GREYSCALE, compareGreyscaleCheckBox.isSelected());
         try {
             settings.setDouble(Settings.Key.CONFIDENCE, Double.parseDouble(confidenceTextField.getText()));
         } catch (NumberFormatException e) {
@@ -226,7 +217,7 @@ public class DuplicateOptionsScreen extends Screen {
 
         final List<SimilarPair<MediaItem>> pairs = new ArrayList<>();
         final double confidence = settings.getDouble(Settings.Key.CONFIDENCE);
-        final boolean compareGreyscale = settings.getBoolean(Settings.Key.COMPARE_GREYSCALE);
+        final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
         ProgressScreen ps = new ProgressScreen();
         CancellableThread ct = new CancellableThread() {
             @Override
@@ -238,13 +229,20 @@ public class DuplicateOptionsScreen extends Screen {
                 } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
                     compare = searched;
                 }
+                if (includeGroupElementsCheckBox.isSelected()) {
+                    compare = expandGroups(compare);
+                }
                 List<Item> to = all;
                 if (toChoiceBox.getValue() == Scope.SELECTED) {
                     to = selected;
                 } else if (toChoiceBox.getValue() == Scope.SEARCHED) {
                     to = searched;
                 }
-                to = new ArrayList<>(to);
+                if (includeGroupElementsCheckBox.isSelected()) {
+                    to = expandGroups(to);
+                } else {
+                    to = new ArrayList<>(to);
+                }
 
                 final int ffs = compare.size();
                 Platform.runLater(() -> ps.setProgress(0, ffs));
@@ -266,8 +264,8 @@ public class DuplicateOptionsScreen extends Screen {
                     for (Item i2 : to) {
                         if (!(i2 instanceof MediaItem)) continue;
 
-                        final double similarity = ((MediaItem) i1).getSimilarityTo((MediaItem) i2, compareGreyscale);
-                        if (similarity >= confidence) {
+                        final double similarity = ((MediaItem) i1).getSimilarityTo((MediaItem) i2);
+                        if (similarity >= confidenceSquare || (similarity >= confidence && ((MediaItem) i1).getHistogram().isColorful() && ((MediaItem) i2).getHistogram().isColorful())) {
                             pairs.add(new SimilarPair<>((MediaItem) i1, (MediaItem) i2, similarity));
                         }
                     }
@@ -299,7 +297,6 @@ public class DuplicateOptionsScreen extends Screen {
     protected void onOpen() {
         updateCounts();
 
-        compareGreyscaleCheckBox.setSelected(settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
         confidenceTextField.setText(settings.getDouble(Settings.Key.CONFIDENCE) + "");
     }
 

@@ -36,7 +36,6 @@ public class SettingsScreen extends Screen {
     private final CheckBox tagWithImageCheckBox = new CheckBox("Tag imported images with 'image'");
 
     private final TextField confidenceTextField = new TextField();
-    private final CheckBox compareGreyscalesCheckBox = new CheckBox("Compare greyscale images (poor accuracy)");
 
     private final CheckBox muteVideoCheckBox;
     private final CheckBox repeatVideoCheckBox;
@@ -143,9 +142,8 @@ public class SettingsScreen extends Screen {
         confidenceTextField.setPromptText("0.95 recommended");
         h = new HBox(5, new Label("Confidence:"), confidenceTextField, new Label("(0.8-1.0)"));
         h.setAlignment(Pos.CENTER_LEFT);
-        v = new VBox(5, h, compareGreyscalesCheckBox);
-        v.setPadding(LEFT20);
-        rootV.getChildren().add(v);
+        h.setPadding(LEFT20);
+        rootV.getChildren().add(h);
 
         l = new Label("Video viewing");
         l.setFont(BOLD_ITALIC);
@@ -245,7 +243,6 @@ public class SettingsScreen extends Screen {
         } catch (NumberFormatException ignored) {
         }
         settings.setDouble(Settings.Key.CONFIDENCE, confidence);
-        settings.setBoolean(Settings.Key.COMPARE_GREYSCALE, compareGreyscalesCheckBox.isSelected());
         settings.setBoolean(Settings.Key.MUTE_VIDEO, muteVideoCheckBox.isSelected());
         settings.setBoolean(Settings.Key.REPEAT_VIDEO, repeatVideoCheckBox.isSelected());
         int gridWidth = 2;
@@ -279,7 +276,6 @@ public class SettingsScreen extends Screen {
         if (confidence < 0.8) confidence = 0.8;
         else if (confidence > 1) confidence = 1;
         confidenceTextField.setText("" + confidence);
-        compareGreyscalesCheckBox.setSelected(settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
         muteVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.MUTE_VIDEO));
         repeatVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
         int gridWidth = settings.getInt(Settings.Key.GRID_WIDTH);
