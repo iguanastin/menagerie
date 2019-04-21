@@ -1,12 +1,11 @@
 package menagerie.model.menagerie;
 
-import com.sun.jna.platform.FileUtils;
+import javafx.application.Platform;
 import menagerie.gui.Main;
 import menagerie.model.menagerie.db.DatabaseManager;
 import menagerie.model.search.Search;
 
 import java.io.File;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.logging.Level;
@@ -74,7 +73,7 @@ public class Menagerie {
      * @param file File to import.
      * @return The MediaItem for the imported file, or null if import failed.
      */
-    public MediaItem importFile(File file, boolean tagTagme, boolean tagVideo, boolean tagImage) {
+    public MediaItem importFile(File file) {
         if (isFilePresent(file)) return null;
 
         MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), 0, null, file, null, null);
@@ -89,25 +88,8 @@ public class Menagerie {
             return null;
         }
 
-        // Add tags
-        if (tagTagme) {
-            Tag tagme = getTagByName("tagme");
-            if (tagme == null) tagme = createTag("tagme");
-            media.addTag(tagme);
-        }
-        if (tagImage && media.isImage()) {
-            Tag image = getTagByName("image");
-            if (image == null) image = createTag("image");
-            media.addTag(image);
-        }
-        if (tagVideo && media.isVideo()) {
-            Tag video = getTagByName("video");
-            if (video == null) video = createTag("video");
-            media.addTag(video);
-        }
-
         //Update active searches
-        activeSearches.forEach(search -> search.refreshSearch(Collections.singletonList(media)));
+        refreshInSearches(media);
 
         return media;
     }
@@ -119,7 +101,7 @@ public class Menagerie {
      * @param title    Title of the new group.
      * @return The newly created group. Null if title is null or empty, and null if element list is null or empty.
      */
-    public GroupItem createGroup(List<Item> elements, String title, boolean tagTagme, boolean combineElementTags) {
+    public GroupItem createGroup(List<Item> elements, String title) {
         if (title == null || title.isEmpty() || elements == null || elements.isEmpty()) return null;
 
         GroupItem group = new GroupItem(this, nextItemID, System.currentTimeMillis(), title);
@@ -139,24 +121,15 @@ public class Menagerie {
             } else if (item instanceof GroupItem) {
                 List<MediaItem> e = new ArrayList<>(((GroupItem) item).getElements());
                 item.getTags().forEach(group::addTag);
-                removeItems(Collections.singletonList(item), false);
+                forgetItem(item);
                 e.forEach(group::addItem);
             } else {
                 return null;
             }
         }
 
-        if (tagTagme) {
-            Tag tagme = getTagByName("tagme");
-            if (tagme == null) tagme = createTag("tagme");
-            group.addTag(tagme);
-        }
-        if (combineElementTags) {
-            group.getElements().forEach(item -> item.getTags().forEach(group::addTag));
-        }
-
         // Update searches
-        refreshInSearches(Collections.singletonList(group));
+        refreshInSearches(group);
 
         return group;
     }
@@ -184,51 +157,47 @@ public class Menagerie {
     }
 
     /**
-     * Removes items from this Menagerie.
+     * Forgets a set of items.
      *
-     * @param items       Items to be removed.
-     * @param deleteFiles Delete the files after removing them. Files will be moved to recycle bin if possible.
+     * @param items Items
      */
-    public void removeItems(List<Item> items, boolean deleteFiles) {
-        List<Item> removed = new ArrayList<>();
-        List<MediaItem> toDelete = new ArrayList<>();
+    public void forgetItems(List<Item> items) {
+        items.forEach(Item::forget);
 
-        for (Item item : items) {
-            if (getItems().remove(item)) {
-                item.getTags().forEach(Tag::decrementFrequency);
+        refreshInSearches(items);
+    }
 
-                removed.add(item);
-                if (deleteFiles && item instanceof MediaItem) toDelete.add((MediaItem) item);
-                if (item instanceof GroupItem) {
-                    activeSearches.forEach(search -> search.refreshSearch(new ArrayList<Item>(((GroupItem) item).getElements())));
-                    ((GroupItem) item).removeAll();
-                }
+    /**
+     * Forgets an item.
+     *
+     * @param item Item
+     */
+    public void forgetItem(Item item) {
+        item.forget();
 
-                getDatabaseManager().removeItemAsync(item.getId());
-            }
-        }
+        refreshInSearches(item);
+    }
 
-        if (deleteFiles) {
-            FileUtils fu = FileUtils.getInstance();
-            if (fu.hasTrash()) {
-                try {
-                    File[] fa = new File[toDelete.size()];
-                    for (int i = 0; i < fa.length; i++) fa[i] = toDelete.get(i).getFile();
-                    fu.moveToTrash(fa);
-                } catch (IOException e) {
-                    Main.log.log(Level.SEVERE, String.format("Unable to send %d files to recycle bin", toDelete.size()), e);
-                }
-            } else {
-                toDelete.forEach(item -> {
-                    if (item.getFile().delete()) {
-                        Main.log.severe(String.format("Unable to delete file: %s", item.getFile().toString()));
-                    }
-                });
-                return;
-            }
-        }
+    /**
+     * Deletes a set of items.
+     *
+     * @param items Items
+     */
+    public void deleteItems(List<Item> items) {
+        items.forEach(Item::delete);
 
-        activeSearches.forEach(search -> search.remove(removed));
+        refreshInSearches(items);
+    }
+
+    /**
+     * Deletes an item.
+     *
+     * @param item Item
+     */
+    public void deleteItem(Item item) {
+        item.delete();
+
+        refreshInSearches(item);
     }
 
     /**
@@ -268,12 +237,21 @@ public class Menagerie {
     }
 
     /**
-     * Check with all active searches to see if items are still valid or need to be removed. This method should be called after an item is modified.
+     * Adds items to any searches that they are valid in, removes them from any searches they are not valid in.
      *
      * @param items Items to check.
      */
     public void refreshInSearches(List<Item> items) {
-        activeSearches.forEach(search -> search.refreshSearch(items));
+        activeSearches.forEach(search -> Platform.runLater(() -> search.refreshSearch(items)));
+    }
+
+    /**
+     * Adds the item to any searches that it is valid in, removes it from any searches it is not valid in.
+     *
+     * @param item Item to check.
+     */
+    public void refreshInSearches(Item item) {
+        refreshInSearches(Collections.singletonList(item));
     }
 
     /**

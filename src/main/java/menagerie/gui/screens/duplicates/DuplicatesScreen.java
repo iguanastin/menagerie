@@ -1,5 +1,6 @@
 package menagerie.gui.screens.duplicates;
 
+import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -24,20 +25,19 @@ import menagerie.util.listeners.PokeListener;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 public class DuplicatesScreen extends Screen {
 
-    private final DynamicMediaView leftMediaView;
-    private final DynamicMediaView rightMediaView;
-    private final ListView<Tag> leftTagList;
-    private final ListView<Tag> rightTagList;
-    private final ItemInfoBox leftInfoBox;
-    private final ItemInfoBox rightInfoBox;
+    private final DynamicMediaView leftMediaView = new DynamicMediaView();
+    private final DynamicMediaView rightMediaView = new DynamicMediaView();
+    private final ListView<Tag> leftTagList = new ListView<>();
+    private final ListView<Tag> rightTagList = new ListView<>();
+    private final ItemInfoBox leftInfoBox = new ItemInfoBox();
+    private final ItemInfoBox rightInfoBox = new ItemInfoBox();
 
-    private final Label similarityLabel;
+    private final Label similarityLabel = new Label("N/A");
 
     private Menagerie menagerie = null;
     private List<SimilarPair<MediaItem>> pairs = null;
@@ -46,6 +46,21 @@ public class DuplicatesScreen extends Screen {
     private boolean deleteFile = true;
 
     private ObjectListener<Item> selectListener = null;
+
+    private ListChangeListener<Tag> leftTagListener = c -> {
+        while (c.next()) {
+            leftTagList.getItems().addAll(c.getAddedSubList());
+            leftTagList.getItems().removeAll(c.getRemoved());
+            leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
+        }
+    };
+    private ListChangeListener<Tag> rightTagListener = c -> {
+        while (c.next()) {
+            rightTagList.getItems().addAll(c.getAddedSubList());
+            rightTagList.getItems().removeAll(c.getRemoved());
+            rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
+        }
+    };
 
 
     public DuplicatesScreen() {
@@ -71,7 +86,6 @@ public class DuplicatesScreen extends Screen {
         setStyle("-fx-background-color: -fx-base;");
 
         // ---------------------------------------------- Center Element -----------------------------------------------
-        leftMediaView = new DynamicMediaView();
         leftMediaView.setOnContextMenuRequested(event -> {
             MenuItem select = new MenuItem("Select in explorer");
             ContextMenu cm = new ContextMenu(select);
@@ -82,7 +96,6 @@ public class DuplicatesScreen extends Screen {
             });
             cm.show(leftMediaView, event.getScreenX(), event.getScreenY());
         });
-        rightMediaView = new DynamicMediaView();
         rightMediaView.setOnContextMenuRequested(event -> {
             MenuItem select = new MenuItem("Select in explorer");
             ContextMenu cm = new ContextMenu(select);
@@ -93,7 +106,6 @@ public class DuplicatesScreen extends Screen {
             });
             cm.show(rightMediaView, event.getScreenX(), event.getScreenY());
         });
-        leftTagList = new ListView<>();
         leftTagList.setCellFactory(param -> {
             TagListCell c = new TagListCell() {
                 @Override
@@ -117,7 +129,6 @@ public class DuplicatesScreen extends Screen {
             return c;
         });
         leftTagList.setPrefWidth(200);
-        rightTagList = new ListView<>();
         rightTagList.setCellFactory(param -> {
             TagListCell c = new TagListCell() {
                 @Override
@@ -141,12 +152,10 @@ public class DuplicatesScreen extends Screen {
             return c;
         });
         rightTagList.setPrefWidth(200);
-        leftInfoBox = new ItemInfoBox();
         leftInfoBox.setAlignment(Pos.BOTTOM_LEFT);
         leftInfoBox.setMaxHeight(USE_PREF_SIZE);
         leftInfoBox.setOpacity(0.75);
         BorderPane.setAlignment(leftInfoBox, Pos.BOTTOM_LEFT);
-        rightInfoBox = new ItemInfoBox();
         rightInfoBox.setAlignment(Pos.BOTTOM_RIGHT);
         rightInfoBox.setMaxHeight(USE_PREF_SIZE);
         rightInfoBox.setOpacity(0.75);
@@ -174,7 +183,6 @@ public class DuplicatesScreen extends Screen {
         VBox bottom = new VBox(5);
         bottom.setPadding(new Insets(5));
         // Construct first element
-        similarityLabel = new Label("N/A");
         Button combineLeft = new Button("<- Combine tags");
         combineLeft.setOnAction(event -> currentPair.getObject2().getTags().forEach(tag -> currentPair.getObject1().addTag(tag)));
         Button combineRight = new Button("Combine tags ->");
@@ -271,8 +279,8 @@ public class DuplicatesScreen extends Screen {
      */
     private void preview(SimilarPair<MediaItem> pair) {
         if (currentPair != null) {
-            currentPair.getObject1().setTagListener(null);
-            currentPair.getObject2().setTagListener(null);
+            currentPair.getObject1().getTags().removeListener(leftTagListener);
+            currentPair.getObject2().getTags().removeListener(rightTagListener);
         }
         currentPair = pair;
 
@@ -292,12 +300,12 @@ public class DuplicatesScreen extends Screen {
             leftTagList.getItems().clear();
             leftTagList.getItems().addAll(pair.getObject1().getTags());
             leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
-            currentPair.getObject1().setTagListener(tagListener);
+            currentPair.getObject1().getTags().addListener(leftTagListener);
 
             rightTagList.getItems().clear();
             rightTagList.getItems().addAll(pair.getObject2().getTags());
             rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
-            currentPair.getObject2().setTagListener(tagListener);
+            currentPair.getObject2().getTags().addListener(rightTagListener);
 
             leftInfoBox.setItem(pair.getObject1());
             rightInfoBox.setItem(pair.getObject2());
@@ -331,7 +339,11 @@ public class DuplicatesScreen extends Screen {
 
         int index = pairs.indexOf(currentPair);
 
-        menagerie.removeItems(Collections.singletonList(toDelete), isDeleteFile());
+        if (isDeleteFile()) {
+            menagerie.deleteItem(toDelete);
+        } else {
+            menagerie.forgetItem(toDelete);
+        }
 
         //Remove other pairs containing the deleted image
         for (SimilarPair pair : new ArrayList<>(pairs)) {

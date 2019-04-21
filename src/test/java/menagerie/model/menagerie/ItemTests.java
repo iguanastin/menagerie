@@ -3,8 +3,6 @@ package menagerie.model.menagerie;
 import menagerie.gui.thumbnail.Thumbnail;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CountDownLatch;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class ItemTests {
@@ -61,34 +59,6 @@ class ItemTests {
         assertTrue(item.removeTag(t1));
         assertFalse(item.hasTag(t1));
         assertFalse(item.getTags().contains(t1));
-    }
-
-    @Test
-    void tagListener() {
-        Item item = new Item(null, 1, 1) {
-            @Override
-            public Thumbnail getThumbnail() {
-                return null;
-            }
-        };
-
-        CountDownLatch cdl = new CountDownLatch(3);
-        item.setTagListener(cdl::countDown);
-
-        Tag t1 = new Tag(null, 1, "tag1", null);
-        Tag t2 = new Tag(null, 2, "tag2", null);
-
-        item.addTag(t1);
-        assertEquals(2, cdl.getCount());
-
-        item.addTag(t1);
-        assertEquals(2, cdl.getCount());
-
-        item.addTag(t2);
-        assertEquals(1, cdl.getCount());
-
-        item.removeTag(t2);
-        assertEquals(0, cdl.getCount());
     }
 
     @Test

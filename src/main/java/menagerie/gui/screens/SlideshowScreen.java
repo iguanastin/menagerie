@@ -164,7 +164,11 @@ public class SlideshowScreen extends Screen {
      */
     public void tryDeleteCurrent(boolean deleteFile) {
         PokeListener onFinish = () -> {
-            menagerie.removeItems(Collections.singletonList(getShowing()), deleteFile);
+            if (deleteFile) {
+                menagerie.deleteItem(getShowing());
+            } else {
+                menagerie.forgetItem(getShowing());
+            }
 
             if (items.isEmpty() || showing == null) return;
 

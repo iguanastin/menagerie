@@ -15,6 +15,7 @@ import menagerie.model.Settings;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Menagerie;
+import menagerie.model.menagerie.Tag;
 import menagerie.util.listeners.ObjectListener;
 
 import java.util.ArrayList;
@@ -114,8 +115,19 @@ public class GroupDialogScreen extends Screen {
         close();
 
         if (menagerie != null && settings != null && toGroup != null && !toGroup.isEmpty()) {
-            GroupItem group = menagerie.createGroup(toGroup, textField.getText(), settings.getBoolean(Settings.Key.TAG_TAGME), elementTagsCheckBox.isSelected());
-            if (groupListener != null) groupListener.pass(group);
+            GroupItem group = menagerie.createGroup(toGroup, textField.getText());
+            if (group != null) {
+                if (settings.getBoolean(Settings.Key.TAG_TAGME)) {
+                    Tag tagme = menagerie.getTagByName("tagme");
+                    if (tagme == null) tagme = menagerie.createTag("tagme");
+                    group.addTag(tagme);
+                }
+                if (elementTagsCheckBox.isSelected()) {
+                    group.getElements().forEach(item -> item.getTags().forEach(group::addTag));
+                }
+
+                if (groupListener != null) groupListener.pass(group);
+            }
         }
     }
 

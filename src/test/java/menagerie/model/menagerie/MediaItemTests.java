@@ -82,12 +82,12 @@ class MediaItemTests {
     @Test
     void renameTo() {
         MediaItem m1 = new MediaItem(null, 1, 1, null);
-        assertFalse(m1.renameTo(null));
-        assertFalse(m1.renameTo(NONEXISTENT_FILE));
+        assertFalse(m1.moveFile(null));
+        assertFalse(m1.moveFile(NONEXISTENT_FILE));
 
         MediaItem m2 = new MediaItem(null, 1, 1, NONEXISTENT_FILE);
-        assertTrue(m2.renameTo(NONEXISTENT_FILE));
-        assertFalse(m2.renameTo(new File("randomfilethatdoesntexist.zapp")));
+        assertTrue(m2.moveFile(NONEXISTENT_FILE));
+        assertFalse(m2.moveFile(new File("randomfilethatdoesntexist.zapp")));
 
         File file = new File("target/test-classes/renametest.bmp");
         File dest = new File("target/test-classes/renametest-dest.bmp");
@@ -95,8 +95,8 @@ class MediaItemTests {
             dest.delete();
             file.createNewFile();
             MediaItem m3 = new MediaItem(null, 1, 1, file);
-            assertTrue(m3.renameTo(dest));
-            assertTrue(m3.renameTo(file));
+            assertTrue(m3.moveFile(dest));
+            assertTrue(m3.moveFile(file));
         } catch (IOException ignored) {
         }
     }

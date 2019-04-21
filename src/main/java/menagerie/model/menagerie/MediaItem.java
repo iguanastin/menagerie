@@ -1,5 +1,6 @@
 package menagerie.model.menagerie;
 
+import com.sun.jna.platform.FileUtils;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
 import menagerie.gui.Main;
@@ -82,7 +83,7 @@ public class MediaItem extends Item {
     public Thumbnail getThumbnail() {
         Thumbnail thumb = null;
         if (thumbnail != null) thumb = thumbnail.get();
-        if (thumb == null && connectedToDatabase()) {
+        if (thumb == null && hasDatabase()) {
             try {
                 thumb = menagerie.getDatabaseManager().getThumbnail(getId());
                 if (thumb != null) thumbnail = new SoftReference<>(thumb);
@@ -98,7 +99,7 @@ public class MediaItem extends Item {
 
             thumbnail = new SoftReference<>(thumb);
 
-            if (thumb != null && connectedToDatabase()) {
+            if (thumb != null && hasDatabase()) {
                 if (thumb.isLoaded()) {
                     menagerie.getDatabaseManager().setThumbnailAsync(getId(), thumb.getImage());
                 } else {
@@ -192,7 +193,7 @@ public class MediaItem extends Item {
 
         try {
             md5 = HexBin.encode(MD5Hasher.hash(getFile()));
-            if (connectedToDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);
+            if (hasDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);
         } catch (IOException e) {
             Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
         }
@@ -205,7 +206,7 @@ public class MediaItem extends Item {
         if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
             try {
                 histogram = new ImageHistogram(getImageSynchronously());
-                if (connectedToDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
+                if (hasDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
             } catch (HistogramReadException e) {
                 Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
             }
@@ -218,7 +219,7 @@ public class MediaItem extends Item {
      * @param dest Destination file to rename this file to.
      * @return True if successful.
      */
-    public boolean renameTo(File dest) {
+    public boolean moveFile(File dest) {
         if (getFile() == null || dest == null) return false;
         if (file.equals(dest)) return true;
 
@@ -227,7 +228,7 @@ public class MediaItem extends Item {
         if (succeeded) {
             file = dest;
 
-            if (connectedToDatabase()) {
+            if (hasDatabase()) {
                 try {
                     menagerie.getDatabaseManager().setPath(getId(), file.getAbsolutePath());
                 } catch (SQLException e) {
@@ -265,7 +266,7 @@ public class MediaItem extends Item {
         Integer gid = null;
         if (group != null) gid = group.getId();
 
-        if (connectedToDatabase()) menagerie.getDatabaseManager().setMediaGIDAsync(getId(), gid);
+        if (hasDatabase()) menagerie.getDatabaseManager().setMediaGIDAsync(getId(), gid);
     }
 
     /**
@@ -301,7 +302,30 @@ public class MediaItem extends Item {
 
         this.pageIndex = pageIndex;
 
-        if (connectedToDatabase()) menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
+        if (hasDatabase()) menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
+    }
+
+    /**
+     * Forgets this item and deletes its file.
+     *
+     * @return True if successfully forgotten and deleted
+     */
+    @Override
+    protected boolean delete() {
+        if (!forget()) return false;
+
+        FileUtils fu = FileUtils.getInstance();
+        if (fu.hasTrash()) {
+            try {
+                fu.moveToTrash(new File[]{getFile()});
+                return true;
+            } catch (IOException e) {
+                Main.log.log(Level.SEVERE, "Unable to send file to recycle bin: " + getFile(), e);
+                return false;
+            }
+        } else {
+            return getFile().delete();
+        }
     }
 
     @Override

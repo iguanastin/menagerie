@@ -131,6 +131,44 @@ public class MainController {
      * Search history stack
      */
     private final Stack<SearchHistory> searchHistory = new Stack<>();
+    private final ListChangeListener<Tag> previewTagListener = c -> {
+        while (c.next()) {
+            tagListView.getItems().addAll(c.getAddedSubList());
+            tagListView.getItems().removeAll(c.getRemoved());
+            tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+        }
+    };
+    private final ListChangeListener<Item> searchChangeListener = c -> {
+        while (c.next()) {
+            // Added
+            if (c.wasAdded()) {
+                itemGridView.getItems().addAll(0, c.getAddedSubList()); // TODO: Insert these in the right position or sort it or something.
+            }
+
+            // Removed
+            if (c.wasRemoved()) {
+                if (c.getRemoved().contains(currentlyPreviewing)) previewItem(null);
+
+                final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected()) + 1;
+                int newIndex = oldLastIndex;
+                for (Item image : c.getRemoved()) {
+                    final int i = itemGridView.getItems().indexOf(image);
+                    if (i < 0) continue;
+
+                    if (i < oldLastIndex) {
+                        newIndex--;
+                    }
+                }
+
+                itemGridView.getItems().removeAll(c.getRemoved());
+
+                if (!itemGridView.getItems().isEmpty()) {
+                    if (newIndex >= itemGridView.getItems().size()) newIndex = itemGridView.getItems().size() - 1;
+                    if (newIndex >= 0) itemGridView.select(itemGridView.getItems().get(newIndex), false, false);
+                }
+            }
+        }
+    };
 
     // --------------------------------- Threads -------------------------------------
     /**
@@ -650,7 +688,7 @@ public class MainController {
         itemGridView.getSelected().addListener((ListChangeListener<? super Item>) c -> resultCountLabel.setText(itemGridView.getSelected().size() + " / " + currentSearch.getResults().size()));
         itemGridView.getItems().addListener((ListChangeListener<? super Item>) c -> {
             while (c.next()) {
-                if (c.getAddedSize() > 0) {
+                if (c.wasAdded()) {
                     itemGridView.getItems().sort(currentSearch.getComparator());
                     break;
                 }
@@ -840,7 +878,7 @@ public class MainController {
      * @param item The item to display. Displays nothing when item is a GroupItem.
      */
     private void previewItem(Item item) {
-        if (currentlyPreviewing != null) currentlyPreviewing.setTagListener(null);
+        if (currentlyPreviewing != null) currentlyPreviewing.getTags().removeListener(previewTagListener);
         currentlyPreviewing = item;
 
         if (item instanceof MediaItem) {
@@ -853,9 +891,13 @@ public class MainController {
             itemInfoBox.setItem(((GroupItem) item).getElements().get(0));
         }
 
-        updateTagList(item);
+        tagListView.getItems().clear();
+        if (item != null) {
+            tagListView.getItems().addAll(item.getTags());
+            tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+        }
 
-        if (item != null) item.setTagListener(() -> updateTagList(item));
+        if (item != null) item.getTags().addListener(previewTagListener);
     }
 
     /**
@@ -870,7 +912,7 @@ public class MainController {
         }
         if (currentlyPreviewing instanceof MediaItem && items.contains(currentlyPreviewing) && ((MediaItem) currentlyPreviewing).isVideo())
             previewMediaView.stop();
-        new ConfirmationScreen().open(screenPane, "Forget files", String.format("Remove selected files from database? (%d files)\n\n" + "This action CANNOT be undone", items.size()), () -> menagerie.removeItems(items, false), null);
+        new ConfirmationScreen().open(screenPane, "Forget files", String.format("Remove selected files from database? (%d files)\n\n" + "This action CANNOT be undone", items.size()), () -> menagerie.forgetItems(items), null);
     }
 
     /**
@@ -885,7 +927,7 @@ public class MainController {
         }
         if (currentlyPreviewing instanceof MediaItem && items.contains(currentlyPreviewing) && ((MediaItem) currentlyPreviewing).isVideo())
             previewMediaView.stop();
-        new ConfirmationScreen().open(screenPane, "Delete files", String.format("Permanently delete selected files? (%d files)\n\n" + "This action CANNOT be undone (files will be deleted)", items.size()), () -> menagerie.removeItems(items, true), null);
+        new ConfirmationScreen().open(screenPane, "Delete files", String.format("Permanently delete selected files? (%d files)\n\n" + "This action CANNOT be undone (files will be deleted)", items.size()), () -> menagerie.deleteItems(items), null);
     }
 
     /**
@@ -896,7 +938,7 @@ public class MainController {
     private void ungroupDialog(List<Item> items) {
         List<Item> groups = new ArrayList<>(items);
         groups.removeIf(item -> !(item instanceof GroupItem));
-        new ConfirmationScreen().open(screenPane, "Ungroup group?", String.format("Are you sure you want to ungroup %d groups?", groups.size()), () -> menagerie.removeItems(groups, false), null);
+        new ConfirmationScreen().open(screenPane, "Ungroup group?", String.format("Are you sure you want to ungroup %d groups?", groups.size()), () -> menagerie.forgetItems(groups), null);
     }
 
     /**
@@ -975,7 +1017,7 @@ public class MainController {
                             if (!((MediaItem) item).getFile().equals(f)) {
                                 File dest = MainController.resolveDuplicateFilename(f);
 
-                                if (!((MediaItem) item).renameTo(dest)) {
+                                if (!((MediaItem) item).moveFile(dest)) {
                                     Main.log.severe("Failed to rename " + ((MediaItem) item).getFile() + " to " + dest);
                                 }
                             }
@@ -990,19 +1032,6 @@ public class MainController {
             };
             ps.open(screenPane, "Moving files", "Moving files to: " + result.getAbsolutePath(), ct::cancel);
             ct.start();
-        }
-    }
-
-    /**
-     * Refreshes the contents of the tag list and initializes listeners for tag changes.
-     *
-     * @param item Target to display tags of and register listeners to.
-     */
-    private void updateTagList(Item item) {
-        tagListView.getItems().clear();
-        if (item != null) {
-            tagListView.getItems().addAll(item.getTags());
-            tagListView.getItems().sort(Comparator.comparing(Tag::getName));
         }
     }
 
@@ -1062,6 +1091,7 @@ public class MainController {
             backButton.setDisable(false);
 
             menagerie.unregisterSearch(currentSearch);
+            currentSearch.getResults().removeListener(searchChangeListener);
         }
         previewItem(null);
 
@@ -1075,27 +1105,7 @@ public class MainController {
         }
         menagerie.registerSearch(currentSearch);
         currentSearch.refreshSearch(menagerie.getItems());
-        currentSearch.addItemsAddedListener(items -> Platform.runLater(() -> itemGridView.getItems().addAll(0, items)));
-        currentSearch.addItemsRemovedListener(items -> Platform.runLater(() -> {
-            final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected()) + 1;
-            int newIndex = oldLastIndex;
-            for (Item image : items) {
-                final int i = itemGridView.getItems().indexOf(image);
-                if (i < 0) continue;
-
-                if (i < oldLastIndex) {
-                    newIndex--;
-                }
-            }
-
-            itemGridView.getItems().removeAll(items);
-            if (items.contains(currentlyPreviewing)) previewItem(null);
-
-            if (!itemGridView.getItems().isEmpty()) {
-                if (newIndex >= itemGridView.getItems().size()) newIndex = itemGridView.getItems().size() - 1;
-                if (newIndex >= 0) itemGridView.select(itemGridView.getItems().get(newIndex), false, false);
-            }
-        }));
+        currentSearch.getResults().addListener(searchChangeListener);
 
         itemGridView.clearSelection();
         itemGridView.getItems().clear();
@@ -1130,8 +1140,6 @@ public class MainController {
         } else {
             new ConfirmationScreen().open(screenPane, "Editting large number of items", "You are attempting to edit " + itemGridView.getSelected().size() + " items. Continue?", () -> editTagsUtility(input), null);
         }
-
-        updateTagList(currentlyPreviewing);
     }
 
     /**

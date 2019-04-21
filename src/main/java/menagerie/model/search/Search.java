@@ -1,12 +1,15 @@
 package menagerie.model.search;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import menagerie.gui.Main;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.search.rules.*;
-import menagerie.util.listeners.ObjectListener;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Data class that contains results of a search filtered and sorted by the given rules.
@@ -18,12 +21,9 @@ public class Search {
     private final boolean descending;
     private final String searchString;
 
-    private final List<Item> results = new ArrayList<>();
+    private final ObservableList<Item> results = FXCollections.observableArrayList();
 
     protected Comparator<Item> comparator;
-
-    protected Set<ObjectListener<List<Item>>> itemsAddedListeners = new HashSet<>();
-    protected Set<ObjectListener<List<Item>>> itemsRemovedListeners = new HashSet<>();
 
 
     /**
@@ -138,49 +138,9 @@ public class Search {
     }
 
     /**
-     * Adds a listener that listens for items being added.
-     *
-     * @param listener Listener to add.
-     * @return True if successful.
-     */
-    public boolean addItemsAddedListener(ObjectListener<List<Item>> listener) {
-        return itemsAddedListeners.add(listener);
-    }
-
-    /**
-     * Adds a listener that listens for items being removed.
-     *
-     * @param listener Listener to add.
-     * @return True if successful.
-     */
-    public boolean addItemsRemovedListener(ObjectListener<List<Item>> listener) {
-        return itemsRemovedListeners.add(listener);
-    }
-
-    /**
-     * Removes a listener that listens for items being added.
-     *
-     * @param listener Listener to remove.
-     * @return True if successful.
-     */
-    public boolean removeItemsAddedListener(ObjectListener<List<Item>> listener) {
-        return itemsAddedListeners.remove(listener);
-    }
-
-    /**
-     * Removes a listener that listens for items being removed.
-     *
-     * @param listener Listener to remove.
-     * @return True if successful.
-     */
-    public boolean removeItemsRemovedListener(ObjectListener<List<Item>> listener) {
-        return itemsRemovedListeners.remove(listener);
-    }
-
-    /**
      * @return List of all results currently in the search. Is a direct reference to the backing list.
      */
-    public List<Item> getResults() {
+    public ObservableList<Item> getResults() {
         return results;
     }
 
@@ -223,11 +183,13 @@ public class Search {
 
         sort();
 
-        if (results.removeAll(toRemove)) itemsRemovedListeners.forEach(listener -> listener.pass(toRemove));
-        if (results.addAll(toAdd)) itemsAddedListeners.forEach(listener -> listener.pass(toAdd));
+        results.removeAll(toRemove);
+        results.addAll(toAdd);
     }
 
     protected boolean isItemValid(Item item) {
+        if (item.isInvalidated()) return false;
+
         if (item instanceof MediaItem && ((MediaItem) item).getGroup() != null && !showGrouped) {
             return false;
         } else {
@@ -239,15 +201,6 @@ public class Search {
         }
 
         return true;
-    }
-
-    /**
-     * Removes items from this search.
-     *
-     * @param items Items to remove.
-     */
-    public void remove(List<Item> items) {
-        if (results.removeAll(items)) itemsRemovedListeners.forEach(listener -> listener.pass(items));
     }
 
     public void sort() {

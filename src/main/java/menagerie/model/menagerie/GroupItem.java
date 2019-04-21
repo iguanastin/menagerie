@@ -4,7 +4,6 @@ import menagerie.gui.thumbnail.Thumbnail;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -43,8 +42,8 @@ public class GroupItem extends Item {
         elements.add(item);
         item.setGroup(this);
 
-        updateIndices();
-        if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(item));
+        if (!isInvalidated()) updateIndices();
+        if (menagerie != null) menagerie.refreshInSearches(item);
         return true;
     }
 
@@ -56,8 +55,8 @@ public class GroupItem extends Item {
     public boolean removeItem(MediaItem item) {
         if (elements.remove(item)) {
             item.setGroup(null);
-            updateIndices();
-            if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(item));
+            if (!isInvalidated()) updateIndices();
+            if (menagerie != null) menagerie.refreshInSearches(item);
             return true;
         }
 
@@ -68,13 +67,10 @@ public class GroupItem extends Item {
      * Removes all items from this group.
      */
     public void removeAll() {
-        Iterator<MediaItem> iter = elements.iterator();
-        while (iter.hasNext()) {
-            MediaItem item = iter.next();
-            iter.remove();
-            item.setGroup(null);
-            if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(item));
-        }
+        List<Item> temp = new ArrayList<>(elements);
+        elements.forEach(mediaItem -> mediaItem.setGroup(null));
+        elements.clear();
+        if (menagerie != null) menagerie.refreshInSearches(temp);
     }
 
     /**
@@ -96,7 +92,7 @@ public class GroupItem extends Item {
             elements.add(anchorIndex + i, list.get(i));
         }
 
-        updateIndices();
+        if (!isInvalidated()) updateIndices();
         return true;
     }
 
@@ -106,7 +102,7 @@ public class GroupItem extends Item {
     public void reverseElements() {
         Collections.reverse(elements);
 
-        updateIndices();
+        if (!isInvalidated()) updateIndices();
     }
 
     /**
@@ -147,8 +143,10 @@ public class GroupItem extends Item {
     public void setTitle(String str) {
         title = str;
 
-        if (connectedToDatabase()) menagerie.getDatabaseManager().setGroupTitleAsync(getId(), title);
-        if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(this));
+        if (!isInvalidated()) {
+            if (hasDatabase()) menagerie.getDatabaseManager().setGroupTitleAsync(getId(), title);
+            if (menagerie != null) menagerie.refreshInSearches(this);
+        }
     }
 
     /**
@@ -156,6 +154,38 @@ public class GroupItem extends Item {
      */
     public List<MediaItem> getElements() {
         return elements;
+    }
+
+    /**
+     * Forgets this group and all its elements from the Menagerie.
+     *
+     * @return True if successfully forgotten.
+     */
+    @Override
+    protected boolean forget() {
+        if (!super.forget()) return false;
+
+        for (MediaItem item : elements) {
+            item.forget();
+        }
+
+        return true;
+    }
+
+    /**
+     * Forgets and deletes this group and all its elements. Element files are deleted.
+     *
+     * @return True if successfully deleted.
+     */
+    @Override
+    protected boolean delete() {
+        if (!super.forget()) return false;
+
+        for (MediaItem item : elements) {
+            item.delete();
+        }
+
+        return true;
     }
 
     @Override

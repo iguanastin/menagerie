@@ -9,6 +9,7 @@ import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
+import menagerie.model.menagerie.Tag;
 import menagerie.util.listeners.ObjectListener;
 
 import java.io.File;
@@ -20,7 +21,10 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 
 /**
@@ -179,13 +183,30 @@ public class ImportJob {
     private boolean tryImport(Menagerie menagerie, Settings settings) {
         if (needsImport) {
             synchronized (this) {
-                item = menagerie.importFile(file, settings.getBoolean(Settings.Key.TAG_TAGME), settings.getBoolean(Settings.Key.TAG_VIDEO), settings.getBoolean(Settings.Key.TAG_IMAGE));
+                item = menagerie.importFile(file);
             }
 
             if (item == null) {
                 return true;
             } else {
                 needsImport = false;
+
+                // Add tags
+                if (settings.getBoolean(Settings.Key.TAG_TAGME)) {
+                    Tag tagme = menagerie.getTagByName("tagme");
+                    if (tagme == null) tagme = menagerie.createTag("tagme");
+                    item.addTag(tagme);
+                }
+                if (settings.getBoolean(Settings.Key.TAG_IMAGE) && item.isImage()) {
+                    Tag image = menagerie.getTagByName("image");
+                    if (image == null) image = menagerie.createTag("image");
+                    item.addTag(image);
+                }
+                if (settings.getBoolean(Settings.Key.TAG_VIDEO) && item.isVideo()) {
+                    Tag video = menagerie.getTagByName("video");
+                    if (video == null) video = menagerie.createTag("video");
+                    item.addTag(video);
+                }
             }
         }
         return false;
@@ -218,7 +239,7 @@ public class ImportJob {
                     synchronized (this) {
                         duplicateOf = (MediaItem) i;
                     }
-                    menagerie.removeItems(Collections.singletonList(item), true);
+                    menagerie.deleteItem(item);
                     needsCheckDuplicate = false;
                     needsCheckSimilar = false;
                     return true;

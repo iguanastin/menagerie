@@ -220,7 +220,7 @@ public class ImportDialogScreen extends Screen {
                         // Rename to hash
                         if (renameToHash && job.getItem().getMD5() != null) {
                             File dest = new File(job.getFile().getParentFile(), job.getItem().getMD5() + job.getFile().getName().substring(job.getFile().getName().lastIndexOf('.')));
-                            if (job.getItem().renameTo(dest)) {
+                            if (job.getItem().moveFile(dest)) {
                                 Main.log.info(String.format("Renamed file \"%s\" to \"%s\"", job.getFile().getName(), dest.getName()));
                             } else {
                                 Main.log.warning(String.format("Failed to rename file \"%s\" to \"%s\"", job.getFile(), dest));
