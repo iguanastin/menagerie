@@ -14,7 +14,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.util.Callback;
-import menagerie.gui.TagListCell;
+import menagerie.gui.taglist.TagListCell;
 import menagerie.model.menagerie.Tag;
 
 import java.util.Comparator;

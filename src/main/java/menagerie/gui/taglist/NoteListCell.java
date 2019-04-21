@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.taglist;
 
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;

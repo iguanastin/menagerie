@@ -1,5 +1,10 @@
 package menagerie.model.menagerie;
 
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,9 +25,9 @@ public class Tag implements Comparable<Tag> {
     private final int id;
     private final String name;
     private List<String> notes = new ArrayList<>();
-    private String colorCSS;
+    private final StringProperty color = new SimpleStringProperty(null);
 
-    private int frequency = 0;
+    private final IntegerProperty frequency = new SimpleIntegerProperty(0);
 
 
     /**
@@ -41,7 +46,11 @@ public class Tag implements Comparable<Tag> {
 
         this.id = id;
         this.name = name.toLowerCase();
-        this.colorCSS = colorCSS;
+        this.color.set(colorCSS);
+
+        colorProperty().addListener((observable, oldValue, newValue) -> {
+            if (canStoreToDatabase()) menagerie.getDatabaseManager().setTagColorAsync(getId(), newValue);
+        });
     }
 
     /**
@@ -62,6 +71,10 @@ public class Tag implements Comparable<Tag> {
      * @return Frequency this tag is used by items.
      */
     public int getFrequency() {
+        return frequency.get();
+    }
+
+    public IntegerProperty frequencyProperty() {
         return frequency;
     }
 
@@ -69,14 +82,14 @@ public class Tag implements Comparable<Tag> {
      * Increments the frequency of usage.
      */
     public void incrementFrequency() {
-        frequency++;
+        frequency.set(getFrequency() + 1);
     }
 
     /**
      * Decrements the frequency of usage.
      */
     void decrementFrequency() {
-        frequency--;
+        frequency.set(getFrequency() - 1);
     }
 
     /**
@@ -90,30 +103,22 @@ public class Tag implements Comparable<Tag> {
      * @return The color of this tag.
      */
     public String getColor() {
-        return colorCSS;
+        return color.get();
+    }
+
+    public StringProperty colorProperty() {
+        return color;
     }
 
     /**
      * Sets the color of this tag.
      *
      * @param colorCSS A string that can be interpreted as a JavaFX color.
-     * @return True if the property changed because of this call.
      */
-    public boolean setColor(String colorCSS) {
+    public void setColor(String colorCSS) {
         if (colorCSS != null && colorCSS.isEmpty()) colorCSS = null;
-        if (this.colorCSS == null) {
-            if (colorCSS == null) {
-                return false;
-            }
-        } else if (this.colorCSS.equals(colorCSS)) {
-            return false;
-        }
 
-        this.colorCSS = colorCSS;
-
-        if (canStoreToDatabase()) menagerie.getDatabaseManager().setTagColorAsync(getId(), colorCSS);
-
-        return true;
+        this.color.set(colorCSS);
     }
 
     /**

@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.taglist;
 
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
@@ -8,8 +8,8 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
+import menagerie.gui.Main;
 import menagerie.model.menagerie.Tag;
-import menagerie.util.listeners.ObjectListener;
 
 import java.awt.*;
 import java.io.IOException;
@@ -24,14 +24,10 @@ public class TagListPopup extends Popup {
 
     private final ListView<String> noteListView = new ListView<>();
 
-    private ObjectListener<String> colorListener;
-
     private Tag tag = null;
 
 
-    public TagListPopup(ObjectListener<String> colorListener) {
-        this.colorListener = colorListener;
-
+    public TagListPopup() {
         VBox v = new VBox(5, nameLabel, new Separator(), colorPicker, new Separator(), noteListView);
         v.setStyle("-fx-background-color: -fx-base;");
         v.setPadding(new Insets(5));
@@ -66,14 +62,12 @@ public class TagListPopup extends Popup {
         });
     }
 
-    void setTag(Tag tag) {
+    public void setTag(Tag tag) {
         this.tag = tag;
 
         colorPicker.setColorPickedListener(color -> {
-            if (tag.setColor(color)) {
-                setNameLabelColor(color);
-                if (colorListener != null) colorListener.pass(color);
-            }
+            tag.setColor(color);
+            setNameLabelColor(color);
         });
 
         noteListView.getItems().clear();

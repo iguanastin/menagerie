@@ -107,19 +107,20 @@ class TagTests {
         Tag t = new Tag(null, 1, "tag", null);
 
         assertNull(t.getColor());
-        assertFalse(t.setColor(null));
+        t.setColor("");
+        assertNull(t.getColor());
 
         final String color1 = "blue";
-        assertTrue(t.setColor(color1));
+        t.setColor(color1);
         assertEquals(color1, t.getColor());
-        assertFalse(t.setColor(color1));
+        t.setColor(color1);
         assertEquals(color1, t.getColor());
 
         final String color2 = "yellow";
-        assertTrue(t.setColor(color2));
+        t.setColor(color2);
         assertEquals(color2, t.getColor());
 
-        assertTrue(t.setColor(null));
+        t.setColor(null);
         assertNull(t.getColor());
     }
 

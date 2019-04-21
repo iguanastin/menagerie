@@ -1,4 +1,4 @@
-package menagerie.gui;
+package menagerie.gui.taglist;
 
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;

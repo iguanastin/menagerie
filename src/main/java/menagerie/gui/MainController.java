@@ -33,6 +33,8 @@ import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
+import menagerie.gui.taglist.TagListCell;
+import menagerie.gui.taglist.TagListPopup;
 import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.*;
@@ -343,7 +345,7 @@ public class MainController {
                 ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1);
                 m.show(c, event.getScreenX(), event.getScreenY());
             });
-            final TagListPopup popup = new TagListPopup(color -> c.updateTextColor());
+            final TagListPopup popup = new TagListPopup();
             popup.setAutoHide(true);
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
@@ -501,7 +503,7 @@ public class MainController {
                 }
             });
 
-            final TagListPopup popup = new TagListPopup(color -> c.updateTextColor());
+            final TagListPopup popup = new TagListPopup();
             popup.setAutoHide(true);
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
