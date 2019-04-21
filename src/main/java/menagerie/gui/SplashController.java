@@ -68,22 +68,29 @@ public class SplashController {
                 } catch (IOException e) {
                     Main.log.log(Level.SEVERE, "Failed to backup database. Unexpected error occured.", e);
                     Main.log.info("DB URL: " + settings.getString(Settings.Key.DATABASE_URL));
-                    Main.showErrorMessage("Error while backing up database", "See log for more details", e.getLocalizedMessage());
-                    Platform.exit();
-                    System.exit(1);
+
+                    Platform.runLater(() -> {
+                        Main.showErrorMessage("Error while backing up database", "See log for more details", e.getLocalizedMessage());
+                        Platform.exit();
+                        System.exit(1);
+                    });
+                    return;
                 }
             }
 
             // ---------------------------------------- Connect to database --------------------------------------------
             Platform.runLater(() -> statusLabel.setText("Connecting to database: " + settings.getString(Settings.Key.DATABASE_URL) + "..."));
-            Connection database = null;
+            Connection database;
             try {
                 database = DriverManager.getConnection("jdbc:h2:" + settings.getString(Settings.Key.DATABASE_URL), settings.getString(Settings.Key.DATABASE_USER), settings.getString(Settings.Key.DATABASE_PASSWORD));
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, "Error connecting to database: " + settings.getString(Settings.Key.DATABASE_URL), e);
-                Main.showErrorMessage("Error connecting to database", "Database is most likely open in another application", e.getLocalizedMessage());
-                Platform.exit();
-                System.exit(1);
+                Platform.runLater(() -> {
+                    Main.showErrorMessage("Error connecting to database", "Database is most likely open in another application", e.getLocalizedMessage());
+                    Platform.exit();
+                    System.exit(1);
+                });
+                return;
             }
 
             // -------------------------------------- Verify/upgrade database ------------------------------------------
@@ -92,9 +99,12 @@ public class SplashController {
                 DatabaseVersionUpdater.updateDatabase(database);
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, "Unexpected error while attempting to verify or upgrade database", e);
-                Main.showErrorMessage("Error while verifying or upgrading database", "See log for more details", e.getLocalizedMessage());
-                Platform.exit();
-                System.exit(1);
+                Platform.runLater(() -> {
+                    Main.showErrorMessage("Error while verifying or upgrading database", "See log for more details", e.getLocalizedMessage());
+                    Platform.exit();
+                    System.exit(1);
+                });
+                return;
             }
 
             // ----------------------------------- Connect database manager --------------------------------------------
@@ -104,9 +114,12 @@ public class SplashController {
                 databaseManager = new DatabaseManager(database);
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, "Unexpected error while connecting database manager to database", e);
-                Main.showErrorMessage("Error while plugging manager into database", "See log for more details", e.getLocalizedMessage());
-                Platform.exit();
-                System.exit(1);
+                Platform.runLater(() -> {
+                    Main.showErrorMessage("Error while plugging manager into database", "See log for more details", e.getLocalizedMessage());
+                    Platform.exit();
+                    System.exit(1);
+                });
+                return;
             }
             databaseManager.setLoadListener(new MenagerieDatabaseLoadListener() {
                 @Override
@@ -138,9 +151,12 @@ public class SplashController {
                 menagerie = new Menagerie(databaseManager);
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, "Error initializing Menagerie", e);
-                Main.showErrorMessage("Error while loading data into Menagerie", "See log for more details", e.getLocalizedMessage());
-                Platform.exit();
-                System.exit(1);
+                Platform.runLater(() -> {
+                    Main.showErrorMessage("Error while loading data into Menagerie", "See log for more details", e.getLocalizedMessage());
+                    Platform.exit();
+                    System.exit(1);
+                });
+                return;
             }
 
             // --------------------------------- Open main application window ------------------------------------------

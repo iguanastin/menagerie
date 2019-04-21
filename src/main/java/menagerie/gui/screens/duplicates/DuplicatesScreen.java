@@ -49,16 +49,13 @@ public class DuplicatesScreen extends Screen {
 
     private ListChangeListener<Tag> leftTagListener = c -> {
         while (c.next()) {
-            leftTagList.getItems().addAll(c.getAddedSubList());
-            leftTagList.getItems().removeAll(c.getRemoved());
-            leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
+            repopulateTagLists();
         }
     };
+
     private ListChangeListener<Tag> rightTagListener = c -> {
         while (c.next()) {
-            rightTagList.getItems().addAll(c.getAddedSubList());
-            rightTagList.getItems().removeAll(c.getRemoved());
-            rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
+            repopulateTagLists();
         }
     };
 
@@ -362,6 +359,20 @@ public class DuplicatesScreen extends Screen {
             close();
         } else {
             preview(pairs.get(index));
+        }
+    }
+
+    private void repopulateTagLists() {
+        leftTagList.getItems().clear();
+        if (currentPair != null) {
+            leftTagList.getItems().addAll(currentPair.getObject1().getTags());
+            leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
+        }
+
+        rightTagList.getItems().clear();
+        if (currentPair != null) {
+            rightTagList.getItems().addAll(currentPair.getObject2().getTags());
+            rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
         }
     }
 

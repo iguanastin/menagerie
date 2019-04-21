@@ -39,38 +39,42 @@ public class DatabaseVersionUpdater {
 
         Main.log.info("Found database version: " + version);
 
-        switch (version) {
-            case -1:
-                cleanDatabase(db);
-                initializeTables(db);
-                break;
-            case 0:
-                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
-                updateFromV0ToV1(db);
-                version++;
-            case 1:
-                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
-                updateFromV1ToV2(db);
-                version++;
-            case 2:
-                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
-                updateFromV2ToV3(db);
-                version++;
-            case 3:
-                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
-                updateFromV3ToV4(db);
-                version++;
-            case 4:
-                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
-                updateFromV4ToV5(db);
-                version++;
-            case 5:
-                Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
-                updateFromV5ToV6(db);
-                version++;
-            case 6:
-                Main.log.info("Database is up to date");
-                break;
+        if (version == -1) {
+            cleanDatabase(db);
+            version = initializeTables(db);
+        }
+        if (version == 0) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV0ToV1(db);
+            version++;
+        }
+        if (version == 1) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV1ToV2(db);
+            version++;
+        }
+        if (version == 2) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV2ToV3(db);
+            version++;
+        }
+        if (version == 3) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV3ToV4(db);
+            version++;
+        }
+        if (version == 4) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV4ToV5(db);
+            version++;
+        }
+        if (version == 5) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV5ToV6(db);
+            version++;
+        }
+        if (version == 6) {
+            Main.log.info("Database is up to date");
         }
     }
 
@@ -113,8 +117,9 @@ public class DatabaseVersionUpdater {
      * @param db Database
      * @throws SQLException If database initialization fails.
      */
-    private static void initializeTables(Connection db) throws SQLException {
+    private static int initializeTables(Connection db) throws SQLException {
         initializeV3Tables(db);
+        return 3;
     }
 
     /**

@@ -1357,7 +1357,6 @@ public class MainController {
             @Override
             public void run() {
                 final int total = menagerie.getItems().size();
-                int count = 0;
 
                 for (int i = 0; i < menagerie.getItems().size(); i++) {
                     if (!(menagerie.getItems().get(i) instanceof MediaItem)) continue;
@@ -1380,16 +1379,12 @@ public class MainController {
 
                     if (i1.getId() == 48295) System.out.println(hasSimilar);
 
-                    if (!hasSimilar) {
-                        count++;
-                        i1.setHasNoSimilar(true);
-                    }
+                    if (!hasSimilar) i1.setHasNoSimilar(true);
 
                     final int finalI = i;
                     Platform.runLater(() -> ps.setProgress(finalI, total));
                 }
 
-                System.out.println(count);
                 Platform.runLater(ps::close);
             }
         };
