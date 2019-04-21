@@ -20,7 +20,7 @@
                 </effect>
             </Label>
             <VBox alignment="CENTER">
-                <ProgressBar prefWidth="600.0"/>
+                <ProgressBar fx:id="progressBar" prefWidth="600.0"/>
                 <Label fx:id="statusLabel" text="Loading...">
                     <font>
                         <Font name="System Italic" size="12.0"/>

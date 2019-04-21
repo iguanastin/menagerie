@@ -54,8 +54,10 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_GET_HIGHEST_TAG_ID;
     // Construction
     private final PreparedStatement PS_GET_TAGS;
+    private final PreparedStatement PS_GET_TAG_COUNT;
     private final PreparedStatement PS_GET_MEDIA;
     private final PreparedStatement PS_GET_GROUPS;
+    private final PreparedStatement PS_GET_ITEM_COUNT;
     private final PreparedStatement PS_GET_TAGS_FOR_ITEM;
     private final PreparedStatement PS_GET_TAG_NOTES;
     // Teardown
@@ -63,6 +65,8 @@ public class DatabaseManager extends Thread {
 
     private final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
     private volatile boolean running = false;
+
+    private MenagerieDatabaseLoadListener loadListener = null;
 
     private final Timer loggingTimer = new Timer(true);
     private final Lock loggingLock = new ReentrantLock();
@@ -101,8 +105,10 @@ public class DatabaseManager extends Thread {
         PS_GET_HIGHEST_TAG_ID = database.prepareStatement("SELECT TOP 1 id FROM tags ORDER BY id DESC;");
         // Construction
         PS_GET_TAGS = database.prepareStatement("SELECT * FROM tags;");
+        PS_GET_TAG_COUNT = database.prepareStatement("SELECT count(*) FROM tags;");
         PS_GET_MEDIA = database.prepareStatement("SELECT items.id, items.added, media.gid, media.page, media.path, media.md5, media.hist_a, media.hist_r, media.hist_g, media.hist_b FROM media JOIN items ON items.id=media.id;");
         PS_GET_GROUPS = database.prepareStatement("SELECT items.id, items.added, groups.title FROM groups JOIN items ON items.id=groups.id;");
+        PS_GET_ITEM_COUNT = database.prepareStatement("SELECT count(*) FROM items;");
         PS_GET_TAGS_FOR_ITEM = database.prepareStatement("SELECT tagged.tag_id FROM tagged WHERE tagged.item_id=?;");
         PS_GET_TAG_NOTES = database.prepareStatement("SELECT * FROM tag_notes;");
         // Teardown
@@ -155,6 +161,10 @@ public class DatabaseManager extends Thread {
                 }
             }
         }, 60000, 60000);
+    }
+
+    public void setLoadListener(MenagerieDatabaseLoadListener loadListener) {
+        this.loadListener = loadListener;
     }
 
     /**
@@ -782,8 +792,7 @@ public class DatabaseManager extends Thread {
         Main.log.info("Finished loading " + menagerie.getTags().size() + " tags from database");
         loadTagNotes(menagerie);
         Main.log.info("Finished loading all tag notes into tags from database");
-        loadGroups(menagerie);
-        loadMedia(menagerie);
+        loadItems(menagerie);
         sortGroupElements(menagerie);
         Main.log.info("Finished loading " + menagerie.getItems().size() + " items from database");
         loadTagsForItems(menagerie);
@@ -834,42 +843,63 @@ public class DatabaseManager extends Thread {
      * @throws SQLException When database query fails.
      */
     private void loadTags(Menagerie menagerie) throws SQLException {
+        int total = 0;
+        synchronized (PS_GET_TAG_COUNT) {
+            try (ResultSet rs = PS_GET_TAG_NOTES.executeQuery()) {
+                if (rs.next()) {
+                    total = rs.getInt(1);
+                }
+            }
+        }
+        if (loadListener != null) loadListener.startTagLoading(total);
+
         synchronized (PS_GET_TAGS) {
             try (ResultSet rs = PS_GET_TAGS.executeQuery()) {
+                int i = 0;
                 while (rs.next()) {
+                    i++;
                     menagerie.getTags().add(new Tag(menagerie, rs.getInt("id"), rs.getNString("name"), rs.getNString("color")));
+                    if (loadListener != null) loadListener.tagsLoading(i, total);
                 }
             }
         }
     }
 
     /**
-     * Loads all groups from the database.
+     * Loads all items from the database.
      * <p>
      * WARNING: This call is very expensive and should only be called once.
      *
-     * @param menagerie Menagerie to load tags into.
+     * @param menagerie Menagerie to load items into.
      * @throws SQLException When database query fails.
      */
-    private void loadGroups(Menagerie menagerie) throws SQLException {
-        synchronized (PS_GET_GROUPS) {
-            try (ResultSet rs = PS_GET_GROUPS.executeQuery()) {
-                while (rs.next()) {
-                    menagerie.getItems().add(new GroupItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"), rs.getNString("groups.title")));
+    private void loadItems(Menagerie menagerie) throws SQLException {
+        int total = 0;
+        synchronized (PS_GET_ITEM_COUNT) {
+            try (ResultSet rs = PS_GET_ITEM_COUNT.executeQuery()) {
+                if (rs.next()) {
+                    total = rs.getInt(1);
                 }
             }
         }
-    }
+        if (loadListener != null) loadListener.startItemLoading(total);
 
-    /**
-     * Loads media items from the database.
-     * <p>
-     * WARNING: This call is very expensive and should only be called once.
-     */
-    private void loadMedia(Menagerie menagerie) throws SQLException {
+        int i = 0;
+        synchronized (PS_GET_GROUPS) {
+            try (ResultSet rs = PS_GET_GROUPS.executeQuery()) {
+                while (rs.next()) {
+                    i++;
+                    menagerie.getItems().add(new GroupItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"), rs.getNString("groups.title")));
+                    if (loadListener != null) loadListener.itemsLoading(i, total);
+                }
+            }
+        }
+
         synchronized (PS_GET_MEDIA) {
             try (ResultSet rs = PS_GET_MEDIA.executeQuery()) {
                 while (rs.next()) {
+                    i++;
+
                     ImageHistogram histogram = null;
                     InputStream histAlpha = rs.getBinaryStream("media.hist_a");
                     if (histAlpha != null) {
@@ -895,6 +925,8 @@ public class DatabaseManager extends Thread {
                     MediaItem media = new MediaItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"), rs.getInt("media.page"), group, new File(rs.getNString("media.path")), rs.getNString("media.md5"), histogram);
                     menagerie.getItems().add(media);
                     if (group != null) group.getElements().add(media);
+
+                    if (loadListener != null) loadListener.itemsLoading(i, total);
                 }
             }
         }

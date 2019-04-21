@@ -6,6 +6,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
@@ -14,6 +15,7 @@ import menagerie.model.Settings;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.db.DatabaseManager;
 import menagerie.model.menagerie.db.DatabaseVersionUpdater;
+import menagerie.model.menagerie.db.MenagerieDatabaseLoadListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,6 +33,7 @@ public class SplashController {
     public ImageView backgroundImageView;
     public Label titleLabel;
     public Label statusLabel;
+    public ProgressBar progressBar;
 
     private final List<Image> icons;
     private final Image splashBackground;
@@ -105,11 +108,31 @@ public class SplashController {
                 Platform.exit();
                 System.exit(1);
             }
+            databaseManager.setLoadListener(new MenagerieDatabaseLoadListener() {
+                @Override
+                public void startItemLoading(int total) {
+                    Platform.runLater(() -> statusLabel.setText("Loading " + total + " items..."));
+                }
+
+                @Override
+                public void itemsLoading(int count, int total) {
+                    Platform.runLater(() -> progressBar.setProgress((double) count / total));
+                }
+
+                @Override
+                public void startTagLoading(int total) {
+                    Platform.runLater(() -> statusLabel.setText("Loading " + total + " tags..."));
+                }
+
+                @Override
+                public void tagsLoading(int count, int total) {
+                    Platform.runLater(() -> progressBar.setProgress((double) count / total));
+                }
+            });
             databaseManager.setDaemon(true);
             databaseManager.start();
 
             // ------------------------------------ Construct Menagerie ------------------------------------------------
-            Platform.runLater(() -> statusLabel.setText("Loading data from database..."));
             Menagerie menagerie = null;
             try {
                 menagerie = new Menagerie(databaseManager);
