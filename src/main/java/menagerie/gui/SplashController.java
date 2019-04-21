@@ -7,6 +7,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
 import menagerie.model.Settings;
@@ -27,6 +28,7 @@ import java.util.logging.Level;
 public class SplashController {
 
     public AnchorPane rootPane;
+    public Label titleLabel;
     public Label statusLabel;
 
     private final List<Image> icons;
@@ -38,6 +40,16 @@ public class SplashController {
 
     @FXML
     public void initialize() {
+
+        // Set graphic
+        titleLabel.setGraphicTextGap(20);
+        for (Image icon : icons) {
+            if (icon.getWidth() == 64) {
+                titleLabel.setGraphic(new ImageView(icon));
+            }
+        }
+
+        // ------------------------------------------ Startup thread ---------------------------------------------------
         new Thread(() -> {
             final Settings settings = new Settings(new File(Main.SETTINGS_PATH));
 

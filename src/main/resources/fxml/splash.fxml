@@ -7,7 +7,7 @@
 <AnchorPane fx:id="rootPane" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.172-ea"
             xmlns:fx="http://javafx.com/fxml/1" fx:controller="menagerie.gui.SplashController">
     <VBox alignment="CENTER" layoutX="100.0" spacing="20" AnchorPane.bottomAnchor="100.0">
-        <Label text="Menagerie v1.5" BorderPane.alignment="CENTER">
+        <Label fx:id="titleLabel" text="Menagerie v1.5" BorderPane.alignment="CENTER">
             <font>
                 <Font size="18.0"/>
             </font>
