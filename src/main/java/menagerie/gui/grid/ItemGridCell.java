@@ -18,8 +18,8 @@ import org.controlsfx.control.GridCell;
 
 public class ItemGridCell extends GridCell<Item> {
 
-    private static final String UNSELECTED_BG_CSS = "-fx-background-color: -grid-cell-unselected-color";
-    private static final String SELECTED_BG_CSS = "-fx-background-color: -grid-cell-selected-color";
+    private static final String UNSELECTED_BG_CSS = "-fx-background-color: -item-unselected-color";
+    private static final String SELECTED_BG_CSS = "-fx-background-color: -item-selected-color";
 
     private static final Font largeFont = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 28);
     private static final Font smallFont = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 14);
@@ -35,7 +35,7 @@ public class ItemGridCell extends GridCell<Item> {
 
     public ItemGridCell() {
         super();
-        this.getStyleClass().add("image-grid-cell");
+        this.getStyleClass().add("item-grid-cell");
 
         centerLabel.setPadding(new Insets(5));
         centerLabel.setFont(largeFont);
