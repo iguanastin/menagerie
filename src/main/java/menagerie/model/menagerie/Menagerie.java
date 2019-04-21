@@ -118,6 +118,8 @@ public class Menagerie {
         for (Item item : elements) {
             if (item instanceof MediaItem && ((MediaItem) item).getGroup() == null) {
                 group.addItem((MediaItem) item);
+            } else if (item instanceof ArchiveItem) {
+                // Don't touch it
             } else if (item instanceof GroupItem) {
                 List<MediaItem> e = new ArrayList<>(((GroupItem) item).getElements());
                 item.getTags().forEach(group::addTag);
