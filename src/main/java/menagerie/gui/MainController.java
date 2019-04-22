@@ -15,6 +15,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -83,6 +84,7 @@ public class MainController {
     public Button backButton;
 
     public ScreenPane screenPane;
+    public HBox scopeHBox;
 
     // ----------------------------------- Screens -----------------------------------
     private TagListScreen tagListScreen;
@@ -585,6 +587,9 @@ public class MainController {
         });
         previewMediaView.setMute(settings.getBoolean(Settings.Key.MUTE_VIDEO));
         previewMediaView.setRepeat(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
+
+        // Init scope label binding
+        scopeLabel.maxWidthProperty().bind(scopeHBox.widthProperty().subtract(backButton.widthProperty()).subtract(scopeHBox.getSpacing()));
     }
 
     /**

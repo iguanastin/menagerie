@@ -41,10 +41,9 @@
                 </center>
                 <top>
                     <VBox spacing="5.0" BorderPane.alignment="CENTER">
-                        <HBox alignment="CENTER_LEFT" spacing="5.0">
-                            <Button disable="true" fx:id="backButton" onAction="#backButtonOnAction"
-                                    mnemonicParsing="false"
-                                    text="🡄"/>
+                        <HBox fx:id="scopeHBox" alignment="CENTER_LEFT" spacing="5.0">
+                            <Button fx:id="backButton" disable="true" mnemonicParsing="false"
+                                    onAction="#backButtonOnAction" text="🡄"/>
                             <Label fx:id="scopeLabel" text="Scope: All"/>
                         </HBox>
                         <HBox spacing="5.0">
