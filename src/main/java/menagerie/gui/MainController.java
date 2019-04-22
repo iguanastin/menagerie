@@ -638,10 +638,11 @@ public class MainController {
             c.setOnDragOver(event -> {
                 if (event.getGestureSource() instanceof ItemGridCell && currentSearch instanceof GroupSearch && !event.getGestureSource().equals(c)) {
                     event.acceptTransferModes(TransferMode.ANY);
+                    event.consume();
                 }
             });
             c.setOnDragDropped(event -> {
-                if (!itemGridView.getSelected().isEmpty()) {
+                if (event.getGestureSource() instanceof ItemGridCell && !itemGridView.getSelected().isEmpty()) {
                     List<MediaItem> list = new ArrayList<>();
                     itemGridView.getSelected().forEach(item -> list.add((MediaItem) item));
                     list.sort(Comparator.comparingInt(MediaItem::getPageIndex));
