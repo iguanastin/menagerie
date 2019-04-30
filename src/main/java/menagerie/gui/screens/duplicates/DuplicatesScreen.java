@@ -397,6 +397,14 @@ public class DuplicatesScreen extends Screen {
         this.selectListener = selectListener;
     }
 
+    public ItemInfoBox getLeftInfoBox() {
+        return leftInfoBox;
+    }
+
+    public ItemInfoBox getRightInfoBox() {
+        return rightInfoBox;
+    }
+
     @Override
     protected void onOpen() {
         if (pairs == null || pairs.isEmpty()) {

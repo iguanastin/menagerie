@@ -410,4 +410,84 @@ public class DatabaseVersionUpdater {
         }
     }
 
+
+    public static void main(String[] args) throws SQLException {
+        // Copies all data into new database
+
+        Connection db1 = DriverManager.getConnection("jdbc:h2:~/test-purge", "sa", "");
+        Connection db2 = DriverManager.getConnection("jdbc:h2:~/test-purge-new", "sa", "");
+
+        Statement s1 = db1.createStatement();
+        Statement s2 = db2.createStatement();
+
+        updateDatabase(db2);
+
+        ResultSet rs = s1.executeQuery("SELECT * FROM tags;");
+        PreparedStatement ps = db2.prepareStatement("INSERT INTO tags VALUES (?, ?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setNString(2, rs.getNString(2));
+            ps.setNString(3, rs.getNString(3));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM tag_notes;");
+        ps = db2.prepareStatement("INSERT INTO tag_notes VALUES (?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setNString(2, rs.getNString(2));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM items;");
+        ps = db2.prepareStatement("INSERT INTO items VALUES (?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setLong(2, rs.getLong(2));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM groups;");
+        ps = db2.prepareStatement("INSERT INTO groups VALUES (?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setNString(2, rs.getNString(2));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM media;");
+        ps = db2.prepareStatement("INSERT INTO media VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt("id"));
+            ps.setObject(2, rs.getObject("gid"));
+            ps.setNString(3, rs.getNString("path"));
+            ps.setNString(4, rs.getNString("md5"));
+            ps.setBinaryStream(5, rs.getBinaryStream("thumbnail"));
+            ps.setBinaryStream(6, rs.getBinaryStream("hist_a"));
+            ps.setBinaryStream(7, rs.getBinaryStream("hist_r"));
+            ps.setBinaryStream(8, rs.getBinaryStream("hist_g"));
+            ps.setBinaryStream(9, rs.getBinaryStream("hist_b"));
+            //            ps.setBinaryStream(5, null);
+            //            ps.setBinaryStream(6, null);
+            //            ps.setBinaryStream(7, null);
+            //            ps.setBinaryStream(8, null);
+            //            ps.setBinaryStream(9, null);
+            ps.setInt(10, rs.getInt("page"));
+            ps.setBoolean(11, rs.getBoolean("no_similar"));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM tagged;");
+        ps = db2.prepareStatement("INSERT INTO tagged VALUES (?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setInt(2, rs.getInt(2));
+            ps.executeUpdate();
+        }
+
+
+        s1.executeUpdate("SHUTDOWN DEFRAG;");
+        s2.executeUpdate("SHUTDOWN DEFRAG;");
+    }
+
 }

@@ -157,6 +157,10 @@ public class SlideshowScreen extends Screen {
         return showing;
     }
 
+    public ItemInfoBox getInfoBox() {
+        return infoBox;
+    }
+
     /**
      * Attempts to delete or remove the currently displayed item.
      *

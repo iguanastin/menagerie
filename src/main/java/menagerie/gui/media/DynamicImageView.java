@@ -13,14 +13,6 @@ public class DynamicImageView extends ImageView {
         super();
     }
 
-    public DynamicImageView(String path, boolean backgroundLoading) {
-        this(new Image(path, backgroundLoading));
-    }
-
-    public DynamicImageView(String path, int width, int height, boolean preserveRatio, boolean smooth, boolean backgroundLoading) {
-        this(new Image(path, width, height, preserveRatio, smooth, backgroundLoading));
-    }
-
     public DynamicImageView(Image img) {
         super(img);
     }

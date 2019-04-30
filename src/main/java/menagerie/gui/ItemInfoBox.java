@@ -1,6 +1,9 @@
 package menagerie.gui;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
+import javafx.scene.Cursor;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
@@ -29,7 +32,7 @@ public class ItemInfoBox extends VBox {
     /**
      * Extended state of this info box.
      */
-    private boolean extended = false;
+    private BooleanProperty extended = new SimpleBooleanProperty(false);
 
 
     public ItemInfoBox() {
@@ -39,6 +42,8 @@ public class ItemInfoBox extends VBox {
 
         // Invert extended state on click
         addEventHandler(MouseEvent.MOUSE_CLICKED, event -> setExtended(!isExtended()));
+        addEventHandler(MouseEvent.MOUSE_ENTERED, event -> getScene().setCursor(Cursor.HAND));
+        addEventHandler(MouseEvent.MOUSE_EXITED, event -> getScene().setCursor(Cursor.DEFAULT));
 
         getChildren().addAll(resolutionLabel, fileSizeLabel);
     }
@@ -47,7 +52,6 @@ public class ItemInfoBox extends VBox {
      * Converts a byte count into a pretty string for user's viewing pleasure.
      *
      * @param bytes Byte count
-     *
      * @return A string in the format: [0-9]+\.[0-9]{2}(B|KB|MB|GB) E.g. "123.45KB"
      */
     private static String bytesToPrettyString(long bytes) {
@@ -61,18 +65,19 @@ public class ItemInfoBox extends VBox {
      * @return The extended state of this info box.
      */
     public boolean isExtended() {
-        return extended;
+        return extended.get();
     }
 
     /**
      * Changes the extended state of this info box and updates the GUI to reflect the change. When extended, shows all available data. Otherwise shows file size and resolution.
+     *
      * @param b New extended state.
      */
     public void setExtended(boolean b) {
-        if (b == extended) return;
+        if (b == extended.get()) return;
 
-        extended = b;
-        if (extended) {
+        extended.set(b);
+        if (b) {
             getChildren().addAll(idLabel, dateLabel, filePathLabel);
         } else {
             getChildren().removeAll(idLabel, dateLabel, filePathLabel);
@@ -80,7 +85,15 @@ public class ItemInfoBox extends VBox {
     }
 
     /**
+     * @return The extended state property.
+     */
+    public BooleanProperty extendedProperty() {
+        return extended;
+    }
+
+    /**
      * Updates the info text and GUI.
+     *
      * @param item Item to pull info from. If null, uses default text.
      */
     public void setItem(MediaItem item) {
@@ -93,7 +106,8 @@ public class ItemInfoBox extends VBox {
                 if (item.getImage().isBackgroundLoading() && item.getImage().getProgress() != 1) {
                     resolutionLabel.setText("Loading...");
                     item.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
-                        if (newValue.doubleValue() == 1 && !item.getImage().isError()) resolutionLabel.setText((int) item.getImage().getWidth() + "x" + (int) item.getImage().getHeight());
+                        if (newValue.doubleValue() == 1 && !item.getImage().isError())
+                            resolutionLabel.setText((int) item.getImage().getWidth() + "x" + (int) item.getImage().getHeight());
                     });
                 } else {
                     resolutionLabel.setText((int) item.getImage().getWidth() + "x" + (int) item.getImage().getHeight());

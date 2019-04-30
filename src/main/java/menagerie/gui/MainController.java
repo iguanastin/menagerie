@@ -258,10 +258,13 @@ public class MainController {
             slideshowScreen.close();
             itemGridView.select(item, false, false);
         });
+        slideshowScreen.getInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
         helpScreen = new HelpScreen();
         settingsScreen = new SettingsScreen(settings);
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
         duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(item -> itemGridView.select(item, false, false));
+        duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
+        duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> itemGridView.select(item, false, false), count -> {
             Platform.runLater(() -> importsButton.setText("Imports: " + count));
 
@@ -588,6 +591,15 @@ public class MainController {
         previewMediaView.setMute(settings.getBoolean(Settings.Key.MUTE_VIDEO));
         previewMediaView.setRepeat(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
 
+        // Init item info box
+        itemInfoBox.extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
+        ((BooleanProperty) settings.getProperty(Settings.Key.EXPAND_ITEM_INFO)).addListener((observable, oldValue, newValue) -> {
+            itemInfoBox.setExtended(newValue);
+            slideshowScreen.getInfoBox().setExtended(newValue);
+            duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().setExtended(newValue);
+            duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().setExtended(newValue);
+        });
+
         // Init scope label binding
         scopeLabel.maxWidthProperty().bind(scopeHBox.widthProperty().subtract(backButton.widthProperty()).subtract(scopeHBox.getSpacing()));
     }
@@ -672,8 +684,16 @@ public class MainController {
                 event.consume();
             });
             c.setOnMouseClicked(event -> {
-                if (c.getItem() instanceof GroupItem && event.getButton() == MouseButton.PRIMARY && event.getClickCount() > 1) {
-                    explorerOpenGroup((GroupItem) c.getItem());
+                if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() > 1) {
+                    if (c.getItem() instanceof GroupItem) {
+                        explorerOpenGroup((GroupItem) c.getItem());
+                    } else if (c.getItem() instanceof MediaItem) {
+                        try {
+                            Desktop.getDesktop().open(((MediaItem) c.getItem()).getFile());
+                        } catch (IOException e) {
+                            Main.log.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) c.getItem()).getFile(), e);
+                        }
+                    }
                 }
             });
             return c;
@@ -1537,10 +1557,20 @@ public class MainController {
                     event.consume(); // Workaround for alt-tabbing correctly
                     break;
                 case ENTER:
-                    if (itemGridView.getSelected().size() == 1 && itemGridView.getSelected().get(0) instanceof GroupItem) {
-                        explorerOpenGroup((GroupItem) itemGridView.getSelected().get(0));
+                    if (itemGridView.getSelected().size() == 1) {
+                        Item item = itemGridView.getSelected().get(0);
+                        if (item instanceof GroupItem) {
+                            explorerOpenGroup((GroupItem) item);
+                            event.consume();
+                        } else if (itemGridView.getSelected().get(0) instanceof MediaItem) {
+                            try {
+                                Desktop.getDesktop().open(((MediaItem) item).getFile());
+                            } catch (IOException e) {
+                                Main.log.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) item).getFile(), e);
+                            }
+                            event.consume();
+                        }
                     }
-                    event.consume();
                     break;
                 case BACK_SPACE:
                     explorerGoBack();
