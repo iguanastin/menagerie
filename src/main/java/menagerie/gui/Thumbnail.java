@@ -94,7 +94,7 @@ public class Thumbnail {
     }
 
     private void loadImageFromDisk() {
-        image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true, true);
+        image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
         registerListenersToImage();
     }
 
