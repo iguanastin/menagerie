@@ -4,7 +4,7 @@ import com.sun.jna.platform.FileUtils;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.scene.image.Image;
 import menagerie.gui.Main;
-import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.histogram.HistogramReadException;
 import menagerie.model.menagerie.histogram.ImageHistogram;
 import menagerie.util.Filters;
@@ -89,32 +89,21 @@ public class MediaItem extends Item {
     public Thumbnail getThumbnail() {
         Thumbnail thumb = null;
         if (thumbnail != null) thumb = thumbnail.get();
-        if (thumb == null && hasDatabase()) {
-            try {
-                thumb = menagerie.getDatabaseManager().getThumbnail(getId());
-                if (thumb != null) thumbnail = new SoftReference<>(thumb);
-            } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to get thumbnail from database: " + getId(), e);
-            }
-        }
         if (thumb == null && file != null) {
             try {
-                thumb = new Thumbnail(file);
+                thumb = new Thumbnail(this, file);
             } catch (IOException ignore) {
             }
 
             thumbnail = new SoftReference<>(thumb);
-
-            if (thumb != null && hasDatabase()) {
-                if (thumb.isLoaded()) {
-                    menagerie.getDatabaseManager().setThumbnailAsync(getId(), thumb.getImage());
-                } else {
-                    thumb.addImageLoadedListener(image1 -> menagerie.getDatabaseManager().setThumbnailAsync(getId(), image1));
-                }
-            }
         }
 
         return thumb;
+    }
+
+    @Override
+    public void purgeThumbnail() {
+        thumbnail = null;
     }
 
     /**

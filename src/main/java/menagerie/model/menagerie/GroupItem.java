@@ -1,6 +1,6 @@
 package menagerie.model.menagerie;
 
-import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.gui.Thumbnail;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -125,6 +125,13 @@ public class GroupItem extends Item {
             return null;
         } else {
             return elements.get(0).getThumbnail();
+        }
+    }
+
+    @Override
+    public void purgeThumbnail() {
+        if (!elements.isEmpty()) {
+            elements.get(0).purgeThumbnail();
         }
     }
 

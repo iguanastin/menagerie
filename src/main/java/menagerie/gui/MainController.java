@@ -33,7 +33,6 @@ import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListPopup;
-import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.db.DatabaseManager;
@@ -1284,7 +1283,7 @@ public class MainController {
         previewMediaView.releaseVLCJ();
         slideshowScreen.releaseVLCJ();
         duplicateOptionsScreen.releaseVLCJ();
-        Thumbnail.getVideoThumbnailThread().releaseResources();
+        Thumbnail.releaseVLCJResources();
 
         try {
             settings.save();

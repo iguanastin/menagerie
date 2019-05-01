@@ -7,7 +7,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
-import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.Item;
 import menagerie.util.listeners.ObjectListener;
 import org.controlsfx.control.GridView;

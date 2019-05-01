@@ -74,6 +74,11 @@ public class DatabaseVersionUpdater {
             version++;
         }
         if (version == 6) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV6ToV7(db);
+            version++;
+        }
+        if (version == 7) {
             Main.log.info("Database is up to date");
         }
     }
@@ -376,6 +381,22 @@ public class DatabaseVersionUpdater {
 
             Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
         }
+    }
+
+    private static Connection updateFromV6ToV7(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v5 to v6...");
+        long t = System.currentTimeMillis();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Dropping thumbnail column from media");
+            s.executeUpdate("ALTER TABLE media DROP COLUMN thumbnail;");
+
+            Main.log.info("Setting database version");
+            s.executeUpdate("INSERT INTO version(version) VALUES (7);");
+
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
+
+        return db;
     }
 
     /**

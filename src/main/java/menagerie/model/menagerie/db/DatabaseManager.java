@@ -1,15 +1,11 @@
 package menagerie.model.menagerie.db;
 
-import javafx.scene.image.Image;
 import menagerie.gui.Main;
-import menagerie.gui.thumbnail.Thumbnail;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.histogram.HistogramReadException;
 import menagerie.model.menagerie.histogram.ImageHistogram;
-import menagerie.util.ImageInputStreamConverter;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
 import java.util.Comparator;
@@ -33,8 +29,6 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_SET_MEDIA_PATH;
     private final PreparedStatement PS_SET_MEDIA_HISTOGRAM;
     private final PreparedStatement PS_SET_MEDIA_PAGE;
-    private final PreparedStatement PS_SET_MEDIA_THUMBNAIL;
-    private final PreparedStatement PS_GET_MEDIA_THUMBNAIL;
     private final PreparedStatement PS_SET_MEDIA_NOSIMILAR;
     // Groups
     private final PreparedStatement PS_CREATE_GROUP;
@@ -85,8 +79,6 @@ public class DatabaseManager extends Thread {
         PS_SET_MEDIA_PATH = database.prepareStatement("UPDATE media SET path=? WHERE id=?;");
         PS_SET_MEDIA_HISTOGRAM = database.prepareStatement("UPDATE media SET hist_a=?, hist_r=?, hist_g=?, hist_b=? WHERE id=?");
         PS_SET_MEDIA_PAGE = database.prepareStatement("UPDATE media SET page=? WHERE id=?;");
-        PS_SET_MEDIA_THUMBNAIL = database.prepareStatement("UPDATE media SET thumbnail=? WHERE id=?;");
-        PS_GET_MEDIA_THUMBNAIL = database.prepareStatement("SELECT thumbnail FROM media WHERE id=?;");
         PS_SET_MEDIA_NOSIMILAR = database.prepareStatement("UPDATE media SET no_similar=? WHERE id=?;");
         // Groups
         PS_CREATE_GROUP = database.prepareStatement("INSERT INTO groups(id, title) VALUES (?, ?);");
@@ -176,38 +168,6 @@ public class DatabaseManager extends Thread {
      */
     public void enqueue(Runnable job) {
         queue.add(job);
-    }
-
-    /**
-     * Stores a thumbnail in the database.
-     *
-     * @param id        ID of item to update.
-     * @param thumbnail Thumbnail to store.
-     * @throws SQLException If the database update failed.
-     * @throws IOException  If the thumbnail could not be converted to a stream.
-     */
-    public void setThumbnail(int id, Image thumbnail) throws SQLException, IOException {
-        synchronized (PS_SET_MEDIA_THUMBNAIL) {
-            PS_SET_MEDIA_THUMBNAIL.setBinaryStream(1, ImageInputStreamConverter.imageToInputStream(thumbnail));
-            PS_SET_MEDIA_THUMBNAIL.setInt(2, id);
-            PS_SET_MEDIA_THUMBNAIL.executeUpdate();
-        }
-    }
-
-    /**
-     * Queues a thumbnail to be stored in the database.
-     *
-     * @param id        ID of item to update.
-     * @param thumbnail Thumbnail to store.
-     */
-    public void setThumbnailAsync(int id, Image thumbnail) {
-        queue.add(() -> {
-            try {
-                setThumbnail(id, thumbnail);
-            } catch (SQLException | IOException e) {
-                Main.log.log(Level.SEVERE, "Failed to set thumbnail async: " + id, e);
-            }
-        });
     }
 
     /**
@@ -752,29 +712,6 @@ public class DatabaseManager extends Thread {
                 Main.log.log(Level.SEVERE, "Failed to set media no_similar. ID: " + id + ", no_similar: " + b, e);
             }
         });
-    }
-
-    /**
-     * Gets a thumbnail from the database.
-     *
-     * @param id ID of item.
-     * @return Thumbnail of the item, or null if there is no thumbnail.
-     * @throws SQLException If database query fails.
-     */
-    public Thumbnail getThumbnail(int id) throws SQLException {
-        synchronized (PS_GET_MEDIA_THUMBNAIL) {
-            PS_GET_MEDIA_THUMBNAIL.setInt(1, id);
-            try (ResultSet rs = PS_GET_MEDIA_THUMBNAIL.executeQuery()) {
-                if (rs.next()) {
-                    InputStream binaryStream = rs.getBinaryStream(1);
-                    if (binaryStream != null) {
-                        return new Thumbnail(ImageInputStreamConverter.imageFromInputStream(binaryStream));
-                    }
-                }
-            }
-        }
-
-        return null;
     }
 
     /**

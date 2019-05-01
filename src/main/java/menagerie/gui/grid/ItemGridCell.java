@@ -28,8 +28,6 @@ public class ItemGridCell extends GridCell<Item> {
     private final Label centerLabel = new Label();
     private final Label bottomRightLabel = new Label();
 
-    private Item lastItem = null;
-
     private final ObjectListener<Image> imageReadyListener;
 
 
@@ -57,9 +55,10 @@ public class ItemGridCell extends GridCell<Item> {
 
     @Override
     protected void updateItem(Item item, boolean empty) {
-        if (lastItem != null && lastItem.getThumbnail() != null)
-            lastItem.getThumbnail().removeImageReadyListener(imageReadyListener);
-        lastItem = item;
+        if (getItem() != null && getItem().getThumbnail() != null) {
+            getItem().getThumbnail().setDoNotLoad(true);
+            getItem().getThumbnail().removeImageReadyListener(imageReadyListener);
+        }
 
         if (empty) {
             view.setImage(null);
@@ -67,6 +66,7 @@ public class ItemGridCell extends GridCell<Item> {
             bottomRightLabel.setText(null);
         } else {
             if (item.getThumbnail() != null) {
+                item.getThumbnail().setDoNotLoad(false);
                 if (item.getThumbnail().getImage() != null) {
                     view.setImage(item.getThumbnail().getImage());
                 } else {

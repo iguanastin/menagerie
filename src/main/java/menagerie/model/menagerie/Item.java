@@ -2,7 +2,7 @@ package menagerie.model.menagerie;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.db.DatabaseManager;
 
 /**
@@ -49,6 +49,8 @@ public abstract class Item implements Comparable<Item> {
      * @return The thumbnail of this item. May be null.
      */
     public abstract Thumbnail getThumbnail();
+
+    public abstract void purgeThumbnail();
 
     /**
      * @return The tags this item is tagged with.

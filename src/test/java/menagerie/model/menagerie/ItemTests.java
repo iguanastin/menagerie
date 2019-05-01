@@ -1,6 +1,6 @@
 package menagerie.model.menagerie;
 
-import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.gui.Thumbnail;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,6 +17,11 @@ class ItemTests {
             public Thumbnail getThumbnail() {
                 return null;
             }
+
+            @Override
+            public void purgeThumbnail() {
+
+            }
         };
 
         assertEquals(id, item.getId());
@@ -30,6 +35,11 @@ class ItemTests {
             @Override
             public Thumbnail getThumbnail() {
                 return null;
+            }
+
+            @Override
+            public void purgeThumbnail() {
+
             }
         };
 
@@ -68,11 +78,21 @@ class ItemTests {
             public Thumbnail getThumbnail() {
                 return null;
             }
+
+            @Override
+            public void purgeThumbnail() {
+
+            }
         };
         Item item2 = new Item(null, 31, 12312) {
             @Override
             public Thumbnail getThumbnail() {
                 return null;
+            }
+
+            @Override
+            public void purgeThumbnail() {
+
             }
         };
 
@@ -86,17 +106,32 @@ class ItemTests {
             public Thumbnail getThumbnail() {
                 return null;
             }
+
+            @Override
+            public void purgeThumbnail() {
+
+            }
         };
         Item item2 = new Item(null, 31, 12312) {
             @Override
             public Thumbnail getThumbnail() {
                 return null;
             }
+
+            @Override
+            public void purgeThumbnail() {
+
+            }
         };
         Item item3 = new Item(null, 35, 12312) {
             @Override
             public Thumbnail getThumbnail() {
                 return null;
+            }
+
+            @Override
+            public void purgeThumbnail() {
+
             }
         };
 
