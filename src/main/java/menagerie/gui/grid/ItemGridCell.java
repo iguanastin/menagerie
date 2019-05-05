@@ -21,8 +21,8 @@ public class ItemGridCell extends GridCell<Item> {
     private static final String UNSELECTED_BG_CSS = "-fx-background-color: -item-unselected-color";
     private static final String SELECTED_BG_CSS = "-fx-background-color: -item-selected-color";
 
-    private static final Font largeFont = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 28);
-    private static final Font smallFont = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 14);
+    private static final Font LARGE_FONT = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 28);
+    private static final Font SMALL_FONT = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 14);
 
     private final ImageView view = new ImageView();
     private final Label centerLabel = new Label();
@@ -36,12 +36,12 @@ public class ItemGridCell extends GridCell<Item> {
         this.getStyleClass().add("item-grid-cell");
 
         centerLabel.setPadding(new Insets(5));
-        centerLabel.setFont(largeFont);
+        centerLabel.setFont(LARGE_FONT);
         centerLabel.setEffect(new DropShadow());
         centerLabel.setWrapText(true);
 
         bottomRightLabel.setPadding(new Insets(2));
-        bottomRightLabel.setFont(smallFont);
+        bottomRightLabel.setFont(SMALL_FONT);
         bottomRightLabel.setEffect(new DropShadow());
         StackPane.setAlignment(bottomRightLabel, Pos.BOTTOM_RIGHT);
 
@@ -77,7 +77,7 @@ public class ItemGridCell extends GridCell<Item> {
             if (item instanceof MediaItem) {
                 if (((MediaItem) item).isVideo()) {
                     centerLabel.setText("Video");
-                    centerLabel.setFont(largeFont);
+                    centerLabel.setFont(LARGE_FONT);
                 } else {
                     centerLabel.setText(null);
                 }
@@ -86,9 +86,19 @@ public class ItemGridCell extends GridCell<Item> {
                 } else {
                     bottomRightLabel.setText(null);
                 }
+                if (!((MediaItem) item).isImage() && !((MediaItem) item).isVideo()) {
+                    centerLabel.setText(((MediaItem) item).getFile().getName());
+                    centerLabel.setFont(SMALL_FONT);
+                    //                    Icon icon = FileSystemView.getFileSystemView().getSystemIcon(((MediaItem) item).getFile());
+                    //                    ImageIcon imgIcon = (ImageIcon) icon;
+                    //                    BufferedImage bi = new BufferedImage(imgIcon.getIconWidth(), imgIcon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+                    //                    Graphics2D g2d = bi.createGraphics();
+                    //                    g2d.drawImage(imgIcon.getImage(), 0, 0, null);
+                    //                    view.setImage(SwingFXUtils.toFXImage(bi, null));
+                }
             } else if (item instanceof GroupItem) {
                 centerLabel.setText(((GroupItem) item).getTitle());
-                centerLabel.setFont(smallFont);
+                centerLabel.setFont(SMALL_FONT);
                 bottomRightLabel.setText(((GroupItem) item).getElements().size() + "");
             }
         }

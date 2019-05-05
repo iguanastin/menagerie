@@ -177,6 +177,10 @@ public class ImportDialogScreen extends Screen {
                 files.remove(i);
                 i--;
             }
+            if (!Filters.FILE_NAME_FILTER.accept(file)) {
+                files.remove(i);
+                i--;
+            }
         }
 
         switch (orderChoiceBox.getValue()) {

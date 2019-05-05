@@ -3,6 +3,7 @@ package menagerie.gui;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -242,6 +243,16 @@ public class MainController {
             settings.setBoolean(Settings.Key.SHOW_HELP_ON_START, false);
         }
 
+        ((StringProperty) settings.getProperty(Settings.Key.USER_FILETYPES)).addListener((observable, oldValue, newValue) -> {
+            Filters.USER_EXTS.clear();
+
+            if (newValue != null && !newValue.isEmpty()) {
+                Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
+            }
+
+            System.out.println(Filters.USER_EXTS);
+        });
+
     }
 
     /**
@@ -439,7 +450,7 @@ public class MainController {
 
             if (files != null && !files.isEmpty()) {
                 for (File file : files) {
-                    importer.addJob(new ImportJob(file));
+                    if (Filters.FILE_NAME_FILTER.accept(file)) importer.addJob(new ImportJob(file));
                 }
             } else if (url != null && !url.isEmpty()) {
                 try {
@@ -461,7 +472,7 @@ public class MainController {
                     } else {
                         target = resolveDuplicateFilename(new File(folder, filename));
                     }
-                    importer.addJob(new ImportJob(new URL(url), target));
+                    if (Filters.FILE_NAME_FILTER.accept(target)) importer.addJob(new ImportJob(new URL(url), target));
                 } catch (MalformedURLException e) {
                     Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
                 }
@@ -908,13 +919,14 @@ public class MainController {
         currentlyPreviewing = item;
 
         if (item instanceof MediaItem) {
-            if (!previewMediaView.preview((MediaItem) item)) {
-                Main.log.warning("Failed to preview file: " + ((MediaItem) item).getFile());
-            }
+            previewMediaView.preview((MediaItem) item);
             itemInfoBox.setItem((MediaItem) item);
         } else if (item instanceof GroupItem) {
             previewMediaView.preview(((GroupItem) item).getElements().get(0));
             itemInfoBox.setItem(((GroupItem) item).getElements().get(0));
+        } else {
+            previewMediaView.preview(null);
+            itemInfoBox.setItem(null);
         }
 
         tagListView.getItems().clear();

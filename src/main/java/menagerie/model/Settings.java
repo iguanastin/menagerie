@@ -23,7 +23,7 @@ public class Settings {
     /**
      * Settings keys
      */
-    public enum Key {USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE, SHOW_HELP_ON_START, TAG_TAGME, TAG_VIDEO, TAG_IMAGE, EXPAND_ITEM_INFO}
+    public enum Key {USER_FILETYPES, USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE, SHOW_HELP_ON_START, TAG_TAGME, TAG_VIDEO, TAG_IMAGE, EXPAND_ITEM_INFO}
 
     private final Map<Key, Property> vars = new HashMap<>();
     private File file;
@@ -93,6 +93,11 @@ public class Settings {
         setBoolean(Key.AUTO_IMPORT_MOVE_TO_DEFAULT, true);
         setBoolean(Key.MUTE_VIDEO, true);
         setBoolean(Key.REPEAT_VIDEO, true);
+        setBoolean(Key.SHOW_HELP_ON_START, true);
+        setBoolean(Key.TAG_TAGME, true);
+        setBoolean(Key.TAG_IMAGE, false);
+        setBoolean(Key.TAG_VIDEO, true);
+        setBoolean(Key.EXPAND_ITEM_INFO, false);
         setInt(Key.GRID_WIDTH, 2);
         setInt(Key.WINDOW_WIDTH, Integer.MIN_VALUE);
         setInt(Key.WINDOW_HEIGHT, Integer.MIN_VALUE);
@@ -103,12 +108,8 @@ public class Settings {
         setString(Key.DATABASE_USER, "sa");
         setString(Key.DATABASE_PASSWORD, "");
         setString(Key.AUTO_IMPORT_FOLDER, null);
+        setString(Key.USER_FILETYPES, null);
         setDouble(Key.CONFIDENCE, 0.95);
-        setBoolean(Key.SHOW_HELP_ON_START, true);
-        setBoolean(Key.TAG_TAGME, true);
-        setBoolean(Key.TAG_IMAGE, false);
-        setBoolean(Key.TAG_VIDEO, true);
-        setBoolean(Key.EXPAND_ITEM_INFO, false);
     }
 
     /**

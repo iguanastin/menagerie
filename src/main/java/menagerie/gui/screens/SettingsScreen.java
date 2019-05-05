@@ -35,6 +35,7 @@ public class SettingsScreen extends Screen {
     private final CheckBox autoImportFolderCheckBox = new CheckBox("Auto-import from folder");
     private final CheckBox autoImportMoveToDefaultCheckBox = new CheckBox("Move to default folder before importing");
     private final TextField importFolderTextField = new TextField();
+    private final TextField alsoImportExtensionsTextField = new TextField();
     private final CheckBox fileNameFromURLCheckBox = new CheckBox("Automatically use filename from URL when importing from web");
     private final CheckBox tagWithTagmeCheckBox = new CheckBox("Tag imported items with 'tagme'");
     private final CheckBox tagWithVideoCheckBox = new CheckBox("Tag imported videos with 'video'");
@@ -125,6 +126,12 @@ public class SettingsScreen extends Screen {
         h = new HBox(5, new Label("Import from:"), importFolderTextField, browse);
         h.setAlignment(Pos.CENTER_LEFT);
         v2.getChildren().add(h);
+        alsoImportExtensionsTextField.setTooltip(new Tooltip("Filetypes separated by spaces. E.g. \".txt .pdf .doc\" without quote marks."));
+        alsoImportExtensionsTextField.setPromptText("Filetypes separated by spaces. E.g. \".txt .pdf .doc\" without quote marks.");
+        h = new HBox(5, new Label("Also import these filetypes:"), alsoImportExtensionsTextField);
+        h.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(alsoImportExtensionsTextField, Priority.ALWAYS);
+        v.getChildren().add(h);
         v.getChildren().add(fileNameFromURLCheckBox);
         v.getChildren().add(tagWithTagmeCheckBox);
         v.getChildren().add(tagWithVideoCheckBox);
@@ -236,6 +243,7 @@ public class SettingsScreen extends Screen {
         settings.setBoolean(Settings.Key.DO_AUTO_IMPORT, autoImportFolderCheckBox.isSelected());
         settings.setBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT, autoImportMoveToDefaultCheckBox.isSelected());
         settings.setString(Settings.Key.AUTO_IMPORT_FOLDER, importFolderTextField.getText());
+        settings.setString(Settings.Key.USER_FILETYPES, alsoImportExtensionsTextField.getText());
         settings.setBoolean(Settings.Key.USE_FILENAME_FROM_URL, fileNameFromURLCheckBox.isSelected());
         settings.setBoolean(Settings.Key.TAG_TAGME, tagWithTagmeCheckBox.isSelected());
         settings.setBoolean(Settings.Key.TAG_VIDEO, tagWithVideoCheckBox.isSelected());
@@ -273,6 +281,7 @@ public class SettingsScreen extends Screen {
         autoImportFolderCheckBox.setSelected(settings.getBoolean(Settings.Key.DO_AUTO_IMPORT));
         autoImportMoveToDefaultCheckBox.setSelected(settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
         importFolderTextField.setText(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER));
+        alsoImportExtensionsTextField.setText(settings.getString(Settings.Key.USER_FILETYPES));
         fileNameFromURLCheckBox.setSelected(settings.getBoolean(Settings.Key.USE_FILENAME_FROM_URL));
         tagWithTagmeCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_TAGME));
         tagWithVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_VIDEO));

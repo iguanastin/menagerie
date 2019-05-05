@@ -43,6 +43,9 @@ public class DynamicMediaView extends StackPane {
             getVideoView().startMedia(item.getFile().getAbsolutePath());
             showVideoView();
         } else {
+            if (getVideoView() != null) getVideoView().stop();
+            getMediaView().setImage(null);
+            hideAllViews();
             return false; // Unknown file type, can't preview it
         }
 
