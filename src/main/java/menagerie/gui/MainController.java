@@ -921,16 +921,8 @@ public class MainController {
         if (currentlyPreviewing != null) currentlyPreviewing.getTags().removeListener(previewTagListener);
         currentlyPreviewing = item;
 
-        if (item instanceof MediaItem) {
-            previewMediaView.preview((MediaItem) item);
-            itemInfoBox.setItem((MediaItem) item);
-        } else if (item instanceof GroupItem) {
-            previewMediaView.preview(((GroupItem) item).getElements().get(0));
-            itemInfoBox.setItem(((GroupItem) item).getElements().get(0));
-        } else {
-            previewMediaView.preview(null);
-            itemInfoBox.setItem(null);
-        }
+        previewMediaView.preview(item);
+        itemInfoBox.setItem(item);
 
         tagListView.getItems().clear();
         if (item != null) {
@@ -977,9 +969,11 @@ public class MainController {
      * @param items Set of items to ungroup if user confirms.
      */
     private void ungroupDialog(List<Item> items) {
-        List<Item> groups = new ArrayList<>(items);
-        groups.removeIf(item -> !(item instanceof GroupItem));
-        new ConfirmationScreen().open(screenPane, "Ungroup group?", String.format("Are you sure you want to ungroup %d groups?", groups.size()), () -> menagerie.forgetItems(groups), null);
+        List<GroupItem> groups = new ArrayList<>();
+        items.forEach(item -> {
+            if (item instanceof GroupItem) groups.add((GroupItem) item);
+        });
+        new ConfirmationScreen().open(screenPane, "Ungroup group?", String.format("Are you sure you want to ungroup %d groups?", groups.size()), () -> groups.forEach(GroupItem::ungroup), null);
     }
 
     /**

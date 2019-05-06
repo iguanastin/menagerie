@@ -104,15 +104,27 @@ public class Menagerie {
     public GroupItem createGroup(List<Item> elements, String title) {
         if (title == null || title.isEmpty() || elements == null || elements.isEmpty()) return null;
 
-        GroupItem group = new GroupItem(this, nextItemID, System.currentTimeMillis(), title);
+        GroupItem group = null;
+        for (Item item : elements) {
+            if (item instanceof GroupItem) {
+                group = (GroupItem) item;
+            }
+        }
+        if (group != null) {
+            group.setTitle(title);
+            elements.remove(group);
+        } else {
+            group = new GroupItem(this, nextItemID, System.currentTimeMillis(), title);
 
-        nextItemID++;
-        items.add(group);
-        try {
-            getDatabaseManager().createGroup(group);
-        } catch (SQLException e) {
-            Main.log.log(Level.SEVERE, "Error storing group in database: " + group, e);
-            return null;
+            try {
+                getDatabaseManager().createGroup(group);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, "Error storing group in database: " + group, e);
+                return null;
+            }
+
+            nextItemID++;
+            items.add(group);
         }
 
         for (Item item : elements) {
@@ -120,6 +132,7 @@ public class Menagerie {
                 group.addItem((MediaItem) item);
             } else if (item instanceof ArchiveItem) {
                 // Don't touch it
+                // TODO
             } else if (item instanceof GroupItem) {
                 List<MediaItem> e = new ArrayList<>(((GroupItem) item).getElements());
                 item.getTags().forEach(group::addTag);

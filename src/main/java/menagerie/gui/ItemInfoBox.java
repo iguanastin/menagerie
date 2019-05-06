@@ -7,6 +7,7 @@ import javafx.scene.Cursor;
 import javafx.scene.control.Label;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
+import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 
 import java.time.ZoneId;
@@ -96,31 +97,32 @@ public class ItemInfoBox extends VBox {
      *
      * @param item Item to pull info from. If null, uses default text.
      */
-    public void setItem(MediaItem item) {
+    public void setItem(Item item) {
+        idLabel.setText(DEFAULT_ID_TEXT);
+        dateLabel.setText(DEFAULT_DATE_TEXT);
+        fileSizeLabel.setText(DEFAULT_FILESIZE_TEXT);
+        resolutionLabel.setText(DEFAULT_RESOLUTION_TEXT);
+        filePathLabel.setText(DEFAULT_FILEPATH_TEXT);
+
         if (item != null) {
             idLabel.setText("ID: " + item.getId());
             dateLabel.setText(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(Locale.getDefault()).withZone(ZoneId.systemDefault()).format(new Date(item.getDateAdded()).toInstant()));
-            fileSizeLabel.setText(bytesToPrettyString(item.getFile().length()));
-            filePathLabel.setText(item.getFile().toString());
-            if (item.isImage()) { //TODO: Support for video resolution (May be possible in latest VLCJ api)
-                if (item.getImage().isBackgroundLoading() && item.getImage().getProgress() != 1) {
+        }
+
+        if (item instanceof MediaItem) {
+            fileSizeLabel.setText(bytesToPrettyString(((MediaItem) item).getFile().length()));
+            filePathLabel.setText(((MediaItem) item).getFile().toString());
+            if (((MediaItem) item).isImage()) { //TODO: Support for video resolution (May be possible in latest VLCJ api)
+                if (((MediaItem) item).getImage().isBackgroundLoading() && ((MediaItem) item).getImage().getProgress() != 1) {
                     resolutionLabel.setText("Loading...");
-                    item.getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
-                        if (newValue.doubleValue() == 1 && !item.getImage().isError())
-                            resolutionLabel.setText((int) item.getImage().getWidth() + "x" + (int) item.getImage().getHeight());
+                    ((MediaItem) item).getImage().progressProperty().addListener((observable, oldValue, newValue) -> {
+                        if (newValue.doubleValue() == 1 && !((MediaItem) item).getImage().isError())
+                            resolutionLabel.setText((int) ((MediaItem) item).getImage().getWidth() + "x" + (int) ((MediaItem) item).getImage().getHeight());
                     });
                 } else {
-                    resolutionLabel.setText((int) item.getImage().getWidth() + "x" + (int) item.getImage().getHeight());
+                    resolutionLabel.setText((int) ((MediaItem) item).getImage().getWidth() + "x" + (int) ((MediaItem) item).getImage().getHeight());
                 }
-            } else {
-                resolutionLabel.setText(DEFAULT_RESOLUTION_TEXT);
             }
-        } else {
-            idLabel.setText(DEFAULT_ID_TEXT);
-            dateLabel.setText(DEFAULT_DATE_TEXT);
-            fileSizeLabel.setText(DEFAULT_FILESIZE_TEXT);
-            resolutionLabel.setText(DEFAULT_RESOLUTION_TEXT);
-            filePathLabel.setText(DEFAULT_FILEPATH_TEXT);
         }
     }
 

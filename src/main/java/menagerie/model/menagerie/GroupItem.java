@@ -195,6 +195,21 @@ public class GroupItem extends Item {
         return true;
     }
 
+    /**
+     * Removes all elements and forgets this group.
+     *
+     * @return True if successfully ungrouped.
+     */
+    public boolean ungroup() {
+        if (isInvalidated()) return false;
+
+        removeAll();
+        boolean result = super.forget();
+        if (result) menagerie.refreshInSearches(this);
+
+        return result;
+    }
+
     @Override
     public String toString() {
         return getId() + " (" + elements.size() + "): " + title;
