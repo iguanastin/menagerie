@@ -162,7 +162,6 @@ public class Thumbnail {
     private static void startVideoThread() {
         Thread t = new Thread(() -> {
             videoThreadRunning = true;
-            vlcjMediaPlayer
             if (vlcjMediaPlayer != null) vlcjMediaPlayer.release();
             vlcjMediaPlayer = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS).newHeadlessMediaPlayer();
 
