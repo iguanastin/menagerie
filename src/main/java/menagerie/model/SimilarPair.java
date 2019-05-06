@@ -52,4 +52,15 @@ public class SimilarPair<T> {
         return obj2;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof SimilarPair)) return false;
+
+        if (getObject1().equals(((SimilarPair) obj).getObject1()) && getObject2().equals(((SimilarPair) obj).getObject2())) {
+            return true;
+        } else {
+            return getObject1().equals(((SimilarPair) obj).getObject2()) && getObject2().equals(((SimilarPair) obj).getObject1());
+        }
+    }
+
 }

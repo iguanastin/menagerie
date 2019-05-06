@@ -33,7 +33,7 @@ import java.util.logging.Level;
 public class ImportJob {
 
     public enum Status {
-        WAITING, IMPORTING, SUCCEEDED, SUCCEEDED_SIMILAR, FAILED_DUPLICATE, FAILED_IMPORT,
+        WAITING, IMPORTING, SUCCEEDED, FAILED_DUPLICATE, FAILED_IMPORT,
 
     }
 
@@ -110,10 +110,8 @@ public class ImportJob {
             setStatus(Status.FAILED_DUPLICATE);
             return;
         }
-        if (trySimilar(menagerie, settings)) {
-            setStatus(Status.SUCCEEDED_SIMILAR);
-            return;
-        }
+
+        trySimilar(menagerie, settings);
 
         setStatus(Status.SUCCEEDED);
     }
@@ -256,9 +254,8 @@ public class ImportJob {
      *
      * @param menagerie Menagerie to find similar items in.
      * @param settings  Application settings to use.
-     * @return True if similar items were found.
      */
-    private boolean trySimilar(Menagerie menagerie, Settings settings) {
+    private void trySimilar(Menagerie menagerie, Settings settings) {
         if (needsCheckSimilar && item.getHistogram() != null) {
             synchronized (this) {
                 similarTo = new ArrayList<>();
@@ -286,11 +283,7 @@ public class ImportJob {
             if (!anyMinimallySimilar) item.setHasNoSimilar(true);
 
             needsCheckSimilar = false;
-            synchronized (this) {
-                return !similarTo.isEmpty();
-            }
         }
-        return false;
     }
 
     /**

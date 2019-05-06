@@ -1,7 +1,9 @@
 package menagerie.gui.screens.importer;
 
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -13,6 +15,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import menagerie.gui.screens.Screen;
 import menagerie.model.SimilarPair;
+import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
@@ -23,10 +26,11 @@ import java.util.List;
 
 public class ImporterScreen extends Screen {
 
-    private final Label countLabel;
-    private final ListView<ImportJob> listView;
+    private final ListView<ImportJob> listView = new ListView<>();
 
     private final List<ImportJob> jobs = new ArrayList<>();
+
+    private final ObservableList<SimilarPair<MediaItem>> similar = FXCollections.observableArrayList();
 
 
     public ImporterScreen(ImporterThread importerThread, ObjectListener<List<SimilarPair<MediaItem>>> duplicateResolverListener, ObjectListener<MediaItem> selectItemListener) {
@@ -44,12 +48,11 @@ public class ImporterScreen extends Screen {
 
         Button exit = new Button("X");
         exit.setOnAction(event -> close());
-        Label title = new Label("Imports");
+        Label title = new Label("Imports: 0");
         setAlignment(title, Pos.CENTER_LEFT);
         BorderPane top = new BorderPane(null, null, exit, null, title);
         top.setPadding(new Insets(0, 0, 0, 5));
 
-        listView = new ListView<>();
         listView.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
@@ -69,7 +72,6 @@ public class ImporterScreen extends Screen {
                 playPauseButton.setText("Pause");
             }
         });
-        countLabel = new Label("0");
         Button cancelAllButton = new Button("Cancel All");
         cancelAllButton.setOnAction(event -> {
             jobs.forEach(job -> {
@@ -79,11 +81,22 @@ public class ImporterScreen extends Screen {
                 }
             });
         });
-        BorderPane bottom = new BorderPane(countLabel, null, playPauseButton, null, cancelAllButton);
+        Button pairsButton = new Button("Similar: 0");
+        similar.addListener((ListChangeListener<? super SimilarPair<MediaItem>>) c -> Platform.runLater(() -> {
+            pairsButton.setText("Similar: " + c.getList().size());
+            if (c.getList().isEmpty()) {
+                setStyle(null);
+            } else {
+                setStyle("-fx-color: blue;");
+            }
+        }));
+        pairsButton.setOnAction(event -> {
+            //TODO
+        });
+        BorderPane bottom = new BorderPane(pairsButton, null, playPauseButton, null, cancelAllButton);
         bottom.setPadding(new Insets(5));
-        setAlignment(countLabel, Pos.CENTER);
 
-        listView.getItems().addListener((ListChangeListener<? super ImportJob>) c -> countLabel.setText("" + c.getList().size()));
+        listView.getItems().addListener((ListChangeListener<? super ImportJob>) c -> title.setText("Imports: " + c.getList().size()));
 
         BorderPane root = new BorderPane(listView, top, null, bottom, null);
         root.setPrefWidth(400);
@@ -99,12 +112,17 @@ public class ImporterScreen extends Screen {
 
 
         // ImporterThread setup
-        listView.setCellFactory(param -> new ImportListCell(this, duplicateResolverListener, selectItemListener));
+        listView.setCellFactory(param -> new ImportListCell(this, selectItemListener));
         importerThread.addImporterListener(job -> {
             jobs.add(job);
             listView.getItems().add(job);
             job.addStatusListener(status -> {
                 if (status == ImportJob.Status.SUCCEEDED) {
+                    if (job.getSimilarTo() != null && !job.getSimilarTo().isEmpty()) {
+                        job.getSimilarTo().forEach(pair -> {
+                            if (similar.contains(pair)) similar.add(pair);
+                        });
+                    }
                     removeJob(job);
                 } else {
                     listView.getChildrenUnmodifiable().forEach(node -> {
@@ -133,6 +151,14 @@ public class ImporterScreen extends Screen {
      */
     public ListView<ImportJob> getListView() {
         return listView;
+    }
+
+    /**
+     *
+     * @return List of similar pairs of imports.
+     */
+    public ObservableList<SimilarPair<MediaItem>> getSimilar() {
+        return similar;
     }
 
 }

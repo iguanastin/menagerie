@@ -208,7 +208,7 @@ public class ImportDialogScreen extends Screen {
 
             if (!tagsToAdd.isEmpty() || renameToHash) {
                 job.addStatusListener(status -> {
-                    if (status == ImportJob.Status.SUCCEEDED || status == ImportJob.Status.SUCCEEDED_SIMILAR) {
+                    if (status == ImportJob.Status.SUCCEEDED) {
                         // Add tags
                         for (String tagName : tagsToAdd) {
                             if (tagName.contains(" "))

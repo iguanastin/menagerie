@@ -29,10 +29,6 @@ public class ImportListCell extends ListCell<ImportJob> {
     private final ProgressBar importingProgressBar;
     private final BorderPane importingView;
 
-    private final Label hasSimilarLabel;
-    private final Button hasSimilarResolveButton;
-    private final BorderPane hasSimilarView;
-
     private final Label duplicateLabel;
     private final BorderPane duplicateView;
 
@@ -40,7 +36,7 @@ public class ImportListCell extends ListCell<ImportJob> {
     private final BorderPane failedView;
 
 
-    ImportListCell(ImporterScreen screen, ObjectListener<List<SimilarPair<MediaItem>>> duplicateResolverListener, ObjectListener<MediaItem> selectItemListener) {
+    ImportListCell(ImporterScreen screen, ObjectListener<MediaItem> selectItemListener) {
         super();
         this.screen = screen;
 
@@ -61,31 +57,18 @@ public class ImportListCell extends ListCell<ImportJob> {
         importingView = new BorderPane(new Label("Importing..."), importingLabel, null, importingProgressBar, null);
         importingLabel.maxWidthProperty().bind(importingView.widthProperty().subtract(10));
 
-        hasSimilarLabel = new Label("N/A");
-        hasSimilarLabel.setTextOverrun(OverrunStyle.CENTER_WORD_ELLIPSIS);
-        hasSimilarResolveButton = new Button("Resolve");
-        hasSimilarResolveButton.setOnAction(event -> {
-            duplicateResolverListener.pass(getItem().getSimilarTo());
-            screen.removeJob(getItem());
-        });
-        Button dismissButton = new Button("Dismiss");
-        EventHandler<ActionEvent> dismissEventHandler = event -> screen.removeJob(getItem());
-        dismissButton.setOnAction(dismissEventHandler);
-        HBox h = new HBox(5, hasSimilarResolveButton, dismissButton);
-        h.setAlignment(Pos.CENTER_RIGHT);
-        hasSimilarView = new BorderPane(new Label("Successfully imported - Has potential duplicates"), hasSimilarLabel, null, h, null);
-        hasSimilarLabel.maxWidthProperty().bind(hasSimilarView.widthProperty().subtract(10));
 
         duplicateLabel = new Label("N/A");
         duplicateLabel.setTextOverrun(OverrunStyle.CENTER_WORD_ELLIPSIS);
-        dismissButton = new Button("Dismiss");
+        Button dismissButton = new Button("Dismiss");
+        EventHandler<ActionEvent> dismissEventHandler = event -> screen.removeJob(getItem());
         dismissButton.setOnAction(dismissEventHandler);
         Button showDuplicateButton = new Button("View");
         showDuplicateButton.setOnAction(event -> {
             selectItemListener.pass(getItem().getDuplicateOf());
             screen.removeJob(getItem());
         });
-        h = new HBox(5, showDuplicateButton, dismissButton);
+        HBox h = new HBox(5, showDuplicateButton, dismissButton);
         h.setAlignment(Pos.CENTER_RIGHT);
         duplicateView = new BorderPane(new Label("Failed - Exact duplicate already present"), duplicateLabel, null, h, null);
         duplicateLabel.maxWidthProperty().bind(duplicateView.widthProperty().subtract(10));
@@ -126,9 +109,6 @@ public class ImportListCell extends ListCell<ImportJob> {
                 case SUCCEEDED:
                     screen.removeJob(getItem());
                     break;
-                case SUCCEEDED_SIMILAR:
-                    showHasSimilarView();
-                    break;
                 case FAILED_DUPLICATE:
                     showDuplicateView();
                     break;
@@ -161,18 +141,6 @@ public class ImportListCell extends ListCell<ImportJob> {
         if (getItem() != null) {
             if (getItem().getUrl() != null) waitingLabel.setText(getItem().getUrl().toString());
             else waitingLabel.setText(getItem().getFile().toString());
-        }
-    }
-
-    /**
-     * Makes this cell show a hasSimilar view.
-     */
-    private void showHasSimilarView() {
-        setGraphic(hasSimilarView);
-        if (getItem() != null) {
-            hasSimilarResolveButton.setText("Resolve: " + getItem().getSimilarTo().size());
-            if (getItem().getUrl() != null) hasSimilarLabel.setText(getItem().getUrl().toString());
-            else hasSimilarLabel.setText(getItem().getFile().toString());
         }
     }
 

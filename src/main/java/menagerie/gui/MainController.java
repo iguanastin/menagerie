@@ -276,17 +276,15 @@ public class MainController {
         duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
         duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> itemGridView.select(item, false, false));
-        importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> {
-            Platform.runLater(() -> {
-                importsButton.setText("Imports: " + c.getList().size());
+        importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> {
+            importsButton.setText("Imports: " + c.getList().size());
 
-                if (c.getList().size() == 0) {
-                    importsButton.setStyle(null);
-                } else {
-                    importsButton.setStyle("-fx-base: blue;");
-                }
-            });
-        });
+            if (c.getList().size() == 0) {
+                importsButton.setStyle(null);
+            } else {
+                importsButton.setStyle("-fx-base: blue;");
+            }
+        }));
         initLogScreen();
         importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
         groupDialogScreen = new GroupDialogScreen();
