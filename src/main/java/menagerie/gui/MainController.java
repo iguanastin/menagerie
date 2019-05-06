@@ -35,6 +35,7 @@ import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListPopup;
 import menagerie.model.Settings;
+import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.db.DatabaseManager;
 import menagerie.model.menagerie.importer.ImportJob;
@@ -277,14 +278,27 @@ public class MainController {
         duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> itemGridView.select(item, false, false));
         importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> {
-            importsButton.setText("Imports: " + c.getList().size());
+            int count = c.getList().size() + importerScreen.getSimilar().size();
+            importsButton.setText("Imports: " + count);
 
-            if (c.getList().size() == 0) {
+            if (count == 0) {
                 importsButton.setStyle(null);
             } else {
                 importsButton.setStyle("-fx-base: blue;");
             }
         }));
+        importerScreen.getSimilar().addListener((ListChangeListener<? super SimilarPair<MediaItem>>) c -> {
+            Platform.runLater(() -> {
+                int count = c.getList().size() + importerScreen.getListView().getItems().size();
+                importsButton.setText("Imports: " + count);
+
+                if (count == 0) {
+                    importsButton.setStyle(null);
+                } else {
+                    importsButton.setStyle("-fx-base: blue;");
+                }
+            });
+        });
         initLogScreen();
         importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
         groupDialogScreen = new GroupDialogScreen();

@@ -15,7 +15,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import menagerie.gui.screens.Screen;
 import menagerie.model.SimilarPair;
-import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
@@ -85,13 +84,14 @@ public class ImporterScreen extends Screen {
         similar.addListener((ListChangeListener<? super SimilarPair<MediaItem>>) c -> Platform.runLater(() -> {
             pairsButton.setText("Similar: " + c.getList().size());
             if (c.getList().isEmpty()) {
-                setStyle(null);
+                pairsButton.setStyle(null);
             } else {
-                setStyle("-fx-color: blue;");
+                pairsButton.setStyle("-fx-base: blue;");
             }
         }));
         pairsButton.setOnAction(event -> {
-            //TODO
+            duplicateResolverListener.pass(new ArrayList<>(similar));
+            similar.clear();
         });
         BorderPane bottom = new BorderPane(pairsButton, null, playPauseButton, null, cancelAllButton);
         bottom.setPadding(new Insets(5));
@@ -118,9 +118,9 @@ public class ImporterScreen extends Screen {
             listView.getItems().add(job);
             job.addStatusListener(status -> {
                 if (status == ImportJob.Status.SUCCEEDED) {
-                    if (job.getSimilarTo() != null && !job.getSimilarTo().isEmpty()) {
+                    if (job.getSimilarTo() != null) {
                         job.getSimilarTo().forEach(pair -> {
-                            if (similar.contains(pair)) similar.add(pair);
+                            if (!similar.contains(pair)) similar.add(pair);
                         });
                     }
                     removeJob(job);
