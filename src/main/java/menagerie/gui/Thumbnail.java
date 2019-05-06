@@ -142,9 +142,6 @@ public class Thumbnail {
         Thread t = new Thread(() -> {
             imageThreadRunning = true;
 
-            if (vlcjMediaPlayer != null) vlcjMediaPlayer.release();
-            vlcjMediaPlayer = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS).newHeadlessMediaPlayer();
-
             while (imageThreadRunning) {
                 try {
                     Thumbnail thumb = imageQueue.take();
@@ -165,6 +162,9 @@ public class Thumbnail {
     private static void startVideoThread() {
         Thread t = new Thread(() -> {
             videoThreadRunning = true;
+            vlcjMediaPlayer
+            if (vlcjMediaPlayer != null) vlcjMediaPlayer.release();
+            vlcjMediaPlayer = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS).newHeadlessMediaPlayer();
 
             while (videoThreadRunning) {
                 try {
