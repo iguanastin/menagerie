@@ -504,14 +504,22 @@ public class MainController {
                     i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
                     MenuItem i1 = new MenuItem("Add to search");
                     i1.setOnAction(event1 -> {
-                        searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
+                        if (searchTextField.getText() == null) {
+                            searchTextField.setText(c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
+                        }
                         GroupItem scope = null;
                         if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
                         applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
                     });
                     MenuItem i2 = new MenuItem("Exclude from search");
                     i2.setOnAction(event1 -> {
-                        searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
+                        if (searchTextField.getText() == null || searchTextField.getText().isEmpty()) {
+                            searchTextField.setText("-" + c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
+                        }
                         GroupItem scope = null;
                         if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
                         applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
