@@ -275,14 +275,17 @@ public class MainController {
         duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(item -> itemGridView.select(item, false, false));
         duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
         duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
-        importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> itemGridView.select(item, false, false), count -> {
-            Platform.runLater(() -> importsButton.setText("Imports: " + count));
+        importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> itemGridView.select(item, false, false));
+        importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> {
+            Platform.runLater(() -> {
+                importsButton.setText("Imports: " + c.getList().size());
 
-            if (count == 0) {
-                importsButton.setStyle(null);
-            } else {
-                importsButton.setStyle("-fx-base: blue;");
-            }
+                if (c.getList().size() == 0) {
+                    importsButton.setStyle(null);
+                } else {
+                    importsButton.setStyle("-fx-base: blue;");
+                }
+            });
         });
         initLogScreen();
         importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);

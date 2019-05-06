@@ -28,11 +28,8 @@ public class ImporterScreen extends Screen {
 
     private final List<ImportJob> jobs = new ArrayList<>();
 
-    private final ObjectListener<Integer> countListener;
 
-
-    public ImporterScreen(ImporterThread importerThread, ObjectListener<List<SimilarPair<MediaItem>>> duplicateResolverListener, ObjectListener<MediaItem> selectItemListener, ObjectListener<Integer> countListener) {
-        this.countListener = countListener;
+    public ImporterScreen(ImporterThread importerThread, ObjectListener<List<SimilarPair<MediaItem>>> duplicateResolverListener, ObjectListener<MediaItem> selectItemListener) {
 
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
@@ -81,8 +78,6 @@ public class ImporterScreen extends Screen {
                     listView.getItems().remove(job);
                 }
             });
-
-            if (countListener != null) countListener.pass(jobs.size());
         });
         BorderPane bottom = new BorderPane(countLabel, null, playPauseButton, null, cancelAllButton);
         bottom.setPadding(new Insets(5));
@@ -111,7 +106,6 @@ public class ImporterScreen extends Screen {
             job.addStatusListener(status -> {
                 if (status == ImportJob.Status.SUCCEEDED) {
                     removeJob(job);
-                    countListener.pass(jobs.size());
                 } else {
                     listView.getChildrenUnmodifiable().forEach(node -> {
                         if (node instanceof ImportListCell) {
@@ -120,7 +114,6 @@ public class ImporterScreen extends Screen {
                     });
                 }
             });
-            if (countListener != null) countListener.pass(jobs.size());
         });
     }
 
@@ -132,7 +125,14 @@ public class ImporterScreen extends Screen {
     void removeJob(ImportJob job) {
         jobs.remove(job);
         Platform.runLater(() -> listView.getItems().remove(job));
-        if (countListener != null) countListener.pass(jobs.size());
+    }
+
+    /**
+     *
+     * @return The list view of this import screen.
+     */
+    public ListView<ImportJob> getListView() {
+        return listView;
     }
 
 }
