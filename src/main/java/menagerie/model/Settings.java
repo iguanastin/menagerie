@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model;
 
 import javafx.beans.property.*;
@@ -23,7 +47,7 @@ public class Settings {
     /**
      * Settings keys
      */
-    public enum Key {USER_FILETYPES, USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE, SHOW_HELP_ON_START, TAG_TAGME, TAG_VIDEO, TAG_IMAGE, EXPAND_ITEM_INFO}
+    public enum Key {LICENSES_AGREED, USER_FILETYPES, USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE, SHOW_HELP_ON_START, TAG_TAGME, TAG_VIDEO, TAG_IMAGE, EXPAND_ITEM_INFO}
 
     private final Map<Key, Property> vars = new HashMap<>();
     private File file;
@@ -103,6 +127,7 @@ public class Settings {
         setInt(Key.WINDOW_HEIGHT, Integer.MIN_VALUE);
         setInt(Key.WINDOW_X, Integer.MIN_VALUE);
         setInt(Key.WINDOW_Y, Integer.MIN_VALUE);
+        setInt(Key.LICENSES_AGREED, 0);
         setString(Key.DEFAULT_FOLDER, null);
         setString(Key.DATABASE_URL, "~/menagerie");
         setString(Key.DATABASE_USER, "sa");

@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model;
 
 /**
@@ -23,8 +47,7 @@ public class SimilarPair<T> {
     public SimilarPair(T obj1, T obj2, double similarity) {
         if (obj1 == null || obj2 == null) throw new NullPointerException("Objects must not be null");
         if (obj1.equals(obj2)) throw new IllegalArgumentException("Objects must not be equal");
-        if (similarity < 0 || similarity > 1)
-            throw new IllegalArgumentException("Similarity must be between 0 and 1, inclusive");
+        if (similarity < 0 || similarity > 1) throw new IllegalArgumentException("Similarity must be between 0 and 1, inclusive");
 
         this.obj1 = obj1;
         this.obj2 = obj2;

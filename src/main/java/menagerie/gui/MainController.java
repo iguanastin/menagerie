@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.gui;
 
 import javafx.application.Platform;
@@ -188,6 +212,9 @@ public class MainController {
      */
     private final Settings settings;
 
+    private static final int TARGET_LICENSE_VERSION = 1;
+    private static final File licensesFolder = new File("./licenses");
+
     // ------------------------------ Video preview status ---------------------------
     /**
      * Variable used to track if a video should be played after the player regains focus.
@@ -235,13 +262,16 @@ public class MainController {
         applySearch(null, null, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
 
         // Init folder watcher
-        if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT))
-            startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+        if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT)) startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
 
         // Show help screen if setting is set
         if (settings.getBoolean(Settings.Key.SHOW_HELP_ON_START)) {
             screenPane.open(helpScreen);
             settings.setBoolean(Settings.Key.SHOW_HELP_ON_START, false);
+        }
+
+        if (settings.getInt(Settings.Key.LICENSES_AGREED) < TARGET_LICENSE_VERSION) {
+            screenPane.open(new LicensesScreen(settings, licensesFolder, TARGET_LICENSE_VERSION));
         }
 
         if (settings.getString(Settings.Key.USER_FILETYPES) != null && !settings.getString(Settings.Key.USER_FILETYPES).trim().isEmpty()) {
@@ -346,8 +376,7 @@ public class MainController {
                 folderWatcherThread.stopWatching();
             }
 
-            if (newValue)
-                startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+            if (newValue) startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
         }));
         ((BooleanProperty) settings.getProperty(Settings.Key.MUTE_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
         ((BooleanProperty) settings.getProperty(Settings.Key.REPEAT_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
@@ -647,8 +676,7 @@ public class MainController {
             ItemGridCell c = new ItemGridCell();
             c.setOnDragDetected(event -> {
                 if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
-                    if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem()))
-                        itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                    if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem())) itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
 
                     Dragboard db = c.startDragAndDrop(TransferMode.ANY);
 
@@ -667,8 +695,7 @@ public class MainController {
                     List<File> files = new ArrayList<>();
                     itemGridView.getSelected().forEach(item -> {
                         if (item instanceof MediaItem) files.add(((MediaItem) item).getFile());
-                        else if (item instanceof GroupItem)
-                            ((GroupItem) item).getElements().forEach(mediaItem -> files.add(mediaItem.getFile()));
+                        else if (item instanceof GroupItem) ((GroupItem) item).getElements().forEach(mediaItem -> files.add(mediaItem.getFile()));
                     });
                     clipboard.putFiles(files);
                     db.setContent(clipboard);
