@@ -22,9 +22,12 @@ public class SimpleCSSColorPicker extends HBox {
             b.setStyle(String.format("-fx-base: %s;", css));
             getChildren().add(b);
         }
+        Button b = new Button("Default");
+        b.setOnAction(event -> confirmedColor(null));
+        getChildren().add(b);
 
         TextField textField = new TextField();
-        textField.setPromptText("Default");
+        textField.setPromptText("Custom");
         textField.setOnAction(event -> confirmedColor(textField.getText()));
         getChildren().add(textField);
     }
