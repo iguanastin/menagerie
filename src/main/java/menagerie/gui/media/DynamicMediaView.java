@@ -1,11 +1,16 @@
 package menagerie.gui.media;
 
 import javafx.application.Platform;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.StackPane;
 import menagerie.gui.Main;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.logging.Level;
 
 /**
  * Dynamically sized view that can display images or videos.
@@ -13,16 +18,14 @@ import menagerie.model.menagerie.MediaItem;
 public class DynamicMediaView extends StackPane {
 
     private DynamicVideoView videoView;
-    private final PanZoomImageView imageView;
+    private final PanZoomImageView imageView = new PanZoomImageView();
+    private final TextArea textView = new TextArea();
 
 
     public DynamicMediaView() {
         super();
 
-        //        videoView = new DynamicVideoView();
-        imageView = new PanZoomImageView();
-
-        getChildren().addAll(imageView);
+        getChildren().addAll(imageView, textView);
     }
 
     /**
@@ -37,16 +40,23 @@ public class DynamicMediaView extends StackPane {
         hideAllViews();
 
         if (item instanceof MediaItem) {
-            if (((MediaItem) item).isImage()) {
-                if (getVideoView() != null) getVideoView().stop();
-                getMediaView().setImage(((MediaItem) item).getImage());
-                showImageView();
-            } else if (((MediaItem) item).isVideo() && getVideoView() != null) {
-                getMediaView().setImage(null);
-                getVideoView().startMedia(((MediaItem) item).getFile().getAbsolutePath());
-                showVideoView();
-            } else {
-                return false; // Unknown file type, can't preview it
+            try {
+                if (((MediaItem) item).isImage()) {
+                    if (getVideoView() != null) getVideoView().stop();
+                    getMediaView().setImage(((MediaItem) item).getImage());
+                    showImageView();
+                } else if (((MediaItem) item).isVideo() && getVideoView() != null) {
+                    getMediaView().setImage(null);
+                    getVideoView().startMedia(((MediaItem) item).getFile().getAbsolutePath());
+                    showVideoView();
+                } else if (Files.probeContentType(((MediaItem) item).getFile().toPath()).equalsIgnoreCase("text/plain")) {
+                    textView.setText(String.join("\n", Files.readAllLines(((MediaItem) item).getFile().toPath())));
+                    showTextView();
+                } else {
+                    return false; // Unknown file type, can't preview it
+                }
+            } catch (IOException e) {
+                Main.log.log(Level.SEVERE, "", e);
             }
         } else if (item instanceof GroupItem) {
             if (!((GroupItem) item).getElements().isEmpty()) {
@@ -67,30 +77,37 @@ public class DynamicMediaView extends StackPane {
             getVideoView().setDisable(true);
             getVideoView().setOpacity(0);
         }
+        getTextView().setDisable(true);
+        getTextView().setOpacity(0);
     }
 
     /**
      * Shows the image view.
      */
     private void showImageView() {
+        hideAllViews();
         getMediaView().setDisable(false);
         getMediaView().setOpacity(1);
-        if (getVideoView() != null) {
-            getVideoView().setDisable(true);
-            getVideoView().setOpacity(0);
-        }
     }
 
     /**
      * Shows the video view, if VLCJ is loaded.
      */
     private void showVideoView() {
+        hideAllViews();
         if (getVideoView() != null) {
             getVideoView().setDisable(false);
             getVideoView().setOpacity(1);
         }
-        getMediaView().setDisable(true);
-        getMediaView().setOpacity(0);
+    }
+
+    /**
+     * Shows the text view
+     */
+    private void showTextView() {
+        hideAllViews();
+        textView.setOpacity(1);
+        textView.setDisable(false);
     }
 
     /**
@@ -114,6 +131,13 @@ public class DynamicMediaView extends StackPane {
      */
     public PanZoomImageView getMediaView() {
         return imageView;
+    }
+
+    /**
+     * @return The text view.
+     */
+    public TextArea getTextView() {
+        return textView;
     }
 
     /**

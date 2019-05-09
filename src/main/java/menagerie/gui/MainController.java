@@ -244,6 +244,7 @@ public class MainController {
             settings.setBoolean(Settings.Key.SHOW_HELP_ON_START, false);
         }
 
+        Filters.USER_EXTS.addAll(Arrays.asList(settings.getString(Settings.Key.USER_FILETYPES).trim().split(" ")));
         ((StringProperty) settings.getProperty(Settings.Key.USER_FILETYPES)).addListener((observable, oldValue, newValue) -> {
             Filters.USER_EXTS.clear();
 

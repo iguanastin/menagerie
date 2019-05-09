@@ -116,6 +116,8 @@ public class PanZoomImageView extends DynamicImageView {
                 }
 
                 updateViewPort();
+            } else {
+                fitImageToView();
             }
         });
     }
