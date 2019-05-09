@@ -1320,7 +1320,7 @@ public class MainController {
             Main.log.log(Level.WARNING, "Failed to save settings to file", e1);
         }
 
-        new Thread(() -> {
+        Thread t = new Thread(() -> {
             try {
                 Main.log.info("Attempting to shut down Menagerie database and defragment the file");
                 menagerie.getDatabaseManager().shutdownDefrag();
@@ -1341,9 +1341,17 @@ public class MainController {
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, "SQL exception when shutting down with defrag", e);
             }
-        }).start();
+        });
+        t.start();
 
         Platform.exit();
+
+        try {
+            t.join();
+        } catch (InterruptedException ignore) {
+        }
+
+        System.exit(0);
     }
 
     // ---------------------------------- Action Event Handlers --------------------------
