@@ -1,5 +1,6 @@
 package menagerie.gui.screens.dialogs;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -13,12 +14,14 @@ import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import menagerie.gui.Main;
+import menagerie.gui.screens.ProgressScreen;
 import menagerie.gui.screens.Screen;
 import menagerie.model.Settings;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
+import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
 
 import java.io.File;
@@ -161,81 +164,104 @@ public class ImportDialogScreen extends Screen {
     }
 
     private void importOnAction() {
-        for (int i = 0; i < files.size(); i++) {
-            File file = files.get(i);
+        ProgressScreen ps = new ProgressScreen();
+        CancellableThread ct = new CancellableThread() {
+            @Override
+            public void run() {
+                for (int i = 0; i < files.size(); i++) {
+                    if (!running) break;
 
-            if (file.isDirectory()) {
-                for (File f2 : Objects.requireNonNull(file.listFiles())) {
-                    if (Filters.FILE_NAME_FILTER.accept(f2) || (recursiveCheckBox.isSelected() && f2.isDirectory())) {
-                        files.add(f2);
-                    }
-                }
-                files.remove(i);
-                i--;
-            } else if (menagerie.isFilePresent(file)) {
-                files.remove(i);
-                i--;
-            } else if (!Filters.FILE_NAME_FILTER.accept(file)) {
-                files.remove(i);
-                i--;
-            }
-        }
+                    File file = files.get(i);
 
-        switch (orderChoiceBox.getValue()) {
-            case Date_Modified:
-                files.sort(Comparator.comparingLong(File::lastModified));
-                break;
-            case Alphabetical:
-                files.sort(Comparator.comparing(File::getName));
-                break;
-            case Default:
-            default:
-                break;
-        }
-
-        for (File file : files) {
-            final ImportJob job = new ImportJob(file);
-            final List<String> tagsToAdd = new ArrayList<>();
-
-            if (tagWithParentCheckBox.isSelected()) tagsToAdd.add(file.getParentFile().getName().toLowerCase());
-            if (tagWithTagsCheckBox.isSelected() && tagWithTagsTextField.getText() != null && !tagWithTagsTextField.getText().isEmpty()) {
-                tagsToAdd.addAll(Arrays.asList(tagWithTagsTextField.getText().toLowerCase().split("\\s")));
-            }
-
-            final boolean renameToHash = renameWithHashCheckBox.isSelected();
-
-            if (!tagsToAdd.isEmpty() || renameToHash) {
-                job.addStatusListener(status -> {
-                    if (status == ImportJob.Status.SUCCEEDED) {
-                        // Add tags
-                        for (String tagName : tagsToAdd) {
-                            if (tagName.contains(" "))
-                                tagName = tagName.replaceAll("\\s", "_"); // Replace all whitespace
-
-                            if (!tagName.matches(Tag.NAME_REGEX)) continue;
-
-                            Tag t = menagerie.getTagByName(tagName);
-                            if (t == null) t = menagerie.createTag(tagName);
-                            job.getItem().addTag(t);
-                        }
-
-                        // Rename to hash
-                        if (renameToHash && job.getItem().getMD5() != null) {
-                            File dest = new File(job.getFile().getParentFile(), job.getItem().getMD5() + job.getFile().getName().substring(job.getFile().getName().lastIndexOf('.')));
-                            if (job.getItem().moveFile(dest)) {
-                                Main.log.info(String.format("Renamed file \"%s\" to \"%s\"", job.getFile().getName(), dest.getName()));
-                            } else {
-                                Main.log.warning(String.format("Failed to rename file \"%s\" to \"%s\"", job.getFile(), dest));
+                    if (file.isDirectory()) {
+                        for (File f2 : Objects.requireNonNull(file.listFiles())) {
+                            if (Filters.FILE_NAME_FILTER.accept(f2) || (recursiveCheckBox.isSelected() && f2.isDirectory())) {
+                                files.add(f2);
                             }
                         }
+                        files.remove(i);
+                        i--;
+                    } else if (menagerie.isFilePresent(file)) {
+                        files.remove(i);
+                        i--;
+                    } else if (!Filters.FILE_NAME_FILTER.accept(file)) {
+                        files.remove(i);
+                        i--;
                     }
+
+                    final int finalI = i;
+                    final int finalSize = files.size();
+                    Platform.runLater(() -> ps.setProgress(finalI, finalSize));
+                }
+
+                if (running) {
+                    switch (orderChoiceBox.getValue()) {
+                        case Date_Modified:
+                            files.sort(Comparator.comparingLong(File::lastModified));
+                            break;
+                        case Alphabetical:
+                            files.sort(Comparator.comparing(File::getName));
+                            break;
+                        case Default:
+                        default:
+                            break;
+                    }
+
+                    for (File file : files) {
+                        final ImportJob job = new ImportJob(file);
+                        final List<String> tagsToAdd = new ArrayList<>();
+
+                        if (tagWithParentCheckBox.isSelected())
+                            tagsToAdd.add(file.getParentFile().getName().toLowerCase());
+                        if (tagWithTagsCheckBox.isSelected() && tagWithTagsTextField.getText() != null && !tagWithTagsTextField.getText().isEmpty()) {
+                            tagsToAdd.addAll(Arrays.asList(tagWithTagsTextField.getText().toLowerCase().split("\\s")));
+                        }
+
+                        final boolean renameToHash = renameWithHashCheckBox.isSelected();
+
+                        if (!tagsToAdd.isEmpty() || renameToHash) {
+                            job.addStatusListener(status -> {
+                                if (status == ImportJob.Status.SUCCEEDED) {
+                                    // Add tags
+                                    for (String tagName : tagsToAdd) {
+                                        if (tagName.contains(" "))
+                                            tagName = tagName.replaceAll("\\s", "_"); // Replace all whitespace
+
+                                        if (!tagName.matches(Tag.NAME_REGEX)) continue;
+
+                                        Tag t = menagerie.getTagByName(tagName);
+                                        if (t == null) t = menagerie.createTag(tagName);
+                                        job.getItem().addTag(t);
+                                    }
+
+                                    // Rename to hash
+                                    if (renameToHash && job.getItem().getMD5() != null) {
+                                        File dest = new File(job.getFile().getParentFile(), job.getItem().getMD5() + job.getFile().getName().substring(job.getFile().getName().lastIndexOf('.')));
+                                        if (job.getItem().moveFile(dest)) {
+                                            Main.log.info(String.format("Renamed file \"%s\" to \"%s\"", job.getFile().getName(), dest.getName()));
+                                        } else {
+                                            Main.log.warning(String.format("Failed to rename file \"%s\" to \"%s\"", job.getFile(), dest));
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        importer.addJob(job);
+                    }
+                }
+
+                Platform.runLater(() -> {
+                    ps.close();
+                    close();
                 });
             }
-
-            importer.addJob(job);
-        }
-
-        close();
+        };
+        ps.open(getManager(), "Finding files", "Finding valid files for import...", () -> {
+            ct.cancel();
+            close();
+        });
+        ct.start();
     }
 
 }
