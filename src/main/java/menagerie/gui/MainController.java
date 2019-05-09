@@ -244,15 +244,15 @@ public class MainController {
             settings.setBoolean(Settings.Key.SHOW_HELP_ON_START, false);
         }
 
-        Filters.USER_EXTS.addAll(Arrays.asList(settings.getString(Settings.Key.USER_FILETYPES).trim().split(" ")));
+        if (settings.getString(Settings.Key.USER_FILETYPES) != null && !settings.getString(Settings.Key.USER_FILETYPES).trim().isEmpty()) {
+            Filters.USER_EXTS.addAll(Arrays.asList(settings.getString(Settings.Key.USER_FILETYPES).trim().split(" ")));
+        }
         ((StringProperty) settings.getProperty(Settings.Key.USER_FILETYPES)).addListener((observable, oldValue, newValue) -> {
             Filters.USER_EXTS.clear();
 
             if (newValue != null && !newValue.isEmpty()) {
                 Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
             }
-
-            System.out.println(Filters.USER_EXTS);
         });
 
     }

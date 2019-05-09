@@ -172,12 +172,10 @@ public class ImportDialogScreen extends Screen {
                 }
                 files.remove(i);
                 i--;
-            }
-            if (menagerie.isFilePresent(file)) {
+            } else if (menagerie.isFilePresent(file)) {
                 files.remove(i);
                 i--;
-            }
-            if (!Filters.FILE_NAME_FILTER.accept(file)) {
+            } else if (!Filters.FILE_NAME_FILTER.accept(file)) {
                 files.remove(i);
                 i--;
             }
