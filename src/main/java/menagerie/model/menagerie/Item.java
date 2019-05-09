@@ -132,6 +132,7 @@ public abstract class Item implements Comparable<Item> {
     protected boolean forget() {
         if (isInvalidated() || menagerie == null || !menagerie.getItems().remove(this)) return false;
 
+        menagerie.itemRemoved(this);
         if (hasDatabase()) getDatabase().removeItemAsync(getId());
         getTags().forEach(Tag::decrementFrequency);
         invalidate();

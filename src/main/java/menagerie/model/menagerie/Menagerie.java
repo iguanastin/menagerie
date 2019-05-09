@@ -18,6 +18,7 @@ public class Menagerie {
     // ------------------------------ Variables -----------------------------------
 
     private final List<Item> items = new ArrayList<>();
+    private final Set<File> fileSet = new HashSet<>();
     private final List<Tag> tags = new ArrayList<>();
 
     private int nextItemID;
@@ -44,6 +45,12 @@ public class Menagerie {
 
         nextItemID = databaseManager.getHighestItemID() + 1;
         nextTagID = databaseManager.getHighestTagID() + 1;
+
+        for (Item item : items) {
+            if (item instanceof MediaItem) {
+                fileSet.add(((MediaItem) item).getFile());
+            }
+        }
     }
 
     /**
@@ -80,6 +87,7 @@ public class Menagerie {
 
         // Add media and commit to database
         items.add(media);
+        fileSet.add(file);
         nextItemID++;
         try {
             getDatabaseManager().createMedia(media);
@@ -288,10 +296,7 @@ public class Menagerie {
      * @return True if this file has already been imported into this Menagerie.
      */
     public boolean isFilePresent(File file) {
-        for (Item item : items) {
-            if (item instanceof MediaItem && ((MediaItem) item).getFile().equals(file)) return true;
-        }
-        return false;
+        return fileSet.contains(file);
     }
 
     /**
@@ -310,6 +315,15 @@ public class Menagerie {
      */
     public void registerSearch(Search search) {
         activeSearches.add(search);
+    }
+
+    /**
+     * Called by items when they removed themselves from the menagerie.
+     *
+     * @param item Item that was removed.
+     */
+    void itemRemoved(Item item) {
+        if (item instanceof MediaItem) fileSet.remove(((MediaItem) item).getFile());
     }
 
 }

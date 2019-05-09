@@ -168,8 +168,15 @@ public class ImportDialogScreen extends Screen {
         CancellableThread ct = new CancellableThread() {
             @Override
             public void run() {
+                int processed = 0;
+                int total = files.size();
                 for (int i = 0; i < files.size(); i++) {
                     if (!running) break;
+
+                    final int finalNum = processed;
+                    final int finalTotal = total;
+                    Platform.runLater(() -> ps.setProgress(finalNum, finalTotal));
+                    processed++;
 
                     File file = files.get(i);
 
@@ -177,21 +184,15 @@ public class ImportDialogScreen extends Screen {
                         for (File f2 : Objects.requireNonNull(file.listFiles())) {
                             if (Filters.FILE_NAME_FILTER.accept(f2) || (recursiveCheckBox.isSelected() && f2.isDirectory())) {
                                 files.add(f2);
+                                total++;
                             }
                         }
                         files.remove(i);
                         i--;
-                    } else if (menagerie.isFilePresent(file)) {
-                        files.remove(i);
-                        i--;
-                    } else if (!Filters.FILE_NAME_FILTER.accept(file)) {
+                    } else if (!Filters.FILE_NAME_FILTER.accept(file) || menagerie.isFilePresent(file)) {
                         files.remove(i);
                         i--;
                     }
-
-                    final int finalI = i;
-                    final int finalSize = files.size();
-                    Platform.runLater(() -> ps.setProgress(finalI, finalSize));
                 }
 
                 if (running) {
