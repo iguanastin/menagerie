@@ -43,12 +43,14 @@ import menagerie.model.menagerie.Tag;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.PatternSyntaxException;
 
 public class TagListScreen extends Screen {
 
-    private final ListView<Tag> listView;
-    private final TextField searchField;
-    private final ChoiceBox<String> orderBox;
+    private final ListView<Tag> listView = new ListView<>();
+    private final TextField searchField = new TextField();
+    private final ChoiceBox<String> orderBox = new ChoiceBox<>();
+    private final CheckBox regexCheckBox = new CheckBox("Regex");
 
     private final ObservableList<Tag> tags = FXCollections.observableArrayList();
 
@@ -62,7 +64,7 @@ public class TagListScreen extends Screen {
 
         //Init "Window"
         VBox v = new VBox(5);
-        v.setPrefWidth(300);
+        v.setPrefWidth(400);
         v.setMaxWidth(USE_PREF_SIZE);
         v.setStyle("-fx-background-color: -fx-base;");
         v.setPadding(new Insets(5));
@@ -77,15 +79,13 @@ public class TagListScreen extends Screen {
         exitButton.setOnAction(event -> close());
         BorderPane header = new BorderPane(null, null, exitButton, null, new Label("Tags"));
 
-        orderBox = new ChoiceBox<>();
         orderBox.getItems().addAll("Name", "ID", "Frequency");
         orderBox.getSelectionModel().clearAndSelect(0);
         orderBox.setOnAction(event -> updateListOrder());
-        HBox h = new HBox(5, new Label("Order by:"), orderBox);
-        h.setAlignment(Pos.CENTER_LEFT);
+        HBox orderHBox = new HBox(5, new Label("Order by:"), orderBox);
+        orderHBox.setAlignment(Pos.CENTER_LEFT);
 
         //Init listView
-        listView = new ListView<>();
         VBox.setVgrow(listView, Priority.ALWAYS);
         setCellFactory(param -> new TagListCell());
         listView.setOnKeyPressed(event -> {
@@ -95,20 +95,15 @@ public class TagListScreen extends Screen {
         });
 
         //Init textfield
-        searchField = new TextField();
         searchField.setPromptText("Search tags by name");
-        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
-            listView.getItems().clear();
-            for (Tag t : tags) {
-                if (t.getName().toLowerCase().startsWith(newValue.toLowerCase())) {
-                    listView.getItems().add(t);
-                }
-            }
-            updateListOrder();
-        });
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> updateSearchResults());
+        regexCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> updateSearchResults());
+        HBox searchHBox = new HBox(5, regexCheckBox, searchField);
+        searchHBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(searchField, Priority.ALWAYS);
 
         //Add children
-        v.getChildren().addAll(header, new Separator(), h, searchField, listView);
+        v.getChildren().addAll(header, new Separator(), orderHBox, searchHBox, listView);
 
 
         tags.addListener((ListChangeListener<? super Tag>) c -> {
@@ -126,6 +121,28 @@ public class TagListScreen extends Screen {
         setDefaultFocusNode(searchField);
     }
 
+    private void updateSearchResults() {
+        listView.getItems().clear();
+        for (Tag t : tags) {
+            String name = t.getName().toLowerCase();
+            String val = searchField.getText();
+            if (val == null) {
+                val = "";
+            } else {
+                val = val.trim().toLowerCase();
+            }
+            if (regexCheckBox.isSelected()) {
+                try {
+                    if (name.matches(val)) listView.getItems().add(t);
+                } catch (PatternSyntaxException ignore) {
+                }
+            } else {
+                if (name.contains(val)) listView.getItems().add(t);
+            }
+        }
+        updateListOrder();
+    }
+
     /**
      * Opens the screen in a manager with a set of tags.
      *
@@ -137,6 +154,8 @@ public class TagListScreen extends Screen {
 
         this.tags.clear();
         this.tags.addAll(tags);
+
+        updateSearchResults();
     }
 
     private void updateListOrder() {
