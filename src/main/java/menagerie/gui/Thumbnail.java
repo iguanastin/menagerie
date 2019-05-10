@@ -128,7 +128,6 @@ public class Thumbnail {
 
         try {
             if (mediaPlayer.media().start(file.getAbsolutePath())) {
-                mediaPlayer.submit(() -> mediaPlayer.controls().setPosition(0.01f));
                 inPositionLatch.await(1, TimeUnit.SECONDS);
                 if (inPositionLatch.getCount() != 0) return;
                 mediaPlayer.events().removeMediaPlayerEventListener(eventListener);
