@@ -94,6 +94,7 @@ public class DatabaseManager extends Thread {
 
 
     public DatabaseManager(Connection database) throws SQLException {
+        super("DatabaseManager Thread");
 
         // ------------------------------------ Init statements -----------------------------------
         // Media

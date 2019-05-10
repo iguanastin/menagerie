@@ -46,6 +46,7 @@ public class FolderWatcherThread extends Thread {
      * @param listener    Listener to notify when files are found.
      */
     public FolderWatcherThread(File watchFolder, FileFilter filter, long timeout, FolderWatcherListener listener) {
+        super("Folder Watcher Thread");
         this.watchFolder = watchFolder;
         this.filter = filter;
         this.timeout = timeout;

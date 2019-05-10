@@ -51,6 +51,8 @@ public class ImporterThread extends Thread {
 
 
     public ImporterThread(Menagerie menagerie, Settings settings) {
+        super("Menagerie Importer Thread");
+
         this.menagerie = menagerie;
         this.settings = settings;
     }

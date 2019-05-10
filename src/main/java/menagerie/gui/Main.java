@@ -59,7 +59,7 @@ public class Main extends Application {
     private static final String logFilePath = "menagerie.log";
 
     private static final String SPLASH_FXML = "/fxml/splash.fxml";
-    private static final String SPLASH_BACKGROUND = "/splash.jpg";
+    private static final String SPLASH_BACKGROUND = "/misc/splash.jpg";
     static final String MAIN_FXML = "/fxml/main.fxml";
     static final String CSS = "/fxml/dark.css";
     static final String MAIN_TITLE = "Menagerie";

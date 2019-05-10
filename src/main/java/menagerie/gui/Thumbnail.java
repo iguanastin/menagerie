@@ -133,37 +133,43 @@ public class Thumbnail {
         };
         Objects.requireNonNull(vlcjMediaPlayer).events().addMediaPlayerEventListener(eventListener);
 
-        if (vlcjMediaPlayer.media().start(file.getAbsolutePath())) {
-            vlcjMediaPlayer.controls().setPosition(0.1f);
-            try {
-                inPositionLatch.await();
-            } catch (InterruptedException e) {
-                Main.log.log(Level.WARNING, "Video thumbnailer interrupted while waiting for video init", e);
-            }
-            vlcjMediaPlayer.events().removeMediaPlayerEventListener(eventListener);
-
-            float vidWidth = (float) vlcjMediaPlayer.video().videoDimension().getWidth();
-            float vidHeight = (float) vlcjMediaPlayer.video().videoDimension().getHeight();
-            float scale = Thumbnail.THUMBNAIL_SIZE / vidWidth;
-            if (scale * vidHeight > Thumbnail.THUMBNAIL_SIZE) scale = Thumbnail.THUMBNAIL_SIZE / vidHeight;
-            int width = (int) (scale * vidWidth);
-            int height = (int) (scale * vidHeight);
-
-            try {
-                image = SwingFXUtils.toFXImage(vlcjMediaPlayer.snapshots().get(width, height), null);
-
-                synchronized (imageReadyListeners) {
-                    imageReadyListeners.forEach(listener -> listener.pass(image));
+        try {
+            if (vlcjMediaPlayer.media().start(file.getAbsolutePath())) {
+                vlcjMediaPlayer.controls().setPosition(0.1f);
+                try {
+                    inPositionLatch.await();
+                } catch (InterruptedException e) {
+                    Main.log.log(Level.WARNING, "Video thumbnailer interrupted while waiting for video init", e);
                 }
-                synchronized (imageLoadedListeners) {
-                    imageLoadedListeners.forEach(listener -> listener.pass(image));
-                }
-                loaded = true;
-            } catch (RuntimeException e) {
-                Main.log.log(Level.WARNING, "Failed to get snapshot", e);
-            }
+                vlcjMediaPlayer.events().removeMediaPlayerEventListener(eventListener);
 
-            vlcjMediaPlayer.controls().stop();
+                if (vlcjMediaPlayer.video().videoDimension() != null) {
+                    float vidWidth = (float) vlcjMediaPlayer.video().videoDimension().getWidth();
+                    float vidHeight = (float) vlcjMediaPlayer.video().videoDimension().getHeight();
+                    float scale = Thumbnail.THUMBNAIL_SIZE / vidWidth;
+                    if (scale * vidHeight > Thumbnail.THUMBNAIL_SIZE) scale = Thumbnail.THUMBNAIL_SIZE / vidHeight;
+                    int width = (int) (scale * vidWidth);
+                    int height = (int) (scale * vidHeight);
+
+                    try {
+                        image = SwingFXUtils.toFXImage(vlcjMediaPlayer.snapshots().get(width, height), null);
+
+                        synchronized (imageReadyListeners) {
+                            imageReadyListeners.forEach(listener -> listener.pass(image));
+                        }
+                        synchronized (imageLoadedListeners) {
+                            imageLoadedListeners.forEach(listener -> listener.pass(image));
+                        }
+                        loaded = true;
+                    } catch (RuntimeException e) {
+                        Main.log.log(Level.WARNING, "Failed to get video snapshot of file: " + file, e);
+                    }
+                }
+
+                vlcjMediaPlayer.controls().stop();
+            }
+        } catch (Exception e) {
+            Main.log.log(Level.WARNING, "Error while trying to create video thumbnail: " + file, e);
         }
     }
 
@@ -183,7 +189,7 @@ public class Thumbnail {
                 } catch (InterruptedException ignore) {
                 }
             }
-        });
+        }, "Image Thumbnailer Thread");
         t.setDaemon(true);
         t.start();
     }
@@ -209,7 +215,7 @@ public class Thumbnail {
                 } catch (InterruptedException ignore) {
                 }
             }
-        });
+        }, "Video Thumbnailer Thread");
         t.setDaemon(true);
         t.start();
     }

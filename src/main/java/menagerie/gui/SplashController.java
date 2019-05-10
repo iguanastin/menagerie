@@ -133,7 +133,7 @@ public class SplashController {
 
             // ----------------------------------- Connect database manager --------------------------------------------
             Platform.runLater(() -> statusLabel.setText("Plugging in database manager..."));
-            DatabaseManager databaseManager = null;
+            DatabaseManager databaseManager;
             try {
                 databaseManager = new DatabaseManager(database);
             } catch (SQLException e) {
@@ -170,7 +170,7 @@ public class SplashController {
             databaseManager.start();
 
             // ------------------------------------ Construct Menagerie ------------------------------------------------
-            Menagerie menagerie = null;
+            Menagerie menagerie;
             try {
                 menagerie = new Menagerie(databaseManager);
             } catch (SQLException e) {
@@ -187,7 +187,7 @@ public class SplashController {
             final Menagerie finalMenagerie = menagerie;
             Platform.runLater(() -> openMain(finalMenagerie, settings));
 
-        }).start();
+        }, "Startup Thread").start();
     }
 
     private void openMain(Menagerie menagerie, Settings settings) {
