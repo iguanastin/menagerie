@@ -68,27 +68,14 @@ public class Thumbnail {
     private boolean doNotLoad = false;
 
     private final Set<ObjectListener<Image>> imageReadyListeners = new HashSet<>();
-    private final Set<ObjectListener<Image>> imageLoadedListeners = new HashSet<>();
 
     private static volatile boolean imageThreadRunning = false;
     private static volatile boolean videoThreadRunning = false;
     private static final BlockingQueue<Thumbnail> imageQueue = new LinkedBlockingQueue<>();
     private static final BlockingQueue<Thumbnail> videoQueue = new LinkedBlockingQueue<>();
-    private static MediaPlayer vlcjMediaPlayer;
+    private static MediaPlayer mediaPlayer;
+    private static MediaPlayerFactory mediaPlayerFactory;
 
-
-    /**
-     * Wraps a thumbnail around an existing image.
-     *
-     * @param image Image to wrap.
-     */
-    public Thumbnail(Item owner, Image image) {
-        this.image = image;
-        this.owner = owner;
-        file = null;
-
-        registerListenersToImage();
-    }
 
     /**
      * Constructs a thumbnail for a file and begins loading it.
@@ -123,42 +110,40 @@ public class Thumbnail {
     }
 
     private void loadVideoFromDisk() {
-        final CountDownLatch inPositionLatch = new CountDownLatch(1);
+        final CountDownLatch inPositionLatch = new CountDownLatch(2);
 
         MediaPlayerEventListener eventListener = new MediaPlayerEventAdapter() {
             @Override
             public void positionChanged(MediaPlayer mediaPlayer, float newPosition) {
                 inPositionLatch.countDown();
             }
+
+            @Override
+            public void videoOutput(MediaPlayer mediaPlayer, int newCount) {
+                inPositionLatch.countDown();
+            }
         };
-        Objects.requireNonNull(vlcjMediaPlayer).events().addMediaPlayerEventListener(eventListener);
+        Objects.requireNonNull(mediaPlayer).events().addMediaPlayerEventListener(eventListener);
 
         try {
-            if (vlcjMediaPlayer.media().start(file.getAbsolutePath())) {
-                vlcjMediaPlayer.controls().setPosition(0.1f);
-                try {
-                    inPositionLatch.await();
-                } catch (InterruptedException e) {
-                    Main.log.log(Level.WARNING, "Video thumbnailer interrupted while waiting for video init", e);
-                }
-                vlcjMediaPlayer.events().removeMediaPlayerEventListener(eventListener);
+            if (mediaPlayer.media().start(file.getAbsolutePath())) {
+                mediaPlayer.submit(() -> mediaPlayer.controls().setPosition(0.01f));
+                inPositionLatch.await();
+                mediaPlayer.events().removeMediaPlayerEventListener(eventListener);
 
-                if (vlcjMediaPlayer.video().videoDimension() != null) {
-                    float vidWidth = (float) vlcjMediaPlayer.video().videoDimension().getWidth();
-                    float vidHeight = (float) vlcjMediaPlayer.video().videoDimension().getHeight();
+                if (mediaPlayer.video().videoDimension() != null) {
+                    float vidWidth = (float) mediaPlayer.video().videoDimension().getWidth();
+                    float vidHeight = (float) mediaPlayer.video().videoDimension().getHeight();
                     float scale = Thumbnail.THUMBNAIL_SIZE / vidWidth;
                     if (scale * vidHeight > Thumbnail.THUMBNAIL_SIZE) scale = Thumbnail.THUMBNAIL_SIZE / vidHeight;
                     int width = (int) (scale * vidWidth);
                     int height = (int) (scale * vidHeight);
 
                     try {
-                        image = SwingFXUtils.toFXImage(vlcjMediaPlayer.snapshots().get(width, height), null);
+                        image = SwingFXUtils.toFXImage(mediaPlayer.snapshots().get(width, height), null);
 
                         synchronized (imageReadyListeners) {
                             imageReadyListeners.forEach(listener -> listener.pass(image));
-                        }
-                        synchronized (imageLoadedListeners) {
-                            imageLoadedListeners.forEach(listener -> listener.pass(image));
                         }
                         loaded = true;
                     } catch (RuntimeException e) {
@@ -166,17 +151,17 @@ public class Thumbnail {
                     }
                 }
 
-                vlcjMediaPlayer.controls().stop();
+                mediaPlayer.controls().stop();
             }
-        } catch (Exception e) {
-            Main.log.log(Level.WARNING, "Error while trying to create video thumbnail: " + file, e);
+        } catch (Throwable t) {
+            Main.log.log(Level.WARNING, "Error while trying to create video thumbnail: " + file, t);
         }
     }
 
     private static void startImageThread() {
-        Thread t = new Thread(() -> {
-            imageThreadRunning = true;
+        imageThreadRunning = true;
 
+        Thread t = new Thread(() -> {
             while (imageThreadRunning) {
                 try {
                     Thumbnail thumb = imageQueue.take();
@@ -195,10 +180,12 @@ public class Thumbnail {
     }
 
     private static void startVideoThread() {
+        videoThreadRunning = true;
+
         Thread t = new Thread(() -> {
-            videoThreadRunning = true;
-            if (vlcjMediaPlayer != null) vlcjMediaPlayer.release();
-            vlcjMediaPlayer = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS).mediaPlayers().newEmbeddedMediaPlayer();
+            if (mediaPlayer != null) mediaPlayer.release();
+            mediaPlayerFactory = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS);
+            mediaPlayer = mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer();
 
             while (videoThreadRunning) {
                 try {
@@ -231,18 +218,12 @@ public class Thumbnail {
             image.progressProperty().addListener((observable, oldValue, newValue) -> {
                 if (!image.isError() && newValue.doubleValue() == 1.0) {
                     loaded = true;
-                    synchronized (imageLoadedListeners) {
-                        imageLoadedListeners.forEach(listener -> listener.pass(image));
-                    }
                 }
             });
         } else {
             loaded = true;
             synchronized (imageReadyListeners) {
                 imageReadyListeners.forEach(listener -> listener.pass(image));
-            }
-            synchronized (imageLoadedListeners) {
-                imageLoadedListeners.forEach(listener -> listener.pass(image));
             }
         }
     }
@@ -251,16 +232,8 @@ public class Thumbnail {
         return imageReadyListeners.add(listener);
     }
 
-    public boolean addImageLoadedListener(ObjectListener<Image> listener) {
-        return imageLoadedListeners.add(listener);
-    }
-
     public boolean removeImageReadyListener(ObjectListener<Image> listener) {
         return imageReadyListeners.remove(listener);
-    }
-
-    public boolean removeImageLoadedListener(ObjectListener<Image> listener) {
-        return imageLoadedListeners.remove(listener);
     }
 
     public synchronized void setDoNotLoad(boolean doNotLoad) {
@@ -272,9 +245,10 @@ public class Thumbnail {
     }
 
     public static void releaseVLCJResources() {
-        if (vlcjMediaPlayer != null) {
-            vlcjMediaPlayer.release();
-            vlcjMediaPlayer = null;
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+            mediaPlayerFactory.release();
+            mediaPlayer = null;
         }
     }
 

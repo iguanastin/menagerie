@@ -96,6 +96,7 @@ public class DynamicVideoView extends StackPane {
         BorderPane bp = new BorderPane(null, null, null, bottomBarHBox, null);
         HBox.setHgrow(slider, Priority.ALWAYS);
         slider.setOpacity(0.75);
+        slider.setFocusTraversable(false);
         slider.valueChangingProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue && !released && getMediaPlayer() != null)
                 getMediaPlayer().controls().setPosition((float) slider.getValue());
