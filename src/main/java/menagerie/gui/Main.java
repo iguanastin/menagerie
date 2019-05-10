@@ -34,6 +34,8 @@ import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import uk.co.caprica.vlcj.factory.discovery.strategy.LinuxNativeDiscoveryStrategy;
+import uk.co.caprica.vlcj.factory.discovery.strategy.OsxNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.factory.discovery.strategy.WindowsNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.support.version.LibVlcVersion;
 
@@ -92,9 +94,11 @@ public class Main extends Application {
         }
 
         // Clear log file
-        if (!new File(logFilePath).delete()) Main.log.warning(String.format("Could not clear log file: %s", logFilePath));
+        if (!new File(logFilePath).delete())
+            Main.log.warning(String.format("Could not clear log file: %s", logFilePath));
         try {
-            if (!new File(logFilePath).createNewFile()) Main.log.warning(String.format("Could not create new log file: %s", logFilePath));
+            if (!new File(logFilePath).createNewFile())
+                Main.log.warning(String.format("Could not create new log file: %s", logFilePath));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -180,18 +184,6 @@ public class Main extends Application {
         log.config("Settings path: " + SETTINGS_PATH);
 
         try {
-            NativeLibrary.addSearchPath("libvlc", new WindowsNativeDiscoveryStrategy().discover());
-            log.config("Loaded LibVLC Version: " + new LibVlcVersion().getVersion());
-
-            VLCJ_LOADED = true;
-        } catch (Throwable e) {
-            log.log(Level.WARNING, "Error loading LibVLC", e);
-
-            VLCJ_LOADED = false;
-        }
-
-
-        try {
             final List<Image> icons = getIcons();
 
             log.info("Loading FXML: " + SPLASH_FXML);
@@ -210,6 +202,29 @@ public class Main extends Application {
             showErrorMessage("Error", "Unable to load FXML: " + SPLASH_FXML + ", see log for more details", e.getLocalizedMessage());
             Platform.exit();
             System.exit(1);
+        }
+    }
+
+    static void loadVLCJ(String path) {
+        List<String> paths = new ArrayList<>();
+        if (path != null) paths.add(path);
+        path = new WindowsNativeDiscoveryStrategy().discover();
+        if (path != null) paths.add(path);
+        path = new LinuxNativeDiscoveryStrategy().discover();
+        if (path != null) paths.add(path);
+        path = new OsxNativeDiscoveryStrategy().discover();
+        if (path != null) paths.add(path);
+
+        for (String p : paths) {
+            NativeLibrary.addSearchPath("libvlc", p);
+            try {
+                NativeLibrary.getInstance("libvlc");
+                log.config("Loaded LibVLC Version: " + new LibVlcVersion().getVersion());
+                VLCJ_LOADED = true;
+                break;
+            } catch (Throwable t) {
+                log.log(Level.WARNING, "Failed to load libvlc with path: " + p, t);
+            }
         }
     }
 

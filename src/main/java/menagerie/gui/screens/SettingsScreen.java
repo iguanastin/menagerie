@@ -67,8 +67,9 @@ public class SettingsScreen extends Screen {
 
     private final TextField confidenceTextField = new TextField();
 
-    private final CheckBox muteVideoCheckBox;
-    private final CheckBox repeatVideoCheckBox;
+    private final TextField vlcLibraryFolderTextField = new TextField();
+    private final CheckBox muteVideoCheckBox = new CheckBox("Mute video preview");
+    private final CheckBox repeatVideoCheckBox = new CheckBox("Repeat video preview");
 
     private final ChoiceBox<Integer> gridWidthChoiceBox;
 
@@ -184,9 +185,23 @@ public class SettingsScreen extends Screen {
         l = new Label("Video viewing");
         l.setFont(BOLD_ITALIC);
         rootV.getChildren().addAll(new Separator(), l);
-        muteVideoCheckBox = new CheckBox("Mute video preview");
-        repeatVideoCheckBox = new CheckBox("Repeat video preview");
-        v = new VBox(5, muteVideoCheckBox, repeatVideoCheckBox);
+        vlcLibraryFolderTextField.setPromptText("Leave empty to use default path");
+        HBox.setHgrow(vlcLibraryFolderTextField, Priority.ALWAYS);
+        browse = new Button("Browse");
+        browse.setOnAction(event -> {
+            DirectoryChooser dc = new DirectoryChooser();
+            if (vlcLibraryFolderTextField.getText() != null && !vlcLibraryFolderTextField.getText().isEmpty())
+                dc.setInitialDirectory(new File(vlcLibraryFolderTextField.getText()).getParentFile());
+            dc.setTitle("Select folder containing libvlc.dll");
+            File result = dc.showDialog(getScene().getWindow());
+
+            if (result != null) {
+                vlcLibraryFolderTextField.setText(result.getAbsolutePath());
+            }
+        });
+        h = new HBox(5, new Label("VLC Library Folder:"), vlcLibraryFolderTextField, browse);
+        h.setAlignment(Pos.CENTER_LEFT);
+        v = new VBox(5, h, muteVideoCheckBox, repeatVideoCheckBox);
         v.setPadding(LEFT20);
         rootV.getChildren().add(v);
 
@@ -280,6 +295,7 @@ public class SettingsScreen extends Screen {
         } catch (NumberFormatException ignored) {
         }
         settings.setDouble(Settings.Key.CONFIDENCE, confidence);
+        settings.setString(Settings.Key.VLCJ_PATH, vlcLibraryFolderTextField.getText());
         settings.setBoolean(Settings.Key.MUTE_VIDEO, muteVideoCheckBox.isSelected());
         settings.setBoolean(Settings.Key.REPEAT_VIDEO, repeatVideoCheckBox.isSelected());
         int gridWidth = 2;
@@ -314,6 +330,7 @@ public class SettingsScreen extends Screen {
         if (confidence < MIN_CONFIDENCE) confidence = MIN_CONFIDENCE;
         else if (confidence > MAX_CONFIDENCE) confidence = MAX_CONFIDENCE;
         confidenceTextField.setText("" + confidence);
+        vlcLibraryFolderTextField.setText(settings.getString(Settings.Key.VLCJ_PATH));
         muteVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.MUTE_VIDEO));
         repeatVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
         int gridWidth = settings.getInt(Settings.Key.GRID_WIDTH);

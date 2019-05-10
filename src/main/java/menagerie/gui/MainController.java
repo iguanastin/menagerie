@@ -256,35 +256,35 @@ public class MainController {
 
             //Init closeRequest handling on window
             rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
-        });
 
-        // Apply a default search
-        applySearch(null, null, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+            // Apply a default search
+            applySearch(null, null, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
 
-        // Init folder watcher
-        if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT)) startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+            // Init folder watcher
+            if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT))
+                startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
 
-        // Show help screen if setting is set
-        if (settings.getBoolean(Settings.Key.SHOW_HELP_ON_START)) {
-            screenPane.open(helpScreen);
-            settings.setBoolean(Settings.Key.SHOW_HELP_ON_START, false);
-        }
-
-        if (settings.getInt(Settings.Key.LICENSES_AGREED) < TARGET_LICENSE_VERSION) {
-            screenPane.open(new LicensesScreen(settings, licensesFolder, TARGET_LICENSE_VERSION));
-        }
-
-        if (settings.getString(Settings.Key.USER_FILETYPES) != null && !settings.getString(Settings.Key.USER_FILETYPES).trim().isEmpty()) {
-            Filters.USER_EXTS.addAll(Arrays.asList(settings.getString(Settings.Key.USER_FILETYPES).trim().split(" ")));
-        }
-        ((StringProperty) settings.getProperty(Settings.Key.USER_FILETYPES)).addListener((observable, oldValue, newValue) -> {
-            Filters.USER_EXTS.clear();
-
-            if (newValue != null && !newValue.isEmpty()) {
-                Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
+            // Show help screen if setting is set
+            if (settings.getBoolean(Settings.Key.SHOW_HELP_ON_START)) {
+                screenPane.open(helpScreen);
+                settings.setBoolean(Settings.Key.SHOW_HELP_ON_START, false);
             }
-        });
 
+            if (settings.getInt(Settings.Key.LICENSES_AGREED) < TARGET_LICENSE_VERSION) {
+                screenPane.open(new LicensesScreen(settings, licensesFolder, TARGET_LICENSE_VERSION));
+            }
+
+            if (settings.getString(Settings.Key.USER_FILETYPES) != null && !settings.getString(Settings.Key.USER_FILETYPES).trim().isEmpty()) {
+                Filters.USER_EXTS.addAll(Arrays.asList(settings.getString(Settings.Key.USER_FILETYPES).trim().split(" ")));
+            }
+            ((StringProperty) settings.getProperty(Settings.Key.USER_FILETYPES)).addListener((observable, oldValue, newValue) -> {
+                Filters.USER_EXTS.clear();
+
+                if (newValue != null && !newValue.isEmpty()) {
+                    Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
+                }
+            });
+        });
     }
 
     /**

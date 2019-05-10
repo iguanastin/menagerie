@@ -84,6 +84,11 @@ public class SplashController {
         new Thread(() -> {
             final Settings settings = new Settings(new File(Main.SETTINGS_PATH));
 
+            // --------------------------------------------- Load VLCJ -------------------------------------------------
+            String vlcj = settings.getString(Settings.Key.VLCJ_PATH);
+            if (vlcj != null && vlcj.isEmpty()) vlcj = null;
+            Main.loadVLCJ(vlcj);
+
             // ----------------------------------------- Back up database ----------------------------------------------
             if (settings.getBoolean(Settings.Key.BACKUP_DATABASE)) {
                 Platform.runLater(() -> statusLabel.setText("Backing up database..."));
