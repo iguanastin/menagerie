@@ -24,7 +24,6 @@
 
 package menagerie.gui;
 
-import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import menagerie.model.menagerie.Item;
 import menagerie.util.Filters;
@@ -112,6 +111,7 @@ public class Thumbnail {
 
     private void loadVideoFromDisk() {
         final CountDownLatch inPositionLatch = new CountDownLatch(2);
+        final CountDownLatch snapshotLatch = new CountDownLatch(1);
 
         MediaPlayerEventListener eventListener = new MediaPlayerEventAdapter() {
             @Override
@@ -123,14 +123,18 @@ public class Thumbnail {
             public void videoOutput(MediaPlayer mediaPlayer, int newCount) {
                 inPositionLatch.countDown();
             }
+
+            @Override
+            public void snapshotTaken(MediaPlayer mediaPlayer, String filename) {
+                snapshotLatch.countDown();
+            }
         };
         Objects.requireNonNull(mediaPlayer).events().addMediaPlayerEventListener(eventListener);
 
         try {
             if (mediaPlayer.media().start(file.getAbsolutePath())) {
-                inPositionLatch.await(1, TimeUnit.SECONDS);
-                if (inPositionLatch.getCount() != 0) return;
-                mediaPlayer.events().removeMediaPlayerEventListener(eventListener);
+                inPositionLatch.await(2, TimeUnit.SECONDS);
+                if (inPositionLatch.getCount() > 0) return;
 
                 if (mediaPlayer.video().videoDimension() != null) {
                     float vidWidth = (float) mediaPlayer.video().videoDimension().getWidth();
@@ -141,7 +145,13 @@ public class Thumbnail {
                     int height = (int) (scale * vidHeight);
 
                     try {
-                        image = SwingFXUtils.toFXImage(mediaPlayer.snapshots().get(width, height), null);
+                        File tempFile = File.createTempFile("menagerie-video-thumb", ".jpg");
+                        mediaPlayer.snapshots().save(tempFile, width, height);
+                        snapshotLatch.await(2, TimeUnit.SECONDS);
+                        mediaPlayer.events().removeMediaPlayerEventListener(eventListener);
+                        if (snapshotLatch.getCount() > 0) return;
+                        image = new Image(tempFile.toURI().toString());
+                        tempFile.delete();
 
                         synchronized (imageReadyListeners) {
                             imageReadyListeners.forEach(listener -> listener.pass(image));
