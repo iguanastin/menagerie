@@ -34,8 +34,8 @@ import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
-import uk.co.caprica.vlcj.version.LibVlcVersion;
+import uk.co.caprica.vlcj.factory.discovery.strategy.WindowsNativeDiscoveryStrategy;
+import uk.co.caprica.vlcj.support.version.LibVlcVersion;
 
 import java.io.File;
 import java.io.IOException;
@@ -180,8 +180,8 @@ public class Main extends Application {
         log.config("Settings path: " + SETTINGS_PATH);
 
         try {
-            NativeLibrary.addSearchPath("libvlc", new DefaultWindowsNativeDiscoveryStrategy().discover());
-            log.config("Loaded LibVLC Version: " + LibVlcVersion.getVersion());
+            NativeLibrary.addSearchPath("libvlc", new WindowsNativeDiscoveryStrategy().discover());
+            log.config("Loaded LibVLC Version: " + new LibVlcVersion().getVersion());
 
             VLCJ_LOADED = true;
         } catch (Throwable e) {

@@ -29,10 +29,10 @@ import javafx.scene.image.Image;
 import menagerie.model.menagerie.Item;
 import menagerie.util.Filters;
 import menagerie.util.listeners.ObjectListener;
-import uk.co.caprica.vlcj.player.MediaPlayer;
-import uk.co.caprica.vlcj.player.MediaPlayerEventAdapter;
-import uk.co.caprica.vlcj.player.MediaPlayerEventListener;
-import uk.co.caprica.vlcj.player.MediaPlayerFactory;
+import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
+import uk.co.caprica.vlcj.player.base.MediaPlayer;
+import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
+import uk.co.caprica.vlcj.player.base.MediaPlayerEventListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -131,34 +131,39 @@ public class Thumbnail {
                 inPositionLatch.countDown();
             }
         };
-        Objects.requireNonNull(vlcjMediaPlayer).addMediaPlayerEventListener(eventListener);
+        Objects.requireNonNull(vlcjMediaPlayer).events().addMediaPlayerEventListener(eventListener);
 
-        if (vlcjMediaPlayer.startMedia(file.getAbsolutePath())) {
-            vlcjMediaPlayer.setPosition(0.1f);
+        if (vlcjMediaPlayer.media().start(file.getAbsolutePath())) {
+            vlcjMediaPlayer.controls().setPosition(0.1f);
             try {
                 inPositionLatch.await();
             } catch (InterruptedException e) {
                 Main.log.log(Level.WARNING, "Video thumbnailer interrupted while waiting for video init", e);
             }
-            vlcjMediaPlayer.removeMediaPlayerEventListener(eventListener);
+            vlcjMediaPlayer.events().removeMediaPlayerEventListener(eventListener);
 
-            float vidWidth = (float) vlcjMediaPlayer.getVideoDimension().getWidth();
-            float vidHeight = (float) vlcjMediaPlayer.getVideoDimension().getHeight();
+            float vidWidth = (float) vlcjMediaPlayer.video().videoDimension().getWidth();
+            float vidHeight = (float) vlcjMediaPlayer.video().videoDimension().getHeight();
             float scale = Thumbnail.THUMBNAIL_SIZE / vidWidth;
             if (scale * vidHeight > Thumbnail.THUMBNAIL_SIZE) scale = Thumbnail.THUMBNAIL_SIZE / vidHeight;
             int width = (int) (scale * vidWidth);
             int height = (int) (scale * vidHeight);
 
-            image = SwingFXUtils.toFXImage(vlcjMediaPlayer.getSnapshot(width, height), null);
-            loaded = true;
-            synchronized (imageReadyListeners) {
-                imageReadyListeners.forEach(listener -> listener.pass(image));
-            }
-            synchronized (imageLoadedListeners) {
-                imageLoadedListeners.forEach(listener -> listener.pass(image));
+            try {
+                image = SwingFXUtils.toFXImage(vlcjMediaPlayer.snapshots().get(width, height), null);
+
+                synchronized (imageReadyListeners) {
+                    imageReadyListeners.forEach(listener -> listener.pass(image));
+                }
+                synchronized (imageLoadedListeners) {
+                    imageLoadedListeners.forEach(listener -> listener.pass(image));
+                }
+                loaded = true;
+            } catch (RuntimeException e) {
+                Main.log.log(Level.WARNING, "Failed to get snapshot", e);
             }
 
-            vlcjMediaPlayer.stop();
+            vlcjMediaPlayer.controls().stop();
         }
     }
 
@@ -187,7 +192,7 @@ public class Thumbnail {
         Thread t = new Thread(() -> {
             videoThreadRunning = true;
             if (vlcjMediaPlayer != null) vlcjMediaPlayer.release();
-            vlcjMediaPlayer = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS).newHeadlessMediaPlayer();
+            vlcjMediaPlayer = new MediaPlayerFactory(VLC_THUMBNAILER_ARGS).mediaPlayers().newEmbeddedMediaPlayer();
 
             while (videoThreadRunning) {
                 try {
@@ -198,6 +203,9 @@ public class Thumbnail {
                     }
 
                     thumb.loadVideoFromDisk();
+                    if (!thumb.loaded) {
+                        thumb.owner.purgeThumbnail();
+                    }
                 } catch (InterruptedException ignore) {
                 }
             }
