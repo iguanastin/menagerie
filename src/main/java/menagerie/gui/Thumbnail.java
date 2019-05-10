@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 /**
@@ -128,7 +129,8 @@ public class Thumbnail {
         try {
             if (mediaPlayer.media().start(file.getAbsolutePath())) {
                 mediaPlayer.submit(() -> mediaPlayer.controls().setPosition(0.01f));
-                inPositionLatch.await();
+                inPositionLatch.await(1, TimeUnit.SECONDS);
+                if (inPositionLatch.getCount() != 0) return;
                 mediaPlayer.events().removeMediaPlayerEventListener(eventListener);
 
                 if (mediaPlayer.video().videoDimension() != null) {
