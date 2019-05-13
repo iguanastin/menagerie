@@ -27,6 +27,7 @@ package menagerie.gui.grid;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -120,10 +121,16 @@ public class ItemGridCell extends GridCell<Item> {
                     //                    g2d.drawImage(imgIcon.getImage(), 0, 0, null);
                     //                    view.setImage(SwingFXUtils.toFXImage(bi, null));
                 }
+                Tooltip tt = new Tooltip(((MediaItem) item).getFile().getAbsolutePath());
+                tt.setWrapText(true);
+                setTooltip(tt);
             } else if (item instanceof GroupItem) {
                 centerLabel.setText(((GroupItem) item).getTitle());
                 centerLabel.setFont(SMALL_FONT);
                 bottomRightLabel.setText(((GroupItem) item).getElements().size() + "");
+                Tooltip tt = new Tooltip(((GroupItem) item).getTitle());
+                tt.setWrapText(true);
+                setTooltip(tt);
             }
         }
 

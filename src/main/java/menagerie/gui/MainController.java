@@ -1182,9 +1182,13 @@ public class MainController {
         if (groupScope == null) {
             currentSearch = new Search(search, descending, showGrouped);
             scopeLabel.setText("Scope: All");
+            scopeLabel.setTooltip(null);
         } else {
             currentSearch = new GroupSearch(search, groupScope, descending);
             scopeLabel.setText("Scope: " + groupScope.getTitle());
+            Tooltip tt = new Tooltip(groupScope.getTitle());
+            tt.setWrapText(true);
+            scopeLabel.setTooltip(tt);
         }
         menagerie.registerSearch(currentSearch);
         currentSearch.refreshSearch(menagerie.getItems());
