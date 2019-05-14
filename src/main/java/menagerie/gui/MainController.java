@@ -177,10 +177,10 @@ public class MainController {
             if (c.wasRemoved()) {
                 if (c.getRemoved().contains(currentlyPreviewing)) previewItem(null);
 
-                final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected()) + 1;
+                final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected());
                 int newIndex = oldLastIndex;
-                for (Item image : c.getRemoved()) {
-                    final int i = itemGridView.getItems().indexOf(image);
+                for (Item item : c.getRemoved()) {
+                    final int i = itemGridView.getItems().indexOf(item);
                     if (i < 0) continue;
 
                     if (i < oldLastIndex) {
@@ -190,7 +190,7 @@ public class MainController {
 
                 itemGridView.getItems().removeAll(c.getRemoved());
 
-                if (!itemGridView.getItems().isEmpty()) {
+                if (!itemGridView.getItems().isEmpty() && itemGridView.getSelected().isEmpty()) {
                     if (newIndex >= itemGridView.getItems().size()) newIndex = itemGridView.getItems().size() - 1;
                     if (newIndex >= 0) itemGridView.select(itemGridView.getItems().get(newIndex), false, false);
                 }
