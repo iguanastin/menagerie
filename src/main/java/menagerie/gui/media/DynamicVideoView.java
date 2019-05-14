@@ -28,6 +28,7 @@ import javafx.application.Platform;
 import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
@@ -119,13 +120,19 @@ public class DynamicVideoView extends StackPane {
         StackPane.setAlignment(pauseImageView, Pos.CENTER);
         pixelWriter = canvas.getGraphicsContext2D().getPixelWriter();
 
+        muteImageView.setPickOnBounds(true);
+        muteImageView.addEventHandler(MouseEvent.MOUSE_ENTERED, event -> getScene().setCursor(Cursor.HAND));
+        muteImageView.addEventHandler(MouseEvent.MOUSE_EXITED, event -> getScene().setCursor(Cursor.DEFAULT));
+        muteImageView.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
+            setMute(!isMuted());
+            event.consume();
+        });
+
         addEventHandler(MouseEvent.MOUSE_ENTERED, event -> {
             bottomBarHBox.setOpacity(1);
-            event.consume();
         });
         addEventHandler(MouseEvent.MOUSE_EXITED, event -> {
             bottomBarHBox.setOpacity(0);
-            event.consume();
         });
         addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
@@ -151,7 +158,10 @@ public class DynamicVideoView extends StackPane {
                     delta = 10000f / duration;
                 }
                 if (event.getDeltaY() < 0) delta = -delta;
-                getMediaPlayer().controls().setPosition(Math.min(0.9999f, Math.max(getMediaPlayer().status().position() + delta, 0)));
+                float newPos = Math.min(0.9999f, Math.max(getMediaPlayer().status().position() + delta, 0));
+                getMediaPlayer().controls().setPosition(newPos);
+                slider.setValue(newPos);
+                event.consume();
             }
         });
     }
