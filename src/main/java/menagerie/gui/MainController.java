@@ -92,6 +92,7 @@ public class MainController {
     public StackPane rootPane;
 
     public BorderPane explorerRootPane;
+    public BorderPane gridPane;
     public MenuBar menuBar;
     public PredictiveTextField searchTextField;
     public PredictiveTextField editTagsTextField;
@@ -1208,9 +1209,9 @@ public class MainController {
      */
     private void setGridWidth(int n) {
         final double width = 18 + (Thumbnail.THUMBNAIL_SIZE + ItemGridView.CELL_BORDER * 2 + itemGridView.getHorizontalCellSpacing() * 2) * n;
-        itemGridView.setMinWidth(width);
-        itemGridView.setMaxWidth(width);
-        itemGridView.setPrefWidth(width);
+        gridPane.setMinWidth(width);
+        gridPane.setMaxWidth(width);
+        gridPane.setPrefWidth(width);
     }
 
     /**

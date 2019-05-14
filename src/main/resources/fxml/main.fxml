@@ -58,7 +58,7 @@
             </StackPane>
         </center>
         <right>
-            <BorderPane>
+            <BorderPane fx:id="gridPane">
                 <center>
                     <ItemGridView fx:id="itemGridView" horizontalCellSpacing="3" verticalCellSpacing="3"
                                   BorderPane.alignment="CENTER"/>
