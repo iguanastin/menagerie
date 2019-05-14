@@ -58,6 +58,7 @@ public class ScreenPane extends StackPane {
         if (current.get() != null) {
             lastFocusMap.put(current.get(), getScene().getFocusOwner());
             current.get().setDisable(true);
+            openStack.push(current.get());
         }
 
         current.set(screen);

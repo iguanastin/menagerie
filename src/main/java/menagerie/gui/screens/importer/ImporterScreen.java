@@ -120,7 +120,7 @@ public class ImporterScreen extends Screen {
         BorderPane bottom = new BorderPane(pairsButton, null, playPauseButton, null, cancelAllButton);
         bottom.setPadding(new Insets(5));
 
-        listView.getItems().addListener((ListChangeListener<? super ImportJob>) c -> title.setText("Imports: " + c.getList().size()));
+        listView.getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> title.setText("Imports: " + c.getList().size())));
 
         BorderPane root = new BorderPane(listView, top, null, bottom, null);
         root.setPrefWidth(400);
@@ -138,23 +138,25 @@ public class ImporterScreen extends Screen {
         // ImporterThread setup
         listView.setCellFactory(param -> new ImportListCell(this, selectItemListener));
         importerThread.addImporterListener(job -> {
-            jobs.add(job);
-            listView.getItems().add(job);
-            job.addStatusListener(status -> {
-                if (status == ImportJob.Status.SUCCEEDED) {
-                    if (job.getSimilarTo() != null) {
-                        job.getSimilarTo().forEach(pair -> {
-                            if (!similar.contains(pair)) similar.add(pair);
+            Platform.runLater(() -> {
+                jobs.add(job);
+                listView.getItems().add(job);
+                job.addStatusListener(status -> {
+                    if (status == ImportJob.Status.SUCCEEDED) {
+                        if (job.getSimilarTo() != null) {
+                            job.getSimilarTo().forEach(pair -> {
+                                if (!similar.contains(pair)) similar.add(pair);
+                            });
+                        }
+                        removeJob(job);
+                    } else {
+                        listView.getChildrenUnmodifiable().forEach(node -> {
+                            if (node instanceof ImportListCell) {
+                                ((ImportListCell) node).updateItem(((ImportListCell) node).getItem(), ((ImportListCell) node).isEmpty());
+                            }
                         });
                     }
-                    removeJob(job);
-                } else {
-                    listView.getChildrenUnmodifiable().forEach(node -> {
-                        if (node instanceof ImportListCell) {
-                            ((ImportListCell) node).updateItem(((ImportListCell) node).getItem(), ((ImportListCell) node).isEmpty());
-                        }
-                    });
-                }
+                });
             });
         });
     }

@@ -35,6 +35,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import menagerie.gui.Main;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
@@ -104,8 +105,13 @@ public class ItemGridCell extends GridCell<Item> {
             }
             if (item instanceof MediaItem) {
                 if (((MediaItem) item).isVideo()) {
-                    centerLabel.setText("Video");
-                    centerLabel.setFont(LARGE_FONT);
+                    if (Main.isVlcjLoaded()) {
+                        centerLabel.setText("Video");
+                        centerLabel.setFont(LARGE_FONT);
+                    } else {
+                        centerLabel.setText(((MediaItem) item).getFile().getName());
+                        centerLabel.setFont(SMALL_FONT);
+                    }
                 } else {
                     centerLabel.setText(null);
                 }
