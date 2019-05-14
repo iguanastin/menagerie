@@ -123,8 +123,8 @@ public class Thumbnail {
                 } else {
                     return;
                 }
-            } catch (RarException | IOException e) {
-                Main.log.log(Level.SEVERE, "Failed to thumbnail RAR: " + file, e);
+            } catch (RarException | IOException | NullPointerException e) {
+                Main.log.log(Level.INFO, "Failed to thumbnail RAR: " + file);
                 return;
             }
         } else if (Filters.ZIP_NAME_FILTER.accept(file)) {
@@ -137,7 +137,7 @@ public class Thumbnail {
                     return;
                 }
             } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "Failed to thumbnail ZIP: " + file, e);
+                Main.log.log(Level.INFO, "Failed to thumbnail ZIP: " + file);
                 return;
             }
         }

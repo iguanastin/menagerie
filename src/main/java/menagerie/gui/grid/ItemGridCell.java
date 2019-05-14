@@ -64,8 +64,11 @@ public class ItemGridCell extends GridCell<Item> {
 
         centerLabel.setPadding(new Insets(5));
         centerLabel.setFont(LARGE_FONT);
-        centerLabel.setEffect(new DropShadow());
+        DropShadow effect = new DropShadow();
+        effect.setSpread(0.5);
+        centerLabel.setEffect(effect);
         centerLabel.setWrapText(true);
+        StackPane.setAlignment(centerLabel, Pos.TOP_CENTER);
 
         bottomRightLabel.setPadding(new Insets(2));
         bottomRightLabel.setFont(SMALL_FONT);
