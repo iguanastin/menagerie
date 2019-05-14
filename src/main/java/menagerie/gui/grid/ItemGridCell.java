@@ -24,6 +24,7 @@
 
 package menagerie.gui.grid;
 
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -74,7 +75,7 @@ public class ItemGridCell extends GridCell<Item> {
         setAlignment(Pos.CENTER);
         setStyle(UNSELECTED_BG_CSS);
 
-        imageReadyListener = view::setImage;
+        imageReadyListener = image -> Platform.runLater(() -> view.setImage(image));
 
     }
 
