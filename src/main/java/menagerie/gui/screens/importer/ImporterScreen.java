@@ -137,28 +137,20 @@ public class ImporterScreen extends Screen {
 
         // ImporterThread setup
         listView.setCellFactory(param -> new ImportListCell(this, selectItemListener));
-        importerThread.addImporterListener(job -> {
-            Platform.runLater(() -> {
-                jobs.add(job);
-                listView.getItems().add(job);
-                job.addStatusListener(status -> {
-                    if (status == ImportJob.Status.SUCCEEDED) {
-                        if (job.getSimilarTo() != null) {
-                            job.getSimilarTo().forEach(pair -> {
-                                if (!similar.contains(pair)) similar.add(pair);
-                            });
-                        }
-                        removeJob(job);
-                    } else {
-                        listView.getChildrenUnmodifiable().forEach(node -> {
-                            if (node instanceof ImportListCell) {
-                                ((ImportListCell) node).updateItem(((ImportListCell) node).getItem(), ((ImportListCell) node).isEmpty());
-                            }
+        importerThread.addImporterListener(job -> Platform.runLater(() -> {
+            jobs.add(job);
+            listView.getItems().add(job);
+            job.statusProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue == ImportJob.Status.SUCCEEDED) {
+                    if (job.getSimilarTo() != null) {
+                        job.getSimilarTo().forEach(pair -> {
+                            if (!similar.contains(pair)) similar.add(pair);
                         });
                     }
-                });
+                    removeJob(job);
+                }
             });
-        });
+        }));
     }
 
     /**

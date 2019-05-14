@@ -243,8 +243,8 @@ public class ImportDialogScreen extends Screen {
                         final boolean renameToHash = renameWithHashCheckBox.isSelected();
 
                         if (!tagsToAdd.isEmpty() || renameToHash) {
-                            job.addStatusListener(status -> {
-                                if (status == ImportJob.Status.SUCCEEDED) {
+                            job.statusProperty().addListener((observable, oldValue, newValue) -> {
+                                if (newValue == ImportJob.Status.SUCCEEDED) {
                                     // Add tags
                                     for (String tagName : tagsToAdd) {
                                         if (tagName.contains(" ")) tagName = tagName.replaceAll("\\s", "_"); // Replace all whitespace

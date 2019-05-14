@@ -25,7 +25,9 @@
 package menagerie.model.menagerie.importer;
 
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import menagerie.gui.Main;
 import menagerie.gui.MainController;
 import menagerie.model.Settings;
@@ -78,8 +80,7 @@ public class ImportJob {
     private volatile boolean needsCheckSimilar = true;
 
     private final DoubleProperty progressProperty = new SimpleDoubleProperty(-1);
-    private volatile Status status = Status.WAITING;
-    private final Set<ObjectListener<Status>> statusListeners = new HashSet<>();
+    private final ObjectProperty<Status> status = new SimpleObjectProperty<>(Status.WAITING);
 
 
     /**
@@ -348,7 +349,7 @@ public class ImportJob {
     /**
      * @return The progress JavaFX Property.
      */
-    public DoubleProperty getProgressProperty() {
+    public DoubleProperty progressProperty() {
         return progressProperty;
     }
 
@@ -363,38 +364,18 @@ public class ImportJob {
      * @return The status of this job.
      */
     public Status getStatus() {
-        synchronized (statusListeners) {
-            return status;
-        }
+        return status.get();
     }
 
     /**
      * @param status The new status to set this job as.
      */
     public void setStatus(Status status) {
-        synchronized (statusListeners) {
-            this.status = status;
-
-            statusListeners.forEach(listener -> listener.pass(status));
-        }
+        this.status.set(status);
     }
 
-    /**
-     * @param listener Listens for status changes.
-     */
-    public void addStatusListener(ObjectListener<Status> listener) {
-        synchronized (statusListeners) {
-            statusListeners.add(listener);
-        }
-    }
-
-    /**
-     * @param listener Listener
-     */
-    public void removeStatusListener(ObjectListener<Status> listener) {
-        synchronized (statusListeners) {
-            statusListeners.remove(listener);
-        }
+    public ObjectProperty<Status> statusProperty() {
+        return status;
     }
 
     /**

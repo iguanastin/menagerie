@@ -39,8 +39,6 @@ import menagerie.util.listeners.ObjectListener;
 
 public class ImportListCell extends ListCell<ImportJob> {
 
-    private final ImporterScreen screen;
-
     private final ChangeListener<Number> progressChangeListener;
 
     private final Label waitingLabel;
@@ -56,10 +54,17 @@ public class ImportListCell extends ListCell<ImportJob> {
     private final Label failedLabel;
     private final BorderPane failedView;
 
+    private final ChangeListener<ImportJob.Status> statusListener = (observable, oldValue, newValue) -> Platform.runLater(() -> {
+        if (getItem() != null) {
+            updateView(getItem().getStatus());
+        } else {
+            setGraphic(null);
+        }
+    });
+
 
     ImportListCell(ImporterScreen screen, ObjectListener<MediaItem> selectItemListener) {
         super();
-        this.screen = screen;
 
         Button cancelButton = new Button("Cancel");
         cancelButton.setOnAction(event -> {
@@ -109,36 +114,42 @@ public class ImportListCell extends ListCell<ImportJob> {
     @Override
     protected void updateItem(ImportJob item, boolean empty) {
         if (getItem() != null) {
-            getItem().getProgressProperty().removeListener(progressChangeListener);
+            getItem().progressProperty().removeListener(progressChangeListener);
+            getItem().statusProperty().removeListener(statusListener);
         }
 
         super.updateItem(item, empty);
 
         if (item != null) {
-            item.getProgressProperty().addListener(progressChangeListener);
+            item.progressProperty().addListener(progressChangeListener);
+            item.statusProperty().addListener(statusListener);
 
             if (item.getUrl() != null) setTooltip(new Tooltip(item.getUrl().toString()));
             else setTooltip(new Tooltip(item.getFile().toString()));
 
-            switch (item.getStatus()) {
-                case WAITING:
-                    showWaitingView();
-                    break;
-                case IMPORTING:
-                    showImportingView();
-                    break;
-                case SUCCEEDED:
-                    screen.removeJob(getItem());
-                    break;
-                case FAILED_DUPLICATE:
-                    showDuplicateView();
-                    break;
-                case FAILED_IMPORT:
-                    showFailedView();
-                    break;
-            }
+            updateView(item.getStatus());
         } else {
             setGraphic(null);
+        }
+    }
+
+    private void updateView(ImportJob.Status status) {
+        switch (status) {
+            case WAITING:
+                showWaitingView();
+                break;
+            case IMPORTING:
+                showImportingView();
+                break;
+            case FAILED_DUPLICATE:
+                showDuplicateView();
+                break;
+            case FAILED_IMPORT:
+                showFailedView();
+                break;
+            default:
+                setGraphic(null);
+                break;
         }
     }
 
