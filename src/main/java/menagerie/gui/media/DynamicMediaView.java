@@ -28,6 +28,7 @@ import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
 import javafx.application.Platform;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
 import javafx.scene.layout.StackPane;
@@ -36,7 +37,12 @@ import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.util.Filters;
+import org.apache.pdfbox.pdfparser.PDFParser;
+import org.apache.pdfbox.pdfparser.PDFStreamParser;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 
+import java.awt.image.BufferedImage;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -107,6 +113,11 @@ public class DynamicMediaView extends StackPane {
                     } catch (IOException e) {
                         Main.log.log(Level.SEVERE, "Failed to preview ZIP: " + ((MediaItem) item).getFile(), e);
                     }
+                } else if (Filters.PDF_NAME_FILTER.accept(((MediaItem) item).getFile())) {
+                    PDDocument doc = PDDocument.load(((MediaItem) item).getFile());
+                    BufferedImage img = new PDFRenderer(doc).renderImage(0); // TODO PDF controls
+                    getImageView().setImage(SwingFXUtils.toFXImage(img, null)); // TODO may not be working properly?
+                    doc.close();
                 } else if (Files.probeContentType(((MediaItem) item).getFile().toPath()).equalsIgnoreCase("text/plain")) {
                     textView.setText(String.join("\n", Files.readAllLines(((MediaItem) item).getFile().toPath())));
                     showTextView();

@@ -41,6 +41,7 @@ public abstract class Filters {
     public static final String[] VIDEO_EXTS = {".mp4", ".avi", ".webm", ".flv", ".wmv", ".3gp", ".mov", ".mpg", ".m4v", ".mkv"};
     public static final String[] RAR_EXTS = {".rar", ".cbr"};
     public static final String[] ZIP_EXTS = {".zip", ".cbz"};
+    public static final String[] PDF_EXTS = {".pdf"};
     public static final List<String> USER_EXTS = new ArrayList<>();
 
     public static final FileFilter IMAGE_NAME_FILTER = file -> matches(file.getName(), IMAGE_EXTS);
@@ -48,6 +49,7 @@ public abstract class Filters {
     public static final FileFilter USER_NAME_FILTER = file -> matches(file.getName(), USER_EXTS);
     public static final FileFilter RAR_NAME_FILTER = file -> matches(file.getName(), RAR_EXTS);
     public static final FileFilter ZIP_NAME_FILTER = file -> matches(file.getName(), ZIP_EXTS);
+    public static final FileFilter PDF_NAME_FILTER = file -> matches(file.getName(), PDF_EXTS);
     public static final FileFilter FILE_NAME_FILTER = file -> IMAGE_NAME_FILTER.accept(file) || VIDEO_NAME_FILTER.accept(file) || USER_NAME_FILTER.accept(file);
 
     /**
