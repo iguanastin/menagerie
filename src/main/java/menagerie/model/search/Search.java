@@ -139,6 +139,10 @@ public class Search {
                     rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
                 } else if (type.equalsIgnoreCase("media")) {
                     rules.add(new TypeRule(TypeRule.Type.MEDIA, inverted));
+                } else if (type.equalsIgnoreCase("image")) {
+                    rules.add(new TypeRule(TypeRule.Type.IMAGE, inverted));
+                } else if (type.equalsIgnoreCase("video")) {
+                    rules.add(new TypeRule(TypeRule.Type.VIDEO, inverted));
                 }
             } else if (arg.startsWith("tags:")) {
                 String temp = arg.substring(arg.indexOf(':') + 1);

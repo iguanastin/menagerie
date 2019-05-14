@@ -46,12 +46,25 @@ public class TypeRule extends SearchRule {
 
 
     public enum Type {
-        GROUP, MEDIA
+        GROUP, MEDIA, IMAGE, VIDEO
     }
 
     @Override
     public boolean accept(Item item) {
-        boolean result = (item instanceof GroupItem && type == Type.GROUP) || (item instanceof MediaItem && type == Type.MEDIA);
+        boolean result = false;
+        if (item instanceof MediaItem) {
+            if (type == Type.MEDIA) {
+                result = true;
+            } else if (type == Type.VIDEO) {
+                result = ((MediaItem) item).isVideo();
+            } else if (type == Type.IMAGE) {
+                result = ((MediaItem) item).isImage();
+            }
+        } else if (item instanceof GroupItem) {
+            if (type == Type.GROUP) {
+                result = true;
+            }
+        }
         if (isInverted()) result = !result;
         return result;
     }
