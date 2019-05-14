@@ -64,8 +64,7 @@ public class Thumbnail {
     private final Item owner;
     private Image image;
 
-    private boolean loaded = false;
-    public int want = 0;
+    private int want = 0;
 
     private final Set<ObjectListener<Image>> imageReadyListeners = new HashSet<>();
 
@@ -106,7 +105,9 @@ public class Thumbnail {
 
     private void loadImageFromDisk() {
         image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
-        registerListenersToImage();
+        synchronized (imageReadyListeners) {
+            imageReadyListeners.forEach(listener -> listener.pass(image));
+        }
     }
 
     private void loadVideoFromDisk() {
@@ -156,7 +157,6 @@ public class Thumbnail {
                         synchronized (imageReadyListeners) {
                             imageReadyListeners.forEach(listener -> listener.pass(image));
                         }
-                        loaded = true;
                     } catch (RuntimeException e) {
                         Main.log.log(Level.WARNING, "Failed to get video snapshot of file: " + file, e);
                     }
@@ -207,7 +207,7 @@ public class Thumbnail {
                     }
 
                     thumb.loadVideoFromDisk();
-                    if (!thumb.loaded) {
+                    if (!thumb.isLoaded()) {
                         thumb.owner.purgeThumbnail();
                     }
                 } catch (InterruptedException ignore) {
@@ -216,27 +216,6 @@ public class Thumbnail {
         }, "Video Thumbnailer Thread");
         t.setDaemon(true);
         t.start();
-    }
-
-    /**
-     * Registers imageLoaded listeners if image has not finished loading yet.
-     */
-    private void registerListenersToImage() {
-        if (image.isBackgroundLoading() && image.getProgress() != 1.0) {
-            synchronized (imageReadyListeners) {
-                imageReadyListeners.forEach(listener -> listener.pass(image));
-            }
-            image.progressProperty().addListener((observable, oldValue, newValue) -> {
-                if (!image.isError() && newValue.doubleValue() == 1.0) {
-                    loaded = true;
-                }
-            });
-        } else {
-            loaded = true;
-            synchronized (imageReadyListeners) {
-                imageReadyListeners.forEach(listener -> listener.pass(image));
-            }
-        }
     }
 
     public boolean addImageReadyListener(ObjectListener<Image> listener) {
@@ -278,7 +257,7 @@ public class Thumbnail {
      * @return True if the image has been completely loaded.
      */
     public synchronized boolean isLoaded() {
-        return loaded;
+        return image != null;
     }
 
 }

@@ -82,7 +82,7 @@ public class ItemGridCell extends GridCell<Item> {
     @Override
     protected void updateItem(Item item, boolean empty) {
         if (getItem() != null && getItem().getThumbnail() != null) {
-            getItem().getThumbnail().want--;
+            getItem().getThumbnail().doNotWant();
             if (!getItem().getThumbnail().isLoaded()) getItem().getThumbnail().doNotWant();
             getItem().getThumbnail().removeImageReadyListener(imageReadyListener);
         }
@@ -93,7 +93,7 @@ public class ItemGridCell extends GridCell<Item> {
             bottomRightLabel.setText(null);
         } else {
             if (item.getThumbnail() != null) {
-                item.getThumbnail().want++;
+                item.getThumbnail().want();
                 if (item.getThumbnail().getImage() != null) {
                     view.setImage(item.getThumbnail().getImage());
                 } else {
