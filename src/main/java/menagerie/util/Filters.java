@@ -27,6 +27,7 @@ package menagerie.util;
 
 import javafx.stage.FileChooser;
 
+import java.io.File;
 import java.io.FileFilter;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,41 +39,15 @@ public abstract class Filters {
 
     public static final String[] IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".bmp"};
     public static final String[] VIDEO_EXTS = {".mp4", ".avi", ".webm", ".flv", ".wmv", ".3gp", ".mov", ".mpg", ".m4v", ".mkv"};
+    public static final String[] RAR_EXTS = {".rar", ".cbr"};
+    public static final String[] ZIP_EXTS = {".zip", ".cbz"};
     public static final List<String> USER_EXTS = new ArrayList<>();
 
-    /**
-     * File filter that accepts only image extensions.
-     */
-    public static final FileFilter IMAGE_NAME_FILTER = file -> {
-        String name = file.getName().toLowerCase();
-        for (String ext : IMAGE_EXTS) {
-            if (name.endsWith(ext)) return true;
-        }
-        return false;
-    };
-    /**
-     * File filter that accepts only video extensions.
-     */
-    public static final FileFilter VIDEO_NAME_FILTER = file -> {
-        String name = file.getName().toLowerCase();
-        for (String ext : VIDEO_EXTS) {
-            if (name.endsWith(ext)) return true;
-        }
-        return false;
-    };
-    /**
-     * File filter that accepts user defined extensions.
-     */
-    public static final FileFilter USER_NAME_FILTER = file -> {
-        String name = file.getName().toLowerCase();
-        for (String ext : USER_EXTS) {
-            if (name.endsWith(ext)) return true;
-        }
-        return false;
-    };
-    /**
-     * File filter that accepts image OR video extensions.
-     */
+    public static final FileFilter IMAGE_NAME_FILTER = file -> matches(file.getName(), IMAGE_EXTS);
+    public static final FileFilter VIDEO_NAME_FILTER = file -> matches(file.getName(), VIDEO_EXTS);
+    public static final FileFilter USER_NAME_FILTER = file -> matches(file.getName(), USER_EXTS);
+    public static final FileFilter RAR_NAME_FILTER = file -> matches(file.getName(), RAR_EXTS);
+    public static final FileFilter ZIP_NAME_FILTER = file -> matches(file.getName(), ZIP_EXTS);
     public static final FileFilter FILE_NAME_FILTER = file -> IMAGE_NAME_FILTER.accept(file) || VIDEO_NAME_FILTER.accept(file) || USER_NAME_FILTER.accept(file);
 
     /**
@@ -89,6 +64,18 @@ public abstract class Filters {
             else exts.add("*." + s);
         });
         return new FileChooser.ExtensionFilter("Accepted Files", exts);
+    }
+
+    private static boolean matches(String name, String[] exts) {
+        name = name.toLowerCase();
+        for (String ext : exts) {
+            if (name.endsWith(ext.toLowerCase())) return true;
+        }
+        return false;
+    }
+
+    private static boolean matches(String name, List<String> exts) {
+        return matches(name, exts.toArray(new String[0]));
     }
 
 }

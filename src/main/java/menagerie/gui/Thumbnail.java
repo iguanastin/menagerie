@@ -24,6 +24,9 @@
 
 package menagerie.gui;
 
+import com.github.junrar.Archive;
+import com.github.junrar.exception.RarException;
+import com.github.junrar.rarfile.FileHeader;
 import javafx.scene.image.Image;
 import menagerie.model.menagerie.Item;
 import menagerie.util.Filters;
@@ -34,8 +37,11 @@ import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventListener;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -43,6 +49,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
+import java.util.zip.ZipFile;
 
 /**
  * JavaFX Image wrapper specifically for loading thumbnails of various types.
@@ -94,7 +101,7 @@ public class Thumbnail {
             startImageThread();
         }
 
-        if (Filters.IMAGE_NAME_FILTER.accept(file)) {
+        if (Filters.IMAGE_NAME_FILTER.accept(file) || Filters.RAR_NAME_FILTER.accept(file) || Filters.ZIP_NAME_FILTER.accept(file)) {
             imageQueue.add(this);
         } else if (Filters.VIDEO_NAME_FILTER.accept(file)) {
             videoQueue.add(this);
@@ -104,7 +111,36 @@ public class Thumbnail {
     }
 
     private void loadImageFromDisk() {
-        image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+        if (Filters.IMAGE_NAME_FILTER.accept(file)) {
+            image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+        } else if (Filters.RAR_NAME_FILTER.accept(file)) {
+            try (Archive a = new Archive(new FileInputStream(file))) {
+                List<FileHeader> fileHeaders = a.getFileHeaders();
+                if (!fileHeaders.isEmpty()) {
+                    try (InputStream is = a.getInputStream(fileHeaders.get(0))) {
+                        image = new Image(is, THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+                    }
+                } else {
+                    return;
+                }
+            } catch (RarException | IOException e) {
+                Main.log.log(Level.SEVERE, "Failed to thumbnail RAR: " + file, e);
+                return;
+            }
+        } else if (Filters.ZIP_NAME_FILTER.accept(file)) {
+            try (ZipFile zip = new ZipFile(file)) {
+                if (zip.entries().hasMoreElements()) {
+                    try (InputStream is = zip.getInputStream(zip.entries().nextElement())) {
+                        image = new Image(is, THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+                    }
+                } else {
+                    return;
+                }
+            } catch (IOException e) {
+                Main.log.log(Level.SEVERE, "Failed to thumbnail ZIP: " + file, e);
+                return;
+            }
+        }
         synchronized (imageReadyListeners) {
             imageReadyListeners.forEach(listener -> listener.pass(image));
         }

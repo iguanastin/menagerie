@@ -24,17 +24,26 @@
 
 package menagerie.gui.media;
 
+import com.github.junrar.Archive;
+import com.github.junrar.exception.RarException;
+import com.github.junrar.rarfile.FileHeader;
 import javafx.application.Platform;
 import javafx.scene.control.TextArea;
+import javafx.scene.image.Image;
 import javafx.scene.layout.StackPane;
 import menagerie.gui.Main;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
+import menagerie.util.Filters;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.logging.Level;
+import java.util.zip.ZipFile;
 
 /**
  * Dynamically sized view that can display images or videos.
@@ -63,19 +72,41 @@ public class DynamicMediaView extends StackPane {
      */
     public boolean preview(Item item) {
         if (getVideoView() != null) getVideoView().stop();
-        getMediaView().setImage(null);
+        getImageView().setImage(null);
         hideAllViews();
 
         if (item instanceof MediaItem) {
             try {
                 if (((MediaItem) item).isImage()) {
                     if (getVideoView() != null) getVideoView().stop();
-                    getMediaView().setImage(((MediaItem) item).getImage());
+                    getImageView().setImage(((MediaItem) item).getImage());
                     showImageView();
                 } else if (((MediaItem) item).isVideo() && getVideoView() != null) {
-                    getMediaView().setImage(null);
+                    getImageView().setImage(null);
                     getVideoView().startMedia(((MediaItem) item).getFile().getAbsolutePath());
                     showVideoView();
+                } else if (Filters.RAR_NAME_FILTER.accept(((MediaItem) item).getFile())) {
+                    try (Archive a = new Archive(new FileInputStream(((MediaItem) item).getFile()))) {
+                        List<FileHeader> fileHeaders = a.getFileHeaders();
+                        if (!fileHeaders.isEmpty()) {
+                            try (InputStream is = a.getInputStream(fileHeaders.get(0))) {
+                                getImageView().setImage(new Image(is));
+                            }
+                        }
+                    } catch (RarException | IOException e) {
+                        Main.log.log(Level.SEVERE, "Failed to preview RAR: " + ((MediaItem) item).getFile(), e);
+                    }
+                    showImageView();
+                } else if (Filters.ZIP_NAME_FILTER.accept(((MediaItem) item).getFile())) {
+                    try (ZipFile zip = new ZipFile(((MediaItem) item).getFile())) {
+                        if (zip.entries().hasMoreElements()) {
+                            try (InputStream is = zip.getInputStream(zip.entries().nextElement())) {
+                                getImageView().setImage(new Image(is));
+                            }
+                        }
+                    } catch (IOException e) {
+                        Main.log.log(Level.SEVERE, "Failed to preview ZIP: " + ((MediaItem) item).getFile(), e);
+                    }
                 } else if (Files.probeContentType(((MediaItem) item).getFile().toPath()).equalsIgnoreCase("text/plain")) {
                     textView.setText(String.join("\n", Files.readAllLines(((MediaItem) item).getFile().toPath())));
                     showTextView();
@@ -83,7 +114,7 @@ public class DynamicMediaView extends StackPane {
                     return false; // Unknown file type, can't preview it
                 }
             } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "", e);
+                Main.log.log(Level.SEVERE, "Error previewing media: " + item, e);
             }
         } else if (item instanceof GroupItem) {
             if (!((GroupItem) item).getElements().isEmpty()) {
@@ -98,8 +129,8 @@ public class DynamicMediaView extends StackPane {
      * Hides both the video and the image views, if they exist.
      */
     private void hideAllViews() {
-        getMediaView().setDisable(true);
-        getMediaView().setOpacity(0);
+        getImageView().setDisable(true);
+        getImageView().setOpacity(0);
         if (getVideoView() != null) {
             getVideoView().setDisable(true);
             getVideoView().setOpacity(0);
@@ -113,8 +144,8 @@ public class DynamicMediaView extends StackPane {
      */
     private void showImageView() {
         hideAllViews();
-        getMediaView().setDisable(false);
-        getMediaView().setOpacity(1);
+        getImageView().setDisable(false);
+        getImageView().setOpacity(1);
     }
 
     /**
@@ -156,7 +187,7 @@ public class DynamicMediaView extends StackPane {
     /**
      * @return The image view.
      */
-    public PanZoomImageView getMediaView() {
+    public PanZoomImageView getImageView() {
         return imageView;
     }
 
