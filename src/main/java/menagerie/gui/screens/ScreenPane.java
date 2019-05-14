@@ -24,11 +24,14 @@
 
 package menagerie.gui.screens;
 
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Stack;
 
 /**
  * A pane that manages stacked screens.
@@ -36,6 +39,8 @@ import java.util.Map;
 public class ScreenPane extends StackPane {
 
     final private Map<Screen, Node> lastFocusMap = new HashMap<>();
+    final private Stack<Screen> openStack = new Stack<>();
+    final private ObjectProperty<Screen> current = new SimpleObjectProperty<>(null);
 
 
     public ScreenPane() {
@@ -47,21 +52,33 @@ public class ScreenPane extends StackPane {
      *
      * @param screen Screen to open.
      */
-    public void open(Screen screen) {
-        if (getChildren().contains(screen)) return;
+    public boolean open(Screen screen) {
+        if (!getChildren().contains(screen)) add(screen);
 
-        if (!getChildren().isEmpty()) {
-            Screen oldScreen = (Screen) getChildren().get(getChildren().size() - 1);
-            lastFocusMap.put(oldScreen, getScene().getFocusOwner());
-            oldScreen.setDisable(true);
+        if (current.get() != null) {
+            lastFocusMap.put(current.get(), getScene().getFocusOwner());
+            current.get().setDisable(true);
         }
 
+        current.set(screen);
+
+        getChildren().remove(screen);
         getChildren().add(screen);
-        screen.setManager(this);
         screen.setDisable(false);
+        screen.setOpacity(1);
         screen.focusDefaultNode();
 
         screen.onOpen();
+        return true;
+    }
+
+    public void add(Screen screen) {
+        if (getChildren().contains(screen)) return;
+
+        getChildren().add(screen);
+        screen.setManager(this);
+        screen.setOpacity(0);
+        screen.setDisable(true);
     }
 
     /**
@@ -71,14 +88,23 @@ public class ScreenPane extends StackPane {
      * @return True if successful, false otherwise.
      */
     public boolean close(Screen screen) {
-        if (getChildren().remove(screen)) {
-            screen.setManager(null);
+        if (getChildren().contains(screen)) {
+            screen.setOpacity(0);
+            screen.setDisable(true);
 
-            if (!getChildren().isEmpty()) {
-                Screen prevScreen = (Screen) getChildren().get(getChildren().size() - 1);
-                prevScreen.setDisable(false);
-                Node focusTarget = lastFocusMap.remove(prevScreen);
-                if (focusTarget != null) focusTarget.requestFocus();
+            if (!screen.isKeepAfterClose()) getChildren().remove(screen);
+
+            if (screen.equals(current.get())) {
+                if (openStack.empty()) {
+                    current.set(null);
+                } else {
+                    current.set(openStack.pop());
+                    current.get().setDisable(false);
+                    Node focusTarget = lastFocusMap.remove(current.get());
+                    if (focusTarget != null) focusTarget.requestFocus();
+                }
+            } else {
+                openStack.remove(screen);
             }
 
             screen.onClose();
@@ -86,6 +112,10 @@ public class ScreenPane extends StackPane {
         } else {
             return false;
         }
+    }
+
+    public ObjectProperty<Screen> currentProperty() {
+        return current;
     }
 
 }

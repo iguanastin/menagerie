@@ -28,6 +28,7 @@ import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -297,18 +298,33 @@ public class MainController {
         initExplorer();
         initSettingsScreen();
         initTagListScreen();
-        slideshowScreen = new SlideshowScreen(item -> {
-            slideshowScreen.close();
-            itemGridView.select(item, false, false);
-        });
-        slideshowScreen.getInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
-        helpScreen = new HelpScreen();
-        settingsScreen = new SettingsScreen(settings);
-        duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
-        duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(item -> itemGridView.select(item, false, false));
-        duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
-        duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
+        initSlideshowScreen();
+        initHelpScreen();
+        initDuplicatesScreen();
+        initImportScreen();
+        initLogScreen();
+        initImportDialogScreen();
+        initGroupDialogScreen();
+
+        screenPane.currentProperty().addListener((observable, oldValue, newValue) -> explorerRootPane.setDisable(newValue != null));
+    }
+
+    private void initGroupDialogScreen() {
+        groupDialogScreen = new GroupDialogScreen();
+        groupDialogScreen.setKeepAfterClose(true);
+        screenPane.add(groupDialogScreen);
+    }
+
+    private void initImportDialogScreen() {
+        importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
+        importDialogScreen.setKeepAfterClose(true);
+        screenPane.add(importDialogScreen);
+    }
+
+    private void initImportScreen() {
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> itemGridView.select(item, false, false));
+        importerScreen.setKeepAfterClose(true);
+        screenPane.add(importerScreen);
         importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> {
             int count = c.getList().size() + importerScreen.getSimilar().size();
             importsButton.setText("Imports: " + count);
@@ -331,45 +347,53 @@ public class MainController {
                 }
             });
         });
-        initLogScreen();
-        importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
-        groupDialogScreen = new GroupDialogScreen();
+    }
 
-        screenPane.getChildren().addListener((ListChangeListener<? super Node>) c -> explorerRootPane.setDisable(!c.getList().isEmpty())); //Init disable listener for explorer screen
+    private void initDuplicatesScreen() {
+        duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
+        duplicateOptionsScreen.setKeepAfterClose(true);
+        screenPane.add(duplicateOptionsScreen);
+        duplicateOptionsScreen.getDuplicatesScreen().setKeepAfterClose(true);
+        screenPane.add(duplicateOptionsScreen.getDuplicatesScreen());
+        duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(item -> itemGridView.select(item, false, false));
+        duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
+        duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
+    }
+
+    private void initHelpScreen() {
+        helpScreen = new HelpScreen();
+        helpScreen.setKeepAfterClose(true);
+        screenPane.add(helpScreen);
+    }
+
+    private void initSlideshowScreen() {
+        slideshowScreen = new SlideshowScreen(item -> {
+            slideshowScreen.close();
+            itemGridView.select(item, false, false);
+        });
+        slideshowScreen.setKeepAfterClose(true);
+        slideshowScreen.getInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
+        screenPane.add(slideshowScreen);
     }
 
     /**
      * Initializes menagerie importer thread.
      */
     private void initImporterThread() {
-        //        try {
-        //            Main.log.info("Connecting to database: " + settings.getString(Settings.Key.DATABASE_URL) + " - " + settings.getString(Settings.Key.DATABASE_USER) + "/" + settings.getString(Settings.Key.DATABASE_PASSWORD));
-        //            Connection db = DriverManager.getConnection("jdbc:h2:" + settings.getString(Settings.Key.DATABASE_URL), settings.getString(Settings.Key.DATABASE_USER), settings.getString(Settings.Key.DATABASE_PASSWORD));
-        //            Main.log.info("Verifying/updating database");
-        //            DatabaseVersionUpdater.updateDatabase(db);
-        //
-        //            DatabaseManager dbManager = new DatabaseManager(db);
-        //            dbManager.setDaemon(true);
-        //            dbManager.start();
-        //
-        //            Main.log.info("Initializing Menagerie");
-        //            menagerie = new Menagerie(dbManager);
-
         Main.log.info("Starting importer thread");
         importer = new ImporterThread(menagerie, settings);
         importer.setDaemon(true);
         importer.start();
-        //        } catch (SQLException e) {
-        //            Main.log.log(Level.SEVERE, "Error connecting to or verifying database", e);
-        //            Main.showErrorMessage("Database Error", "Error when connecting to or verifying database", e.getLocalizedMessage());
-        //            Platform.exit();
-        //        }
     }
 
     /**
      * Initializes the settings screen
      */
     private void initSettingsScreen() {
+        settingsScreen = new SettingsScreen(settings);
+        settingsScreen.setKeepAfterClose(true);
+        screenPane.add(settingsScreen);
+
         ((IntegerProperty) settings.getProperty(Settings.Key.GRID_WIDTH)).addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
         ((BooleanProperty) settings.getProperty(Settings.Key.DO_AUTO_IMPORT)).addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
             // Defer to later to ensure other settings get updated before any action is taken, since this operation relies on other settings
@@ -388,6 +412,7 @@ public class MainController {
      */
     private void initTagListScreen() {
         tagListScreen = new TagListScreen();
+        tagListScreen.setKeepAfterClose(true);
         tagListScreen.setCellFactory(param -> {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
@@ -422,6 +447,8 @@ public class MainController {
      */
     private void initLogScreen() {
         logScreen = new LogScreen();
+        logScreen.setKeepAfterClose(true);
+        screenPane.add(logScreen);
         logScreen.getListView().setCellFactory(param -> new LogListCell());
         Main.log.addHandler(new Handler() {
             @Override

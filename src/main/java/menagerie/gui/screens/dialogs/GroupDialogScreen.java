@@ -73,6 +73,7 @@ public class GroupDialogScreen extends Screen {
         BorderPane top = new BorderPane(null, null, exit, new Separator(), new Label("Combine into group"));
 
         // --------------------------------- Center --------------------------------------
+        elementTagsCheckBox.setSelected(true);
         VBox center = new VBox(5, messageLabel, textField, elementTagsCheckBox);
         center.setPadding(new Insets(5));
 
