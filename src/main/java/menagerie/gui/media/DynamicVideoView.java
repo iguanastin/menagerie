@@ -25,6 +25,8 @@
 package menagerie.gui.media;
 
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -63,16 +65,21 @@ import java.util.concurrent.Semaphore;
  */
 public class DynamicVideoView extends StackPane {
 
+    private final Image muteImage = new Image(getClass().getResource("/misc/mute.png").toString());
+    private final Image unmuteImage = new Image(getClass().getResource("/misc/unmute.png").toString());
+
     private final Slider slider = new Slider(0, 1, 0);
     private final Label durationLabel = new Label("0:00/0:00");
-    private final ImageView muteImageView = new ImageView(getClass().getResource("/misc/mute.png").toString());
-    private final ImageView pauseImageView = new ImageView(getClass().getResource("/misc/pause.png").toString());
+    private final ImageView muteImageView = new ImageView(unmuteImage);
+    private final ImageView pauseImageView = new ImageView(getClass().getResource("/misc/play.png").toString());
     private final Canvas canvas = new Canvas(100, 50);
     private MediaPlayerComponent mediaPlayerComponent = null;
     private EmbeddedMediaPlayer mediaPlayer = null;
     private WritableImage img;
     private PixelWriter pixelWriter;
     private final WritablePixelFormat<ByteBuffer> pixelFormat = PixelFormat.getByteBgraPreInstance();
+
+    private final BooleanProperty mute = new SimpleBooleanProperty(false);
 
     private final double timerPeriod = 1000.0 / 60;
     private NanoTimer timer = new NanoTimer(timerPeriod) {
@@ -93,7 +100,10 @@ public class DynamicVideoView extends StackPane {
         canvas.heightProperty().bind(heightProperty());
         getChildren().add(canvas);
         HBox bottomBarHBox = new HBox(5, durationLabel, slider, muteImageView);
-        bottomBarHBox.setAlignment(Pos.BOTTOM_RIGHT);
+        bottomBarHBox.setAlignment(Pos.CENTER);
+        bottomBarHBox.setStyle("-fx-background-color: -fx-base;");
+        bottomBarHBox.setOpacity(0.75);
+        bottomBarHBox.setPadding(new Insets(3));
         BorderPane bp = new BorderPane(null, null, null, bottomBarHBox, null);
         HBox.setHgrow(slider, Priority.ALWAYS);
         slider.setOpacity(0.75);
@@ -128,12 +138,15 @@ public class DynamicVideoView extends StackPane {
             event.consume();
         });
 
-        addEventHandler(MouseEvent.MOUSE_ENTERED, event -> {
-            bottomBarHBox.setOpacity(1);
+        mute.addListener((observable, oldValue, newValue) -> {
+            if (!released && getMediaPlayer() != null) {
+                getMediaPlayer().audio().setMute(newValue);
+            }
+            muteImageView.setImage(newValue ? muteImage : unmuteImage);
         });
-        addEventHandler(MouseEvent.MOUSE_EXITED, event -> {
-            bottomBarHBox.setOpacity(0);
-        });
+
+        addEventHandler(MouseEvent.MOUSE_ENTERED, event -> bottomBarHBox.setOpacity(0.75));
+        addEventHandler(MouseEvent.MOUSE_EXITED, event -> bottomBarHBox.setOpacity(0));
         addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 if (isPlaying()) {
@@ -182,6 +195,11 @@ public class DynamicVideoView extends StackPane {
                             if (!slider.isValueChanging()) slider.setValue(newPosition);
                         });
                     }
+
+                    @Override
+                    public void mediaPlayerReady(MediaPlayer mediaPlayer) {
+                        mediaPlayer.submit(() -> mediaPlayer.audio().setMute(isMuted()));
+                    }
                 });
             }
 
@@ -217,10 +235,7 @@ public class DynamicVideoView extends StackPane {
     }
 
     public void setMute(boolean b) {
-        if (!released && getMediaPlayer() != null) {
-            getMediaPlayer().audio().setMute(b);
-            muteImageView.setOpacity(b ? 1 : 0);
-        }
+        mute.set(b);
     }
 
     public void setRepeat(boolean b) {
@@ -236,7 +251,7 @@ public class DynamicVideoView extends StackPane {
     }
 
     public boolean isMuted() {
-        return !released && getMediaPlayer() != null && getMediaPlayer().audio().isMute();
+        return mute.get();
     }
 
     public void pause() {
