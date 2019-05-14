@@ -65,7 +65,7 @@ public class Thumbnail {
     private Image image;
 
     private boolean loaded = false;
-    private boolean doNotLoad = false;
+    public int want = 0;
 
     private final Set<ObjectListener<Image>> imageReadyListeners = new HashSet<>();
 
@@ -247,12 +247,16 @@ public class Thumbnail {
         return imageReadyListeners.remove(listener);
     }
 
-    public synchronized void setDoNotLoad(boolean doNotLoad) {
-        this.doNotLoad = doNotLoad;
+    public synchronized void want() {
+        want++;
+    }
+
+    public synchronized void doNotWant() {
+        want--;
     }
 
     public synchronized boolean isDoNotLoad() {
-        return doNotLoad;
+        return want == 0;
     }
 
     public static void releaseVLCJResources() {
