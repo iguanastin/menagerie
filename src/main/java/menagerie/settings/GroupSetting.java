@@ -64,6 +64,7 @@ public class GroupSetting extends Setting {
 
     public void setToggleable(boolean toggleable) {
         this.toggleable.set(toggleable);
+        if (!toggleable) setEnabled(true);
     }
 
     public BooleanProperty toggleableProperty() {
