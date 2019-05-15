@@ -30,7 +30,7 @@ import org.json.JSONObject;
 
 public class StringSetting extends Setting {
 
-    private static final String VALUE_KEY = "value";
+    static final String VALUE_KEY = "value";
 
     private static final String TYPE = "string";
 
