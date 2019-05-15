@@ -28,8 +28,6 @@ import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
 import javafx.application.Platform;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -69,7 +67,7 @@ public class DynamicMediaView extends StackPane {
     private final BorderPane pdfControlsPane;
     private final Label pdfPageLabel = new Label("0/0");
     private PDDocument currentPDF = null;
-    private IntegerProperty currentPDFPageIndex = new SimpleIntegerProperty(-1);
+    private int currentPDFPageIndex = 0;
 
 
     public DynamicMediaView() {
@@ -77,19 +75,15 @@ public class DynamicMediaView extends StackPane {
 
         Button pdfLeftButton = new Button("<-");
         pdfLeftButton.setOnAction(event -> {
-            if (currentPDFPageIndex.get() > 0) {
-                setPDFPage(currentPDFPageIndex.get() - 1);
+            if (currentPDFPageIndex > 0) {
+                setPDFPage(currentPDFPageIndex - 1);
             }
         });
         Button pdfRightButton = new Button("->");
         pdfRightButton.setOnAction(event -> {
-            if (currentPDFPageIndex.get() < currentPDF.getNumberOfPages() - 1) {
-                setPDFPage(currentPDFPageIndex.get() + 1);
+            if (currentPDFPageIndex < currentPDF.getNumberOfPages() - 1) {
+                setPDFPage(currentPDFPageIndex + 1);
             }
-        });
-        currentPDFPageIndex.addListener((observable, oldValue, newValue) -> {
-            pdfLeftButton.setDisable(newValue.intValue() <= 0);
-            pdfRightButton.setDisable(newValue.intValue() > currentPDF.getNumberOfPages() - 2);
         });
         HBox bottomHBox = new HBox(5, pdfLeftButton, pdfPageLabel, pdfRightButton);
         bottomHBox.setAlignment(Pos.CENTER);
@@ -245,7 +239,7 @@ public class DynamicMediaView extends StackPane {
     private void setPDFPage(int page) {
         if (currentPDF == null || page < 0 || page >= currentPDF.getNumberOfPages()) return;
 
-        currentPDFPageIndex.set(page);
+        currentPDFPageIndex = page;
 
         try {
             BufferedImage img = new PDFRenderer(currentPDF).renderImageWithDPI(page, 300);
