@@ -114,11 +114,7 @@ public class MediaItem extends Item {
         Thumbnail thumb = null;
         if (thumbnail != null) thumb = thumbnail.get();
         if (thumb == null && file != null) {
-            try {
-                thumb = new Thumbnail(this, file);
-            } catch (IOException ignore) {
-            }
-
+            thumb = new Thumbnail(this, file);
             thumbnail = new SoftReference<>(thumb);
         }
 

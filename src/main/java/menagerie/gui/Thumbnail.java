@@ -70,6 +70,9 @@ public class Thumbnail {
      */
     public static final int THUMBNAIL_SIZE = 150;
 
+    private static final String UNSUPPORTED_IMAGE_PATH = "/misc/default-thumb.png";
+    private static Image unsupportedImage = null;
+
     // -------------------------------- Variables -----------------------------------------
 
     private final File file;
@@ -80,9 +83,9 @@ public class Thumbnail {
 
     private final Set<ObjectListener<Image>> imageReadyListeners = new HashSet<>();
 
-    private static volatile boolean imageThreadRunning = false;
+    private static volatile boolean generalThreadRunning = false;
     private static volatile boolean videoThreadRunning = false;
-    private static final BlockingQueue<Thumbnail> imageQueue = new LinkedBlockingQueue<>();
+    private static final BlockingQueue<Thumbnail> generalQueue = new LinkedBlockingQueue<>();
     private static final BlockingQueue<Thumbnail> videoQueue = new LinkedBlockingQueue<>();
     private static MediaPlayer mediaPlayer;
     private static MediaPlayerFactory mediaPlayerFactory;
@@ -92,9 +95,8 @@ public class Thumbnail {
      * Constructs a thumbnail for a file and begins loading it.
      *
      * @param file A media file that is accepted by the {@link Filters}
-     * @throws IOException If file is not accepted by the {@link Filters}
      */
-    public Thumbnail(Item owner, File file) throws IOException {
+    public Thumbnail(Item owner, File file) {
         this.owner = owner;
         this.file = file;
 
@@ -102,20 +104,18 @@ public class Thumbnail {
             startVideoThread();
         }
 
-        if (!imageThreadRunning) {
-            startImageThread();
+        if (!generalThreadRunning) {
+            startGeneralThread();
         }
 
-        if (Filters.IMAGE_NAME_FILTER.accept(file) || Filters.RAR_NAME_FILTER.accept(file) || Filters.ZIP_NAME_FILTER.accept(file) || Filters.PDF_NAME_FILTER.accept(file)) {
-            imageQueue.add(this);
-        } else if (Filters.VIDEO_NAME_FILTER.accept(file)) {
+        if (Filters.VIDEO_NAME_FILTER.accept(file)) {
             videoQueue.add(this);
         } else {
-            throw new IOException("Unsupported filetype");
+            generalQueue.add(this);
         }
     }
 
-    private void loadImageFromDisk() {
+    private void loadItemImage() {
         if (Filters.IMAGE_NAME_FILTER.accept(file)) {
             image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
         } else if (Filters.RAR_NAME_FILTER.accept(file)) {
@@ -156,13 +156,25 @@ public class Thumbnail {
                 Main.log.log(Level.INFO, "Failed to thumbnail PDF: " + file, e);
                 return;
             }
+        } else {
+            synchronized (this) {
+                if (unsupportedImage == null) {
+                    unsupportedImage = new Image(getClass().getResourceAsStream(UNSUPPORTED_IMAGE_PATH));
+                }
+
+                image = unsupportedImage;
+            }
+
+            synchronized (imageReadyListeners) {
+                imageReadyListeners.forEach(listener -> listener.pass(image));
+            }
         }
         synchronized (imageReadyListeners) {
             imageReadyListeners.forEach(listener -> listener.pass(image));
         }
     }
 
-    private void loadVideoFromDisk() {
+    private void loadVideoImage() {
         final CountDownLatch inPositionLatch = new CountDownLatch(2);
         final CountDownLatch snapshotLatch = new CountDownLatch(1);
 
@@ -221,23 +233,23 @@ public class Thumbnail {
         }
     }
 
-    private static void startImageThread() {
-        imageThreadRunning = true;
+    private static void startGeneralThread() {
+        generalThreadRunning = true;
 
         Thread t = new Thread(() -> {
-            while (imageThreadRunning) {
+            while (generalThreadRunning) {
                 try {
-                    Thumbnail thumb = imageQueue.take();
+                    Thumbnail thumb = generalQueue.take();
                     if (thumb.isDoNotLoad()) {
                         thumb.owner.purgeThumbnail();
                         continue;
                     }
 
-                    thumb.loadImageFromDisk();
+                    thumb.loadItemImage();
                 } catch (InterruptedException ignore) {
                 }
             }
-        }, "Image Thumbnailer Thread");
+        }, "General Thumbnailer Thread");
         t.setDaemon(true);
         t.start();
     }
@@ -258,7 +270,7 @@ public class Thumbnail {
                         continue;
                     }
 
-                    thumb.loadVideoFromDisk();
+                    thumb.loadVideoImage();
                     if (!thumb.isLoaded()) {
                         thumb.owner.purgeThumbnail();
                     }
