@@ -28,8 +28,17 @@ import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
 import javafx.application.Platform;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.embed.swing.SwingFXUtils;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import menagerie.gui.Main;
 import menagerie.model.menagerie.GroupItem;
@@ -37,12 +46,9 @@ import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.util.Filters;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -60,14 +66,41 @@ public class DynamicMediaView extends StackPane {
     private final PanZoomImageView imageView = new PanZoomImageView();
     private final TextArea textView = new TextArea();
 
+    private final BorderPane pdfControlsPane;
+    private final Label pdfPageLabel = new Label("0/0");
+    private PDDocument currentPDF = null;
+    private IntegerProperty currentPDFPageIndex = new SimpleIntegerProperty(-1);
+
 
     public DynamicMediaView() {
         super();
 
+        Button pdfLeftButton = new Button("<-");
+        pdfLeftButton.setOnAction(event -> {
+            if (currentPDFPageIndex.get() > 0) {
+                setPDFPage(currentPDFPageIndex.get() - 1);
+            }
+        });
+        Button pdfRightButton = new Button("->");
+        pdfRightButton.setOnAction(event -> {
+            if (currentPDFPageIndex.get() < currentPDF.getNumberOfPages() - 1) {
+                setPDFPage(currentPDFPageIndex.get() + 1);
+            }
+        });
+        currentPDFPageIndex.addListener((observable, oldValue, newValue) -> {
+            pdfLeftButton.setDisable(newValue.intValue() <= 0);
+            pdfRightButton.setDisable(newValue.intValue() > currentPDF.getNumberOfPages() - 2);
+        });
+        HBox bottomHBox = new HBox(5, pdfLeftButton, pdfPageLabel, pdfRightButton);
+        bottomHBox.setAlignment(Pos.CENTER);
+        bottomHBox.setPadding(new Insets(5));
+        pdfControlsPane = new BorderPane(null, null, null, bottomHBox, null);
+        pdfControlsPane.setPickOnBounds(false);
+
         textView.setEditable(false);
         textView.setFocusTraversable(false);
         textView.setWrapText(true);
-        getChildren().addAll(imageView, textView);
+        getChildren().addAll(imageView, textView, pdfControlsPane);
     }
 
     /**
@@ -78,17 +111,17 @@ public class DynamicMediaView extends StackPane {
      */
     public boolean preview(Item item) {
         if (getVideoView() != null) getVideoView().stop();
-        getImageView().setImage(null);
+        imageView.setImage(null);
         hideAllViews();
 
         if (item instanceof MediaItem) {
             try {
                 if (((MediaItem) item).isImage()) {
                     if (getVideoView() != null) getVideoView().stop();
-                    getImageView().setImage(((MediaItem) item).getImage());
+                    imageView.setImage(((MediaItem) item).getImage());
                     showImageView();
                 } else if (((MediaItem) item).isVideo() && getVideoView() != null) {
-                    getImageView().setImage(null);
+                    imageView.setImage(null);
                     getVideoView().startMedia(((MediaItem) item).getFile().getAbsolutePath());
                     showVideoView();
                 } else if (Filters.RAR_NAME_FILTER.accept(((MediaItem) item).getFile())) {
@@ -96,7 +129,7 @@ public class DynamicMediaView extends StackPane {
                         List<FileHeader> fileHeaders = a.getFileHeaders();
                         if (!fileHeaders.isEmpty()) {
                             try (InputStream is = a.getInputStream(fileHeaders.get(0))) {
-                                getImageView().setImage(new Image(is));
+                                imageView.setImage(new Image(is));
                             }
                         }
                     } catch (RarException | IOException | NullPointerException e) {
@@ -107,20 +140,17 @@ public class DynamicMediaView extends StackPane {
                     try (ZipFile zip = new ZipFile(((MediaItem) item).getFile())) {
                         if (zip.entries().hasMoreElements()) {
                             try (InputStream is = zip.getInputStream(zip.entries().nextElement())) {
-                                getImageView().setImage(new Image(is));
+                                imageView.setImage(new Image(is));
                             }
                         }
                     } catch (IOException e) {
                         Main.log.log(Level.INFO, "Failed to preview ZIP: " + ((MediaItem) item).getFile());
                     }
                 } else if (Filters.PDF_NAME_FILTER.accept(((MediaItem) item).getFile())) {
-                    PDDocument doc = PDDocument.load(((MediaItem) item).getFile());
-                    BufferedImage img = new PDFRenderer(doc).renderImage(0, 1, ImageType.ARGB); // TODO PDF controls
-                    File temp = File.createTempFile("menagerie-pdf", ".png");
-                    temp.deleteOnExit();
-                    ImageIO.write(img, "png", temp);
-                    getImageView().setImage(new Image(temp.toURI().toString())); // TODO may not be working properly?
-                    doc.close();
+                    if (currentPDF != null) currentPDF.close();
+                    currentPDF = PDDocument.load(((MediaItem) item).getFile());
+                    setPDFPage(0);
+                    showPDFView();
                 } else if (Files.probeContentType(((MediaItem) item).getFile().toPath()).equalsIgnoreCase("text/plain")) {
                     textView.setText(String.join("\n", Files.readAllLines(((MediaItem) item).getFile().toPath())));
                     showTextView();
@@ -143,14 +173,16 @@ public class DynamicMediaView extends StackPane {
      * Hides both the video and the image views, if they exist.
      */
     private void hideAllViews() {
-        getImageView().setDisable(true);
-        getImageView().setOpacity(0);
+        imageView.setDisable(true);
+        imageView.setOpacity(0);
         if (getVideoView() != null) {
             getVideoView().setDisable(true);
             getVideoView().setOpacity(0);
         }
-        getTextView().setDisable(true);
-        getTextView().setOpacity(0);
+        textView.setDisable(true);
+        textView.setOpacity(0);
+        pdfControlsPane.setDisable(true);
+        pdfControlsPane.setOpacity(0);
     }
 
     /**
@@ -158,8 +190,8 @@ public class DynamicMediaView extends StackPane {
      */
     private void showImageView() {
         hideAllViews();
-        getImageView().setDisable(false);
-        getImageView().setOpacity(1);
+        imageView.setDisable(false);
+        imageView.setOpacity(1);
     }
 
     /**
@@ -182,6 +214,14 @@ public class DynamicMediaView extends StackPane {
         textView.setDisable(false);
     }
 
+    private void showPDFView() {
+        hideAllViews();
+        imageView.setDisable(false);
+        imageView.setOpacity(1);
+        pdfControlsPane.setDisable(false);
+        pdfControlsPane.setOpacity(1);
+    }
+
     /**
      * Attempts to get the video view. If VLCJ not loaded and this is the first call to this method, video view will be constructed.
      *
@@ -198,18 +238,23 @@ public class DynamicMediaView extends StackPane {
         return videoView;
     }
 
-    /**
-     * @return The image view.
-     */
     public PanZoomImageView getImageView() {
         return imageView;
     }
 
-    /**
-     * @return The text view.
-     */
-    public TextArea getTextView() {
-        return textView;
+    private void setPDFPage(int page) {
+        if (currentPDF == null || page < 0 || page >= currentPDF.getNumberOfPages()) return;
+
+        currentPDFPageIndex.set(page);
+
+        try {
+            BufferedImage img = new PDFRenderer(currentPDF).renderImageWithDPI(page, 300);
+            imageView.setImage(SwingFXUtils.toFXImage(img, null));
+        } catch (IOException e) {
+            Main.log.log(Level.WARNING, "Failed to render PDF page: " + page, e);
+        }
+
+        pdfPageLabel.setText((page + 1) + "/" + currentPDF.getNumberOfPages());
     }
 
     /**

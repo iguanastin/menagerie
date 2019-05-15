@@ -27,15 +27,20 @@ package menagerie.gui;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import menagerie.model.menagerie.Item;
 import menagerie.util.Filters;
 import menagerie.util.listeners.ObjectListener;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory;
 import uk.co.caprica.vlcj.player.base.MediaPlayer;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter;
 import uk.co.caprica.vlcj.player.base.MediaPlayerEventListener;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -101,7 +106,7 @@ public class Thumbnail {
             startImageThread();
         }
 
-        if (Filters.IMAGE_NAME_FILTER.accept(file) || Filters.RAR_NAME_FILTER.accept(file) || Filters.ZIP_NAME_FILTER.accept(file)) {
+        if (Filters.IMAGE_NAME_FILTER.accept(file) || Filters.RAR_NAME_FILTER.accept(file) || Filters.ZIP_NAME_FILTER.accept(file) || Filters.PDF_NAME_FILTER.accept(file)) {
             imageQueue.add(this);
         } else if (Filters.VIDEO_NAME_FILTER.accept(file)) {
             videoQueue.add(this);
@@ -138,6 +143,17 @@ public class Thumbnail {
                 }
             } catch (IOException e) {
                 Main.log.log(Level.INFO, "Failed to thumbnail ZIP: " + file);
+                return;
+            }
+        } else if (Filters.PDF_NAME_FILTER.accept(file)) {
+            try (PDDocument doc = PDDocument.load(file)) {
+                PDRectangle mb = doc.getPage(0).getMediaBox();
+                float scale = THUMBNAIL_SIZE / mb.getWidth();
+                if (THUMBNAIL_SIZE / mb.getHeight() < scale) scale = THUMBNAIL_SIZE / mb.getHeight();
+                BufferedImage img = new PDFRenderer(doc).renderImage(0, scale);
+                image = SwingFXUtils.toFXImage(img, null);
+            } catch (IOException e) {
+                Main.log.log(Level.INFO, "Failed to thumbnail PDF: " + file, e);
                 return;
             }
         }
