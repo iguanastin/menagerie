@@ -51,6 +51,11 @@ public class SettingTests {
             public int getVersion() {
                 return version;
             }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
+            }
         };
 
         assertEquals(id, s.getID());
@@ -72,6 +77,11 @@ public class SettingTests {
             @Override
             public int getVersion() {
                 return 0;
+            }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
             }
         };
 
@@ -131,6 +141,11 @@ public class SettingTests {
             public int getVersion() {
                 return version;
             }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
+            }
         };
 
         JSONObject json = s.toJSON();
@@ -168,6 +183,11 @@ public class SettingTests {
             public int getVersion() {
                 return version;
             }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
+            }
         };
 
         assertEquals(s, s);
@@ -183,6 +203,11 @@ public class SettingTests {
             public int getVersion() {
                 return 2;
             }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
+            }
         };
         assertNotEquals(s, s1);
 
@@ -195,6 +220,11 @@ public class SettingTests {
             @Override
             public int getVersion() {
                 return version;
+            }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
             }
         };
         assertNotEquals(s, s2);
@@ -209,6 +239,11 @@ public class SettingTests {
             public int getVersion() {
                 return version;
             }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
+            }
         };
         assertNotEquals(s, s3);
 
@@ -221,6 +256,11 @@ public class SettingTests {
             @Override
             public int getVersion() {
                 return version;
+            }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
             }
         };
         assertNotEquals(s, s4);
@@ -237,6 +277,11 @@ public class SettingTests {
             @Override
             public int getVersion() {
                 return 0;
+            }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
             }
         }).toString();
     }

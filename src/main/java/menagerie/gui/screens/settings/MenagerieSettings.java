@@ -22,12 +22,18 @@
  SOFTWARE.
  */
 
-package menagerie.settings;
+package menagerie.gui.screens.settings;
+
+import menagerie.settings.*;
+
+import java.io.File;
 
 public class MenagerieSettings extends Settings {
 
 
-    public MenagerieSettings() {
+    public MenagerieSettings(File file) {
+        super(file);
+
         GroupSetting importGroup = new GroupSetting("import-group", "Importing", null, false, false, true);
         importGroup.getChildren().add(new FolderSetting("default-folder", "Default Folder", "Folder to import files into, where applicable", false, null));
         importGroup.getChildren().add(new StringSetting("user-filetypes", "Also import filetypes", "File extensions, separated by spaces. E.g. \".txt .pdf .rar\"", false, null));
@@ -42,13 +48,15 @@ public class MenagerieSettings extends Settings {
         getSettings().add(importGroup);
 
         GroupSetting duplicateGroup = new GroupSetting("duplicate-group", "Duplicate Finding", null, false, false, true);
-        duplicateGroup.getChildren().add(new DoubleSetting("duplicate-confidence", "Duplicate Confidence", null, false, 0.95));
+        DoubleSetting confidence = new DoubleSetting("duplicate-confidence", "Duplicate Confidence", "Value between 0.90 and 1.00", false, 0.95);
+        confidence.setRange(0.9, 1.0);
+        duplicateGroup.getChildren().add(confidence);
         getSettings().add(duplicateGroup);
 
         GroupSetting videoGroup = new GroupSetting("video-group", "Video Playback", null, false, false, true);
         videoGroup.getChildren().add(new BooleanSetting("repeat-video", "Repeat video", null, false, true));
         videoGroup.getChildren().add(new BooleanSetting("mute-video", "Mute video", null, false, false));
-        videoGroup.getChildren().add(new FolderSetting("vlc-folder", "VLC Folder", null, false, null));
+        videoGroup.getChildren().add(new FolderSetting("vlc-folder", "VLC Folder", "Only needs to be specified if VLC cannot be found in the normal places", false, null));
         getSettings().add(videoGroup);
 
         GroupSetting dbGroup = new GroupSetting("db-group", "Database", null, false, false, true);
@@ -59,7 +67,9 @@ public class MenagerieSettings extends Settings {
         getSettings().add(dbGroup);
 
         GroupSetting explorerGroup = new GroupSetting("explorer-group", "Explorer", null, false, false, true);
-        explorerGroup.getChildren().add(new IntSetting("grid-width", "Grid width", null, false, 3));
+        IntSetting gridWidth = new IntSetting("grid-width", "Grid width", null, false, 3);
+        gridWidth.setRange(1, 8);
+        explorerGroup.getChildren().add(gridWidth);
         getSettings().add(explorerGroup);
 
         getSettings().add(new BooleanSetting("help-on-start", null, null, true, true));
@@ -70,6 +80,10 @@ public class MenagerieSettings extends Settings {
         getSettings().add(new IntSetting("window-y", null, null, true, 0));
         getSettings().add(new IntSetting("window-width", null, null, true, 800));
         getSettings().add(new IntSetting("window-height", null, null, true, 600));
+    }
+
+    public MenagerieSettings() {
+        this(null);
     }
 
 }

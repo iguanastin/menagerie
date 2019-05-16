@@ -26,6 +26,13 @@ package menagerie.settings;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import menagerie.util.Util;
 import org.json.JSONObject;
 
@@ -67,6 +74,31 @@ public class StringSetting extends Setting {
     @Override
     public int getVersion() {
         return 1;
+    }
+
+    @Override
+    public SettingNode makeJFXNode() {
+        Label label = new Label(getLabel());
+        TextField textField = new TextField(getValue());
+        if (getTip() != null && !getTip().isEmpty()) {
+            textField.setPromptText(getTip());
+            textField.setTooltip(new Tooltip(getTip()));
+        }
+        HBox h = new HBox(5, label, textField);
+        h.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(textField, Priority.ALWAYS);
+
+        return new SettingNode() {
+            @Override
+            public void applyToSetting() {
+                setValue(textField.getText());
+            }
+
+            @Override
+            public Node getNode() {
+                return h;
+            }
+        };
     }
 
     @Override

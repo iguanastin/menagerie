@@ -32,11 +32,11 @@ import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.*;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.*;
 import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -55,6 +55,8 @@ import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
+import menagerie.gui.screens.settings.MenagerieSettings;
+import menagerie.gui.screens.settings.NewSettingsScreen;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListPopup;
 import menagerie.model.Settings;
@@ -79,8 +81,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -284,6 +286,10 @@ public class MainController {
                     Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
                 }
             });
+
+            MenagerieSettings s = new MenagerieSettings();
+            NewSettingsScreen nss = new NewSettingsScreen();
+            nss.open(screenPane, s);
         });
     }
 

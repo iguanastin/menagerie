@@ -134,6 +134,11 @@ class SettingsTests {
             public int getVersion() {
                 return 1;
             }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
+            }
         };
         s.getSettings().add(anonSetting);
 
@@ -175,6 +180,11 @@ class SettingsTests {
             @Override
             public int getVersion() {
                 return 0;
+            }
+
+            @Override
+            public SettingNode makeJFXNode() {
+                return null;
             }
         });
         assertNotEquals(s, s2);

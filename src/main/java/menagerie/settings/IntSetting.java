@@ -26,15 +26,24 @@ package menagerie.settings;
 
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.HBox;
 import org.json.JSONObject;
 
 public class IntSetting extends Setting {
 
     private static final String VALUE_KEY = "value";
+    private static final String MIN_KEY = "min";
+    private static final String MAX_KEY = "max";
 
     private static final String TYPE = "int";
 
     private final IntegerProperty value = new SimpleIntegerProperty();
+    private int min = Integer.MIN_VALUE, max = Integer.MAX_VALUE;
 
 
     public IntSetting(String identifier, String label, String tip, boolean hidden, int value) {
@@ -44,6 +53,27 @@ public class IntSetting extends Setting {
 
     public IntSetting(String identifier) {
         super(identifier);
+    }
+
+    public int getMin() {
+        return min;
+    }
+
+    public int getMax() {
+        return max;
+    }
+
+    public void setRange(int min, int max) {
+        if (min > max) {
+            int temp = min;
+            min = max;
+            max = temp;
+        }
+
+        this.min = min;
+        this.max = max;
+
+        if (getValue() < min || getValue() > max) setValue(Math.min(Math.max(min, getValue()), max));
     }
 
     public int getValue() {
@@ -69,10 +99,36 @@ public class IntSetting extends Setting {
     }
 
     @Override
+    public SettingNode makeJFXNode() {
+        Label label = new Label(getLabel());
+        Spinner<Integer> spinner = new Spinner<>(getMin(), getMax(), getValue());
+        spinner.setEditable(true);
+        if (getTip() != null && !getTip().isEmpty()) {
+            spinner.setTooltip(new Tooltip(getTip()));
+        }
+        HBox h = new HBox(5, label, spinner);
+        h.setAlignment(Pos.CENTER_LEFT);
+
+        return new SettingNode() {
+            @Override
+            public void applyToSetting() {
+                setValue(spinner.getValue());
+            }
+
+            @Override
+            public Node getNode() {
+                return h;
+            }
+        };
+    }
+
+    @Override
     JSONObject toJSON() {
         JSONObject json = super.toJSON();
 
         json.put(VALUE_KEY, getValue());
+        json.put(MIN_KEY, getMin());
+        json.put(MAX_KEY, getMax());
 
         return json;
     }
@@ -92,6 +148,8 @@ public class IntSetting extends Setting {
             if (json.has(VALUE_KEY)) value = json.getInt(VALUE_KEY);
 
             setting = new IntSetting(json.getString(ID_KEY), label, tip, hidden, value);
+
+            if (json.has(MIN_KEY) && json.has(MAX_KEY)) setting.setRange(json.getInt(MIN_KEY), json.getInt(MAX_KEY));
         }
 
         return setting;

@@ -26,6 +26,9 @@ package menagerie.settings;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.scene.Node;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Tooltip;
 import org.json.JSONObject;
 
 public class BooleanSetting extends Setting {
@@ -66,6 +69,27 @@ public class BooleanSetting extends Setting {
     @Override
     public int getVersion() {
         return 1;
+    }
+
+    @Override
+    public SettingNode makeJFXNode() {
+        CheckBox checkBox = new CheckBox(getLabel());
+        checkBox.setSelected(getValue());
+        if (getTip() != null && !getTip().isEmpty()) {
+            checkBox.setTooltip(new Tooltip(getTip()));
+        }
+
+        return new SettingNode() {
+            @Override
+            public void applyToSetting() {
+                setValue(checkBox.isSelected());
+            }
+
+            @Override
+            public Node getNode() {
+                return checkBox;
+            }
+        };
     }
 
     @Override

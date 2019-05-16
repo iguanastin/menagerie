@@ -43,7 +43,16 @@ public class Settings {
     protected static final List<Class<? extends Setting>> PARSABLE_SETTINGS = new ArrayList<>(Arrays.asList(GroupSetting.class, IntSetting.class, DoubleSetting.class, BooleanSetting.class, StringSetting.class, FileSetting.class, FolderSetting.class));
 
     private final List<Setting> settings = new ArrayList<>();
+    private File file = null;
 
+
+    public Settings() {
+
+    }
+
+    public Settings(File file) {
+        this.file = file;
+    }
 
     public Setting getSetting(String identifier) {
         List<Setting> list = new ArrayList<>(settings);
@@ -65,6 +74,10 @@ public class Settings {
 
     public int getVersion() {
         return 1;
+    }
+
+    public File getFile() {
+        return file;
     }
 
     @Override
@@ -89,7 +102,7 @@ public class Settings {
         String fileText = String.join("\n", Files.readAllLines(file.toPath()));
         JSONObject json = new JSONObject(fileText);
 
-        Settings settings = new Settings();
+        Settings settings = new Settings(file);
 
         if (!json.has(VERSION_KEY)) return settings; // No version defined, nothing to load.
 
@@ -141,6 +154,10 @@ public class Settings {
         try (FileWriter fw = new FileWriter(file)) {
             json.write(fw, 2, 0);
         }
+    }
+
+    public void save() throws IOException {
+        save(file);
     }
 
 }

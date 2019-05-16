@@ -26,6 +26,12 @@ package menagerie.settings;
 
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -90,6 +96,53 @@ public class GroupSetting extends Setting {
     @Override
     public int getVersion() {
         return 1;
+    }
+
+    @Override
+    public SettingNode makeJFXNode() {
+        VBox root = new VBox(5);
+        root.setFillWidth(true);
+        VBox v = new VBox(5);
+        v.setPadding(new Insets(0, 0, 0, 20));
+        v.setDisable(!isEnabled());
+
+        CheckBox checkBox = null;
+        if (isToggleable()) {
+            checkBox = new CheckBox(getLabel());
+            checkBox.selectedProperty().addListener((observable, oldValue, newValue) -> v.setDisable(!newValue));
+            checkBox.setSelected(isEnabled());
+            checkBox.setFont(new Font("System Bold", Font.getDefault().getSize()));
+            root.getChildren().add(checkBox);
+        } else {
+            Label label = new Label(getLabel());
+            label.setFont(new Font("System Bold Italic", Font.getDefault().getSize()));
+            root.getChildren().add(label);
+        }
+
+        root.getChildren().add(v);
+
+        List<SettingNode> childNodes = new ArrayList<>();
+        for (Setting child : getChildren()) {
+            if (child.isHidden()) continue;
+
+            SettingNode node = child.makeJFXNode();
+            childNodes.add(node);
+            v.getChildren().add(node.getNode());
+        }
+
+        final CheckBox finalCheckBox = checkBox;
+        return new SettingNode() {
+            @Override
+            public void applyToSetting() {
+                if (finalCheckBox != null) setEnabled(finalCheckBox.isSelected());
+                childNodes.forEach(SettingNode::applyToSetting);
+            }
+
+            @Override
+            public Node getNode() {
+                return root;
+            }
+        };
     }
 
     @Override

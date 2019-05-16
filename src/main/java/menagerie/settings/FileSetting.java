@@ -24,7 +24,18 @@
 
 package menagerie.settings;
 
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.stage.FileChooser;
 import org.json.JSONObject;
+
+import java.io.File;
 
 public class FileSetting extends StringSetting {
 
@@ -47,6 +58,47 @@ public class FileSetting extends StringSetting {
     @Override
     public int getVersion() {
         return 1;
+    }
+
+    @Override
+    public SettingNode makeJFXNode() {
+        Label label = new Label(getLabel());
+        TextField textField = new TextField(getValue());
+        if (getTip() != null && !getTip().isEmpty()) {
+            textField.setPromptText(getTip());
+            textField.setTooltip(new Tooltip(getTip()));
+        }
+        Button browse = new Button("Browse");
+        browse.setOnAction(event -> {
+            FileChooser fc = new FileChooser();
+            fc.setTitle(getLabel());
+            if (getValue() != null && !getValue().isEmpty()) {
+                File current = new File(getValue());
+                if (current.exists()) {
+                    fc.setInitialDirectory(current.getParentFile());
+                    fc.setInitialFileName(current.getName());
+                }
+            }
+            File result = fc.showOpenDialog(browse.getScene().getWindow());
+            if (result != null) {
+                textField.setText(result.getAbsolutePath());
+            }
+        });
+        HBox h = new HBox(5, label, textField, browse);
+        h.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(textField, Priority.ALWAYS);
+
+        return new SettingNode() {
+            @Override
+            public void applyToSetting() {
+                setValue(textField.getText());
+            }
+
+            @Override
+            public Node getNode() {
+                return h;
+            }
+        };
     }
 
     public static FileSetting fromJSON(JSONObject json) {

@@ -26,15 +26,24 @@ package menagerie.settings;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Label;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.HBox;
 import org.json.JSONObject;
 
 public class DoubleSetting extends Setting {
 
     private static final String VALUE_KEY = "value";
+    private static final String MIN_KEY = "min";
+    private static final String MAX_KEY = "max";
 
     private static final String TYPE = "double";
 
     private final DoubleProperty value = new SimpleDoubleProperty();
+    private double min = Double.MIN_VALUE, max = Double.MAX_VALUE;
 
 
     public DoubleSetting(String identifier, String label, String tip, boolean hidden, double value) {
@@ -44,6 +53,27 @@ public class DoubleSetting extends Setting {
 
     public DoubleSetting(String identifier) {
         super(identifier);
+    }
+
+    public double getMin() {
+        return min;
+    }
+
+    public double getMax() {
+        return max;
+    }
+
+    public void setRange(double min, double max) {
+        if (min > max) {
+            double temp = min;
+            min = max;
+            max = temp;
+        }
+
+        this.min = min;
+        this.max = max;
+
+        if (getValue() < min || getValue() > max) setValue(Math.min(Math.max(min, getValue()), max));
     }
 
     public double getValue() {
@@ -69,10 +99,36 @@ public class DoubleSetting extends Setting {
     }
 
     @Override
+    public SettingNode makeJFXNode() {
+        Label label = new Label(getLabel());
+        Spinner<Double> spinner = new Spinner<>(getMin(), getMax(), getValue());
+        spinner.setEditable(true);
+        if (getTip() != null && !getTip().isEmpty()) {
+            spinner.setTooltip(new Tooltip(getTip()));
+        }
+        HBox h = new HBox(5, label, spinner);
+        h.setAlignment(Pos.CENTER_LEFT);
+
+        return new SettingNode() {
+            @Override
+            public void applyToSetting() {
+                setValue(spinner.getValue());
+            }
+
+            @Override
+            public Node getNode() {
+                return h;
+            }
+        };
+    }
+
+    @Override
     JSONObject toJSON() {
         JSONObject json = super.toJSON();
 
         json.put(VALUE_KEY, getValue());
+        json.put(MIN_KEY, getMin());
+        json.put(MAX_KEY, getMax());
 
         return json;
     }
@@ -92,6 +148,9 @@ public class DoubleSetting extends Setting {
             if (json.has(VALUE_KEY)) value = json.getDouble(VALUE_KEY);
 
             setting = new DoubleSetting(json.getString(ID_KEY), label, tip, hidden, value);
+
+            if (json.has(MIN_KEY) && json.has(MAX_KEY))
+                setting.setRange(json.getDouble(MIN_KEY), json.getDouble(MAX_KEY));
         }
 
         return setting;

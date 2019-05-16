@@ -85,6 +85,8 @@ public abstract class Setting {
 
     public abstract int getVersion();
 
+    public abstract SettingNode makeJFXNode();
+
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof Setting) {
