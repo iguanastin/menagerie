@@ -44,14 +44,14 @@ public class GroupSetting extends Setting {
     private final BooleanProperty toggleable = new SimpleBooleanProperty(false);
 
 
-    public GroupSetting(String identifier, String label, boolean toggleable, boolean enabled) {
-        super(identifier, label);
+    public GroupSetting(String identifier, String label, String tip, boolean hidden, boolean toggleable, boolean enabled) {
+        super(identifier, label, tip, hidden);
         this.toggleable.set(toggleable);
         this.enabled.set(enabled);
     }
 
-    public GroupSetting(String identifier, String label) {
-        this(identifier, label, false, true);
+    public GroupSetting(String identifier) {
+        super(identifier);
     }
 
     public List<Setting> getChildren() {
@@ -64,7 +64,6 @@ public class GroupSetting extends Setting {
 
     public void setToggleable(boolean toggleable) {
         this.toggleable.set(toggleable);
-        if (!toggleable) setEnabled(true);
     }
 
     public BooleanProperty toggleableProperty() {
@@ -109,7 +108,16 @@ public class GroupSetting extends Setting {
 
         GroupSetting group = null;
         if (json.getInt(VERSION_KEY) == 1) {
-            group = new GroupSetting(json.getString(ID_KEY), json.getString(LABEL_KEY), json.getBoolean(TOGGLEABLE_KEY), json.getBoolean(ENABLED_KEY));
+            String label = null, tip = null;
+            boolean hidden = false, toggleable = false, enabled = true;
+
+            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+            if (json.has(TOGGLEABLE_KEY)) toggleable = json.getBoolean(TOGGLEABLE_KEY);
+            if (json.has(ENABLED_KEY)) enabled = json.getBoolean(ENABLED_KEY);
+
+            group = new GroupSetting(json.getString(ID_KEY), label, tip, hidden, toggleable, enabled);
 
             if (json.has(CHILDREN_KEY)) {
                 group.getChildren().addAll(Settings.parseArrayOfSettings(json.getJSONArray(CHILDREN_KEY)));

@@ -37,13 +37,13 @@ public class BooleanSetting extends Setting {
     private final BooleanProperty value = new SimpleBooleanProperty();
 
 
-    public BooleanSetting(String identifier, String label, boolean value) {
-        this(identifier, label);
+    public BooleanSetting(String identifier, String label, String tip, boolean hidden, boolean value) {
+        super(identifier, label, tip, hidden);
         this.value.set(value);
     }
 
-    public BooleanSetting(String identifier, String label) {
-        super(identifier, label);
+    public BooleanSetting(String identifier) {
+        super(identifier);
     }
 
     public boolean getValue() {
@@ -82,7 +82,15 @@ public class BooleanSetting extends Setting {
 
         BooleanSetting setting = null;
         if (json.getInt(VERSION_KEY) == 1) {
-            setting = new BooleanSetting(json.getString(ID_KEY), json.getString(LABEL_KEY), json.getBoolean(VALUE_KEY));
+            String label = null, tip = null;
+            boolean hidden = false, value = false;
+
+            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+            if (json.has(VALUE_KEY)) value = json.getBoolean(VALUE_KEY);
+
+            setting = new BooleanSetting(json.getString(ID_KEY), label, tip, hidden, value);
         }
 
         return setting;

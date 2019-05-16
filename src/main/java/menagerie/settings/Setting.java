@@ -24,6 +24,7 @@
 
 package menagerie.settings;
 
+import menagerie.util.Util;
 import org.json.JSONObject;
 
 public abstract class Setting {
@@ -31,15 +32,25 @@ public abstract class Setting {
     static final String TYPE_KEY = "type";
     static final String ID_KEY = "id";
     static final String LABEL_KEY = "label";
+    static final String HIDDEN_KEY = "hidden";
+    static final String TIP_KEY = "tip";
     static final String VERSION_KEY = "version";
 
     private final String id;
     private String label;
+    private String tip;
+    private boolean hidden;
 
 
-    public Setting(String id, String label) {
-        this.id = id;
+    public Setting(String id, String label, String tip, boolean hidden) {
+        this(id);
         this.label = label;
+        this.tip = tip;
+        this.hidden = hidden;
+    }
+
+    public Setting(String id) {
+        this.id = id;
     }
 
     public String getID() {
@@ -54,6 +65,22 @@ public abstract class Setting {
         this.label = label;
     }
 
+    public String getTip() {
+        return tip;
+    }
+
+    public void setTip(String tip) {
+        this.tip = tip;
+    }
+
+    public boolean isHidden() {
+        return hidden;
+    }
+
+    public void setHidden(boolean hidden) {
+        this.hidden = hidden;
+    }
+
     public abstract String getType();
 
     public abstract int getVersion();
@@ -64,16 +91,18 @@ public abstract class Setting {
             Setting s = (Setting) obj;
             String id1 = getID(), id2 = s.getID();
             String l1 = getLabel(), l2 = s.getLabel();
+            String tip1 = getTip(), tip2 = s.getTip();
             String t1 = getType(), t2 = s.getType();
+            boolean h1 = isHidden(), h2 = s.isHidden();
             int v1 = getVersion(), v2 = s.getVersion();
-            return id1.equals(id2) && l1.equals(l2) && t1.equals(t2) && v1 == v2;
+            return Util.equalsNullable(id1, id2) && Util.equalsNullable(l1, l2) && Util.equalsNullable(tip1, tip2) && Util.equalsNullable(t1, t2) && h1 == h2 && v1 == v2;
         }
 
         return false;
     }
 
     static boolean isValidSettingJSON(JSONObject json, String expectedType) {
-        return json.has(TYPE_KEY) && json.has(VERSION_KEY) && json.has(LABEL_KEY) && json.has(ID_KEY) && json.getString(TYPE_KEY).equals(expectedType);
+        return json.has(TYPE_KEY) && json.has(VERSION_KEY) && json.has(ID_KEY) && json.getString(TYPE_KEY).equals(expectedType);
     }
 
     JSONObject toJSON() {
@@ -81,6 +110,8 @@ public abstract class Setting {
         json.put(ID_KEY, getID());
         json.put(TYPE_KEY, getType());
         json.put(LABEL_KEY, getLabel());
+        json.put(TIP_KEY, getTip());
+        json.put(HIDDEN_KEY, isHidden());
         json.put(VERSION_KEY, getVersion());
         return json;
     }

@@ -33,16 +33,17 @@ public class IntSettingTests {
     @Test
     void createGet() {
         String id = "id";
-        String label = "label";
-        IntSetting s = new IntSetting(id, label);
+        IntSetting s = new IntSetting(id);
         assertEquals(id, s.getID());
-        assertEquals(label, s.getLabel());
 
+        String label = "label", tip = "tip";
         int value = 1234;
-        s = new IntSetting(id, label, value);
+        boolean hidden = true;
+        s = new IntSetting(id, label, tip, hidden, value);
         assertEquals(id, s.getID());
         assertEquals(label, s.getLabel());
         assertEquals(value, s.getValue());
+        assertEquals(hidden, s.isHidden());
 
         assertNotNull(s.valueProperty());
 
@@ -57,7 +58,7 @@ public class IntSettingTests {
 
     @Test
     void testJSON() {
-        IntSetting s = new IntSetting("id", "label", 1337);
+        IntSetting s = new IntSetting("id", "label", "tip", true, 1337);
         IntSetting s2 = IntSetting.fromJSON(s.toJSON());
 
         assertEquals(s, s2);
@@ -65,8 +66,8 @@ public class IntSettingTests {
 
     @Test
     void testEquals() {
-        IntSetting s1 = new IntSetting("id", "label", 1);
-        IntSetting s2 = new IntSetting("id", "label", 2);
+        IntSetting s1 = new IntSetting("id", "label", "tip", false, 1);
+        IntSetting s2 = new IntSetting("id", "label", "tip", false, 2);
 
         assertNotEquals(s1, s2);
 
@@ -76,7 +77,7 @@ public class IntSettingTests {
 
     @Test
     void testToString() {
-        assertDoesNotThrow(() -> new IntSetting("id", "label").toString());
+        assertDoesNotThrow(() -> new IntSetting("id").toString());
     }
 
 }

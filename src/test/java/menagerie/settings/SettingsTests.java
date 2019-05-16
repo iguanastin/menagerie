@@ -34,35 +34,34 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SettingsTests {
 
-    private Settings s = new Settings();
+    private Settings s;
 
-    private IntSetting int1 = new IntSetting("int1", "int setting", 12345);
-    private IntSetting int2 = new IntSetting("int2", "int setting", -54321);
-    private DoubleSetting double1 = new DoubleSetting("double1", "double setting", -321.45);
-    private DoubleSetting double2 = new DoubleSetting("double2", "double setting", 123.54);
-    private BooleanSetting boolean1 = new BooleanSetting("boolean1", "boolean setting", true);
-    private BooleanSetting boolean2 = new BooleanSetting("boolean2", "boolean setting", false);
-    private StringSetting string1 = new StringSetting("string1", "string setting", "a string");
+    private IntSetting int1;
+    private IntSetting int2;
+    private DoubleSetting double1;
+    private DoubleSetting double2;
+    private BooleanSetting boolean1;
+    private BooleanSetting boolean2;
+    private StringSetting string1;
 
-    private GroupSetting group1 = new GroupSetting("group1", "first group", true, false);
-
-    private GroupSetting group2 = new GroupSetting("group2", "second group");
+    private GroupSetting group1;
+    private GroupSetting group2;
 
     @BeforeEach
     void resetVariables() {
         s = new Settings();
 
-        int1 = new IntSetting("int1", "int setting", 12345);
-        int2 = new IntSetting("int2", "int setting", -54321);
-        double1 = new DoubleSetting("double1", "double setting", -321.45);
-        double2 = new DoubleSetting("double2", "double setting", 123.54);
-        boolean1 = new BooleanSetting("boolean1", "boolean setting", true);
-        boolean2 = new BooleanSetting("boolean2", "boolean setting", false);
-        string1 = new StringSetting("string1", "string setting", "a string");
+        int1 = new IntSetting("int1", "int setting", "tooltip", false, 12345);
+        int2 = new IntSetting("int2", null, null, false, -54321);
+        double1 = new DoubleSetting("double1", "double setting", null, false, -321.45);
+        double2 = new DoubleSetting("double2", null, null, false, 123.54);
+        boolean1 = new BooleanSetting("boolean1", null, null, false, true);
+        boolean2 = new BooleanSetting("boolean2", null, null, true, false);
+        string1 = new StringSetting("string1", null, null, false, "a string");
 
-        group1 = new GroupSetting("group1", "first group", true, false);
+        group1 = new GroupSetting("group1", null, null, false, true, false);
 
-        group2 = new GroupSetting("group2", "second group");
+        group2 = new GroupSetting("group2");
 
         s.getSettings().add(int1);
         s.getSettings().add(double1);
@@ -125,7 +124,7 @@ class SettingsTests {
             fail(e);
         }
 
-        Setting anonSetting = new Setting("bad-setting", "a label") {
+        Setting anonSetting = new Setting("bad-setting") {
             @Override
             public String getType() {
                 return "anonymous";
@@ -167,7 +166,7 @@ class SettingsTests {
         assertEquals(s, s2);
 
         String id = "bad";
-        s2.getSettings().add(new Setting(id, "bad-label") {
+        s2.getSettings().add(new Setting(id) {
             @Override
             public String getType() {
                 return "bad-type";

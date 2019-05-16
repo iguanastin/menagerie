@@ -28,17 +28,17 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class FileSettingTests {
+public class FolderSettingTests {
 
     @Test
     void createGet() {
         String id = "id";
-        FileSetting s = new FileSetting(id);
+        FolderSetting s = new FolderSetting(id);
         assertEquals(id, s.getID());
 
         String value = "some/path", label = "label", tip = "tip";
         boolean hidden = true;
-        s = new FileSetting(id, label, tip, hidden, value);
+        s = new FolderSetting(id, label, tip, hidden, value);
         assertEquals(id, s.getID());
         assertEquals(label, s.getLabel());
         assertEquals(value, s.getValue());
@@ -50,23 +50,23 @@ public class FileSettingTests {
         s.setValue(value);
         assertEquals(value, s.getValue());
 
-        assertEquals("file", s.getType());
+        assertEquals("folder", s.getType());
 
         assertDoesNotThrow(s::getVersion);
     }
 
     @Test
     void testJSON() {
-        FileSetting s = new FileSetting("id", "label", "tip", true, "A strinnnnnnnnnnnnnnnng");
-        FileSetting s2 = FileSetting.fromJSON(s.toJSON());
+        FolderSetting s = new FolderSetting("id", "label", "tip", true, "A strinnnnnnnnnnnnnnnng");
+        FolderSetting s2 = FolderSetting.fromJSON(s.toJSON());
 
         assertEquals(s, s2);
     }
 
     @Test
     void testEquals() {
-        FileSetting s1 = new FileSetting("id", "label", "tip", false, "string 1");
-        FileSetting s2 = new FileSetting("id", "label", "tip", false, "string 2");
+        FolderSetting s1 = new FolderSetting("id", "label", "tip", false, "string 1");
+        FolderSetting s2 = new FolderSetting("id", "label", "tip", false, "string 2");
 
         assertNotEquals(s1, s2);
 
@@ -76,7 +76,7 @@ public class FileSettingTests {
 
     @Test
     void testToString() {
-        assertDoesNotThrow(() -> new FileSetting("id").toString());
+        assertDoesNotThrow(() -> new FolderSetting("id").toString());
     }
 
 }

@@ -38,8 +38,10 @@ public class SettingTests {
         String id = "id";
         String label = "label";
         String type = "type";
+        String tip = "tip";
+        boolean hidden = true;
         int version = 5;
-        Setting s = new Setting(id, label) {
+        Setting s = new Setting(id, label, tip, hidden) {
             @Override
             public String getType() {
                 return type;
@@ -53,13 +55,15 @@ public class SettingTests {
 
         assertEquals(id, s.getID());
         assertEquals(label, s.getLabel());
+        assertEquals(tip, s.getTip());
         assertEquals(type, s.getType());
+        assertEquals(hidden, s.isHidden());
         assertEquals(version, s.getVersion());
     }
 
     @Test
-    void testLabel() {
-        Setting s = new Setting("id", "label") {
+    void testOptionals() {
+        Setting s = new Setting("id", "label", "tip", false) {
             @Override
             public String getType() {
                 return null;
@@ -74,6 +78,14 @@ public class SettingTests {
         String newLabel = "new label";
         s.setLabel(newLabel);
         assertEquals(newLabel, s.getLabel());
+
+        String newTip = "new tip";
+        s.setTip(newTip);
+        assertEquals(newTip, s.getTip());
+
+        boolean newHidden = true;
+        s.setHidden(newHidden);
+        assertEquals(newHidden, s.isHidden());
     }
 
     @Test
@@ -81,28 +93,24 @@ public class SettingTests {
         String type = "type";
 
         JSONObject j1 = new JSONObject();
-        j1.put("id", "id").put("type", type).put("version", 1).put("label", "label");
+        j1.put("id", "id").put("type", type).put("version", 1);
         assertTrue(Setting.isValidSettingJSON(j1, type));
 
         JSONObject j2 = new JSONObject();
-        j2.put("id", "id").put("type", "wrong type").put("version", 1).put("label", "label");
+        j2.put("id", "id").put("type", "wrong type").put("version", 1);
         assertFalse(Setting.isValidSettingJSON(j2, type));
 
         JSONObject j3 = new JSONObject();
-        j3.put("type", type).put("version", 1).put("label", "label");
+        j3.put("type", type).put("version", 1);
         assertFalse(Setting.isValidSettingJSON(j3, type));
 
         JSONObject j4 = new JSONObject();
-        j4.put("id", "id").put("version", 1).put("label", "label");
+        j4.put("id", "id").put("version", 1);
         assertFalse(Setting.isValidSettingJSON(j4, type));
 
         JSONObject j5 = new JSONObject();
-        j5.put("id", "id").put("type", type).put("label", "label");
+        j5.put("id", "id").put("type", type);
         assertFalse(Setting.isValidSettingJSON(j5, type));
-
-        JSONObject j6 = new JSONObject();
-        j6.put("id", "id").put("type", type).put("version", 1);
-        assertFalse(Setting.isValidSettingJSON(j6, type));
     }
 
     @Test
@@ -110,8 +118,10 @@ public class SettingTests {
         String id = "id";
         String label = "label";
         String type = "type";
+        String tip = "tip";
+        boolean hidden = true;
         int version = 1;
-        Setting s = new Setting(id, label) {
+        Setting s = new Setting(id, label, tip, hidden) {
             @Override
             public String getType() {
                 return type;
@@ -128,11 +138,15 @@ public class SettingTests {
         assertTrue(json.has(ID_KEY));
         assertTrue(json.has(TYPE_KEY));
         assertTrue(json.has(LABEL_KEY));
+        assertTrue(json.has(TIP_KEY));
+        assertTrue(json.has(HIDDEN_KEY));
         assertTrue(json.has(VERSION_KEY));
 
         assertEquals(id, json.getString(ID_KEY));
         assertEquals(type, json.getString(TYPE_KEY));
         assertEquals(label, json.getString(LABEL_KEY));
+        assertEquals(tip, json.getString(TIP_KEY));
+        assertEquals(hidden, json.getBoolean(HIDDEN_KEY));
         assertEquals(version, json.getInt(VERSION_KEY));
     }
 
@@ -141,8 +155,10 @@ public class SettingTests {
         String id = "id";
         String label = "label";
         String type = "type";
+        String tip = "tip";
+        boolean hidden = true;
         int version = 1;
-        Setting s = new Setting(id, label) {
+        Setting s = new Setting(id, label, tip, hidden) {
             @Override
             public String getType() {
                 return type;
@@ -157,7 +173,7 @@ public class SettingTests {
         assertEquals(s, s);
         assertNotEquals(s, new Object());
 
-        Setting s1 = new Setting(id, label) {
+        Setting s1 = new Setting(id, label, tip, hidden) {
             @Override
             public String getType() {
                 return type;
@@ -170,7 +186,7 @@ public class SettingTests {
         };
         assertNotEquals(s, s1);
 
-        Setting s2 = new Setting(id, label) {
+        Setting s2 = new Setting(id, label, tip, hidden) {
             @Override
             public String getType() {
                 return "wrong type";
@@ -183,7 +199,7 @@ public class SettingTests {
         };
         assertNotEquals(s, s2);
 
-        Setting s3 = new Setting(id, "wrong label") {
+        Setting s3 = new Setting(id, "wrong label", tip, hidden) {
             @Override
             public String getType() {
                 return type;
@@ -196,7 +212,7 @@ public class SettingTests {
         };
         assertNotEquals(s, s3);
 
-        Setting s4 = new Setting("wrong id", label) {
+        Setting s4 = new Setting("wrong id", label, null, hidden) {
             @Override
             public String getType() {
                 return type;
@@ -212,7 +228,7 @@ public class SettingTests {
 
     @Test
     void testToString() {
-        Assertions.assertDoesNotThrow(() -> new Setting("id", "label") {
+        Assertions.assertDoesNotThrow(() -> new Setting("id") {
             @Override
             public String getType() {
                 return null;

@@ -40,7 +40,7 @@ public class Settings {
 
     private static final String VERSION_KEY = "version";
 
-    protected static final List<Class<? extends Setting>> PARSABLE_SETTINGS = new ArrayList<>(Arrays.asList(GroupSetting.class, IntSetting.class, DoubleSetting.class, BooleanSetting.class, StringSetting.class));
+    protected static final List<Class<? extends Setting>> PARSABLE_SETTINGS = new ArrayList<>(Arrays.asList(GroupSetting.class, IntSetting.class, DoubleSetting.class, BooleanSetting.class, StringSetting.class, FileSetting.class, FolderSetting.class));
 
     private final List<Setting> settings = new ArrayList<>();
 

@@ -33,16 +33,17 @@ public class StringSettingTests {
     @Test
     void createGet() {
         String id = "id";
-        String label = "label";
-        StringSetting s = new StringSetting(id, label);
+        StringSetting s = new StringSetting(id);
         assertEquals(id, s.getID());
-        assertEquals(label, s.getLabel());
 
-        String value = "a string";
-        s = new StringSetting(id, label, value);
+        String label = "label", value = "a string", tip = "tip";
+        boolean hidden = true;
+        s = new StringSetting(id, label, tip, hidden, value);
         assertEquals(id, s.getID());
         assertEquals(label, s.getLabel());
         assertEquals(value, s.getValue());
+        assertEquals(tip, s.getTip());
+        assertEquals(hidden, s.isHidden());
 
         assertNotNull(s.valueProperty());
 
@@ -57,7 +58,7 @@ public class StringSettingTests {
 
     @Test
     void testJSON() {
-        StringSetting s = new StringSetting("id", "label", "A strinnnnnnnnnnnnnnnng");
+        StringSetting s = new StringSetting("id", "label", "tip", true, "A strinnnnnnnnnnnnnnnng");
         StringSetting s2 = StringSetting.fromJSON(s.toJSON());
 
         assertEquals(s, s2);
@@ -65,8 +66,8 @@ public class StringSettingTests {
 
     @Test
     void testEquals() {
-        StringSetting s1 = new StringSetting("id", "label", "string 1");
-        StringSetting s2 = new StringSetting("id", "label", "string 2");
+        StringSetting s1 = new StringSetting("id", "label", "tip", false, "string 1");
+        StringSetting s2 = new StringSetting("id", "label", "tip", false, "string 2");
 
         assertNotEquals(s1, s2);
 
@@ -76,7 +77,7 @@ public class StringSettingTests {
 
     @Test
     void testToString() {
-        assertDoesNotThrow(() -> new StringSetting("id", "label").toString());
+        assertDoesNotThrow(() -> new StringSetting("id").toString());
     }
 
 }

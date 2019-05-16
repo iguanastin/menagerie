@@ -31,12 +31,12 @@ public class FileSetting extends StringSetting {
     private static final String TYPE = "file";
 
 
-    public FileSetting(String id, String label, String filepath) {
-        super(id, label, filepath);
+    public FileSetting(String id, String label, String tip, boolean hidden, String filepath) {
+        super(id, label, tip, hidden, filepath);
     }
 
-    public FileSetting(String id, String label) {
-        super(id, label);
+    public FileSetting(String id) {
+        super(id);
     }
 
     @Override
@@ -54,7 +54,15 @@ public class FileSetting extends StringSetting {
 
         FileSetting setting = null;
         if (json.getInt(VERSION_KEY) == 1) {
-            setting = new FileSetting(json.getString(ID_KEY), json.getString(LABEL_KEY), json.getString(VALUE_KEY));
+            String label = null, tip = null, value = null;
+            boolean hidden = false;
+
+            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+            if (json.has(VALUE_KEY)) value = json.getString(VALUE_KEY);
+
+            setting = new FileSetting(json.getString(ID_KEY), label, tip, hidden, value);
         }
 
         return setting;

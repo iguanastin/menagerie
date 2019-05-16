@@ -33,16 +33,16 @@ public class GroupSettingTests {
     @Test
     void createGet() {
         String id = "id";
-        String label = "label";
-        GroupSetting s = new GroupSetting(id, label);
+        GroupSetting s = new GroupSetting(id);
         assertEquals(id, s.getID());
-        assertEquals(label, s.getLabel());
 
-        boolean toggle = true;
-        boolean enabled = false;
-        s = new GroupSetting(id, label, toggle, enabled);
+        String label = "label", tip = "tip";
+        boolean hidden = true, toggle = true, enabled = false;
+        s = new GroupSetting(id, label, tip, hidden, toggle, enabled);
         assertEquals(id, s.getID());
         assertEquals(label, s.getLabel());
+        assertEquals(tip, s.getTip());
+        assertEquals(hidden, s.isHidden());
         assertEquals(toggle, s.isToggleable());
         assertEquals(enabled, s.isEnabled());
 
@@ -64,10 +64,10 @@ public class GroupSettingTests {
 
     @Test
     void testJSON() {
-        GroupSetting s = new GroupSetting("id", "label", true, false);
-        s.getChildren().add(new IntSetting("int", "label", 123));
-        GroupSetting g = new GroupSetting("g2", "label");
-        g.getChildren().add(new BooleanSetting("bool", "label", true));
+        GroupSetting s = new GroupSetting("id", "label", "tip", false, true, false);
+        s.getChildren().add(new IntSetting("int", "label", "tip", false, 123));
+        GroupSetting g = new GroupSetting("g2");
+        g.getChildren().add(new BooleanSetting("bool", "label", "tip", false, true));
         s.getChildren().add(g);
         GroupSetting s2 = GroupSetting.fromJSON(s.toJSON());
 
@@ -76,16 +76,16 @@ public class GroupSettingTests {
 
     @Test
     void testEquals() {
-        GroupSetting s1 = new GroupSetting("id", "label", false, false);
-        GroupSetting s2 = new GroupSetting("id", "label", true, false);
+        GroupSetting s1 = new GroupSetting("id", "label", "tip", true, false, false);
+        GroupSetting s2 = new GroupSetting("id", "label", "tip", true, true, false);
 
         assertNotEquals(s1, s2);
 
         s2.setToggleable(false);
         assertEquals(s1, s2);
 
-        IntSetting is1 = new IntSetting("int", "label", 1234);
-        IntSetting is2 = new IntSetting("int", "label", 1234);
+        IntSetting is1 = new IntSetting("int", "label", "tip", false, 1234);
+        IntSetting is2 = new IntSetting("int", "label", "tip", false, 1234);
         s1.getChildren().add(is1);
         s2.getChildren().add(is2);
         assertEquals(s1, s2);
@@ -96,7 +96,7 @@ public class GroupSettingTests {
 
     @Test
     void testToString() {
-        assertDoesNotThrow(() -> new GroupSetting("id", "label").toString());
+        assertDoesNotThrow(() -> new GroupSetting("id").toString());
     }
 
 }

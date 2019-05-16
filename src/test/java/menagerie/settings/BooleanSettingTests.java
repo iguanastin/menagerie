@@ -33,16 +33,16 @@ public class BooleanSettingTests {
     @Test
     void createGet() {
         String id = "id";
-        String label = "label";
-        BooleanSetting s = new BooleanSetting(id, label);
+        BooleanSetting s = new BooleanSetting(id);
         assertEquals(id, s.getID());
-        assertEquals(label, s.getLabel());
 
-        boolean value = true;
-        s = new BooleanSetting(id, label, true);
+        boolean value = true, hidden = true;
+        String label = "label", tip = "tip";
+        s = new BooleanSetting(id, label, tip, hidden, true);
         assertEquals(id, s.getID());
         assertEquals(label, s.getLabel());
         assertEquals(value, s.getValue());
+        assertEquals(hidden, s.isHidden());
 
         assertNotNull(s.valueProperty());
 
@@ -56,7 +56,7 @@ public class BooleanSettingTests {
 
     @Test
     void testJSON() {
-        BooleanSetting s = new BooleanSetting("id", "label", true);
+        BooleanSetting s = new BooleanSetting("id", "label", "tip", true, true);
         BooleanSetting s2 = BooleanSetting.fromJSON(s.toJSON());
 
         assertEquals(s, s2);
@@ -64,8 +64,8 @@ public class BooleanSettingTests {
 
     @Test
     void testEquals() {
-        BooleanSetting s1 = new BooleanSetting("id", "label", true);
-        BooleanSetting s2 = new BooleanSetting("id", "label", false);
+        BooleanSetting s1 = new BooleanSetting("id", "label", "tip", false, true);
+        BooleanSetting s2 = new BooleanSetting("id", "label", "tip", false, false);
 
         assertNotEquals(s1, s2);
 
@@ -75,7 +75,7 @@ public class BooleanSettingTests {
 
     @Test
     void testToString() {
-        assertDoesNotThrow(() -> new BooleanSetting("id", "label").toString());
+        assertDoesNotThrow(() -> new BooleanSetting("id").toString());
     }
 
 }

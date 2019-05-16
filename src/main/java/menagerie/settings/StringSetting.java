@@ -26,6 +26,7 @@ package menagerie.settings;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import menagerie.util.Util;
 import org.json.JSONObject;
 
 public class StringSetting extends Setting {
@@ -37,13 +38,13 @@ public class StringSetting extends Setting {
     private final StringProperty value = new SimpleStringProperty();
 
 
-    public StringSetting(String identifier, String label, String value) {
-        this(identifier, label);
+    public StringSetting(String identifier, String label, String tip, boolean hidden, String value) {
+        super(identifier, label, tip, hidden);
         this.value.set(value);
     }
 
-    public StringSetting(String identifier, String label) {
-        super(identifier, label);
+    public StringSetting(String identifier) {
+        super(identifier);
     }
 
     public String getValue() {
@@ -82,7 +83,15 @@ public class StringSetting extends Setting {
 
         StringSetting setting = null;
         if (json.getInt(VERSION_KEY) == 1) {
-            setting = new StringSetting(json.getString(ID_KEY), json.getString(LABEL_KEY), json.getString(VALUE_KEY));
+            String label = null, tip = null, value = null;
+            boolean hidden = false;
+
+            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+            if (json.has(VALUE_KEY)) value = json.getString(VALUE_KEY);
+            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+
+            setting = new StringSetting(json.getString(ID_KEY), label, tip, hidden, value);
         }
 
         return setting;
@@ -95,7 +104,7 @@ public class StringSetting extends Setting {
 
     @Override
     public boolean equals(Object obj) {
-        return super.equals(obj) && obj instanceof StringSetting && ((StringSetting) obj).getValue().equals(getValue());
+        return super.equals(obj) && obj instanceof StringSetting && Util.equalsNullable(((StringSetting) obj).getValue(), getValue());
     }
 
 }

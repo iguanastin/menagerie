@@ -37,13 +37,13 @@ public class DoubleSetting extends Setting {
     private final DoubleProperty value = new SimpleDoubleProperty();
 
 
-    public DoubleSetting(String identifier, String label, double value) {
-        this(identifier, label);
+    public DoubleSetting(String identifier, String label, String tip, boolean hidden, double value) {
+        super(identifier, label, tip, hidden);
         this.value.set(value);
     }
 
-    public DoubleSetting(String identifier, String label) {
-        super(identifier, label);
+    public DoubleSetting(String identifier) {
+        super(identifier);
     }
 
     public double getValue() {
@@ -82,7 +82,16 @@ public class DoubleSetting extends Setting {
 
         DoubleSetting setting = null;
         if (json.getInt(VERSION_KEY) == 1) {
-            setting = new DoubleSetting(json.getString(ID_KEY), json.getString(LABEL_KEY), json.getDouble(VALUE_KEY));
+            String label = null, tip = null;
+            boolean hidden = false;
+            double value = 0;
+
+            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+            if (json.has(VALUE_KEY)) value = json.getDouble(VALUE_KEY);
+
+            setting = new DoubleSetting(json.getString(ID_KEY), label, tip, hidden, value);
         }
 
         return setting;

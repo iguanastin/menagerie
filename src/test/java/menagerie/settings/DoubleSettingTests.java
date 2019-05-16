@@ -33,16 +33,17 @@ public class DoubleSettingTests {
     @Test
     void createGet() {
         String id = "id";
-        String label = "label";
-        DoubleSetting s = new DoubleSetting(id, label);
+        DoubleSetting s = new DoubleSetting(id);
         assertEquals(id, s.getID());
-        assertEquals(label, s.getLabel());
 
         double value = 0.05;
-        s = new DoubleSetting(id, label, value);
+        String label = "label", tip = "tip";
+        boolean hidden = true;
+        s = new DoubleSetting(id, label, tip, hidden, value);
         assertEquals(id, s.getID());
         assertEquals(label, s.getLabel());
         assertEquals(value, s.getValue());
+        assertEquals(hidden, s.isHidden());
 
         assertNotNull(s.valueProperty());
 
@@ -57,7 +58,7 @@ public class DoubleSettingTests {
 
     @Test
     void testJSON() {
-        DoubleSetting s = new DoubleSetting("id", "label", 1.234);
+        DoubleSetting s = new DoubleSetting("id", "label", "tip", true, 1.234);
         DoubleSetting s2 = DoubleSetting.fromJSON(s.toJSON());
 
         assertEquals(s, s2);
@@ -65,8 +66,8 @@ public class DoubleSettingTests {
 
     @Test
     void testEquals() {
-        DoubleSetting s1 = new DoubleSetting("id", "label", 1);
-        DoubleSetting s2 = new DoubleSetting("id", "label", 2);
+        DoubleSetting s1 = new DoubleSetting("id", "label", "tip", false, 1);
+        DoubleSetting s2 = new DoubleSetting("id", "label", "tip", false, 2);
 
         assertNotEquals(s1, s2);
 
@@ -76,7 +77,7 @@ public class DoubleSettingTests {
 
     @Test
     void testToString() {
-        assertDoesNotThrow(() -> new DoubleSetting("id", "label").toString());
+        assertDoesNotThrow(() -> new DoubleSetting("id").toString());
     }
 
 }
