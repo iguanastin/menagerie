@@ -55,8 +55,6 @@ import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
-import menagerie.gui.screens.settings.MenagerieSettings;
-import menagerie.gui.screens.settings.NewSettingsScreen;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListPopup;
 import menagerie.model.Settings;
@@ -287,9 +285,14 @@ public class MainController {
                 }
             });
 
-            MenagerieSettings s = new MenagerieSettings();
-            NewSettingsScreen nss = new NewSettingsScreen();
-            nss.open(screenPane, s);
+            //            MenagerieSettings s = new MenagerieSettings();
+            //            try {
+            //                s.load(new File("C:\\temp\\test.settings"));
+            //            } catch (IOException e) {
+            //                Main.log.log(Level.WARNING, "No settings file found to load settings from", e);
+            //            }
+            //            NewSettingsScreen nss = new NewSettingsScreen();
+            //            nss.open(screenPane, s);
         });
     }
 

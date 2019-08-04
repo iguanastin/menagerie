@@ -60,6 +60,31 @@ public class GroupSetting extends Setting {
         super(identifier);
     }
 
+    public GroupSetting disable() {
+        setEnabled(false);
+        return this;
+    }
+
+    public GroupSetting toggleable() {
+        setToggleable(true);
+        return this;
+    }
+
+    public GroupSetting hide() {
+        setHidden(true);
+        return this;
+    }
+
+    public GroupSetting tip(String tip) {
+        setTip(tip);
+        return this;
+    }
+
+    public GroupSetting label(String label) {
+        setLabel(label);
+        return this;
+    }
+
     public List<Setting> getChildren() {
         return children;
     }
@@ -91,11 +116,6 @@ public class GroupSetting extends Setting {
     @Override
     public String getType() {
         return TYPE;
-    }
-
-    @Override
-    public int getVersion() {
-        return 1;
     }
 
     @Override
@@ -159,22 +179,19 @@ public class GroupSetting extends Setting {
     public static GroupSetting fromJSON(JSONObject json) {
         if (!isValidSettingJSON(json, TYPE)) return null;
 
-        GroupSetting group = null;
-        if (json.getInt(VERSION_KEY) == 1) {
-            String label = null, tip = null;
-            boolean hidden = false, toggleable = false, enabled = true;
+        String label = null, tip = null;
+        boolean hidden = false, toggleable = false, enabled = true;
 
-            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-            if (json.has(TOGGLEABLE_KEY)) toggleable = json.getBoolean(TOGGLEABLE_KEY);
-            if (json.has(ENABLED_KEY)) enabled = json.getBoolean(ENABLED_KEY);
+        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+        if (json.has(TOGGLEABLE_KEY)) toggleable = json.getBoolean(TOGGLEABLE_KEY);
+        if (json.has(ENABLED_KEY)) enabled = json.getBoolean(ENABLED_KEY);
 
-            group = new GroupSetting(json.getString(ID_KEY), label, tip, hidden, toggleable, enabled);
+        GroupSetting group = new GroupSetting(json.getString(ID_KEY), label, tip, hidden, toggleable, enabled);
 
-            if (json.has(CHILDREN_KEY)) {
-                group.getChildren().addAll(Settings.parseArrayOfSettings(json.getJSONArray(CHILDREN_KEY)));
-            }
+        if (json.has(CHILDREN_KEY)) {
+            group.getChildren().addAll(Settings.parseArrayOfSettings(json.getJSONArray(CHILDREN_KEY)));
         }
 
         return group;

@@ -51,8 +51,42 @@ public class IntSetting extends Setting {
         this.value.set(value);
     }
 
+    public IntSetting(String identifier, int value) {
+        super(identifier);
+        this.value.set(value);
+    }
+
     public IntSetting(String identifier) {
         super(identifier);
+        this.value.set(0);
+    }
+
+    public IntSetting hide() {
+        setHidden(true);
+        return this;
+    }
+
+    public IntSetting tip(String tip) {
+        setTip(tip);
+        return this;
+    }
+
+    public IntSetting label(String label) {
+        setLabel(label);
+        return this;
+    }
+
+    public IntSetting min(int min) {
+        return range(min, getMax());
+    }
+
+    public IntSetting max(int max) {
+        return range(getMin(), max);
+    }
+
+    public IntSetting range(int min, int max) {
+        setRange(min, max);
+        return this;
     }
 
     public int getMin() {
@@ -63,6 +97,16 @@ public class IntSetting extends Setting {
         return max;
     }
 
+    public void setMin(int min) {
+        this.min = min;
+        if (getValue() < min) setValue(min);
+    }
+
+    public void setMax(int max) {
+        this.max = max;
+        if (getValue() > max) setValue(max);
+    }
+
     public void setRange(int min, int max) {
         if (min > max) {
             int temp = min;
@@ -70,10 +114,8 @@ public class IntSetting extends Setting {
             max = temp;
         }
 
-        this.min = min;
-        this.max = max;
-
-        if (getValue() < min || getValue() > max) setValue(Math.min(Math.max(min, getValue()), max));
+        setMin(min);
+        setMax(max);
     }
 
     public int getValue() {
@@ -94,15 +136,25 @@ public class IntSetting extends Setting {
     }
 
     @Override
-    public int getVersion() {
-        return 1;
-    }
-
-    @Override
     public SettingNode makeJFXNode() {
         Label label = new Label(getLabel());
         Spinner<Integer> spinner = new Spinner<>(getMin(), getMax(), getValue());
         spinner.setEditable(true);
+        spinner.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                try {
+                    int v = Integer.parseInt(spinner.getEditor().getText());
+                    if (v < getMin() || v > getMax()) {
+                        v = Math.min(Math.max(getMin(), v), getMax());
+                    }
+                    setValue(v);
+                } catch (NumberFormatException ignore) {
+                }
+
+                spinner.getValueFactory().setValue(getValue());
+                spinner.getEditor().setText(spinner.getValue() + "");
+            }
+        });
         if (getTip() != null && !getTip().isEmpty()) {
             spinner.setTooltip(new Tooltip(getTip()));
         }
@@ -136,21 +188,19 @@ public class IntSetting extends Setting {
     public static IntSetting fromJSON(JSONObject json) {
         if (!isValidSettingJSON(json, TYPE)) return null;
 
-        IntSetting setting = null;
-        if (json.getInt(VERSION_KEY) == 1) {
-            String label = null, tip = null;
-            boolean hidden = false;
-            int value = 0;
+        String label = null, tip = null;
+        boolean hidden = false;
+        int value = 0;
 
-            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-            if (json.has(VALUE_KEY)) value = json.getInt(VALUE_KEY);
+        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+        if (json.has(VALUE_KEY)) value = json.getInt(VALUE_KEY);
 
-            setting = new IntSetting(json.getString(ID_KEY), label, tip, hidden, value);
+        IntSetting setting = new IntSetting(json.getString(ID_KEY), label, tip, hidden, value);
 
-            if (json.has(MIN_KEY) && json.has(MAX_KEY)) setting.setRange(json.getInt(MIN_KEY), json.getInt(MAX_KEY));
-        }
+        if (json.has(MIN_KEY)) setting.setMin(json.getInt(MIN_KEY));
+        if (json.has(MAX_KEY)) setting.setMax(json.getInt(MAX_KEY));
 
         return setting;
     }

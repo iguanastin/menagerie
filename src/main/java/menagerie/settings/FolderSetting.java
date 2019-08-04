@@ -46,18 +46,32 @@ public class FolderSetting extends StringSetting {
         super(identifier, label, tip, hidden, value);
     }
 
+    public FolderSetting(String identifier, String value) {
+        super(identifier, value);
+    }
+
     public FolderSetting(String identifier) {
         super(identifier);
+    }
+
+    public FolderSetting hide() {
+        setHidden(true);
+        return this;
+    }
+
+    public FolderSetting tip(String tip) {
+        setTip(tip);
+        return this;
+    }
+
+    public FolderSetting label(String label) {
+        setLabel(label);
+        return this;
     }
 
     @Override
     public String getType() {
         return TYPE;
-    }
-
-    @Override
-    public int getVersion() {
-        return 1;
     }
 
     @Override
@@ -103,20 +117,15 @@ public class FolderSetting extends StringSetting {
     public static FolderSetting fromJSON(JSONObject json) {
         if (!isValidSettingJSON(json, TYPE)) return null;
 
-        FolderSetting setting = null;
-        if (json.getInt(VERSION_KEY) == 1) {
-            String label = null, tip = null, value = null;
-            boolean hidden = false;
+        String label = null, tip = null, value = null;
+        boolean hidden = false;
 
-            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-            if (json.has(VALUE_KEY)) value = json.getString(VALUE_KEY);
+        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+        if (json.has(VALUE_KEY)) value = json.getString(VALUE_KEY);
 
-            setting = new FolderSetting(json.getString(ID_KEY), label, tip, hidden, value);
-        }
-
-        return setting;
+        return new FolderSetting(json.getString(ID_KEY), label, tip, hidden, value);
     }
 
 }

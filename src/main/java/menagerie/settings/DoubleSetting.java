@@ -29,7 +29,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
-import javafx.scene.control.Spinner;
+import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import org.json.JSONObject;
@@ -51,8 +51,41 @@ public class DoubleSetting extends Setting {
         this.value.set(value);
     }
 
+    public DoubleSetting(String identifier, double value) {
+        super(identifier);
+        this.value.set(value);
+    }
+
     public DoubleSetting(String identifier) {
         super(identifier);
+    }
+
+    public DoubleSetting hide() {
+        setHidden(true);
+        return this;
+    }
+
+    public DoubleSetting tip(String tip) {
+        setTip(tip);
+        return this;
+    }
+
+    public DoubleSetting label(String label) {
+        setLabel(label);
+        return this;
+    }
+
+    public DoubleSetting min(double min) {
+        return range(min, getMax());
+    }
+
+    public DoubleSetting max(double max) {
+        return range(getMin(), max);
+    }
+
+    public DoubleSetting range(double min, double max) {
+        setRange(min, max);
+        return this;
     }
 
     public double getMin() {
@@ -63,6 +96,16 @@ public class DoubleSetting extends Setting {
         return max;
     }
 
+    public void setMin(double min) {
+        this.min = min;
+        if (getValue() < min) setValue(min);
+    }
+
+    public void setMax(double max) {
+        this.max = max;
+        if (getValue() > max) setValue(max);
+    }
+
     public void setRange(double min, double max) {
         if (min > max) {
             double temp = min;
@@ -70,10 +113,8 @@ public class DoubleSetting extends Setting {
             max = temp;
         }
 
-        this.min = min;
-        this.max = max;
-
-        if (getValue() < min || getValue() > max) setValue(Math.min(Math.max(min, getValue()), max));
+        setMin(min);
+        setMax(max);
     }
 
     public double getValue() {
@@ -94,25 +135,37 @@ public class DoubleSetting extends Setting {
     }
 
     @Override
-    public int getVersion() {
-        return 1;
-    }
-
-    @Override
     public SettingNode makeJFXNode() {
         Label label = new Label(getLabel());
-        Spinner<Double> spinner = new Spinner<>(getMin(), getMax(), getValue());
-        spinner.setEditable(true);
+        TextField textfield = new TextField(getValue() + "");
+        textfield.focusedProperty().addListener((observable, oldValue, newValue) -> {
+            if (!newValue) {
+                try {
+                    double val = Double.parseDouble(textfield.getText());
+
+                    if (val < getMin()) {
+                        val = getMin();
+                    } else if (val > getMax()) {
+                        val = getMax();
+                    }
+
+                    setValue(val);
+                    textfield.setText(val + "");
+                } catch (NumberFormatException e) {
+                    textfield.setText(getValue() + "");
+                }
+            }
+        });
         if (getTip() != null && !getTip().isEmpty()) {
-            spinner.setTooltip(new Tooltip(getTip()));
+            textfield.setTooltip(new Tooltip(getTip()));
         }
-        HBox h = new HBox(5, label, spinner);
+        HBox h = new HBox(5, label, textfield);
         h.setAlignment(Pos.CENTER_LEFT);
 
         return new SettingNode() {
             @Override
             public void applyToSetting() {
-                setValue(spinner.getValue());
+                setValue(Double.parseDouble(textfield.getText()));
             }
 
             @Override
@@ -135,23 +188,18 @@ public class DoubleSetting extends Setting {
 
     public static DoubleSetting fromJSON(JSONObject json) {
         if (!isValidSettingJSON(json, TYPE)) return null;
+        String label = null, tip = null;
+        boolean hidden = false;
+        double value = 0;
 
-        DoubleSetting setting = null;
-        if (json.getInt(VERSION_KEY) == 1) {
-            String label = null, tip = null;
-            boolean hidden = false;
-            double value = 0;
+        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+        if (json.has(VALUE_KEY)) value = json.getDouble(VALUE_KEY);
 
-            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-            if (json.has(VALUE_KEY)) value = json.getDouble(VALUE_KEY);
-
-            setting = new DoubleSetting(json.getString(ID_KEY), label, tip, hidden, value);
-
-            if (json.has(MIN_KEY) && json.has(MAX_KEY))
-                setting.setRange(json.getDouble(MIN_KEY), json.getDouble(MAX_KEY));
-        }
+        DoubleSetting setting = new DoubleSetting(json.getString(ID_KEY), label, tip, hidden, value);
+        if (json.has(MIN_KEY)) setting.setMin(json.getDouble(MIN_KEY));
+        if (json.has(MAX_KEY)) setting.setMax(json.getDouble(MAX_KEY));
 
         return setting;
     }

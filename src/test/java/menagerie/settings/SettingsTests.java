@@ -104,9 +104,9 @@ class SettingsTests {
         final File finalFile = file;
         assertDoesNotThrow(() -> s.save(finalFile));
 
-        Settings s2 = null;
+        Settings s2 = new Settings();
         try {
-            s2 = Settings.load(file);
+            s2.load(file);
         } catch (IOException e) {
             fail(e);
         }
@@ -150,7 +150,8 @@ class SettingsTests {
 
         try {
             Settings.PARSABLE_SETTINGS.add(anonSetting.getClass());
-            Settings s2 = Settings.load(file);
+            Settings s2 = new Settings();
+            s2.load(file);
 
             s.getSettings().remove(anonSetting);
             assertEquals(s, s2);

@@ -70,6 +70,7 @@ public class NewSettingsScreen extends Screen {
 
 
         Button exit = new Button("X");
+        exit.setFocusTraversable(false);
         exit.setOnAction(event -> close());
         BorderPane top = new BorderPane(null, null, exit, new Separator(), new Label("Settings"));
         top.setPadding(ALL5);
@@ -83,7 +84,6 @@ public class NewSettingsScreen extends Screen {
         bottom.setAlignment(Pos.CENTER_RIGHT);
 
         scrollPane.setPadding(ALL5);
-        scrollPane.setFocusTraversable(false);
         BorderPane root = new BorderPane(scrollPane, top, null, bottom, null);
         root.setPrefSize(800, 600);
         root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);

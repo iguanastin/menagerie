@@ -44,6 +44,7 @@ public class Settings {
 
     private final List<Setting> settings = new ArrayList<>();
     private File file = null;
+    private int version = 1;
 
 
     public Settings() {
@@ -52,6 +53,26 @@ public class Settings {
 
     public Settings(File file) {
         this.file = file;
+    }
+
+    public void load(File file) throws IOException {
+        this.file = file;
+        load();
+    }
+
+    public void load() throws IOException {
+        String fileText = String.join("\n", Files.readAllLines(file.toPath()));
+        JSONObject json = new JSONObject(fileText);
+
+        if (!json.has(VERSION_KEY)) return; // No version defined, nothing to load.
+
+        version = json.getInt(VERSION_KEY); // Use this if there is ever a need for versioning in the future.
+
+        if (json.has("settings")) {
+            JSONArray settingsArray = json.getJSONArray("settings");
+
+            getSettings().addAll(parseArrayOfSettings(settingsArray));
+        }
     }
 
     public Setting getSetting(String identifier) {
@@ -73,7 +94,7 @@ public class Settings {
     }
 
     public int getVersion() {
-        return 1;
+        return version;
     }
 
     public File getFile() {
@@ -96,25 +117,6 @@ public class Settings {
         }
 
         return false;
-    }
-
-    public static Settings load(File file) throws IOException {
-        String fileText = String.join("\n", Files.readAllLines(file.toPath()));
-        JSONObject json = new JSONObject(fileText);
-
-        Settings settings = new Settings(file);
-
-        if (!json.has(VERSION_KEY)) return settings; // No version defined, nothing to load.
-
-        int version = json.getInt(VERSION_KEY); // Use this if there is ever a need for versioning in the future.
-
-        if (json.has("settings")) {
-            JSONArray settingsArray = json.getJSONArray("settings");
-
-            settings.getSettings().addAll(parseArrayOfSettings(settingsArray));
-        }
-
-        return settings;
     }
 
     static List<Setting> parseArrayOfSettings(JSONArray settingsArray) {
@@ -144,6 +146,11 @@ public class Settings {
     }
 
     public void save(File file) throws IOException {
+        this.file = file;
+        save();
+    }
+
+    public void save() throws IOException {
         JSONObject json = new JSONObject();
         json.put(VERSION_KEY, getVersion());
 
@@ -154,10 +161,6 @@ public class Settings {
         try (FileWriter fw = new FileWriter(file)) {
             json.write(fw, 2, 0);
         }
-    }
-
-    public void save() throws IOException {
-        save(file);
     }
 
 }

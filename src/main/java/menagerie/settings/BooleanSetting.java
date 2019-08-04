@@ -45,8 +45,28 @@ public class BooleanSetting extends Setting {
         this.value.set(value);
     }
 
+    public BooleanSetting(String identifier, boolean value) {
+        super(identifier);
+        this.value.set(value);
+    }
+
     public BooleanSetting(String identifier) {
         super(identifier);
+    }
+
+    public BooleanSetting hide() {
+        setHidden(true);
+        return this;
+    }
+
+    public BooleanSetting tip(String tip) {
+        setTip(tip);
+        return this;
+    }
+
+    public BooleanSetting label(String label) {
+        setLabel(label);
+        return this;
     }
 
     public boolean getValue() {
@@ -64,11 +84,6 @@ public class BooleanSetting extends Setting {
     @Override
     public String getType() {
         return TYPE;
-    }
-
-    @Override
-    public int getVersion() {
-        return 1;
     }
 
     @Override
@@ -104,20 +119,15 @@ public class BooleanSetting extends Setting {
     public static BooleanSetting fromJSON(JSONObject json) {
         if (!isValidSettingJSON(json, TYPE)) return null;
 
-        BooleanSetting setting = null;
-        if (json.getInt(VERSION_KEY) == 1) {
-            String label = null, tip = null;
-            boolean hidden = false, value = false;
+        String label = null, tip = null;
+        boolean hidden = false, value = false;
 
-            if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-            if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-            if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-            if (json.has(VALUE_KEY)) value = json.getBoolean(VALUE_KEY);
+        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
+        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
+        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
+        if (json.has(VALUE_KEY)) value = json.getBoolean(VALUE_KEY);
 
-            setting = new BooleanSetting(json.getString(ID_KEY), label, tip, hidden, value);
-        }
-
-        return setting;
+        return new BooleanSetting(json.getString(ID_KEY), label, tip, hidden, value);
     }
 
     @Override
