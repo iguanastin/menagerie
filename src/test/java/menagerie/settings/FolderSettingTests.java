@@ -51,8 +51,6 @@ public class FolderSettingTests {
         assertEquals(value, s.getValue());
 
         assertEquals("folder", s.getType());
-
-        assertDoesNotThrow(s::getVersion);
     }
 
     @Test

@@ -50,8 +50,6 @@ public class BooleanSettingTests {
         assertFalse(s.getValue());
 
         assertEquals("boolean", s.getType());
-
-        assertDoesNotThrow(s::getVersion);
     }
 
     @Test

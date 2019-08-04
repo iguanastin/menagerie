@@ -131,11 +131,6 @@ class SettingsTests {
             }
 
             @Override
-            public int getVersion() {
-                return 1;
-            }
-
-            @Override
             public SettingNode makeJFXNode() {
                 return null;
             }
@@ -176,11 +171,6 @@ class SettingsTests {
             @Override
             public String getType() {
                 return "bad-type";
-            }
-
-            @Override
-            public int getVersion() {
-                return 0;
             }
 
             @Override

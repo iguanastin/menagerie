@@ -51,8 +51,6 @@ public class FileSettingTests {
         assertEquals(value, s.getValue());
 
         assertEquals("file", s.getType());
-
-        assertDoesNotThrow(s::getVersion);
     }
 
     @Test

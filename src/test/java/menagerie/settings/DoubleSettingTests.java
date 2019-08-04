@@ -52,8 +52,6 @@ public class DoubleSettingTests {
         assertEquals(value, s.getValue());
 
         assertEquals("double", s.getType());
-
-        assertDoesNotThrow(s::getVersion);
     }
 
     @Test

@@ -52,8 +52,6 @@ public class IntSettingTests {
         assertEquals(value, s.getValue());
 
         assertEquals("int", s.getType());
-
-        assertDoesNotThrow(s::getVersion);
     }
 
     @Test

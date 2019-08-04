@@ -58,8 +58,6 @@ public class GroupSettingTests {
         assertEquals(enabled, s.isEnabled());
 
         assertEquals("group", s.getType());
-
-        assertDoesNotThrow(s::getVersion);
     }
 
     @Test

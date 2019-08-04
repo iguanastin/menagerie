@@ -50,6 +50,7 @@ public class TagListScreen extends Screen {
     private final ListView<Tag> listView = new ListView<>();
     private final TextField searchField = new TextField();
     private final ChoiceBox<String> orderBox = new ChoiceBox<>();
+    private final ToggleButton descendingButton = new ToggleButton("Descending");
     private final CheckBox regexCheckBox = new CheckBox("Regex");
 
     private final ObservableList<Tag> tags = FXCollections.observableArrayList();
@@ -79,10 +80,11 @@ public class TagListScreen extends Screen {
         exitButton.setOnAction(event -> close());
         BorderPane header = new BorderPane(null, null, exitButton, null, new Label("Tags"));
 
-        orderBox.getItems().addAll("Name", "ID", "Frequency");
+        orderBox.getItems().addAll("Frequency", "Name", "ID", "Color");
         orderBox.getSelectionModel().clearAndSelect(0);
         orderBox.setOnAction(event -> updateListOrder());
-        HBox orderHBox = new HBox(5, new Label("Order by:"), orderBox);
+        descendingButton.selectedProperty().addListener((observable, oldValue, newValue) -> updateListOrder());
+        HBox orderHBox = new HBox(5, new Label("Order by:"), orderBox, descendingButton);
         orderHBox.setAlignment(Pos.CENTER_LEFT);
 
         //Init listView
@@ -159,20 +161,36 @@ public class TagListScreen extends Screen {
     }
 
     private void updateListOrder() {
+        Comparator<Tag> comparator = Comparator.comparing(Tag::getName);
+
         switch (orderBox.getValue()) {
             case "ID":
-                listView.getItems().sort(Comparator.comparingInt(Tag::getId));
+                comparator = Comparator.comparingInt(Tag::getId);
                 break;
             case "Frequency":
-                listView.getItems().sort(Comparator.comparingInt(Tag::getFrequency).reversed());
+                comparator = Comparator.comparingInt(Tag::getFrequency);
                 break;
-            case "Name":
-                listView.getItems().sort(Comparator.comparing(Tag::getName));
-                break;
-            default:
-                listView.getItems().sort(Comparator.comparing(Tag::getName));
+            case "Color":
+                comparator = (o1, o2) -> {
+                    if (o1.getColor() == null) {
+                        if (o2.getColor() == null) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    } else {
+                        if (o2.getColor() == null) {
+                            return -1;
+                        } else {
+                            return o1.getColor().compareTo(o2.getColor());
+                        }
+                    }
+                };
                 break;
         }
+
+        if (descendingButton.isSelected()) comparator = comparator.reversed();
+        listView.getItems().sort(comparator);
     }
 
     /**

@@ -52,8 +52,6 @@ public class StringSettingTests {
         assertEquals(value, s.getValue());
 
         assertEquals("string", s.getType());
-
-        assertDoesNotThrow(s::getVersion);
     }
 
     @Test

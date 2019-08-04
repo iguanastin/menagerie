@@ -40,16 +40,10 @@ public class SettingTests {
         String type = "type";
         String tip = "tip";
         boolean hidden = true;
-        int version = 5;
         Setting s = new Setting(id, label, tip, hidden) {
             @Override
             public String getType() {
                 return type;
-            }
-
-            @Override
-            public int getVersion() {
-                return version;
             }
 
             @Override
@@ -63,7 +57,6 @@ public class SettingTests {
         assertEquals(tip, s.getTip());
         assertEquals(type, s.getType());
         assertEquals(hidden, s.isHidden());
-        assertEquals(version, s.getVersion());
     }
 
     @Test
@@ -72,11 +65,6 @@ public class SettingTests {
             @Override
             public String getType() {
                 return null;
-            }
-
-            @Override
-            public int getVersion() {
-                return 0;
             }
 
             @Override
@@ -103,24 +91,26 @@ public class SettingTests {
         String type = "type";
 
         JSONObject j1 = new JSONObject();
-        j1.put("id", "id").put("type", type).put("version", 1);
+        j1.put("id", "id").put("type", type);
         assertTrue(Setting.isValidSettingJSON(j1, type));
 
-        JSONObject j2 = new JSONObject();
-        j2.put("id", "id").put("type", "wrong type").put("version", 1);
-        assertFalse(Setting.isValidSettingJSON(j2, type));
+        // TODO Rewrite this test so it's actually useful. Version isn't needed for individual settings anymore
 
-        JSONObject j3 = new JSONObject();
-        j3.put("type", type).put("version", 1);
-        assertFalse(Setting.isValidSettingJSON(j3, type));
-
-        JSONObject j4 = new JSONObject();
-        j4.put("id", "id").put("version", 1);
-        assertFalse(Setting.isValidSettingJSON(j4, type));
-
-        JSONObject j5 = new JSONObject();
-        j5.put("id", "id").put("type", type);
-        assertFalse(Setting.isValidSettingJSON(j5, type));
+        //        JSONObject j2 = new JSONObject();
+        //        j2.put("id", "id").put("type", "wrong type").put("version", 1);
+        //        assertFalse(Setting.isValidSettingJSON(j2, type));
+        //
+        //        JSONObject j3 = new JSONObject();
+        //        j3.put("type", type).put("version", 1);
+        //        assertFalse(Setting.isValidSettingJSON(j3, type));
+        //
+        //        JSONObject j4 = new JSONObject();
+        //        j4.put("id", "id").put("version", 1);
+        //        assertFalse(Setting.isValidSettingJSON(j4, type));
+        //
+        //        JSONObject j5 = new JSONObject();
+        //        j5.put("id", "id").put("type", type);
+        //        assertFalse(Setting.isValidSettingJSON(j5, type));
     }
 
     @Test
@@ -130,16 +120,10 @@ public class SettingTests {
         String type = "type";
         String tip = "tip";
         boolean hidden = true;
-        int version = 1;
         Setting s = new Setting(id, label, tip, hidden) {
             @Override
             public String getType() {
                 return type;
-            }
-
-            @Override
-            public int getVersion() {
-                return version;
             }
 
             @Override
@@ -155,14 +139,12 @@ public class SettingTests {
         assertTrue(json.has(LABEL_KEY));
         assertTrue(json.has(TIP_KEY));
         assertTrue(json.has(HIDDEN_KEY));
-        assertTrue(json.has(VERSION_KEY));
 
         assertEquals(id, json.getString(ID_KEY));
         assertEquals(type, json.getString(TYPE_KEY));
         assertEquals(label, json.getString(LABEL_KEY));
         assertEquals(tip, json.getString(TIP_KEY));
         assertEquals(hidden, json.getBoolean(HIDDEN_KEY));
-        assertEquals(version, json.getInt(VERSION_KEY));
     }
 
     @Test
@@ -172,16 +154,10 @@ public class SettingTests {
         String type = "type";
         String tip = "tip";
         boolean hidden = true;
-        int version = 1;
         Setting s = new Setting(id, label, tip, hidden) {
             @Override
             public String getType() {
                 return type;
-            }
-
-            @Override
-            public int getVersion() {
-                return version;
             }
 
             @Override
@@ -200,11 +176,6 @@ public class SettingTests {
             }
 
             @Override
-            public int getVersion() {
-                return 2;
-            }
-
-            @Override
             public SettingNode makeJFXNode() {
                 return null;
             }
@@ -215,11 +186,6 @@ public class SettingTests {
             @Override
             public String getType() {
                 return "wrong type";
-            }
-
-            @Override
-            public int getVersion() {
-                return version;
             }
 
             @Override
@@ -236,11 +202,6 @@ public class SettingTests {
             }
 
             @Override
-            public int getVersion() {
-                return version;
-            }
-
-            @Override
             public SettingNode makeJFXNode() {
                 return null;
             }
@@ -251,11 +212,6 @@ public class SettingTests {
             @Override
             public String getType() {
                 return type;
-            }
-
-            @Override
-            public int getVersion() {
-                return version;
             }
 
             @Override
@@ -272,11 +228,6 @@ public class SettingTests {
             @Override
             public String getType() {
                 return null;
-            }
-
-            @Override
-            public int getVersion() {
-                return 0;
             }
 
             @Override
