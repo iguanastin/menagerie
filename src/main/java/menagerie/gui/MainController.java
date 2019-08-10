@@ -25,9 +25,6 @@
 package menagerie.gui;
 
 import javafx.application.Platform;
-import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -56,10 +53,9 @@ import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.screens.settings.MenagerieSettings;
-import menagerie.gui.screens.settings.NewSettingsScreen;
+import menagerie.gui.screens.settings.SettingsScreen;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListPopup;
-import menagerie.model.Settings;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.db.DatabaseManager;
@@ -68,7 +64,6 @@ import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.GroupSearch;
 import menagerie.model.search.Search;
 import menagerie.model.search.SearchHistory;
-import menagerie.settings.SettingsException;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
@@ -213,7 +208,7 @@ public class MainController {
     /**
      * Settings object used by this application.
      */
-    private final Settings settings;
+    private final MenagerieSettings settings;
 
     private static final int TARGET_LICENSE_VERSION = 1;
     private static final File licensesFolder = new File("./licenses");
@@ -231,11 +226,9 @@ public class MainController {
 
     // --------------------------------- Constructor ---------------------------------
 
-    public MainController(Menagerie menagerie, Settings settings) {
+    MainController(Menagerie menagerie, MenagerieSettings settings) {
         this.menagerie = menagerie;
         this.settings = settings;
-
-        if (settings.getDouble(Settings.Key.CONFIDENCE) < 0.9) settings.setDouble(Settings.Key.CONFIDENCE, 0.9);
     }
 
     // ---------------------------------- Initializers -------------------------------
@@ -264,40 +257,29 @@ public class MainController {
             applySearch(null, null, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
 
             // Init folder watcher
-            if (settings.getBoolean(Settings.Key.DO_AUTO_IMPORT))
-                startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+            if (settings.autoImportGroup.isEnabled())
+                startWatchingFolderForImages(settings.autoImportFolder.getValue(), settings.autoImportMove.getValue());
 
             // Show help screen if setting is set
-            if (settings.getBoolean(Settings.Key.SHOW_HELP_ON_START)) {
+            if (settings.helpOnStart.getValue()) {
                 screenPane.open(helpScreen);
-                settings.setBoolean(Settings.Key.SHOW_HELP_ON_START, false);
+                settings.helpOnStart.setValue(false);
             }
 
-            if (settings.getInt(Settings.Key.LICENSES_AGREED) < TARGET_LICENSE_VERSION) {
+            if (settings.licensesAgreed.getValue() < TARGET_LICENSE_VERSION) {
                 screenPane.open(new LicensesScreen(settings, licensesFolder, TARGET_LICENSE_VERSION));
             }
 
-            if (settings.getString(Settings.Key.USER_FILETYPES) != null && !settings.getString(Settings.Key.USER_FILETYPES).trim().isEmpty()) {
-                Filters.USER_EXTS.addAll(Arrays.asList(settings.getString(Settings.Key.USER_FILETYPES).trim().split(" ")));
+            if (settings.userFileTypes.getValue() != null && !settings.userFileTypes.getValue().trim().isEmpty()) {
+                Filters.USER_EXTS.addAll(Arrays.asList(settings.userFileTypes.getValue().trim().split(" ")));
             }
-            ((StringProperty) settings.getProperty(Settings.Key.USER_FILETYPES)).addListener((observable, oldValue, newValue) -> {
+            settings.userFileTypes.valueProperty().addListener((observable, oldValue, newValue) -> {
                 Filters.USER_EXTS.clear();
 
                 if (newValue != null && !newValue.isEmpty()) {
                     Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
                 }
             });
-
-            MenagerieSettings s = new MenagerieSettings();
-            try {
-                s.load(new File("C:\\temp\\menagerie.json"));
-            } catch (IOException e) {
-                Main.log.log(Level.WARNING, "No settings file found to load settings from", e);
-            } catch (SettingsException e) {
-                Main.log.log(Level.SEVERE, "Invalid settings format", e);
-            }
-            NewSettingsScreen nss = new NewSettingsScreen();
-            nss.open(screenPane, s);
         });
     }
 
@@ -368,8 +350,8 @@ public class MainController {
         duplicateOptionsScreen.getDuplicatesScreen().setKeepAfterClose(true);
         screenPane.add(duplicateOptionsScreen.getDuplicatesScreen());
         duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(item -> itemGridView.select(item, false, false));
-        duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
-        duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
+        duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
+        duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
     }
 
     private void initHelpScreen() {
@@ -384,7 +366,7 @@ public class MainController {
             itemGridView.select(item, false, false);
         });
         slideshowScreen.setKeepAfterClose(true);
-        slideshowScreen.getInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
+        slideshowScreen.getInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
         screenPane.add(slideshowScreen);
     }
 
@@ -396,28 +378,25 @@ public class MainController {
         importer = new ImporterThread(menagerie, settings);
         importer.setDaemon(true);
         importer.start();
-    }
 
-    /**
-     * Initializes the settings screen
-     */
-    private void initSettingsScreen() {
-        settingsScreen = new SettingsScreen(settings);
-        settingsScreen.setKeepAfterClose(true);
-        screenPane.add(settingsScreen);
-
-        ((IntegerProperty) settings.getProperty(Settings.Key.GRID_WIDTH)).addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
-        ((BooleanProperty) settings.getProperty(Settings.Key.DO_AUTO_IMPORT)).addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
+        settings.autoImportGroup.enabledProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
             // Defer to later to ensure other settings get updated before any action is taken, since this operation relies on other settings
             if (folderWatcherThread != null) {
                 folderWatcherThread.stopWatching();
             }
 
             if (newValue)
-                startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+                startWatchingFolderForImages(settings.autoImportFolder.getValue(), settings.autoImportMove.getValue());
         }));
-        ((BooleanProperty) settings.getProperty(Settings.Key.MUTE_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
-        ((BooleanProperty) settings.getProperty(Settings.Key.REPEAT_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
+    }
+
+    /**
+     * Initializes the settings screen
+     */
+    private void initSettingsScreen() {
+        settingsScreen = new SettingsScreen();
+        settingsScreen.setKeepAfterClose(true);
+        screenPane.add(settingsScreen);
     }
 
     /**
@@ -507,12 +486,49 @@ public class MainController {
      */
     private void initExplorer() {
         // Set image grid width from settings
-        setGridWidth(settings.getInt(Settings.Key.GRID_WIDTH));
+        setGridWidth(settings.gridWidth.getValue());
 
         // Init image grid
         initItemGridView();
 
         // Init drag/drop handlers
+        initExplorerDragDropListeners();
+
+        // Init tag list cell factory
+        initExplorerTagListCellFactory();
+
+        // Init predictive textfields
+        initPredictiveTextFields();
+
+        // Init preview
+        previewMediaView.getImageView().getScale().addListener((observable, oldValue, newValue) -> {
+            if (newValue.doubleValue() == 1) {
+                explorerZoomLabel.setText(null);
+            } else {
+                explorerZoomLabel.setText(String.format("%d%%", (int) (100 * (1 / newValue.doubleValue()))));
+            }
+        });
+        previewMediaView.setMute(settings.muteVideo.getValue());
+        previewMediaView.setRepeat(settings.repeatVideo.getValue());
+
+        // Init item info box
+        itemInfoBox.extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
+        settings.expandItemInfo.valueProperty().addListener((observable, oldValue, newValue) -> {
+            itemInfoBox.setExtended(newValue);
+            slideshowScreen.getInfoBox().setExtended(newValue);
+            duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().setExtended(newValue);
+            duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().setExtended(newValue);
+        });
+
+        // Init scope label binding
+        scopeLabel.maxWidthProperty().bind(scopeHBox.widthProperty().subtract(backButton.widthProperty()).subtract(scopeHBox.getSpacing()));
+
+        settings.gridWidth.valueProperty().addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
+        settings.muteVideo.valueProperty().addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
+        settings.repeatVideo.valueProperty().addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
+    }
+
+    private void initExplorerDragDropListeners() {
         explorerRootPane.disabledProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
                 if (previewMediaView.isPlaying()) {
@@ -540,10 +556,10 @@ public class MainController {
                 }
             } else if (url != null && !url.isEmpty()) {
                 try {
-                    String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+                    String folder = settings.defaultFolder.getValue();
                     String filename = new URL(url).getPath().replaceAll("^.*/", "");
                     File target;
-                    if (!settings.getBoolean(Settings.Key.USE_FILENAME_FROM_URL) || folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
+                    if (!settings.urlFilename.getValue() || folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
                         do {
                             FileChooser fc = new FileChooser();
                             fc.setTitle("Save as");
@@ -565,65 +581,9 @@ public class MainController {
             }
             event.consume();
         });
+    }
 
-        // Init tag list cell factory
-        tagListView.setCellFactory(param -> {
-            TagListCell c = new TagListCell();
-            c.setOnContextMenuRequested(event -> {
-                if (c.getItem() != null) {
-                    MenuItem i0 = new MenuItem("Add note");
-                    i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
-                    MenuItem i1 = new MenuItem("Add to search");
-                    i1.setOnAction(event1 -> {
-                        if (searchTextField.getText() == null) {
-                            searchTextField.setText(c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
-                        }
-                        GroupItem scope = null;
-                        if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
-                    });
-                    MenuItem i2 = new MenuItem("Exclude from search");
-                    i2.setOnAction(event1 -> {
-                        if (searchTextField.getText() == null || searchTextField.getText().isEmpty()) {
-                            searchTextField.setText("-" + c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
-                        }
-                        GroupItem scope = null;
-                        if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
-                    });
-                    MenuItem i3 = new MenuItem("Remove from selected");
-                    i3.setOnAction(event1 -> {
-                        Map<Item, List<Tag>> removed = new HashMap<>();
-                        itemGridView.getSelected().forEach(item -> {
-                            if (item.removeTag(c.getItem())) {
-                                removed.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
-                            }
-                        });
-
-                        tagEditHistory.push(new TagEditEvent(null, removed));
-                    });
-                    ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1, i2, new SeparatorMenuItem(), i3);
-                    m.show(c, event.getScreenX(), event.getScreenY());
-                }
-            });
-
-            final TagListPopup popup = new TagListPopup();
-            popup.setAutoHide(true);
-            c.setOnMouseClicked(event -> {
-                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-                    popup.setTag(c.getItem());
-                    popup.show(c, event.getScreenX(), event.getScreenY());
-                }
-            });
-
-            return c;
-        });
-
-        // Init predictive textfields
+    private void initPredictiveTextFields() {
         editTagsTextField.setOptionsListener(prefix -> {
             prefix = prefix.toLowerCase();
             boolean negative = prefix.startsWith("-");
@@ -683,29 +643,64 @@ public class MainController {
 
             return results;
         });
+    }
 
-        // Init preview
-        previewMediaView.getImageView().getScale().addListener((observable, oldValue, newValue) -> {
-            if (newValue.doubleValue() == 1) {
-                explorerZoomLabel.setText(null);
-            } else {
-                explorerZoomLabel.setText(String.format("%d%%", (int) (100 * (1 / newValue.doubleValue()))));
-            }
+    private void initExplorerTagListCellFactory() {
+        tagListView.setCellFactory(param -> {
+            TagListCell c = new TagListCell();
+            c.setOnContextMenuRequested(event -> {
+                if (c.getItem() != null) {
+                    MenuItem i0 = new MenuItem("Add note");
+                    i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
+                    MenuItem i1 = new MenuItem("Add to search");
+                    i1.setOnAction(event1 -> {
+                        if (searchTextField.getText() == null) {
+                            searchTextField.setText(c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
+                        }
+                        GroupItem scope = null;
+                        if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
+                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+                    });
+                    MenuItem i2 = new MenuItem("Exclude from search");
+                    i2.setOnAction(event1 -> {
+                        if (searchTextField.getText() == null || searchTextField.getText().isEmpty()) {
+                            searchTextField.setText("-" + c.getItem().getName());
+                        } else {
+                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
+                        }
+                        GroupItem scope = null;
+                        if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
+                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+                    });
+                    MenuItem i3 = new MenuItem("Remove from selected");
+                    i3.setOnAction(event1 -> {
+                        Map<Item, List<Tag>> removed = new HashMap<>();
+                        itemGridView.getSelected().forEach(item -> {
+                            if (item.removeTag(c.getItem())) {
+                                removed.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
+                            }
+                        });
+
+                        tagEditHistory.push(new TagEditEvent(null, removed));
+                    });
+                    ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1, i2, new SeparatorMenuItem(), i3);
+                    m.show(c, event.getScreenX(), event.getScreenY());
+                }
+            });
+
+            final TagListPopup popup = new TagListPopup();
+            popup.setAutoHide(true);
+            c.setOnMouseClicked(event -> {
+                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
+                    popup.setTag(c.getItem());
+                    popup.show(c, event.getScreenX(), event.getScreenY());
+                }
+            });
+
+            return c;
         });
-        previewMediaView.setMute(settings.getBoolean(Settings.Key.MUTE_VIDEO));
-        previewMediaView.setRepeat(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
-
-        // Init item info box
-        itemInfoBox.extendedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.EXPAND_ITEM_INFO, newValue));
-        ((BooleanProperty) settings.getProperty(Settings.Key.EXPAND_ITEM_INFO)).addListener((observable, oldValue, newValue) -> {
-            itemInfoBox.setExtended(newValue);
-            slideshowScreen.getInfoBox().setExtended(newValue);
-            duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().setExtended(newValue);
-            duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().setExtended(newValue);
-        });
-
-        // Init scope label binding
-        scopeLabel.maxWidthProperty().bind(scopeHBox.widthProperty().subtract(backButton.widthProperty()).subtract(scopeHBox.getSpacing()));
     }
 
     /**
@@ -834,34 +829,40 @@ public class MainController {
         Main.log.info("Initializing window properties and listeners");
 
         Stage stage = ((Stage) explorerRootPane.getScene().getWindow());
-        stage.setMaximized(settings.getBoolean(Settings.Key.WINDOW_MAXIMIZED));
-        if (settings.getInt(Settings.Key.WINDOW_WIDTH) > 0) {
-            stage.setWidth(settings.getInt(Settings.Key.WINDOW_WIDTH));
+        stage.setMaximized(settings.windowMaximized.getValue());
+        if (settings.windowWidth.getValue() > 0) {
+            stage.setWidth(settings.windowWidth.getValue());
         } else {
-            settings.setInt(Settings.Key.WINDOW_WIDTH, (int) stage.getWidth());
+            settings.windowWidth.setValue((int) stage.getWidth());
         }
-        if (settings.getInt(Settings.Key.WINDOW_HEIGHT) > 0) {
-            stage.setHeight(settings.getInt(Settings.Key.WINDOW_HEIGHT));
+        if (settings.windowHeight.getValue() > 0) {
+            stage.setHeight(settings.windowHeight.getValue());
         } else {
-            settings.setInt(Settings.Key.WINDOW_HEIGHT, (int) stage.getHeight());
+            settings.windowHeight.setValue((int) stage.getHeight());
         }
-        if (settings.getInt(Settings.Key.WINDOW_X) >= 0) {
-            stage.setX(settings.getInt(Settings.Key.WINDOW_X));
+        if (settings.windowX.getValue() >= 0) {
+            stage.setX(settings.windowX.getValue());
         } else {
-            settings.setInt(Settings.Key.WINDOW_X, (int) stage.getX());
+            settings.windowX.setValue((int) stage.getX());
         }
-        if (settings.getInt(Settings.Key.WINDOW_Y) >= 0) {
-            stage.setY(settings.getInt(Settings.Key.WINDOW_Y));
+        if (settings.windowY.getValue() >= 0) {
+            stage.setY(settings.windowY.getValue());
         } else {
-            settings.setInt(Settings.Key.WINDOW_Y, (int) stage.getY());
+            settings.windowY.setValue((int) stage.getY());
         }
 
         //Bind window properties to settings
-        stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.setBoolean(Settings.Key.WINDOW_MAXIMIZED, newValue));
-        stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_WIDTH, newValue.intValue()));
-        stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_HEIGHT, newValue.intValue()));
-        stage.xProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_X, newValue.intValue()));
-        stage.yProperty().addListener((observable, oldValue, newValue) -> settings.setInt(Settings.Key.WINDOW_Y, newValue.intValue()));
+        //        stage.maximizedProperty().addListener((observable, oldValue, newValue) -> settings.windowMaximized.setValue(newValue));
+        //        stage.widthProperty().addListener((observable, oldValue, newValue) -> settings.windowWidth.setValue(newValue.intValue()));
+        //        stage.heightProperty().addListener((observable, oldValue, newValue) -> settings.windowHeight.setValue(newValue.intValue()));
+        //        stage.xProperty().addListener((observable, oldValue, newValue) -> settings.windowX.setValue(newValue.intValue()));
+        //        stage.yProperty().addListener((observable, oldValue, newValue) -> settings.windowY.setValue(newValue.intValue()));
+        // TODO test simplified binding
+        settings.windowMaximized.valueProperty().bind(stage.maximizedProperty());
+        settings.windowWidth.valueProperty().bind(stage.widthProperty());
+        settings.windowHeight.valueProperty().bind(stage.heightProperty());
+        settings.windowX.valueProperty().bind(stage.xProperty());
+        settings.windowY.valueProperty().bind(stage.yProperty());
 
         stage.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
@@ -1121,7 +1122,7 @@ public class MainController {
 
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("Move files to folder...");
-        String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+        String folder = settings.defaultFolder.getValue();
         if (folder != null && !folder.isEmpty()) dc.setInitialDirectory(new File(folder));
         File result = dc.showDialog(rootPane.getScene().getWindow());
 
@@ -1354,7 +1355,7 @@ public class MainController {
                 for (File file : files) {
                     Main.log.info("Folder watcher got file to import: " + file);
                     if (moveToDefault) {
-                        String work = settings.getString(Settings.Key.DEFAULT_FOLDER);
+                        String work = settings.defaultFolder.getValue();
                         if (!work.endsWith("/") && !work.endsWith("\\")) work += "/";
                         File f = new File(work + file.getName());
                         if (file.equals(f)) continue; //File is being "moved" to same folder
@@ -1390,7 +1391,7 @@ public class MainController {
         Thumbnail.releaseVLCJResources();
 
         try {
-            settings.save();
+            settings.save(new File(Main.SETTINGS_PATH));
         } catch (IOException e1) {
             Main.log.log(Level.WARNING, "Failed to save settings to file", e1);
         }
@@ -1402,7 +1403,7 @@ public class MainController {
                 Main.log.info("Done defragging database file");
 
                 if (revertDatabase) {
-                    File database = DatabaseManager.resolveDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
+                    File database = DatabaseManager.resolveDatabaseFile(settings.dbUrl.getValue());
                     File backup = new File(database + ".bak");
                     Main.log.warning(String.format("Reverting to last backup database: %s", backup.toString()));
                     try {
@@ -1533,7 +1534,7 @@ public class MainController {
     }
 
     public void settingsMenuButtonOnAction(ActionEvent event) {
-        settingsScreen.open(screenPane);
+        settingsScreen.open(screenPane, settings);
         event.consume();
     }
 
@@ -1563,7 +1564,7 @@ public class MainController {
     }
 
     public void revertDatabaseMenuButtonOnAction(ActionEvent event) {
-        File database = DatabaseManager.resolveDatabaseFile(settings.getString(Settings.Key.DATABASE_URL));
+        File database = DatabaseManager.resolveDatabaseFile(settings.dbUrl.getValue());
         File backup = new File(database + ".bak");
         if (backup.exists()) {
             new ConfirmationScreen().open(screenPane, "Revert database", "Revert to latest backup? (" + new Date(backup.lastModified()) + ")\n\nLatest backup: \"" + backup + "\"\n\nNote: Files will not be deleted!", () -> cleanExit(true), null);
@@ -1606,7 +1607,7 @@ public class MainController {
                     event.consume();
                     break;
                 case S:
-                    settingsScreen.open(screenPane);
+                    settingsScreen.open(screenPane, settings);
                     event.consume();
                     break;
                 case T:

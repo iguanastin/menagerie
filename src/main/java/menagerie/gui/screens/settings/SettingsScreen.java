@@ -49,7 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 
-public class NewSettingsScreen extends Screen {
+public class SettingsScreen extends Screen {
 
     private static final Insets ALL5 = new Insets(5);
 
@@ -59,7 +59,7 @@ public class NewSettingsScreen extends Screen {
     private final List<SettingNode> settingNodes = new ArrayList<>();
 
 
-    public NewSettingsScreen() {
+    public SettingsScreen() {
 
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {

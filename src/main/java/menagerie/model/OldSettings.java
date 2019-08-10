@@ -42,7 +42,7 @@ import java.util.logging.Level;
  * <p>
  * Property events are handled on the FX thread.
  */
-public class Settings {
+public class OldSettings {
 
     /**
      * Settings keys
@@ -58,7 +58,7 @@ public class Settings {
      *
      * @param file File to read from
      */
-    public Settings(File file) {
+    public OldSettings(File file) {
         this();
 
         if (file != null) {
@@ -109,7 +109,7 @@ public class Settings {
     /**
      * Constructs a settings object using default settings.
      */
-    public Settings() {
+    public OldSettings() {
         setBoolean(Key.USE_FILENAME_FROM_URL, true);
         setBoolean(Key.BACKUP_DATABASE, true);
         setBoolean(Key.WINDOW_MAXIMIZED, true);

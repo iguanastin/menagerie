@@ -38,7 +38,7 @@ import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.ProgressScreen;
-import menagerie.model.Settings;
+import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
@@ -46,7 +46,8 @@ import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.util.CancellableThread;
 
-import java.io.FileNotFoundException;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -59,7 +60,7 @@ public class DuplicateOptionsScreen extends Screen {
         SELECTED, SEARCHED, ALL
     }
 
-    private final Settings settings;
+    private final MenagerieSettings settings;
 
     private final DuplicatesScreen duplicateScreen;
 
@@ -72,7 +73,7 @@ public class DuplicateOptionsScreen extends Screen {
     private Menagerie menagerie = null;
 
 
-    public DuplicateOptionsScreen(Settings settings) {
+    public DuplicateOptionsScreen(MenagerieSettings settings) {
         this.settings = settings;
 
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
@@ -226,15 +227,15 @@ public class DuplicateOptionsScreen extends Screen {
      */
     private void saveSettings() {
         try {
-            settings.setDouble(Settings.Key.CONFIDENCE, Double.parseDouble(confidenceTextField.getText()));
+            settings.duplicateConfidence.setValue(Double.parseDouble(confidenceTextField.getText()));
         } catch (NumberFormatException e) {
             Main.log.log(Level.WARNING, "Failed to convert DuplicateOptionsScreen confidenceTextField to double for saving settings", e);
         }
 
         try {
-            settings.save();
-        } catch (FileNotFoundException e) {
-            Main.log.log(Level.SEVERE, "Failed to save settings", e);
+            settings.save(new File(Main.SETTINGS_PATH));
+        } catch (IOException e) {
+            Main.log.log(Level.SEVERE, "Failed to save settings file", e);
         }
     }
 
@@ -242,7 +243,7 @@ public class DuplicateOptionsScreen extends Screen {
         saveSettings();
 
         final List<SimilarPair<MediaItem>> pairs = new ArrayList<>();
-        final double confidence = settings.getDouble(Settings.Key.CONFIDENCE);
+        final double confidence = settings.duplicateConfidence.getValue();
         final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
         ProgressScreen ps = new ProgressScreen();
         CancellableThread ct = new CancellableThread() {
@@ -331,7 +332,7 @@ public class DuplicateOptionsScreen extends Screen {
     protected void onOpen() {
         updateCounts();
 
-        confidenceTextField.setText(settings.getDouble(Settings.Key.CONFIDENCE) + "");
+        confidenceTextField.setText(settings.duplicateConfidence.getValue() + "");
     }
 
     /**

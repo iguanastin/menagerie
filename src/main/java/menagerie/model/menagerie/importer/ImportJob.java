@@ -30,13 +30,12 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import menagerie.gui.Main;
 import menagerie.gui.MainController;
-import menagerie.model.Settings;
+import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
-import menagerie.util.listeners.ObjectListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -48,9 +47,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.logging.Level;
 
 /**
@@ -119,7 +116,7 @@ public class ImportJob {
      * @param menagerie Menagerie to import into.
      * @param settings  Application settings to import with.
      */
-    void runJob(Menagerie menagerie, Settings settings) {
+    void runJob(Menagerie menagerie, MenagerieSettings settings) {
         setStatus(Status.IMPORTING);
 
         if (tryDownload(settings)) {
@@ -147,11 +144,11 @@ public class ImportJob {
      * @param settings Application settings to use.
      * @return True if the download fails.
      */
-    private boolean tryDownload(Settings settings) {
+    private boolean tryDownload(MenagerieSettings settings) {
         if (needsDownload) {
             try {
                 if (downloadTo == null) {
-                    String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+                    String folder = settings.defaultFolder.getValue();
                     if (folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
                         Main.log.warning(String.format("Default folder '%s' doesn't exist or isn't a folder", folder));
                         return true;
@@ -203,7 +200,7 @@ public class ImportJob {
      * @param menagerie Menagerie to import into.
      * @return True if the import failed.
      */
-    private boolean tryImport(Menagerie menagerie, Settings settings) {
+    private boolean tryImport(Menagerie menagerie, MenagerieSettings settings) {
         if (needsImport) {
             synchronized (this) {
                 item = menagerie.importFile(file);
@@ -215,17 +212,17 @@ public class ImportJob {
                 needsImport = false;
 
                 // Add tags
-                if (settings.getBoolean(Settings.Key.TAG_TAGME)) {
+                if (settings.tagTagme.getValue()) {
                     Tag tagme = menagerie.getTagByName("tagme");
                     if (tagme == null) tagme = menagerie.createTag("tagme");
                     item.addTag(tagme);
                 }
-                if (settings.getBoolean(Settings.Key.TAG_IMAGE) && item.isImage()) {
+                if (settings.tagImages.getValue() && item.isImage()) {
                     Tag image = menagerie.getTagByName("image");
                     if (image == null) image = menagerie.createTag("image");
                     item.addTag(image);
                 }
-                if (settings.getBoolean(Settings.Key.TAG_VIDEO) && item.isVideo()) {
+                if (settings.tagVideos.getValue() && item.isVideo()) {
                     Tag video = menagerie.getTagByName("video");
                     if (video == null) video = menagerie.createTag("video");
                     item.addTag(video);
@@ -280,12 +277,12 @@ public class ImportJob {
      * @param menagerie Menagerie to find similar items in.
      * @param settings  Application settings to use.
      */
-    private void trySimilar(Menagerie menagerie, Settings settings) {
+    private void trySimilar(Menagerie menagerie, MenagerieSettings settings) {
         if (needsCheckSimilar && item.getHistogram() != null) {
             synchronized (this) {
                 similarTo = new ArrayList<>();
             }
-            final double confidence = settings.getDouble(Settings.Key.CONFIDENCE);
+            final double confidence = settings.duplicateConfidence.getValue();
             final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
             boolean anyMinimallySimilar = false;
             for (Item i : menagerie.getItems()) {

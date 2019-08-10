@@ -33,7 +33,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import menagerie.gui.Main;
-import menagerie.model.Settings;
+import menagerie.gui.screens.settings.MenagerieSettings;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,13 +42,11 @@ import java.util.logging.Level;
 
 public class LicensesScreen extends Screen {
 
-    private final Button agree = new Button("Agree");
-
     private static final Insets ALL5 = new Insets(5);
 
     private int index = 0;
 
-    public LicensesScreen(Settings settings, File licenseFolder, int targetLicenseVersion) {
+    public LicensesScreen(MenagerieSettings settings, File licenseFolder, int targetLicenseVersion) {
         BorderPane top = new BorderPane(null, null, null, new Separator(), new Label("License Agreement"));
         top.setPadding(ALL5);
 
@@ -75,6 +73,7 @@ public class LicensesScreen extends Screen {
             }
         }
 
+        Button agree = new Button("Agree");
         agree.setOnAction(event -> {
             index++;
             if (licenses != null && index < licenses.length) {
@@ -87,8 +86,7 @@ public class LicensesScreen extends Screen {
                 }
             } else {
                 close();
-                if (licenses != null && licenses.length > 0)
-                    settings.setInt(Settings.Key.LICENSES_AGREED, targetLicenseVersion);
+                if (licenses != null && licenses.length > 0) settings.licensesAgreed.setValue(targetLicenseVersion);
             }
         });
         Button cancel = new Button("Cancel");

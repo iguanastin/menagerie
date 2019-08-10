@@ -38,7 +38,7 @@ import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import menagerie.gui.Main;
 import menagerie.gui.screens.dialogs.AlertDialogScreen;
-import menagerie.model.Settings;
+import menagerie.model.OldSettings;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -47,7 +47,7 @@ import java.util.logging.Level;
 import static menagerie.model.menagerie.MediaItem.MAX_CONFIDENCE;
 import static menagerie.model.menagerie.MediaItem.MIN_CONFIDENCE;
 
-public class SettingsScreen extends Screen {
+public class OldSettingsScreen extends Screen {
 
     private static final Insets ALL5 = new Insets(5);
     private static final Insets LEFT20 = new Insets(0, 0, 0, 20);
@@ -79,10 +79,10 @@ public class SettingsScreen extends Screen {
     private final CheckBox backupDatabaseCheckBox = new CheckBox("Backup database on launch");
 
 
-    private final Settings settings;
+    private final OldSettings settings;
 
 
-    public SettingsScreen(Settings settings) {
+    public OldSettingsScreen(OldSettings settings) {
         this.settings = settings;
 
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
@@ -278,15 +278,15 @@ public class SettingsScreen extends Screen {
      * Applies inputs to settings object and saves it.
      */
     private void applyToSettings() {
-        settings.setString(Settings.Key.DEFAULT_FOLDER, defaultFolderTextField.getText());
-        settings.setBoolean(Settings.Key.DO_AUTO_IMPORT, autoImportFolderCheckBox.isSelected());
-        settings.setBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT, autoImportMoveToDefaultCheckBox.isSelected());
-        settings.setString(Settings.Key.AUTO_IMPORT_FOLDER, importFolderTextField.getText());
-        settings.setString(Settings.Key.USER_FILETYPES, alsoImportExtensionsTextField.getText());
-        settings.setBoolean(Settings.Key.USE_FILENAME_FROM_URL, fileNameFromURLCheckBox.isSelected());
-        settings.setBoolean(Settings.Key.TAG_TAGME, tagWithTagmeCheckBox.isSelected());
-        settings.setBoolean(Settings.Key.TAG_VIDEO, tagWithVideoCheckBox.isSelected());
-        settings.setBoolean(Settings.Key.TAG_IMAGE, tagWithImageCheckBox.isSelected());
+        settings.setString(OldSettings.Key.DEFAULT_FOLDER, defaultFolderTextField.getText());
+        settings.setBoolean(OldSettings.Key.DO_AUTO_IMPORT, autoImportFolderCheckBox.isSelected());
+        settings.setBoolean(OldSettings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT, autoImportMoveToDefaultCheckBox.isSelected());
+        settings.setString(OldSettings.Key.AUTO_IMPORT_FOLDER, importFolderTextField.getText());
+        settings.setString(OldSettings.Key.USER_FILETYPES, alsoImportExtensionsTextField.getText());
+        settings.setBoolean(OldSettings.Key.USE_FILENAME_FROM_URL, fileNameFromURLCheckBox.isSelected());
+        settings.setBoolean(OldSettings.Key.TAG_TAGME, tagWithTagmeCheckBox.isSelected());
+        settings.setBoolean(OldSettings.Key.TAG_VIDEO, tagWithVideoCheckBox.isSelected());
+        settings.setBoolean(OldSettings.Key.TAG_IMAGE, tagWithImageCheckBox.isSelected());
         double confidence = DEFAULT_CONFIDENCE;
         try {
             confidence = Double.parseDouble(confidenceTextField.getText());
@@ -294,19 +294,19 @@ public class SettingsScreen extends Screen {
             else if (confidence > MAX_CONFIDENCE) confidence = MAX_CONFIDENCE;
         } catch (NumberFormatException ignored) {
         }
-        settings.setDouble(Settings.Key.CONFIDENCE, confidence);
-        settings.setString(Settings.Key.VLCJ_PATH, vlcLibraryFolderTextField.getText());
-        settings.setBoolean(Settings.Key.MUTE_VIDEO, muteVideoCheckBox.isSelected());
-        settings.setBoolean(Settings.Key.REPEAT_VIDEO, repeatVideoCheckBox.isSelected());
+        settings.setDouble(OldSettings.Key.CONFIDENCE, confidence);
+        settings.setString(OldSettings.Key.VLCJ_PATH, vlcLibraryFolderTextField.getText());
+        settings.setBoolean(OldSettings.Key.MUTE_VIDEO, muteVideoCheckBox.isSelected());
+        settings.setBoolean(OldSettings.Key.REPEAT_VIDEO, repeatVideoCheckBox.isSelected());
         int gridWidth = 2;
         if (gridWidthChoiceBox.getSelectionModel().getSelectedItem() != null) {
             gridWidth = gridWidthChoiceBox.getSelectionModel().getSelectedItem();
         }
-        settings.setInt(Settings.Key.GRID_WIDTH, gridWidth);
-        settings.setString(Settings.Key.DATABASE_URL, databaseURLTextField.getText());
-        settings.setString(Settings.Key.DATABASE_USER, databaseUserTextField.getText());
-        settings.setString(Settings.Key.DATABASE_PASSWORD, databasePasswordTextField.getText());
-        settings.setBoolean(Settings.Key.BACKUP_DATABASE, backupDatabaseCheckBox.isSelected());
+        settings.setInt(OldSettings.Key.GRID_WIDTH, gridWidth);
+        settings.setString(OldSettings.Key.DATABASE_URL, databaseURLTextField.getText());
+        settings.setString(OldSettings.Key.DATABASE_USER, databaseUserTextField.getText());
+        settings.setString(OldSettings.Key.DATABASE_PASSWORD, databasePasswordTextField.getText());
+        settings.setBoolean(OldSettings.Key.BACKUP_DATABASE, backupDatabaseCheckBox.isSelected());
 
         try {
             settings.save();
@@ -317,30 +317,30 @@ public class SettingsScreen extends Screen {
 
     @Override
     protected void onOpen() {
-        defaultFolderTextField.setText(settings.getString(Settings.Key.DEFAULT_FOLDER));
-        autoImportFolderCheckBox.setSelected(settings.getBoolean(Settings.Key.DO_AUTO_IMPORT));
-        autoImportMoveToDefaultCheckBox.setSelected(settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
-        importFolderTextField.setText(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER));
-        alsoImportExtensionsTextField.setText(settings.getString(Settings.Key.USER_FILETYPES));
-        fileNameFromURLCheckBox.setSelected(settings.getBoolean(Settings.Key.USE_FILENAME_FROM_URL));
-        tagWithTagmeCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_TAGME));
-        tagWithVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_VIDEO));
-        tagWithImageCheckBox.setSelected(settings.getBoolean(Settings.Key.TAG_IMAGE));
-        double confidence = settings.getDouble(Settings.Key.CONFIDENCE);
+        defaultFolderTextField.setText(settings.getString(OldSettings.Key.DEFAULT_FOLDER));
+        autoImportFolderCheckBox.setSelected(settings.getBoolean(OldSettings.Key.DO_AUTO_IMPORT));
+        autoImportMoveToDefaultCheckBox.setSelected(settings.getBoolean(OldSettings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+        importFolderTextField.setText(settings.getString(OldSettings.Key.AUTO_IMPORT_FOLDER));
+        alsoImportExtensionsTextField.setText(settings.getString(OldSettings.Key.USER_FILETYPES));
+        fileNameFromURLCheckBox.setSelected(settings.getBoolean(OldSettings.Key.USE_FILENAME_FROM_URL));
+        tagWithTagmeCheckBox.setSelected(settings.getBoolean(OldSettings.Key.TAG_TAGME));
+        tagWithVideoCheckBox.setSelected(settings.getBoolean(OldSettings.Key.TAG_VIDEO));
+        tagWithImageCheckBox.setSelected(settings.getBoolean(OldSettings.Key.TAG_IMAGE));
+        double confidence = settings.getDouble(OldSettings.Key.CONFIDENCE);
         if (confidence < MIN_CONFIDENCE) confidence = MIN_CONFIDENCE;
         else if (confidence > MAX_CONFIDENCE) confidence = MAX_CONFIDENCE;
         confidenceTextField.setText("" + confidence);
-        vlcLibraryFolderTextField.setText(settings.getString(Settings.Key.VLCJ_PATH));
-        muteVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.MUTE_VIDEO));
-        repeatVideoCheckBox.setSelected(settings.getBoolean(Settings.Key.REPEAT_VIDEO));
-        int gridWidth = settings.getInt(Settings.Key.GRID_WIDTH);
+        vlcLibraryFolderTextField.setText(settings.getString(OldSettings.Key.VLCJ_PATH));
+        muteVideoCheckBox.setSelected(settings.getBoolean(OldSettings.Key.MUTE_VIDEO));
+        repeatVideoCheckBox.setSelected(settings.getBoolean(OldSettings.Key.REPEAT_VIDEO));
+        int gridWidth = settings.getInt(OldSettings.Key.GRID_WIDTH);
         if (gridWidth < 2) gridWidth = 2;
         else if (gridWidth > 6) gridWidth = 6;
         gridWidthChoiceBox.getSelectionModel().select((Integer) gridWidth);
-        databaseURLTextField.setText(settings.getString(Settings.Key.DATABASE_URL));
-        databaseUserTextField.setText(settings.getString(Settings.Key.DATABASE_USER));
-        databasePasswordTextField.setText(settings.getString(Settings.Key.DATABASE_PASSWORD));
-        backupDatabaseCheckBox.setSelected(settings.getBoolean(Settings.Key.BACKUP_DATABASE));
+        databaseURLTextField.setText(settings.getString(OldSettings.Key.DATABASE_URL));
+        databaseUserTextField.setText(settings.getString(OldSettings.Key.DATABASE_USER));
+        databasePasswordTextField.setText(settings.getString(OldSettings.Key.DATABASE_PASSWORD));
+        backupDatabaseCheckBox.setSelected(settings.getBoolean(OldSettings.Key.BACKUP_DATABASE));
     }
 
 }

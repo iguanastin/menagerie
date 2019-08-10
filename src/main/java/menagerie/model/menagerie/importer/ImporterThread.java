@@ -25,7 +25,7 @@
 package menagerie.model.menagerie.importer;
 
 import menagerie.gui.Main;
-import menagerie.model.Settings;
+import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.util.listeners.ObjectListener;
 
@@ -43,13 +43,13 @@ public class ImporterThread extends Thread {
     private volatile boolean paused = false;
 
     private final Menagerie menagerie;
-    private final Settings settings;
+    private final MenagerieSettings settings;
     private final Queue<ImportJob> queue = new ConcurrentLinkedQueue<>();
 
     private final Set<ObjectListener<ImportJob>> importerListeners = new HashSet<>();
 
 
-    public ImporterThread(Menagerie menagerie, Settings settings) {
+    public ImporterThread(Menagerie menagerie, MenagerieSettings settings) {
         super("Menagerie Importer Thread");
 
         this.menagerie = menagerie;

@@ -26,6 +26,7 @@ package menagerie.settings;
 
 import menagerie.gui.Main;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -44,7 +45,7 @@ public class Settings {
     private int version = 1;
 
 
-    public void load(File file) throws IOException, SettingsException {
+    public void load(File file) throws IOException, SettingsException, JSONException {
         String fileText = String.join("\n", Files.readAllLines(file.toPath()));
         JSONObject json = new JSONObject(fileText);
 
@@ -79,6 +80,34 @@ public class Settings {
         }
 
         return null;
+    }
+
+    public BooleanSetting getBool(String id) {
+        return (BooleanSetting) getSetting(id);
+    }
+
+    public DoubleSetting getDouble(String id) {
+        return (DoubleSetting) getSetting(id);
+    }
+
+    public FileSetting getFile(String id) {
+        return (FileSetting) getSetting(id);
+    }
+
+    public FolderSetting getFolder(String id) {
+        return (FolderSetting) getSetting(id);
+    }
+
+    public GroupSetting getGroup(String id) {
+        return (GroupSetting) getSetting(id);
+    }
+
+    public IntSetting getInt(String id) {
+        return (IntSetting) getSetting(id);
+    }
+
+    public StringSetting getString(String id) {
+        return (StringSetting) getSetting(id);
     }
 
     public List<Setting> getSettings() {

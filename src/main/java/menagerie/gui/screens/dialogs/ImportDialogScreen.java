@@ -39,7 +39,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
-import menagerie.model.Settings;
+import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.menagerie.importer.ImportJob;
@@ -68,7 +68,7 @@ public class ImportDialogScreen extends Screen {
     private List<File> files = new ArrayList<>();
     private File lastFolder = null;
 
-    public ImportDialogScreen(Settings settings, Menagerie menagerie, ImporterThread importer) {
+    public ImportDialogScreen(MenagerieSettings settings, Menagerie menagerie, ImporterThread importer) {
         this.menagerie = menagerie;
         this.importer = importer;
 
@@ -141,13 +141,13 @@ public class ImportDialogScreen extends Screen {
         setDefaultFocusNode(accept);
     }
 
-    private void browseFoldersDialog(Settings settings) {
+    private void browseFoldersDialog(MenagerieSettings settings) {
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("Import folder...");
         if (lastFolder != null) {
             dc.setInitialDirectory(lastFolder);
-        } else if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null) {
-            File f = new File(settings.getString(Settings.Key.DEFAULT_FOLDER));
+        } else if (settings.defaultFolder.getValue() != null) {
+            File f = new File(settings.defaultFolder.getValue());
             if (f.isDirectory()) dc.setInitialDirectory(f);
         }
         File folder = dc.showDialog(getScene().getWindow());
@@ -159,15 +159,15 @@ public class ImportDialogScreen extends Screen {
         }
     }
 
-    private void browseFilesDialog(Settings settings) {
+    private void browseFilesDialog(MenagerieSettings settings) {
         FileChooser fc = new FileChooser();
         fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
         fc.setTitle("Import files...");
 
         if (lastFolder != null) {
             fc.setInitialDirectory(lastFolder);
-        } else if (settings.getString(Settings.Key.DEFAULT_FOLDER) != null) {
-            File f = new File(settings.getString(Settings.Key.DEFAULT_FOLDER));
+        } else if (settings.defaultFolder.getValue() != null) {
+            File f = new File(settings.defaultFolder.getValue());
             if (f.isDirectory()) fc.setInitialDirectory(f);
         }
         List<File> result = fc.showOpenMultipleDialog(getScene().getWindow());

@@ -35,13 +35,17 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import menagerie.model.Settings;
+import menagerie.gui.screens.settings.MenagerieSettings;
+import menagerie.model.OldSettings;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.db.DatabaseManager;
 import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.db.MenagerieDatabaseLoadListener;
+import menagerie.settings.SettingsException;
+import org.json.JSONException;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -82,21 +86,33 @@ public class SplashController {
 
         // ------------------------------------------ Startup thread ---------------------------------------------------
         new Thread(() -> {
-            final Settings settings = new Settings(new File(Main.SETTINGS_PATH));
+            final MenagerieSettings settings = new MenagerieSettings();
+            try {
+                settings.load(new File(Main.SETTINGS_PATH));
+            } catch (FileNotFoundException e) {
+                Main.log.warning("Settings file does not exist");
+            } catch (IOException e) {
+                Main.log.log(Level.SEVERE, "Error reading settings file", e);
+            } catch (JSONException e) {
+                Main.log.warning("JSON error, attempting to read old style settings");
+                settings.loadFrom(new OldSettings(new File(Main.SETTINGS_PATH)));
+            } catch (SettingsException e) {
+                Main.log.log(Level.SEVERE, "Invalid settings file", e);
+            }
 
             // --------------------------------------------- Load VLCJ -------------------------------------------------
-            String vlcj = settings.getString(Settings.Key.VLCJ_PATH);
+            String vlcj = settings.vlcFolder.getValue();
             if (vlcj != null && vlcj.isEmpty()) vlcj = null;
             Main.loadVLCJ(vlcj);
 
             // ----------------------------------------- Back up database ----------------------------------------------
-            if (settings.getBoolean(Settings.Key.BACKUP_DATABASE)) {
+            if (settings.dbBackup.getValue()) {
                 Platform.runLater(() -> statusLabel.setText("Backing up database..."));
                 try {
-                    backupDatabase(settings.getString(Settings.Key.DATABASE_URL));
+                    backupDatabase(settings.dbUrl.getValue());
                 } catch (IOException e) {
-                    Main.log.log(Level.SEVERE, "Failed to backup database. Unexpected error occured.", e);
-                    Main.log.info("DB URL: " + settings.getString(Settings.Key.DATABASE_URL));
+                    Main.log.log(Level.SEVERE, "Failed to backup database. Unexpected error occurred.", e);
+                    Main.log.info("DB URL: " + settings.dbUrl.getValue());
 
                     Platform.runLater(() -> {
                         Main.showErrorMessage("Error while backing up database", "See log for more details", e.getLocalizedMessage());
@@ -108,12 +124,12 @@ public class SplashController {
             }
 
             // ---------------------------------------- Connect to database --------------------------------------------
-            Platform.runLater(() -> statusLabel.setText("Connecting to database: " + settings.getString(Settings.Key.DATABASE_URL) + "..."));
+            Platform.runLater(() -> statusLabel.setText("Connecting to database: " + settings.dbUrl.getValue() + "..."));
             Connection database;
             try {
-                database = DriverManager.getConnection("jdbc:h2:" + settings.getString(Settings.Key.DATABASE_URL), settings.getString(Settings.Key.DATABASE_USER), settings.getString(Settings.Key.DATABASE_PASSWORD));
+                database = DriverManager.getConnection("jdbc:h2:" + settings.dbUrl.getValue(), settings.dbUser.getValue(), settings.dbPass.getValue());
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Error connecting to database: " + settings.getString(Settings.Key.DATABASE_URL), e);
+                Main.log.log(Level.SEVERE, "Error connecting to database: " + settings.dbUrl.getValue(), e);
                 Platform.runLater(() -> {
                     Main.showErrorMessage("Error connecting to database", "Database is most likely open in another application", e.getLocalizedMessage());
                     Platform.exit();
@@ -123,7 +139,7 @@ public class SplashController {
             }
 
             // -------------------------------------- Verify/upgrade database ------------------------------------------
-            Platform.runLater(() -> statusLabel.setText("Verifying and upgrading database: " + settings.getString(Settings.Key.DATABASE_URL) + "..."));
+            Platform.runLater(() -> statusLabel.setText("Verifying and upgrading database: " + settings.dbUrl.getValue() + "..."));
             try {
                 DatabaseVersionUpdater.updateDatabase(database);
             } catch (SQLException e) {
@@ -195,7 +211,7 @@ public class SplashController {
         }, "Startup Thread").start();
     }
 
-    private void openMain(Menagerie menagerie, Settings settings) {
+    private void openMain(Menagerie menagerie, MenagerieSettings settings) {
         try {
             Main.log.info(String.format("Loading FXML: %s", Main.MAIN_FXML));
             FXMLLoader loader = new FXMLLoader(getClass().getResource(Main.MAIN_FXML));

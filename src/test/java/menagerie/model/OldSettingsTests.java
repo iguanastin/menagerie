@@ -36,20 +36,20 @@ import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class SettingsTests {
+class OldSettingsTests {
 
     @ParameterizedTest(name = "DefaultIsSet {0}")
-    @EnumSource(Settings.Key.class)
-    void defaultIsSet(Settings.Key key) {
-        Settings s = new Settings();
+    @EnumSource(OldSettings.Key.class)
+    void defaultIsSet(OldSettings.Key key) {
+        OldSettings s = new OldSettings();
 
         assertNotNull(s.getProperty(key), String.format("\"%s\" has no default value", key));
     }
 
     @ParameterizedTest(name = "SetGetString {0}")
-    @EnumSource(Settings.Key.class)
-    void setGetString(Settings.Key key) {
-        Settings s = new Settings();
+    @EnumSource(OldSettings.Key.class)
+    void setGetString(OldSettings.Key key) {
+        OldSettings s = new OldSettings();
 
         Property p = s.getProperty(key);
         if (p instanceof BooleanProperty) {
@@ -83,7 +83,7 @@ class SettingsTests {
     @DisplayName("SaveLoadTest")
     @Test
     void saveLoad() {
-        final Settings s = new Settings();
+        final OldSettings s = new OldSettings();
         final File file;
         try {
             file = File.createTempFile("settings", ".txt");
@@ -95,7 +95,7 @@ class SettingsTests {
             final String stringVal = "string abcd 1234";
 
             // Set all settings
-            for (Settings.Key key : Settings.Key.values()) {
+            for (OldSettings.Key key : OldSettings.Key.values()) {
                 Property p = s.getProperty(key);
                 if (p instanceof StringProperty) {
                     s.setString(key, stringVal);
@@ -113,8 +113,8 @@ class SettingsTests {
             try {
                 s.save(file);
 
-                Settings s2 = new Settings(file);
-                for (Settings.Key key : Settings.Key.values()) {
+                OldSettings s2 = new OldSettings(file);
+                for (OldSettings.Key key : OldSettings.Key.values()) {
                     Property p = s2.getProperty(key);
                     if (p instanceof StringProperty) {
                         assertEquals(stringVal, s2.getString(key));

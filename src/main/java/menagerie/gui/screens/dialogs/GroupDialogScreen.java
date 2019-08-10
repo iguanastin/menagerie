@@ -35,7 +35,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
-import menagerie.model.Settings;
+import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Menagerie;
@@ -52,7 +52,7 @@ public class GroupDialogScreen extends Screen {
     private final CheckBox elementTagsCheckBox = new CheckBox("Tag group with element tags");
 
     private Menagerie menagerie = null;
-    private Settings settings = null;
+    private MenagerieSettings settings = null;
     private List<Item> toGroup = null;
 
     private ObjectListener<GroupItem> groupListener = null;
@@ -106,7 +106,7 @@ public class GroupDialogScreen extends Screen {
      * @param manager Manager to open in.
      * @param text    Default textfield text.
      */
-    public void open(ScreenPane manager, Menagerie menagerie, Settings settings, String text, List<Item> toGroup, ObjectListener<GroupItem> groupListener) {
+    public void open(ScreenPane manager, Menagerie menagerie, MenagerieSettings settings, String text, List<Item> toGroup, ObjectListener<GroupItem> groupListener) {
         this.groupListener = groupListener;
         this.menagerie = menagerie;
         this.settings = settings;
@@ -142,7 +142,7 @@ public class GroupDialogScreen extends Screen {
         if (menagerie != null && settings != null && toGroup != null && !toGroup.isEmpty()) {
             GroupItem group = menagerie.createGroup(toGroup, textField.getText());
             if (group != null) {
-                if (settings.getBoolean(Settings.Key.TAG_TAGME)) {
+                if (settings.tagTagme.getValue()) {
                     Tag tagme = menagerie.getTagByName("tagme");
                     if (tagme == null) tagme = menagerie.createTag("tagme");
                     group.addTag(tagme);
