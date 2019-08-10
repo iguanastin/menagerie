@@ -32,6 +32,8 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import menagerie.gui.Main;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -42,8 +44,6 @@ public class GroupSetting extends Setting {
     private static final String TOGGLEABLE_KEY = "toggleable";
     private static final String ENABLED_KEY = "enabled";
     private static final String CHILDREN_KEY = "children";
-
-    private static final String TYPE = "group";
 
     private final List<Setting> children = new ArrayList<>();
     private final BooleanProperty enabled = new SimpleBooleanProperty(true);
@@ -56,8 +56,22 @@ public class GroupSetting extends Setting {
         this.enabled.set(enabled);
     }
 
+    public GroupSetting(String identifier, String label, String tip, boolean hidden, boolean toggleable, boolean enabled, Setting... children) {
+        this(identifier, label, tip, hidden, toggleable, enabled);
+        for (Setting child : children) {
+            getChildren().add(child);
+        }
+    }
+
     public GroupSetting(String identifier) {
         super(identifier);
+    }
+
+    public GroupSetting(String identifier, Setting... children) {
+        this(identifier);
+        for (Setting child : children) {
+            getChildren().add(child);
+        }
     }
 
     public GroupSetting disable() {
@@ -89,6 +103,14 @@ public class GroupSetting extends Setting {
         return children;
     }
 
+    public Setting getChild(String id) {
+        for (Setting s : getChildren()) {
+            if (s.getID().equalsIgnoreCase(id)) return s;
+        }
+
+        return null;
+    }
+
     public boolean isToggleable() {
         return toggleable.get();
     }
@@ -111,11 +133,6 @@ public class GroupSetting extends Setting {
 
     public BooleanProperty enabledProperty() {
         return enabled;
-    }
-
-    @Override
-    public String getType() {
-        return TYPE;
     }
 
     @Override
@@ -166,6 +183,27 @@ public class GroupSetting extends Setting {
     }
 
     @Override
+    void initFromJSON(JSONObject json) {
+        setToggleable(json.getBoolean(TOGGLEABLE_KEY));
+        setEnabled(json.getBoolean(ENABLED_KEY));
+
+        if (json.has(CHILDREN_KEY)) {
+            JSONArray arr = json.getJSONArray(CHILDREN_KEY);
+
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject j = arr.getJSONObject(i);
+
+                Setting setting = getChild(j.getString(Setting.ID_KEY));
+                if (setting != null) {
+                    setting.initFromJSON(j);
+                } else {
+                    Main.log.warning("Unexpected setting found: " + j);
+                }
+            }
+        }
+    }
+
+    @Override
     JSONObject toJSON() {
         JSONObject json = super.toJSON();
         json.put(TOGGLEABLE_KEY, isToggleable());
@@ -176,30 +214,9 @@ public class GroupSetting extends Setting {
         return json;
     }
 
-    public static GroupSetting fromJSON(JSONObject json) {
-        if (!isValidSettingJSON(json, TYPE)) return null;
-
-        String label = null, tip = null;
-        boolean hidden = false, toggleable = false, enabled = true;
-
-        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-        if (json.has(TOGGLEABLE_KEY)) toggleable = json.getBoolean(TOGGLEABLE_KEY);
-        if (json.has(ENABLED_KEY)) enabled = json.getBoolean(ENABLED_KEY);
-
-        GroupSetting group = new GroupSetting(json.getString(ID_KEY), label, tip, hidden, toggleable, enabled);
-
-        if (json.has(CHILDREN_KEY)) {
-            group.getChildren().addAll(Settings.parseArrayOfSettings(json.getJSONArray(CHILDREN_KEY)));
-        }
-
-        return group;
-    }
-
     @Override
     public String toString() {
-        return getType() + "(id:\"" + getID() + "\", label:\"" + getLabel() + "\", toggleable:" + isToggleable() + ", enabled:" + isEnabled() + ", children:" + getChildren().size() + ")";
+        return "Group(id:\"" + getID() + "\", label:\"" + getLabel() + "\", toggleable:" + isToggleable() + ", enabled:" + isEnabled() + ", children:" + getChildren().size() + ")";
     }
 
     @Override

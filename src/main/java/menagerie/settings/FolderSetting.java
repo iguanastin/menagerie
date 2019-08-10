@@ -33,13 +33,10 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.stage.DirectoryChooser;
-import org.json.JSONObject;
 
 import java.io.File;
 
 public class FolderSetting extends StringSetting {
-
-    private static final String TYPE = "folder";
 
 
     public FolderSetting(String identifier, String label, String tip, boolean hidden, String value) {
@@ -67,11 +64,6 @@ public class FolderSetting extends StringSetting {
     public FolderSetting label(String label) {
         setLabel(label);
         return this;
-    }
-
-    @Override
-    public String getType() {
-        return TYPE;
     }
 
     @Override
@@ -112,20 +104,6 @@ public class FolderSetting extends StringSetting {
                 return h;
             }
         };
-    }
-
-    public static FolderSetting fromJSON(JSONObject json) {
-        if (!isValidSettingJSON(json, TYPE)) return null;
-
-        String label = null, tip = null, value = null;
-        boolean hidden = false;
-
-        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-        if (json.has(VALUE_KEY)) value = json.getString(VALUE_KEY);
-
-        return new FolderSetting(json.getString(ID_KEY), label, tip, hidden, value);
     }
 
 }

@@ -40,8 +40,6 @@ public class DoubleSetting extends Setting {
     private static final String MIN_KEY = "min";
     private static final String MAX_KEY = "max";
 
-    private static final String TYPE = "double";
-
     private final DoubleProperty value = new SimpleDoubleProperty();
     private double min = Double.MIN_VALUE, max = Double.MAX_VALUE;
 
@@ -130,11 +128,6 @@ public class DoubleSetting extends Setting {
     }
 
     @Override
-    public String getType() {
-        return TYPE;
-    }
-
-    @Override
     public SettingNode makeJFXNode() {
         Label label = new Label(getLabel());
         TextField textfield = new TextField(getValue() + "");
@@ -176,37 +169,19 @@ public class DoubleSetting extends Setting {
     }
 
     @Override
-    JSONObject toJSON() {
-        JSONObject json = super.toJSON();
-
-        json.put(VALUE_KEY, getValue());
-        json.put(MIN_KEY, getMin());
-        json.put(MAX_KEY, getMax());
-
-        return json;
+    void initFromJSON(JSONObject json) {
+        setRange(json.getDouble(MIN_KEY), json.getDouble(MAX_KEY));
+        setValue(json.getDouble(VALUE_KEY));
     }
 
-    public static DoubleSetting fromJSON(JSONObject json) {
-        if (!isValidSettingJSON(json, TYPE)) return null;
-        String label = null, tip = null;
-        boolean hidden = false;
-        double value = 0;
-
-        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-        if (json.has(VALUE_KEY)) value = json.getDouble(VALUE_KEY);
-
-        DoubleSetting setting = new DoubleSetting(json.getString(ID_KEY), label, tip, hidden, value);
-        if (json.has(MIN_KEY)) setting.setMin(json.getDouble(MIN_KEY));
-        if (json.has(MAX_KEY)) setting.setMax(json.getDouble(MAX_KEY));
-
-        return setting;
+    @Override
+    JSONObject toJSON() {
+        return super.toJSON().put(VALUE_KEY, getValue()).put(MIN_KEY, getMin()).put(MAX_KEY, getMax());
     }
 
     @Override
     public String toString() {
-        return getType() + "(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
+        return "Double(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
     }
 
     @Override

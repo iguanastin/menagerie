@@ -38,9 +38,7 @@ import org.json.JSONObject;
 
 public class StringSetting extends Setting {
 
-    static final String VALUE_KEY = "value";
-
-    private static final String TYPE = "string";
+    private static final String VALUE_KEY = "value";
 
     private final StringProperty value = new SimpleStringProperty();
 
@@ -87,11 +85,6 @@ public class StringSetting extends Setting {
     }
 
     @Override
-    public String getType() {
-        return TYPE;
-    }
-
-    @Override
     public SettingNode makeJFXNode() {
         Label label = new Label(getLabel());
         TextField textField = new TextField(getValue());
@@ -117,31 +110,22 @@ public class StringSetting extends Setting {
     }
 
     @Override
-    JSONObject toJSON() {
-        JSONObject json = super.toJSON();
-
-        json.put(VALUE_KEY, getValue());
-
-        return json;
+    void initFromJSON(JSONObject json) {
+        if (json.has(VALUE_KEY)) {
+            setValue(json.getString(VALUE_KEY));
+        } else {
+            setValue(null);
+        }
     }
 
-    public static StringSetting fromJSON(JSONObject json) {
-        if (!isValidSettingJSON(json, TYPE)) return null;
-
-        String label = null, tip = null, value = null;
-        boolean hidden = false;
-
-        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-        if (json.has(VALUE_KEY)) value = json.getString(VALUE_KEY);
-        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-
-        return new StringSetting(json.getString(ID_KEY), label, tip, hidden, value);
+    @Override
+    JSONObject toJSON() {
+        return super.toJSON().put(VALUE_KEY, getValue());
     }
 
     @Override
     public String toString() {
-        return getType() + "(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
+        return "String(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
     }
 
     @Override

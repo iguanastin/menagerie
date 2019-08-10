@@ -35,8 +35,6 @@ public class BooleanSetting extends Setting {
 
     private static final String VALUE_KEY = "value";
 
-    private static final String TYPE = "boolean";
-
     private final BooleanProperty value = new SimpleBooleanProperty();
 
 
@@ -82,11 +80,6 @@ public class BooleanSetting extends Setting {
     }
 
     @Override
-    public String getType() {
-        return TYPE;
-    }
-
-    @Override
     public SettingNode makeJFXNode() {
         CheckBox checkBox = new CheckBox(getLabel());
         checkBox.setSelected(getValue());
@@ -109,30 +102,17 @@ public class BooleanSetting extends Setting {
 
     @Override
     JSONObject toJSON() {
-        JSONObject json = super.toJSON();
-
-        json.put(VALUE_KEY, getValue());
-
-        return json;
+        return super.toJSON().put(VALUE_KEY, getValue());
     }
 
-    public static BooleanSetting fromJSON(JSONObject json) {
-        if (!isValidSettingJSON(json, TYPE)) return null;
-
-        String label = null, tip = null;
-        boolean hidden = false, value = false;
-
-        if (json.has(LABEL_KEY)) label = json.getString(LABEL_KEY);
-        if (json.has(TIP_KEY)) tip = json.getString(TIP_KEY);
-        if (json.has(HIDDEN_KEY)) hidden = json.getBoolean(HIDDEN_KEY);
-        if (json.has(VALUE_KEY)) value = json.getBoolean(VALUE_KEY);
-
-        return new BooleanSetting(json.getString(ID_KEY), label, tip, hidden, value);
+    @Override
+    void initFromJSON(JSONObject json) {
+        setValue(json.getBoolean(VALUE_KEY));
     }
 
     @Override
     public String toString() {
-        return getType() + "(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
+        return "Boolean(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
     }
 
     @Override

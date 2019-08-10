@@ -65,7 +65,7 @@ public class Main extends Application {
     static final String MAIN_FXML = "/fxml/main.fxml";
     static final String CSS = "/fxml/dark.css";
     static final String MAIN_TITLE = "Menagerie";
-    static final String SETTINGS_PATH = "menagerie.settings";
+    public static final String SETTINGS_PATH = "menagerie.settings";
 
 
     /**

@@ -55,6 +55,8 @@ import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
+import menagerie.gui.screens.settings.MenagerieSettings;
+import menagerie.gui.screens.settings.NewSettingsScreen;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListPopup;
 import menagerie.model.Settings;
@@ -66,6 +68,7 @@ import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.GroupSearch;
 import menagerie.model.search.Search;
 import menagerie.model.search.SearchHistory;
+import menagerie.settings.SettingsException;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
@@ -285,14 +288,16 @@ public class MainController {
                 }
             });
 
-            //            MenagerieSettings s = new MenagerieSettings();
-            //            try {
-            //                s.load(new File("C:\\temp\\test.settings"));
-            //            } catch (IOException e) {
-            //                Main.log.log(Level.WARNING, "No settings file found to load settings from", e);
-            //            }
-            //            NewSettingsScreen nss = new NewSettingsScreen();
-            //            nss.open(screenPane, s);
+            MenagerieSettings s = new MenagerieSettings();
+            try {
+                s.load(new File("C:\\temp\\menagerie.json"));
+            } catch (IOException e) {
+                Main.log.log(Level.WARNING, "No settings file found to load settings from", e);
+            } catch (SettingsException e) {
+                Main.log.log(Level.SEVERE, "Invalid settings format", e);
+            }
+            NewSettingsScreen nss = new NewSettingsScreen();
+            nss.open(screenPane, s);
         });
     }
 
@@ -408,7 +413,8 @@ public class MainController {
                 folderWatcherThread.stopWatching();
             }
 
-            if (newValue) startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
+            if (newValue)
+                startWatchingFolderForImages(settings.getString(Settings.Key.AUTO_IMPORT_FOLDER), settings.getBoolean(Settings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
         }));
         ((BooleanProperty) settings.getProperty(Settings.Key.MUTE_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
         ((BooleanProperty) settings.getProperty(Settings.Key.REPEAT_VIDEO)).addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
@@ -711,7 +717,8 @@ public class MainController {
             ItemGridCell c = new ItemGridCell();
             c.setOnDragDetected(event -> {
                 if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
-                    if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem())) itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+                    if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem()))
+                        itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
 
                     Dragboard db = c.startDragAndDrop(TransferMode.ANY);
 
@@ -730,7 +737,8 @@ public class MainController {
                     List<File> files = new ArrayList<>();
                     itemGridView.getSelected().forEach(item -> {
                         if (item instanceof MediaItem) files.add(((MediaItem) item).getFile());
-                        else if (item instanceof GroupItem) ((GroupItem) item).getElements().forEach(mediaItem -> files.add(mediaItem.getFile()));
+                        else if (item instanceof GroupItem)
+                            ((GroupItem) item).getElements().forEach(mediaItem -> files.add(mediaItem.getFile()));
                     });
                     clipboard.putFiles(files);
                     db.setContent(clipboard);

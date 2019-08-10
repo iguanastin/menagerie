@@ -29,11 +29,7 @@ import org.json.JSONObject;
 
 public abstract class Setting {
 
-    static final String TYPE_KEY = "type";
     static final String ID_KEY = "id";
-    static final String LABEL_KEY = "label";
-    static final String HIDDEN_KEY = "hidden";
-    static final String TIP_KEY = "tip";
 
     private final String id;
     private String label;
@@ -80,9 +76,9 @@ public abstract class Setting {
         this.hidden = hidden;
     }
 
-    public abstract String getType();
-
     public abstract SettingNode makeJFXNode();
+
+    abstract void initFromJSON(JSONObject json);
 
     @Override
     public boolean equals(Object obj) {
@@ -91,26 +87,15 @@ public abstract class Setting {
             String id1 = getID(), id2 = s.getID();
             String l1 = getLabel(), l2 = s.getLabel();
             String tip1 = getTip(), tip2 = s.getTip();
-            String t1 = getType(), t2 = s.getType();
             boolean h1 = isHidden(), h2 = s.isHidden();
-            return Util.equalsNullable(id1, id2) && Util.equalsNullable(l1, l2) && Util.equalsNullable(tip1, tip2) && Util.equalsNullable(t1, t2) && h1 == h2;
+            return Util.equalsNullable(id1, id2) && Util.equalsNullable(l1, l2) && Util.equalsNullable(tip1, tip2) && h1 == h2;
         }
 
         return false;
     }
 
-    static boolean isValidSettingJSON(JSONObject json, String expectedType) {
-        return json.has(TYPE_KEY) && json.has(ID_KEY) && json.getString(TYPE_KEY).equals(expectedType);
-    }
-
     JSONObject toJSON() {
-        JSONObject json = new JSONObject();
-        json.put(ID_KEY, getID());
-        json.put(TYPE_KEY, getType());
-        json.put(LABEL_KEY, getLabel());
-        json.put(TIP_KEY, getTip());
-        json.put(HIDDEN_KEY, isHidden());
-        return json;
+        return new JSONObject().put(ID_KEY, getID());
     }
 
 }

@@ -24,65 +24,57 @@
 
 package menagerie.settings;
 
+import menagerie.gui.Main;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class Settings {
 
     private static final String VERSION_KEY = "version";
-
-    protected static final List<Class<? extends Setting>> PARSABLE_SETTINGS = new ArrayList<>(Arrays.asList(GroupSetting.class, IntSetting.class, DoubleSetting.class, BooleanSetting.class, StringSetting.class, FileSetting.class, FolderSetting.class));
+    private static final String SETTINGS_KEY = "settings";
 
     private final List<Setting> settings = new ArrayList<>();
-    private File file = null;
     private int version = 1;
 
 
-    public Settings() {
-
-    }
-
-    public Settings(File file) {
-        this.file = file;
-    }
-
-    public void load(File file) throws IOException {
-        this.file = file;
-        load();
-    }
-
-    public void load() throws IOException {
+    public void load(File file) throws IOException, SettingsException {
         String fileText = String.join("\n", Files.readAllLines(file.toPath()));
         JSONObject json = new JSONObject(fileText);
 
-        if (!json.has(VERSION_KEY)) return; // No version defined, nothing to load.
+        if (!json.has(VERSION_KEY)) throw new SettingsException("No version tag");
+        if (json.getInt(VERSION_KEY) != version) throw new SettingsException("Unknown settings version");
 
-        version = json.getInt(VERSION_KEY); // Use this if there is ever a need for versioning in the future.
+        if (json.has(SETTINGS_KEY)) {
+            JSONArray arr = json.getJSONArray(SETTINGS_KEY);
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject j = arr.getJSONObject(i);
 
-        if (json.has("settings")) {
-            JSONArray settingsArray = json.getJSONArray("settings");
-
-            getSettings().addAll(parseArrayOfSettings(settingsArray));
+                Setting setting = getSetting(j.getString(Setting.ID_KEY));
+                if (setting != null) {
+                    setting.initFromJSON(j);
+                } else {
+                    Main.log.warning("Unexpected setting: " + j);
+                }
+            }
         }
     }
 
     public Setting getSetting(String identifier) {
-        List<Setting> list = new ArrayList<>(settings);
-        for (int i = 0; i < list.size(); i++) {
-            Setting setting = list.get(i);
+        for (Setting setting : settings) {
             if (setting.getID().equalsIgnoreCase(identifier)) {
                 return setting;
             } else if (setting instanceof GroupSetting) {
-                list.addAll(((GroupSetting) setting).getChildren());
+                Setting child = ((GroupSetting) setting).getChild(identifier);
+                if (child != null) {
+                    return child;
+                }
             }
         }
 
@@ -95,10 +87,6 @@ public class Settings {
 
     public int getVersion() {
         return version;
-    }
-
-    public File getFile() {
-        return file;
     }
 
     @Override
@@ -119,38 +107,7 @@ public class Settings {
         return false;
     }
 
-    static List<Setting> parseArrayOfSettings(JSONArray settingsArray) {
-        List<Setting> results = new ArrayList<>();
-
-        for (int i = 0; i < settingsArray.length(); i++) {
-            boolean parsed = false;
-            for (Class<? extends Setting> parsableSetting : PARSABLE_SETTINGS) {
-                try {
-                    Method method = parsableSetting.getMethod("fromJSON", JSONObject.class);
-                    Setting setting = (Setting) method.invoke(null, settingsArray.getJSONObject(i));
-                    if (setting != null) {
-                        results.add(setting);
-                        parsed = true;
-                        break;
-                    }
-                } catch (Exception ignore) {
-                }
-            }
-
-            if (!parsed) {
-                System.out.println("Unable to parse into setting: " + settingsArray.get(i));
-            }
-        }
-
-        return results;
-    }
-
     public void save(File file) throws IOException {
-        this.file = file;
-        save();
-    }
-
-    public void save() throws IOException {
         JSONObject json = new JSONObject();
         json.put(VERSION_KEY, getVersion());
 

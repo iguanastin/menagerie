@@ -43,6 +43,7 @@ import menagerie.settings.Setting;
 import menagerie.settings.SettingNode;
 import menagerie.settings.Settings;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -100,9 +101,9 @@ public class NewSettingsScreen extends Screen {
     private void accept() {
         settingNodes.forEach(SettingNode::applyToSetting);
         try {
-            settings.save();
+            settings.save(new File("C:\\temp\\menagerie.json"));
         } catch (IOException e) {
-            Main.log.log(Level.WARNING, "Failed to save settings file: " + settings.getFile(), e);
+            Main.log.log(Level.WARNING, "Failed to save settings file: " + Main.SETTINGS_PATH, e);
         }
         close();
     }
