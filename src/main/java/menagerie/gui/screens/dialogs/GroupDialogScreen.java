@@ -35,11 +35,11 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
-import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
+import menagerie.settings.MenagerieSettings;
 import menagerie.util.listeners.ObjectListener;
 
 import java.util.ArrayList;

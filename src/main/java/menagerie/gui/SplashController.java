@@ -35,12 +35,12 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import menagerie.gui.screens.settings.MenagerieSettings;
-import menagerie.model.OldSettings;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.db.DatabaseManager;
 import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.db.MenagerieDatabaseLoadListener;
+import menagerie.settings.MenagerieSettings;
+import menagerie.settings.OldSettings;
 import menagerie.settings.SettingsException;
 import org.json.JSONException;
 

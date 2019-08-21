@@ -33,7 +33,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import menagerie.gui.Main;
-import menagerie.gui.screens.settings.MenagerieSettings;
+import menagerie.settings.MenagerieSettings;
 
 import java.io.File;
 import java.io.IOException;

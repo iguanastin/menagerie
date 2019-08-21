@@ -22,19 +22,16 @@
  SOFTWARE.
  */
 
-package menagerie.gui.screens.settings;
-
-import menagerie.model.OldSettings;
-import menagerie.settings.*;
+package menagerie.settings;
 
 import java.util.Collections;
 
 public class MenagerieSettings extends Settings {
 
     public GroupSetting importGroup, autoImportGroup, duplicateGroup, videoGroup, dbGroup, explorerGroup;
-    public FolderSetting defaultFolder, autoImportFolder, vlcFolder;
-    public StringSetting userFileTypes, dbUrl, dbUser, dbPass;
-    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo;
+    public FolderSetting defaultFolder, autoImportFolder, vlcFolder, lastImportFolder;
+    public StringSetting userFileTypes, dbUrl, dbUser, dbPass, tagWithOnImport, importItemsIntoGroupName, importOrder;
+    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport;
     public DoubleSetting duplicateConfidence;
     public IntSetting gridWidth, licensesAgreed, windowX, windowY, windowWidth, windowHeight;
 
@@ -88,6 +85,17 @@ public class MenagerieSettings extends Settings {
         windowWidth = new IntSetting("window-width", 800).min(0).hide();
         windowHeight = new IntSetting("window-height", 600).min(0).hide();
         Collections.addAll(getSettings(), helpOnStart, windowMaximized, expandItemInfo, licensesAgreed, windowX, windowY, windowWidth, windowHeight);
+
+        importOrder = new StringSetting("import-order").hide();
+        lastImportFolder = new FolderSetting("last-import-folder").hide();
+        recursivelyImport = new BooleanSetting("recurse-import", true).hide();
+        tagParentFolderOnImport = new BooleanSetting("import-tag-parent-folder", false).hide();
+        renameToHashOnImport = new BooleanSetting("import-rename-to-hash", false).hide();
+        tagWithOnImport = new StringSetting("import-tag-with").hide();
+        doTagWithOnImport = new BooleanSetting("import-do-tag-with", false).hide();
+        importItemsIntoGroupName = new StringSetting("import-items-into-group").hide();
+        doImportItemsIntoGroup = new BooleanSetting("do-import-items-into-group", false);
+        Collections.addAll(getSettings(), importOrder, lastImportFolder, recursivelyImport, tagParentFolderOnImport, renameToHashOnImport, tagWithOnImport, doTagWithOnImport, importItemsIntoGroupName, doImportItemsIntoGroup);
     }
 
     public void loadFrom(OldSettings old) {

@@ -22,7 +22,7 @@
  SOFTWARE.
  */
 
-package menagerie.model;
+package menagerie.settings;
 
 import javafx.beans.property.*;
 import menagerie.gui.Main;

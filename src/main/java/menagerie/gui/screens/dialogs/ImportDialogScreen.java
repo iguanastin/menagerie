@@ -39,18 +39,20 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
-import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
+import menagerie.settings.MenagerieSettings;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
 import menagerie.util.WindowsExplorerComparator;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.*;
+import java.util.logging.Level;
 
 public class ImportDialogScreen extends Screen {
 
@@ -67,14 +69,21 @@ public class ImportDialogScreen extends Screen {
     private final TextField tagWithTagsTextField = new TextField();
     private final TextField createGroupTextField = new TextField();
     private final CheckBox createGroupCheckBox = new CheckBox("Import items into new group titled:");
+
     private final ImporterThread importer;
     private final Menagerie menagerie;
+    private final MenagerieSettings settings;
     private List<File> files = new ArrayList<>();
     private File lastFolder = null;
 
     public ImportDialogScreen(MenagerieSettings settings, Menagerie menagerie, ImporterThread importer) {
         this.menagerie = menagerie;
         this.importer = importer;
+        this.settings = settings;
+
+        if (settings.lastImportFolder.getValue() != null) {
+            lastFolder = new File(settings.lastImportFolder.getValue());
+        }
 
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
@@ -111,20 +120,33 @@ public class ImportDialogScreen extends Screen {
         HBox fileHBox = new HBox(5, filesTextField, browseFiles, browseFolders);
         // Order option
         orderChoiceBox.getItems().addAll(Order.values());
-        orderChoiceBox.getSelectionModel().selectFirst();
+        if (settings.importOrder.getValue() != null) {
+            try {
+                orderChoiceBox.getSelectionModel().select(Order.valueOf(settings.importOrder.getValue()));
+            } catch (IllegalArgumentException e) {
+                orderChoiceBox.getSelectionModel().selectFirst();
+            }
+        } else {
+            orderChoiceBox.getSelectionModel().selectFirst();
+        }
         HBox orderHBox = new HBox(5, new Label("Import files in order:"), orderChoiceBox);
         orderHBox.setAlignment(Pos.CENTER_LEFT);
         // Tag on import
         HBox.setHgrow(tagWithTagsTextField, Priority.ALWAYS);
         tagWithTagsCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> tagWithTagsTextField.setDisable(!newValue));
-        tagWithTagsTextField.setDisable(true);
+        tagWithTagsCheckBox.setSelected(settings.doTagWithOnImport.getValue());
+        tagWithTagsTextField.setText(settings.tagWithOnImport.getValue());
         HBox tagHBox = new HBox(5, tagWithTagsCheckBox, tagWithTagsTextField);
         tagHBox.setAlignment(Pos.CENTER_LEFT);
         HBox groupHBox = new HBox(5, createGroupCheckBox, createGroupTextField);
         groupHBox.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(createGroupTextField, Priority.ALWAYS);
         createGroupCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> createGroupTextField.setDisable(!newValue));
-        createGroupTextField.setDisable(true);
+        createGroupCheckBox.setSelected(settings.doImportItemsIntoGroup.getValue());
+        createGroupTextField.setText(settings.importItemsIntoGroupName.getValue());
+        recursiveCheckBox.setSelected(settings.recursivelyImport.getValue());
+        tagWithParentCheckBox.setSelected(settings.tagParentFolderOnImport.getValue());
+        renameWithHashCheckBox.setSelected(settings.renameToHashOnImport.getValue());
         VBox center = new VBox(5, fileHBox, orderHBox, recursiveCheckBox, tagWithParentCheckBox, renameWithHashCheckBox, tagHBox, groupHBox);
         center.setPadding(new Insets(5));
 
@@ -192,6 +214,29 @@ public class ImportDialogScreen extends Screen {
         filesTextField.setText(null);
     }
 
+    private void saveSettings() {
+        System.out.println(orderChoiceBox.getValue());
+        settings.importOrder.setValue(orderChoiceBox.getValue().name());
+        if (lastFolder != null) {
+            settings.lastImportFolder.setValue(lastFolder.getAbsolutePath());
+        } else {
+            settings.lastImportFolder.setValue(null);
+        }
+        settings.recursivelyImport.setValue(recursiveCheckBox.isSelected());
+        settings.tagParentFolderOnImport.setValue(tagWithParentCheckBox.isSelected());
+        settings.renameToHashOnImport.setValue(renameWithHashCheckBox.isSelected());
+        settings.doTagWithOnImport.setValue(tagWithTagsCheckBox.isSelected());
+        settings.tagWithOnImport.setValue(tagWithTagsTextField.getText());
+        settings.doImportItemsIntoGroup.setValue(createGroupCheckBox.isSelected());
+        settings.importItemsIntoGroupName.setValue(createGroupTextField.getText());
+
+        try {
+            settings.save(new File(Main.SETTINGS_PATH));
+        } catch (IOException e) {
+            Main.log.log(Level.WARNING, "Unable to save settings file", e);
+        }
+    }
+
     private void importOnAction() {
         ProgressScreen ps = new ProgressScreen();
         CancellableThread ct = new CancellableThread() {
@@ -240,13 +285,19 @@ public class ImportDialogScreen extends Screen {
                     GroupItem group = null;
                     if (createGroupCheckBox.isSelected() && !createGroupTextField.getText().isEmpty()) {
                         group = menagerie.createGroup(null, createGroupTextField.getText());
+                        if (settings.tagTagme.getValue()) {
+                            Tag t = menagerie.getTagByName("tagme");
+                            if (t == null) t = menagerie.createTag("tagme");
+                            group.addTag(t);
+                        }
                     }
 
                     for (File file : files) {
                         final ImportJob job = new ImportJob(file, group);
                         final List<String> tagsToAdd = new ArrayList<>();
 
-                        if (tagWithParentCheckBox.isSelected()) tagsToAdd.add(file.getParentFile().getName().toLowerCase());
+                        if (tagWithParentCheckBox.isSelected())
+                            tagsToAdd.add(file.getParentFile().getName().toLowerCase());
                         if (tagWithTagsCheckBox.isSelected() && tagWithTagsTextField.getText() != null && !tagWithTagsTextField.getText().isEmpty()) {
                             tagsToAdd.addAll(Arrays.asList(tagWithTagsTextField.getText().toLowerCase().split("\\s")));
                         }
@@ -258,7 +309,8 @@ public class ImportDialogScreen extends Screen {
                                 if (newValue == ImportJob.Status.SUCCEEDED) {
                                     // Add tags
                                     for (String tagName : tagsToAdd) {
-                                        if (tagName.contains(" ")) tagName = tagName.replaceAll("\\s", "_"); // Replace all whitespace
+                                        if (tagName.contains(" "))
+                                            tagName = tagName.replaceAll("\\s", "_"); // Replace all whitespace
 
                                         if (!tagName.matches(Tag.NAME_REGEX)) continue;
 
@@ -284,6 +336,7 @@ public class ImportDialogScreen extends Screen {
                     }
                 }
 
+                saveSettings();
                 Platform.runLater(() -> {
                     ps.close();
                     close();

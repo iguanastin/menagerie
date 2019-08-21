@@ -30,9 +30,9 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import menagerie.gui.Main;
 import menagerie.gui.MainController;
-import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
+import menagerie.settings.MenagerieSettings;
 
 import java.io.File;
 import java.io.FileOutputStream;

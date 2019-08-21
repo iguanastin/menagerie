@@ -25,8 +25,8 @@
 package menagerie.model.menagerie.importer;
 
 import menagerie.gui.Main;
-import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.menagerie.Menagerie;
+import menagerie.settings.MenagerieSettings;
 import menagerie.util.listeners.ObjectListener;
 
 import java.util.HashSet;
