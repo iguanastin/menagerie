@@ -22,6 +22,8 @@
  SOFTWARE.
  */
 
+// Source: https://stackoverflow.com/a/23249000
+
 package menagerie.util;
 
 import java.io.File;
