@@ -47,6 +47,7 @@ import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
+import menagerie.util.WindowsExplorerComparator;
 
 import java.io.File;
 import java.util.*;
@@ -54,7 +55,7 @@ import java.util.*;
 public class ImportDialogScreen extends Screen {
 
     private enum Order {
-        Default, Alphabetical, Date_Modified
+        As_Selected, Alphabetical, Date_Modified
     }
 
     private final TextField filesTextField = new TextField();
@@ -229,9 +230,9 @@ public class ImportDialogScreen extends Screen {
                             files.sort(Comparator.comparingLong(File::lastModified));
                             break;
                         case Alphabetical:
-                            files.sort(Comparator.comparing(File::getName));
+                            files.sort(new WindowsExplorerComparator());
                             break;
-                        case Default:
+                        case As_Selected:
                         default:
                             break;
                     }
