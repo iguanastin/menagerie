@@ -492,7 +492,9 @@ public class MainController {
         initItemGridView();
 
         // Init drag/drop handlers
-        initExplorerDragDropListeners();
+        explorerRootPane.disabledProperty().addListener((observable1, oldValue1, newValue1) -> explorerRootPaneDisabledChanged(newValue1));
+        explorerRootPane.setOnDragOver(this::explorerRootPaneOnDragOver);
+        explorerRootPane.setOnDragDropped(this::explorerRootPaneOnDragDropped);
 
         // Init tag list cell factory
         initExplorerTagListCellFactory();
@@ -526,61 +528,6 @@ public class MainController {
         settings.gridWidth.valueProperty().addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
         settings.muteVideo.valueProperty().addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
         settings.repeatVideo.valueProperty().addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
-    }
-
-    private void initExplorerDragDropListeners() {
-        explorerRootPane.disabledProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue) {
-                if (previewMediaView.isPlaying()) {
-                    previewMediaView.pause();
-                    playVideoAfterExplorerEnabled = true;
-                }
-            } else if (playVideoAfterExplorerEnabled) {
-                previewMediaView.play();
-                playVideoAfterExplorerEnabled = false;
-            }
-        });
-        explorerRootPane.setOnDragOver(event -> {
-            if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
-                event.acceptTransferModes(TransferMode.ANY);
-                event.consume();
-            }
-        });
-        explorerRootPane.setOnDragDropped(event -> {
-            List<File> files = event.getDragboard().getFiles();
-            String url = event.getDragboard().getUrl();
-
-            if (files != null && !files.isEmpty()) {
-                for (File file : files) {
-                    if (Filters.FILE_NAME_FILTER.accept(file)) importer.addJob(new ImportJob(file));
-                }
-            } else if (url != null && !url.isEmpty()) {
-                try {
-                    String folder = settings.defaultFolder.getValue();
-                    String filename = new URL(url).getPath().replaceAll("^.*/", "");
-                    File target;
-                    if (!settings.urlFilename.getValue() || folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
-                        do {
-                            FileChooser fc = new FileChooser();
-                            fc.setTitle("Save as");
-                            fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
-                            if (folder != null && !folder.isEmpty()) fc.setInitialDirectory(new File(folder));
-                            fc.setInitialFileName(filename);
-
-                            target = fc.showSaveDialog(rootPane.getScene().getWindow());
-
-                            if (target == null) return;
-                        } while (target.exists() || !target.getParentFile().exists());
-                    } else {
-                        target = resolveDuplicateFilename(new File(folder, filename));
-                    }
-                    if (Filters.FILE_NAME_FILTER.accept(target)) importer.addJob(new ImportJob(new URL(url), target));
-                } catch (MalformedURLException e) {
-                    Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
-                }
-            }
-            event.consume();
-        });
     }
 
     private void initPredictiveTextFields() {
@@ -759,7 +706,7 @@ public class MainController {
                     list.sort(Comparator.comparingInt(MediaItem::getPageIndex));
 
                     boolean before = false;
-                    if (c.sceneToLocal(event.getSceneX(), event.getSceneY()).getX() < Thumbnail.THUMBNAIL_SIZE / 2)
+                    if (c.sceneToLocal(event.getSceneX(), event.getSceneY()).getX() < (double) Thumbnail.THUMBNAIL_SIZE / 2)
                         before = true;
                     if (currentSearch.isDescending()) before = !before;
                     if (((MediaItem) c.getItem()).getGroup().moveElements(list, (MediaItem) c.getItem(), before)) {
@@ -1586,6 +1533,63 @@ public class MainController {
     public void backButtonOnAction(ActionEvent event) {
         explorerGoBack();
         event.consume();
+    }
+
+    // -------------------------------- Misc Event Handlers --------------------------------
+
+    private void explorerRootPaneOnDragDropped(DragEvent event) {
+        List<File> files = event.getDragboard().getFiles();
+        String url = event.getDragboard().getUrl();
+
+        if (files != null && !files.isEmpty()) {
+            for (File file : files) {
+                if (Filters.FILE_NAME_FILTER.accept(file)) importer.addJob(new ImportJob(file));
+            }
+        } else if (url != null && !url.isEmpty()) {
+            try {
+                String folder = settings.defaultFolder.getValue();
+                String filename = new URL(url).getPath().replaceAll("^.*/", "");
+                File target;
+                if (!settings.urlFilename.getValue() || folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
+                    do {
+                        FileChooser fc = new FileChooser();
+                        fc.setTitle("Save as");
+                        fc.setSelectedExtensionFilter(Filters.getExtensionFilter());
+                        if (folder != null && !folder.isEmpty()) fc.setInitialDirectory(new File(folder));
+                        fc.setInitialFileName(filename);
+
+                        target = fc.showSaveDialog(rootPane.getScene().getWindow());
+
+                        if (target == null) return;
+                    } while (target.exists() || !target.getParentFile().exists());
+                } else {
+                    target = resolveDuplicateFilename(new File(folder, filename));
+                }
+                if (Filters.FILE_NAME_FILTER.accept(target)) importer.addJob(new ImportJob(new URL(url), target));
+            } catch (MalformedURLException e) {
+                Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
+            }
+        }
+        event.consume();
+    }
+
+    private void explorerRootPaneOnDragOver(DragEvent event) {
+        if (event.getGestureSource() == null && (event.getDragboard().hasFiles() || event.getDragboard().hasUrl())) {
+            event.acceptTransferModes(TransferMode.ANY);
+            event.consume();
+        }
+    }
+
+    private void explorerRootPaneDisabledChanged(Boolean newValue) {
+        if (newValue) {
+            if (previewMediaView.isPlaying()) {
+                previewMediaView.pause();
+                playVideoAfterExplorerEnabled = true;
+            }
+        } else if (playVideoAfterExplorerEnabled) {
+            previewMediaView.play();
+            playVideoAfterExplorerEnabled = false;
+        }
     }
 
     // ---------------------------------- Key Event Handlers -------------------------------
