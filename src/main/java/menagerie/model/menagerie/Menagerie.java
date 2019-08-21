@@ -134,7 +134,9 @@ public class Menagerie {
      * @return The newly created group. Null if title is null or empty, and null if element list is null or empty.
      */
     public GroupItem createGroup(List<Item> elements, String title) {
-        if (title == null || title.isEmpty() || elements == null || elements.isEmpty()) return null;
+        if (title == null || title.isEmpty()) return null;
+
+        if (elements == null) elements = new ArrayList<>();
 
         GroupItem group = null;
         for (Item item : elements) {

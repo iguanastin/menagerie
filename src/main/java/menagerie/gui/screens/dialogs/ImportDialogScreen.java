@@ -40,6 +40,7 @@ import javafx.stage.FileChooser;
 import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.settings.MenagerieSettings;
+import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.menagerie.importer.ImportJob;
@@ -63,6 +64,8 @@ public class ImportDialogScreen extends Screen {
     private final CheckBox tagWithTagsCheckBox = new CheckBox("Tag with (space-separated tags):");
     private final CheckBox renameWithHashCheckBox = new CheckBox("Rename file to hash after import");
     private final TextField tagWithTagsTextField = new TextField();
+    private final TextField createGroupTextField = new TextField();
+    private final CheckBox createGroupCheckBox = new CheckBox("Import items into new group titled:");
     private final ImporterThread importer;
     private final Menagerie menagerie;
     private List<File> files = new ArrayList<>();
@@ -116,7 +119,12 @@ public class ImportDialogScreen extends Screen {
         tagWithTagsTextField.setDisable(true);
         HBox tagHBox = new HBox(5, tagWithTagsCheckBox, tagWithTagsTextField);
         tagHBox.setAlignment(Pos.CENTER_LEFT);
-        VBox center = new VBox(5, fileHBox, orderHBox, recursiveCheckBox, tagWithParentCheckBox, renameWithHashCheckBox, tagHBox);
+        HBox groupHBox = new HBox(5, createGroupCheckBox, createGroupTextField);
+        groupHBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(createGroupTextField, Priority.ALWAYS);
+        createGroupCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> createGroupTextField.setDisable(!newValue));
+        createGroupTextField.setDisable(true);
+        VBox center = new VBox(5, fileHBox, orderHBox, recursiveCheckBox, tagWithParentCheckBox, renameWithHashCheckBox, tagHBox, groupHBox);
         center.setPadding(new Insets(5));
 
         // ----------------------------------- Bottom --------------------------------------
@@ -231,8 +239,13 @@ public class ImportDialogScreen extends Screen {
                             break;
                     }
 
+                    GroupItem group = null;
+                    if (createGroupCheckBox.isSelected() && !createGroupTextField.getText().isEmpty()) {
+                        group = menagerie.createGroup(null, createGroupTextField.getText());
+                    }
+
                     for (File file : files) {
-                        final ImportJob job = new ImportJob(file);
+                        final ImportJob job = new ImportJob(file, group);
                         final List<String> tagsToAdd = new ArrayList<>();
 
                         if (tagWithParentCheckBox.isSelected()) tagsToAdd.add(file.getParentFile().getName().toLowerCase());

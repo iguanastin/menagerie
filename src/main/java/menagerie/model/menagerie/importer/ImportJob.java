@@ -32,10 +32,7 @@ import menagerie.gui.Main;
 import menagerie.gui.MainController;
 import menagerie.gui.screens.settings.MenagerieSettings;
 import menagerie.model.SimilarPair;
-import menagerie.model.menagerie.Item;
-import menagerie.model.menagerie.MediaItem;
-import menagerie.model.menagerie.Menagerie;
-import menagerie.model.menagerie.Tag;
+import menagerie.model.menagerie.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -67,6 +64,7 @@ public class ImportJob {
     private File file = null;
     private MediaItem item = null;
     private MediaItem duplicateOf = null;
+    private GroupItem addToGroup = null;
     private List<SimilarPair<MediaItem>> similarTo = null;
 
     private volatile boolean needsDownload = false;
@@ -85,9 +83,10 @@ public class ImportJob {
      *
      * @param url URL of file to download.
      */
-    public ImportJob(URL url) {
+    public ImportJob(URL url, GroupItem addToGroup) {
         this.url = url;
         needsDownload = true;
+        this.addToGroup = addToGroup;
     }
 
     /**
@@ -96,8 +95,8 @@ public class ImportJob {
      * @param url        URL of file to download.
      * @param downloadTo File to download URL into.
      */
-    public ImportJob(URL url, File downloadTo) {
-        this(url);
+    public ImportJob(URL url, File downloadTo, GroupItem addToGroup) {
+        this(url, addToGroup);
         this.downloadTo = downloadTo;
     }
 
@@ -106,8 +105,9 @@ public class ImportJob {
      *
      * @param file File to import.
      */
-    public ImportJob(File file) {
+    public ImportJob(File file, GroupItem addToGroup) {
         this.file = file;
+        this.addToGroup = addToGroup;
     }
 
     /**
@@ -131,6 +131,9 @@ public class ImportJob {
         if (tryDuplicate(menagerie)) {
             setStatus(Status.FAILED_DUPLICATE);
             return;
+        }
+        if (addToGroup != null) {
+            tryAddToGroup(addToGroup);
         }
 
         trySimilar(menagerie, settings);
@@ -269,6 +272,10 @@ public class ImportJob {
             needsCheckDuplicate = false;
         }
         return false;
+    }
+
+    private void tryAddToGroup(GroupItem group) {
+        group.addItem(item);
     }
 
     /**

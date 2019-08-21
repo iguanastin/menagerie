@@ -1316,7 +1316,7 @@ public class MainController {
                         file = dest;
                     }
 
-                    importer.addJob(new ImportJob(file));
+                    importer.addJob(new ImportJob(file, null));
                 }
             });
             folderWatcherThread.setDaemon(true);
@@ -1543,7 +1543,7 @@ public class MainController {
 
         if (files != null && !files.isEmpty()) {
             for (File file : files) {
-                if (Filters.FILE_NAME_FILTER.accept(file)) importer.addJob(new ImportJob(file));
+                if (Filters.FILE_NAME_FILTER.accept(file)) importer.addJob(new ImportJob(file, null));
             }
         } else if (url != null && !url.isEmpty()) {
             try {
@@ -1565,7 +1565,7 @@ public class MainController {
                 } else {
                     target = resolveDuplicateFilename(new File(folder, filename));
                 }
-                if (Filters.FILE_NAME_FILTER.accept(target)) importer.addJob(new ImportJob(new URL(url), target));
+                if (Filters.FILE_NAME_FILTER.accept(target)) importer.addJob(new ImportJob(new URL(url), target, null));
             } catch (MalformedURLException e) {
                 Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
             }
