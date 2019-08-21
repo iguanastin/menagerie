@@ -1656,6 +1656,10 @@ public class MainController {
                     logButton.setStyle(null);
                     event.consume();
                     break;
+                case M:
+                    new MoveFilesScreen().open(screenPane, itemGridView.getSelected());
+                    event.consume();
+                    break;
                 default:
                     break;
             }
