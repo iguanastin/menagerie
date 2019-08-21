@@ -160,10 +160,7 @@ public class ImportDialogScreen extends Screen {
         }
         File folder = dc.showDialog(getScene().getWindow());
         if (folder != null) {
-            files = new ArrayList<>();
-            files.add(folder);
-            lastFolder = folder.getParentFile();
-            filesTextField.setText(folder.toString());
+            setFolder(folder);
         }
     }
 
@@ -297,6 +294,17 @@ public class ImportDialogScreen extends Screen {
             close();
         });
         ct.start();
+    }
+
+    public void setFolder(File folder) {
+        files = new ArrayList<>();
+        files.add(folder);
+        lastFolder = folder.getParentFile();
+        filesTextField.setText(folder.toString());
+    }
+
+    public void setGroupName(String name) {
+        createGroupTextField.setText(name);
     }
 
 }

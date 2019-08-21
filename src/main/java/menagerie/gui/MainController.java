@@ -1543,7 +1543,13 @@ public class MainController {
 
         if (files != null && !files.isEmpty()) {
             for (File file : files) {
-                if (Filters.FILE_NAME_FILTER.accept(file)) importer.addJob(new ImportJob(file, null));
+                if (Filters.FILE_NAME_FILTER.accept(file)) {
+                    importer.addJob(new ImportJob(file, null));
+                } else if (files.size() == 1 && file.isDirectory()) {
+                    screenPane.open(importDialogScreen);
+                    importDialogScreen.setGroupName(file.getName());
+                    importDialogScreen.setFolder(file);
+                }
             }
         } else if (url != null && !url.isEmpty()) {
             try {
