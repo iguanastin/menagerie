@@ -48,12 +48,9 @@ import java.util.List;
 public class MoveFilesScreen extends Screen {
 
     private final TextField folderTextField = new TextField();
-    private final Button folderBrowseButton = new Button("Browse");
-    private final ListView<String> preTree = new ListView<>();
-    private final ListView<String> postTree = new ListView<>();
-    private final Button move = new Button("Move");
-    private final Button cancel = new Button("Cancel");
+    private final VBox treeVBox = new VBox(5);
 
+    private FileMoveTree tree = null;
     private List<MediaItem> toMove = null;
 
 
@@ -80,6 +77,7 @@ public class MoveFilesScreen extends Screen {
         BorderPane header = new BorderPane(null, null, exitButton, null, new Label("Move Files..."));
 
         HBox.setHgrow(folderTextField, Priority.ALWAYS);
+        Button folderBrowseButton = new Button("Browse");
         folderBrowseButton.setOnAction(event -> {
             DirectoryChooser dc = new DirectoryChooser();
             dc.setTitle("Move Files to Folder...");
@@ -91,23 +89,23 @@ public class MoveFilesScreen extends Screen {
                 folderTextField.setText(target.getAbsolutePath());
             }
         });
-        folderTextField.textProperty().addListener((observable, oldValue, newValue) -> {
-            // TODO Update tree view
-        });
         HBox folderBox = new HBox(5, new Label("Move To:"), folderTextField, folderBrowseButton);
 
-        HBox.setHgrow(preTree, Priority.ALWAYS);
-        HBox.setHgrow(postTree, Priority.ALWAYS);
-        HBox treeBox = new HBox(5, preTree, postTree);
-        VBox.setVgrow(treeBox, Priority.ALWAYS);
+        Label treeDescriptionLabel = new Label("Current folder structure. Items in blue will preserve folder structure. Click an item to toggle preservation.");
+        treeDescriptionLabel.setPadding(new Insets(0, 0, 0, 5));
 
+        ScrollPane treeScrollPane = new ScrollPane(treeVBox);
+        VBox.setVgrow(treeScrollPane, Priority.ALWAYS);
+
+        Button move = new Button("Move");
         move.setOnAction(event -> move());
+        Button cancel = new Button("Cancel");
         cancel.setOnAction(event -> close());
         HBox footer = new HBox(5, move, cancel);
         footer.setAlignment(Pos.CENTER_RIGHT);
 
         //Add children
-        v.getChildren().addAll(header, new Separator(), folderBox, treeBox, footer);
+        v.getChildren().addAll(header, new Separator(), folderBox, new Separator(), treeDescriptionLabel, treeScrollPane, footer);
 
         setDefaultFocusNode(cancel);
     }
@@ -124,25 +122,10 @@ public class MoveFilesScreen extends Screen {
             }
         });
 
-        initPreTree();
-    }
+        tree = new FileMoveTree(this.toMove);
 
-    private void initPreTree() {
-        preTree.getItems().clear();
-
-        FileMoveTree tree = new FileMoveTree(toMove);
-
-        System.out.println("PreTree");
-        tree.getRoots().forEach(fileMoveNode -> p(fileMoveNode, "  "));
-    }
-
-    private void p(FileMoveNode node, String prefix) {
-        System.out.println(prefix + node.getFolder());
-        System.out.println(prefix + "  " + node.getItems().size());
-
-        for (FileMoveNode n : node.getNodes()) {
-            p(n, prefix + "  ");
-        }
+        treeVBox.getChildren().clear();
+        tree.getRoots().forEach(root -> treeVBox.getChildren().add(new FileMoveNodeCell(root)));
     }
 
     private void move() {

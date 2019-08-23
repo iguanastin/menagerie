@@ -73,6 +73,7 @@ public class FileMoveTree {
             if (subnode == null) {
                 subnode = new FileMoveNode(stop);
                 node.getNodes().add(subnode);
+                subnode.setParent(node);
             }
 
             node = subnode;

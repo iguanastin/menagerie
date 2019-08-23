@@ -24,6 +24,8 @@
 
 package menagerie.gui.screens.move;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import menagerie.model.menagerie.MediaItem;
 
 import java.io.File;
@@ -35,13 +37,24 @@ public class FileMoveNode {
     private final File folder;
     private final List<MediaItem> items;
     private final List<FileMoveNode> nodes;
-    private boolean preserve = false;
+    private final int depth;
+    private FileMoveNode parent = null;
+    private BooleanProperty preserve = new SimpleBooleanProperty(false);
 
 
     public FileMoveNode(File folder, List<MediaItem> items, List<FileMoveNode> nodes) {
         this.folder = folder;
         this.items = items;
         this.nodes = nodes;
+
+        int result = 0;
+        File f = getFolder();
+        while (f.getParentFile() != null) {
+            result++;
+            f = f.getParentFile();
+        }
+
+        depth = result;
     }
 
     public FileMoveNode(File folder) {
@@ -60,16 +73,46 @@ public class FileMoveNode {
         return nodes;
     }
 
+    public int getDepth() {
+        return depth;
+    }
+
+    public FileMoveNode getParent() {
+        return parent;
+    }
+
+    public boolean isRoot() {
+        for (File root : File.listRoots()) {
+            if (root.equals(getFolder())) return true;
+        }
+
+        return false;
+    }
+
     public boolean isPreserve() {
+        return preserve.getValue();
+    }
+
+    public BooleanProperty preserveProperty() {
         return preserve;
     }
 
     public void setPreserve(boolean preserve) {
-        this.preserve = preserve;
+        this.preserve.set(preserve);
 
-        for (FileMoveNode node : getNodes()) {
-            node.setPreserve(preserve);
+        if (preserve) {
+            for (FileMoveNode node : getNodes()) {
+                node.setPreserve(true);
+            }
+        } else {
+            if (getParent() != null) {
+                getParent().setPreserve(false);
+            }
         }
+    }
+
+    public void setParent(FileMoveNode parent) {
+        this.parent = parent;
     }
 
 }
