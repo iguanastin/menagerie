@@ -52,6 +52,7 @@ import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
+import menagerie.gui.screens.move.MoveFilesScreen;
 import menagerie.gui.screens.settings.SettingsScreen;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListPopup;

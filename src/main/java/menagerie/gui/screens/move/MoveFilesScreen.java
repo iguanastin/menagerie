@@ -22,7 +22,7 @@
  SOFTWARE.
  */
 
-package menagerie.gui.screens;
+package menagerie.gui.screens.move;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -35,21 +35,20 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
+import menagerie.gui.screens.Screen;
+import menagerie.gui.screens.ScreenPane;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class MoveFilesScreen extends Screen {
 
     private final TextField folderTextField = new TextField();
     private final Button folderBrowseButton = new Button("Browse");
-    private final Spinner<Integer> depthSpinner = new Spinner<>(0, 10, 0);
     private final ListView<String> preTree = new ListView<>();
     private final ListView<String> postTree = new ListView<>();
     private final Button move = new Button("Move");
@@ -96,13 +95,6 @@ public class MoveFilesScreen extends Screen {
             // TODO Update tree view
         });
         HBox folderBox = new HBox(5, new Label("Move To:"), folderTextField, folderBrowseButton);
-        folderBox.setAlignment(Pos.CENTER_LEFT);
-        depthSpinner.valueProperty().addListener((observable, oldValue, newValue) -> {
-            // TODO Update tree view
-        });
-        HBox depthBox = new HBox(5, new Label("Preserve folder structure up to"), depthSpinner, new Label("levels up from file"));
-        depthBox.setAlignment(Pos.CENTER_LEFT);
-        VBox settingsBox = new VBox(5, folderBox, depthBox);
 
         HBox.setHgrow(preTree, Priority.ALWAYS);
         HBox.setHgrow(postTree, Priority.ALWAYS);
@@ -115,7 +107,7 @@ public class MoveFilesScreen extends Screen {
         footer.setAlignment(Pos.CENTER_RIGHT);
 
         //Add children
-        v.getChildren().addAll(header, new Separator(), settingsBox, treeBox, footer);
+        v.getChildren().addAll(header, new Separator(), folderBox, treeBox, footer);
 
         setDefaultFocusNode(cancel);
     }
@@ -136,12 +128,20 @@ public class MoveFilesScreen extends Screen {
     }
 
     private void initPreTree() {
-        Map<File, TreeItem<String>> map = new HashMap<>();
-
         preTree.getItems().clear();
 
-        for (MediaItem item : toMove) {
+        FileMoveTree tree = new FileMoveTree(toMove);
 
+        System.out.println("PreTree");
+        tree.getRoots().forEach(fileMoveNode -> p(fileMoveNode, "  "));
+    }
+
+    private void p(FileMoveNode node, String prefix) {
+        System.out.println(prefix + node.getFolder());
+        System.out.println(prefix + "  " + node.getItems().size());
+
+        for (FileMoveNode n : node.getNodes()) {
+            p(n, prefix + "  ");
         }
     }
 
