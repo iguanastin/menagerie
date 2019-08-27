@@ -24,20 +24,32 @@
 
 package menagerie.gui.screens.move;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FileMoveNodeCell extends VBox {
 
     private static final Background PRESERVED_BACKGROUND = new Background(new BackgroundFill(new Color(0, 111.0 / 255, 128.0 / 255, 1), null, null));
+    private static final Background COLLAPSED_BACKGROUND = new Background(new BackgroundFill(new Color(128.0 / 255, 119.0 / 255, 0, 1), null, null));
     private static final Insets INDENT = new Insets(0, 0, 0, 10);
+
+    private final BooleanProperty expanded = new SimpleBooleanProperty(true);
+    private final Button expandButton = new Button("-");
+    private Label itemsLabel = null;
+    private final List<FileMoveNodeCell> subNodes = new ArrayList<>();
 
     private final FileMoveNode node;
 
@@ -47,31 +59,38 @@ public class FileMoveNodeCell extends VBox {
         node.preserveProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue) {
                 setBackground(PRESERVED_BACKGROUND);
+            } else if (!isExpanded()) {
+                setBackground(COLLAPSED_BACKGROUND);
             } else {
                 setBackground(null);
             }
         });
 
-        String nameLabelText;
+        expandButton.setPadding(new Insets(0, 3, 0, 3));
+        expandButton.setOnAction(event -> setExpanded(!isExpanded()));
+        String folderName;
         if (node.isRoot()) {
-            nameLabelText = node.getFolder().getAbsolutePath();
+            folderName = node.getFolder().getAbsolutePath();
         } else {
-            nameLabelText = node.getFolder().getName() + File.separatorChar;
+            folderName = node.getFolder().getName() + File.separatorChar;
         }
-        Label nameLabel = new Label(nameLabelText);
-        nameLabel.setTooltip(new Tooltip(node.getFolder().getAbsolutePath()));
-        getChildren().add(nameLabel);
+        Label titleLabel = new Label();
+        titleLabel.setText(folderName);
+        titleLabel.setTooltip(new Tooltip(node.getFolder().getAbsolutePath()));
+        HBox titleBox = new HBox(5, expandButton, titleLabel);
+        getChildren().add(titleBox);
 
         if (node.getItems().size() > 0) {
-            Label itemsLabel = new Label(node.getItems().size() + " files");
+            itemsLabel = new Label(node.getItems().size() + " files");
             itemsLabel.setBackground(PRESERVED_BACKGROUND);
             itemsLabel.setPadding(new Insets(0, 3, 0, 3));
-            getChildren().add(itemsLabel);
             VBox.setMargin(itemsLabel, INDENT);
+            getChildren().add(itemsLabel);
         }
 
         for (FileMoveNode subNode : node.getNodes()) {
             FileMoveNodeCell newNode = new FileMoveNodeCell(subNode);
+            subNodes.add(newNode);
             getChildren().add(newNode);
             VBox.setMargin(newNode, new Insets(0, 0, 0, 10));
         }
@@ -84,6 +103,36 @@ public class FileMoveNodeCell extends VBox {
 
     public FileMoveNode getNode() {
         return node;
+    }
+
+    public boolean isExpanded() {
+        return expanded.get();
+    }
+
+    public BooleanProperty expandedProperty() {
+        return expanded;
+    }
+
+    public void setExpanded(boolean b) {
+        expanded.set(b);
+
+        if (b) {
+            expandButton.setText("-");
+            if (itemsLabel != null) getChildren().add(itemsLabel);
+            getChildren().addAll(subNodes);
+
+            if (!node.isPreserved()) {
+                setBackground(null);
+            }
+        } else {
+            expandButton.setText("+");
+            if (itemsLabel != null) getChildren().remove(itemsLabel);
+            getChildren().removeAll(subNodes);
+
+            if (!node.isPreserved()) {
+                setBackground(COLLAPSED_BACKGROUND);
+            }
+        }
     }
 
 }
