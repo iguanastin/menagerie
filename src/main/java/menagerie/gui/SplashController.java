@@ -57,6 +57,7 @@ import java.util.logging.Level;
 
 public class SplashController {
 
+    public static final int PROGRESS_UPDATE_INTERVAL = 16;
     public StackPane rootPane;
     public ImageView backgroundImageView;
     public Label titleLabel;
@@ -65,6 +66,8 @@ public class SplashController {
 
     private final List<Image> icons;
     private final Image splashBackground;
+
+    private long lastProgressUpdate = 0;
 
 
     public SplashController(List<Image> icons, Image splashBackground) {
@@ -174,7 +177,11 @@ public class SplashController {
 
                 @Override
                 public void itemsLoading(int count, int total) {
-                    Platform.runLater(() -> progressBar.setProgress((double) count / total));
+                    long time = System.currentTimeMillis();
+                    if (time - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
+                        lastProgressUpdate = time;
+                        Platform.runLater(() -> progressBar.setProgress((double) count / total));
+                    }
                 }
 
                 @Override
