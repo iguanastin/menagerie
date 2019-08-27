@@ -30,10 +30,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 
 import java.io.File;
@@ -45,6 +42,7 @@ public class FileMoveNodeCell extends VBox {
     private static final Background PRESERVED_BACKGROUND = new Background(new BackgroundFill(new Color(0, 111.0 / 255, 128.0 / 255, 1), null, null));
     private static final Background COLLAPSED_BACKGROUND = new Background(new BackgroundFill(new Color(128.0 / 255, 119.0 / 255, 0, 1), null, null));
     private static final Insets INDENT = new Insets(0, 0, 0, 10);
+    private static final Border BORDER = new Border(new BorderStroke(Color.BLACK, null, null, Color.BLACK, BorderStrokeStyle.SOLID, BorderStrokeStyle.NONE, BorderStrokeStyle.NONE, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT, null));
 
     private final BooleanProperty expanded = new SimpleBooleanProperty(true);
     private final Button expandButton = new Button("-");
@@ -78,6 +76,10 @@ public class FileMoveNodeCell extends VBox {
         titleLabel.setText(folderName);
         titleLabel.setTooltip(new Tooltip(node.getFolder().getAbsolutePath()));
         HBox titleBox = new HBox(5, expandButton, titleLabel);
+        titleBox.setOnMouseClicked(event -> {
+            node.setPreserve(!node.isPreserved());
+            event.consume();
+        });
         getChildren().add(titleBox);
 
         if (node.getItems().size() > 0) {
@@ -95,10 +97,7 @@ public class FileMoveNodeCell extends VBox {
             VBox.setMargin(newNode, new Insets(0, 0, 0, 10));
         }
 
-        setOnMouseClicked(event -> {
-            node.setPreserve(!node.isPreserved());
-            event.consume();
-        });
+        setBorder(BORDER);
     }
 
     public FileMoveNode getNode() {
