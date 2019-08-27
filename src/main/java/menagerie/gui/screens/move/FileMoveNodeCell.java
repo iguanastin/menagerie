@@ -77,7 +77,7 @@ public class FileMoveNodeCell extends VBox {
         }
 
         setOnMouseClicked(event -> {
-            node.setPreserve(!node.isPreserve());
+            node.setPreserve(!node.isPreserved());
             event.consume();
         });
     }

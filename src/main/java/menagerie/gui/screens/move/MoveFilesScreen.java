@@ -42,6 +42,9 @@ import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -129,7 +132,34 @@ public class MoveFilesScreen extends Screen {
     }
 
     private void move() {
-        // TODO
+        if (folderTextField.getText() == null || folderTextField.getText().isEmpty()) return;
+
+        Path root = Paths.get(folderTextField.getText());
+
+        if (!Files.exists(root)) {
+            File f = root.toFile();
+            f.mkdirs(); // TODO Error handling
+        }
+
+        tree.getRoots().forEach(node -> moveRecurse(root, node));
+
+        close();
+    }
+
+    private static void moveRecurse(Path path, FileMoveNode node) {
+        for (MediaItem item : node.getItems()) {
+            File target = path.resolve(item.getFile().getName()).toFile();
+            item.moveFile(target);
+        }
+
+        for (FileMoveNode subNode : node.getNodes()) {
+            Path p = path;
+            if (subNode.isPreserved()) {
+                p = path.resolve(subNode.getFolder().getName());
+                if (!Files.exists(p)) p.toFile().mkdir(); // TODO error handling when mkdir fails
+            }
+            moveRecurse(p, subNode);
+        }
     }
 
 }

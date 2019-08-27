@@ -89,7 +89,7 @@ public class FileMoveNode {
         return false;
     }
 
-    public boolean isPreserve() {
+    public boolean isPreserved() {
         return preserve.getValue();
     }
 
@@ -98,15 +98,17 @@ public class FileMoveNode {
     }
 
     public void setPreserve(boolean preserve) {
-        this.preserve.set(preserve);
+        if (!isRoot()) {
+            this.preserve.set(preserve);
 
-        if (preserve) {
-            for (FileMoveNode node : getNodes()) {
-                node.setPreserve(true);
-            }
-        } else {
-            if (getParent() != null) {
-                getParent().setPreserve(false);
+            if (preserve) {
+                for (FileMoveNode node : getNodes()) {
+                    node.setPreserve(true);
+                }
+            } else {
+                if (getParent() != null) {
+                    getParent().setPreserve(false);
+                }
             }
         }
     }
