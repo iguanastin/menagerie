@@ -1636,7 +1636,11 @@ public class MainController {
                     event.consume();
                     break;
                 case D:
-                    duplicateOptionsScreen.open(screenPane, menagerie, itemGridView.getSelected(), currentSearch.getResults(), menagerie.getItems());
+                    if (event.isShiftDown() && duplicateOptionsScreen.getDuplicatesScreen().getPairs() != null && !duplicateOptionsScreen.getDuplicatesScreen().getPairs().isEmpty()) {
+                        duplicateOptionsScreen.getDuplicatesScreen().openWithOldPairs(screenPane, menagerie);
+                    } else {
+                        duplicateOptionsScreen.open(screenPane, menagerie, itemGridView.getSelected(), currentSearch.getResults(), menagerie.getItems());
+                    }
                     event.consume();
                     break;
                 case Z:

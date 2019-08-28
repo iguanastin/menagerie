@@ -69,12 +69,15 @@ public class DuplicateOptionsScreen extends Screen {
     private final TextField confidenceTextField = new TextField();
     private final CheckBox sortedCheckBox = new CheckBox();
     private final CheckBox includeGroupElementsCheckBox = new CheckBox("Include group elements");
+    private final Button previousButton = new Button("Open last");
 
     private List<Item> selected = null, searched = null, all = null;
     private Menagerie menagerie = null;
 
 
     public DuplicateOptionsScreen(MenagerieSettings settings) {
+        duplicateScreen = new DuplicatesScreen();
+
         this.settings = settings;
 
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
@@ -163,9 +166,16 @@ public class DuplicateOptionsScreen extends Screen {
         compare.setOnAction(event -> compareButtonOnAction());
         Button cancel = new Button("Cancel");
         cancel.setOnAction(event -> close());
-        HBox bottom = new HBox(5, compareCountLabel, compare, cancel);
+        previousButton.setOnAction(event -> {
+            if (duplicateScreen.getPairs() != null && !duplicateScreen.getPairs().isEmpty()) {
+                duplicateScreen.openWithOldPairs(getManager(), menagerie);
+                close();
+            }
+        });
+        h = new HBox(5, compareCountLabel, compare, cancel);
+        h.setAlignment(Pos.CENTER_RIGHT);
+        BorderPane bottom = new BorderPane(null, null, h, null, previousButton);
         bottom.setPadding(new Insets(5));
-        bottom.setAlignment(Pos.CENTER_RIGHT);
 
         BorderPane root = new BorderPane(center, null, null, bottom, null);
         root.setPrefWidth(500);
@@ -177,8 +187,6 @@ public class DuplicateOptionsScreen extends Screen {
         setCenter(root);
 
         setDefaultFocusNode(compare);
-
-        duplicateScreen = new DuplicatesScreen();
     }
 
     /**
@@ -232,8 +240,9 @@ public class DuplicateOptionsScreen extends Screen {
      */
     private void saveSettings() {
         try {
-            settings.duplicateConfidence.setValue(Double.parseDouble(confidenceTextField.getText()));
+            settings.duplicatesConfidence.setValue(Double.parseDouble(confidenceTextField.getText()));
             settings.duplicatesSorted.setValue(sortedCheckBox.isSelected());
+            settings.duplicatesIncludeGroups.setValue(includeGroupElementsCheckBox.isSelected());
         } catch (NumberFormatException e) {
             Main.log.log(Level.WARNING, "Failed to convert DuplicateOptionsScreen confidenceTextField to double for saving settings", e);
         }
@@ -249,7 +258,7 @@ public class DuplicateOptionsScreen extends Screen {
         saveSettings();
 
         final List<SimilarPair<MediaItem>> pairs = new ArrayList<>();
-        final double confidence = settings.duplicateConfidence.getValue();
+        final double confidence = settings.duplicatesConfidence.getValue();
         final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
         ProgressScreen ps = new ProgressScreen();
         CancellableThread ct = new CancellableThread() {
@@ -342,8 +351,10 @@ public class DuplicateOptionsScreen extends Screen {
     protected void onOpen() {
         updateCounts();
 
-        confidenceTextField.setText(settings.duplicateConfidence.getValue() + "");
+        confidenceTextField.setText(settings.duplicatesConfidence.getValue() + "");
         sortedCheckBox.setSelected(settings.duplicatesSorted.getValue());
+        includeGroupElementsCheckBox.setSelected(settings.duplicatesIncludeGroups.getValue());
+        previousButton.setDisable(duplicateScreen.getPairs() == null || duplicateScreen.getPairs().isEmpty());
     }
 
     /**

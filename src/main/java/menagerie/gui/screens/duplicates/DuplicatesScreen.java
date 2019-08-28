@@ -245,9 +245,14 @@ public class DuplicatesScreen extends Screen {
     public void open(ScreenPane manager, Menagerie menagerie, List<SimilarPair<MediaItem>> pairs) {
         if (manager == null || menagerie == null || pairs == null || pairs.isEmpty()) return;
 
-        this.menagerie = menagerie;
         this.pairs = pairs;
         preview(pairs.get(0));
+
+        openWithOldPairs(manager, menagerie);
+    }
+
+    public void openWithOldPairs(ScreenPane manager, Menagerie menagerie) {
+        this.menagerie = menagerie;
 
         leftTagList.setDisable(false);
         rightTagList.setDisable(false);
@@ -400,6 +405,10 @@ public class DuplicatesScreen extends Screen {
         }
     }
 
+    public List<SimilarPair<MediaItem>> getPairs() {
+        return pairs;
+    }
+
     /**
      * @return True if this duplicate screen will delete the file when deleting the duplicate.
      */
@@ -427,25 +436,6 @@ public class DuplicatesScreen extends Screen {
 
     public ItemInfoBox getRightInfoBox() {
         return rightInfoBox;
-    }
-
-    @Override
-    protected void onOpen() {
-        if (pairs == null || pairs.isEmpty()) {
-            close();
-            return;
-        }
-
-        preview(pairs.get(0));
-    }
-
-    @Override
-    protected void onClose() {
-        menagerie = null;
-        pairs = null;
-        currentPair = null;
-
-        preview(null);
     }
 
     /**

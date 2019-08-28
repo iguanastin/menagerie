@@ -28,11 +28,11 @@ import java.util.Collections;
 
 public class MenagerieSettings extends Settings {
 
-    public GroupSetting importGroup, autoImportGroup, duplicateGroup, videoGroup, dbGroup, explorerGroup;
+    public GroupSetting importGroup, autoImportGroup, duplicatesGroup, videoGroup, dbGroup, explorerGroup;
     public FolderSetting defaultFolder, autoImportFolder, vlcFolder, lastImportFolder;
     public StringSetting userFileTypes, dbUrl, dbUser, dbPass, tagWithOnImport, importItemsIntoGroupName, importOrder;
-    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesSorted;
-    public DoubleSetting duplicateConfidence;
+    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesSorted, duplicatesIncludeGroups;
+    public DoubleSetting duplicatesConfidence;
     public IntSetting gridWidth, licensesAgreed, windowX, windowY, windowWidth, windowHeight;
 
 
@@ -51,11 +51,12 @@ public class MenagerieSettings extends Settings {
         Collections.addAll(importGroup.getChildren(), defaultFolder, userFileTypes, urlFilename, tagImages, tagVideos, tagTagme, autoImportGroup);
         getSettings().add(importGroup);
 
-        duplicateGroup = new GroupSetting("duplicate-group").label("Duplicate Finding");
-        duplicateConfidence = new DoubleSetting("duplicate-confidence", 0.95).range(0.9, 1.0).label("Duplicate Confidence").tip("Value between 0.90 and 1.00");
-        duplicatesSorted = new BooleanSetting("duplicates-sorted", true).label("Sort Duplicates by Confidence").tip("Shows duplicates ordered by similarity. Most similar first");
-        Collections.addAll(duplicateGroup.getChildren(), duplicateConfidence, duplicatesSorted);
-        getSettings().add(duplicateGroup);
+        duplicatesGroup = new GroupSetting("duplicate-group").label("Duplicate Finding");
+        duplicatesConfidence = new DoubleSetting("duplicate-confidence", 0.95).range(0.9, 1.0).label("Duplicate Confidence").tip("Value between 0.90 and 1.00");
+        duplicatesSorted = new BooleanSetting("duplicates-sorted", true).label("Sort duplicates by confidence").tip("Shows duplicates ordered by similarity. Most similar first");
+        duplicatesIncludeGroups = new BooleanSetting("duplicates-groups", true).label("Include items in groups").tip("Include group items in duplicate comparisons");
+        Collections.addAll(duplicatesGroup.getChildren(), duplicatesConfidence, duplicatesSorted, duplicatesIncludeGroups);
+        getSettings().add(duplicatesGroup);
 
         videoGroup = new GroupSetting("video-group").label("Video Playback");
         repeatVideo = new BooleanSetting("repeat-video", true).label("Repeat video");
@@ -110,7 +111,7 @@ public class MenagerieSettings extends Settings {
         autoImportFolder.setValue(old.getString(OldSettings.Key.AUTO_IMPORT_FOLDER));
         autoImportMove.setValue(old.getBoolean(OldSettings.Key.AUTO_IMPORT_MOVE_TO_DEFAULT));
 
-        duplicateConfidence.setValue(old.getDouble(OldSettings.Key.CONFIDENCE));
+        duplicatesConfidence.setValue(old.getDouble(OldSettings.Key.CONFIDENCE));
 
         repeatVideo.setValue(old.getBoolean(OldSettings.Key.REPEAT_VIDEO));
         muteVideo.setValue(old.getBoolean(OldSettings.Key.MUTE_VIDEO));

@@ -289,7 +289,7 @@ public class ImportJob {
             synchronized (this) {
                 similarTo = new ArrayList<>();
             }
-            final double confidence = settings.duplicateConfidence.getValue();
+            final double confidence = settings.duplicatesConfidence.getValue();
             final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
             boolean anyMinimallySimilar = false;
             for (Item i : menagerie.getItems()) {
