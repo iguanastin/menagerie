@@ -26,6 +26,7 @@ package menagerie.model.menagerie;
 
 import javafx.application.Platform;
 import menagerie.gui.Main;
+import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.db.DatabaseManager;
 import menagerie.model.search.Search;
 
@@ -44,6 +45,7 @@ public class Menagerie {
     private final List<Item> items = new ArrayList<>();
     private final Set<File> fileSet = new HashSet<>();
     private final List<Tag> tags = new ArrayList<>();
+    private final Set<SimilarPair<MediaItem>> nonDuplicates = new HashSet<>();
 
     private int nextItemID;
     private int nextTagID;
@@ -285,6 +287,30 @@ public class Menagerie {
         return null;
     }
 
+    public Set<SimilarPair<MediaItem>> getNonDuplicates() {
+        return nonDuplicates;
+    }
+
+    public boolean hasNonDuplicate(SimilarPair<MediaItem> pair) {
+        return nonDuplicates.contains(pair);
+    }
+
+    public boolean addNonDuplicate(SimilarPair<MediaItem> pair) {
+        if (nonDuplicates.contains(pair)) return false;
+
+        databaseManager.addNonDuplicateAsync(pair.getObject1().getId(), pair.getObject2().getId());
+
+        return nonDuplicates.add(pair);
+    }
+
+    public boolean removeNonDuplicate(SimilarPair<MediaItem> pair) {
+        if (!nonDuplicates.contains(pair)) return false;
+
+        databaseManager.removeNonDuplicateAsync(pair.getObject1().getId(), pair.getObject2().getId());
+
+        return nonDuplicates.remove(pair);
+    }
+
     /**
      * Adds items to any searches that they are valid in, removes them from any searches they are not valid in.
      *
@@ -308,6 +334,14 @@ public class Menagerie {
      */
     public List<Item> getItems() {
         return items;
+    }
+
+    public Item getItemByID(int id) {
+        for (Item item : items) {
+            if (item.getId() == id) return item;
+        }
+
+        return null;
     }
 
     /**

@@ -87,6 +87,11 @@ public class SimilarPair<T> implements Comparable<SimilarPair<T>> {
     }
 
     @Override
+    public int hashCode() {
+        return obj1.hashCode() + obj2.hashCode();
+    }
+
+    @Override
     public int compareTo(SimilarPair<T> o) {
         if (getSimilarity() < o.getSimilarity()) {
             return 1;

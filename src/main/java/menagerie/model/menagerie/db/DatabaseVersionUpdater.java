@@ -103,6 +103,11 @@ public class DatabaseVersionUpdater {
             version++;
         }
         if (version == 7) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV7ToV8(db);
+            version++;
+        }
+        if (version == 8) {
             Main.log.info("Database is up to date");
         }
     }
@@ -407,8 +412,8 @@ public class DatabaseVersionUpdater {
         }
     }
 
-    private static Connection updateFromV6ToV7(Connection db) throws SQLException {
-        Main.log.warning("Database updating from v5 to v6...");
+    private static void updateFromV6ToV7(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v6 to v7...");
         long t = System.currentTimeMillis();
         try (Statement s = db.createStatement()) {
             Main.log.info("Dropping thumbnail column from media");
@@ -419,8 +424,20 @@ public class DatabaseVersionUpdater {
 
             Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
         }
+    }
 
-        return db;
+    private static void updateFromV7ToV8(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v7 to v8...");
+        long t = System.currentTimeMillis();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Creating 'non_dupes' table");
+            s.executeUpdate("CREATE TABLE non_dupes(item_1 INT, item_2 INT, FOREIGN KEY (item_1) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (item_2) REFERENCES items(id) ON DELETE CASCADE);");
+
+            Main.log.info("Setting database version");
+            s.executeUpdate("INSERT INTO version(version) VALUES (8);");
+
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
     }
 
     /**

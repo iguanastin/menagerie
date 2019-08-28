@@ -25,6 +25,7 @@
 package menagerie.model.menagerie.db;
 
 import menagerie.gui.Main;
+import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.histogram.HistogramReadException;
 import menagerie.model.menagerie.histogram.ImageHistogram;
@@ -47,6 +48,7 @@ import java.util.logging.Level;
 public class DatabaseManager extends Thread {
 
     // Media
+    private final PreparedStatement PS_GET_MEDIA;
     private final PreparedStatement PS_CREATE_MEDIA;
     private final PreparedStatement PS_SET_MEDIA_GID;
     private final PreparedStatement PS_SET_MEDIA_MD5;
@@ -54,10 +56,16 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_SET_MEDIA_HISTOGRAM;
     private final PreparedStatement PS_SET_MEDIA_PAGE;
     private final PreparedStatement PS_SET_MEDIA_NOSIMILAR;
+    // Non Duplicates
+    private final PreparedStatement PS_ADD_NON_DUPE;
+    private final PreparedStatement PS_REMOVE_NON_DUPE;
+    private final PreparedStatement PS_GET_NON_DUPES;
     // Groups
+    private final PreparedStatement PS_GET_GROUPS;
     private final PreparedStatement PS_CREATE_GROUP;
     private final PreparedStatement PS_SET_GROUP_TITLE;
     // Items
+    private final PreparedStatement PS_GET_ITEM_COUNT;
     private final PreparedStatement PS_CREATE_ITEM;
     private final PreparedStatement PS_DELETE_ITEM;
     // Tags
@@ -68,17 +76,13 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_ADD_TAG_NOTE;
     private final PreparedStatement PS_REMOVE_TAG_NOTE;
     private final PreparedStatement PS_SET_TAG_COLOR;
+    private final PreparedStatement PS_GET_TAGS_FOR_ITEM;
+    private final PreparedStatement PS_GET_TAG_NOTES;
+    private final PreparedStatement PS_GET_TAGS;
+    private final PreparedStatement PS_GET_TAG_COUNT;
     // Counters
     private final PreparedStatement PS_GET_HIGHEST_ITEM_ID;
     private final PreparedStatement PS_GET_HIGHEST_TAG_ID;
-    // Construction
-    private final PreparedStatement PS_GET_TAGS;
-    private final PreparedStatement PS_GET_TAG_COUNT;
-    private final PreparedStatement PS_GET_MEDIA;
-    private final PreparedStatement PS_GET_GROUPS;
-    private final PreparedStatement PS_GET_ITEM_COUNT;
-    private final PreparedStatement PS_GET_TAGS_FOR_ITEM;
-    private final PreparedStatement PS_GET_TAG_NOTES;
     // Teardown
     private final PreparedStatement PS_SHUTDOWN_DEFRAG;
 
@@ -98,6 +102,7 @@ public class DatabaseManager extends Thread {
 
         // ------------------------------------ Init statements -----------------------------------
         // Media
+        PS_GET_MEDIA = database.prepareStatement("SELECT items.id, items.added, media.gid, media.page, media.no_similar, media.path, media.md5, media.hist_a, media.hist_r, media.hist_g, media.hist_b FROM media JOIN items ON items.id=media.id;");
         PS_CREATE_MEDIA = database.prepareStatement("INSERT INTO media(id, path, md5, hist_a, hist_r, hist_g, hist_b) VALUES (?, ?, ?, ?, ?, ?, ?);");
         PS_SET_MEDIA_GID = database.prepareStatement("UPDATE media SET gid=? WHERE id=?;");
         PS_SET_MEDIA_MD5 = database.prepareStatement("UPDATE media SET md5=? WHERE id=?;");
@@ -105,10 +110,16 @@ public class DatabaseManager extends Thread {
         PS_SET_MEDIA_HISTOGRAM = database.prepareStatement("UPDATE media SET hist_a=?, hist_r=?, hist_g=?, hist_b=? WHERE id=?");
         PS_SET_MEDIA_PAGE = database.prepareStatement("UPDATE media SET page=? WHERE id=?;");
         PS_SET_MEDIA_NOSIMILAR = database.prepareStatement("UPDATE media SET no_similar=? WHERE id=?;");
+        // Non Duplicates
+        PS_GET_NON_DUPES = database.prepareStatement("SELECT item_1, item_2 FROM non_dupes;");
+        PS_ADD_NON_DUPE = database.prepareStatement("INSERT INTO non_dupes(item_1, item_2) VALUES(?, ?);");
+        PS_REMOVE_NON_DUPE = database.prepareStatement("DELETE FROM non_dupes WHERE (item_1=? AND item_2=?) OR (item_2=? AND item_1=?);");
         // Groups
+        PS_GET_GROUPS = database.prepareStatement("SELECT items.id, items.added, groups.title FROM groups JOIN items ON items.id=groups.id;");
         PS_CREATE_GROUP = database.prepareStatement("INSERT INTO groups(id, title) VALUES (?, ?);");
         PS_SET_GROUP_TITLE = database.prepareStatement("UPDATE groups SET title=? WHERE id=?;");
         // Items
+        PS_GET_ITEM_COUNT = database.prepareStatement("SELECT count(*) FROM items;");
         PS_DELETE_ITEM = database.prepareStatement("DELETE FROM items WHERE id=?;");
         PS_CREATE_ITEM = database.prepareStatement("INSERT INTO items(id, added) VALUES (?, ?);");
         // Tags
@@ -119,17 +130,13 @@ public class DatabaseManager extends Thread {
         PS_ADD_TAG_NOTE = database.prepareStatement("INSERT INTO tag_notes(tag_id, note) VALUES (?, ?);");
         PS_REMOVE_TAG_NOTE = database.prepareStatement("DELETE TOP 1 FROM tag_notes WHERE tag_id=? AND note LIKE ?;");
         PS_SET_TAG_COLOR = database.prepareStatement("UPDATE tags SET color=? WHERE id=?;");
+        PS_GET_TAGS = database.prepareStatement("SELECT * FROM tags;");
+        PS_GET_TAG_COUNT = database.prepareStatement("SELECT count(*) FROM tags;");
+        PS_GET_TAGS_FOR_ITEM = database.prepareStatement("SELECT tagged.tag_id FROM tagged WHERE tagged.item_id=?;");
+        PS_GET_TAG_NOTES = database.prepareStatement("SELECT * FROM tag_notes;");
         // Counters
         PS_GET_HIGHEST_ITEM_ID = database.prepareStatement("SELECT TOP 1 id FROM items ORDER BY id DESC;");
         PS_GET_HIGHEST_TAG_ID = database.prepareStatement("SELECT TOP 1 id FROM tags ORDER BY id DESC;");
-        // Construction
-        PS_GET_TAGS = database.prepareStatement("SELECT * FROM tags;");
-        PS_GET_TAG_COUNT = database.prepareStatement("SELECT count(*) FROM tags;");
-        PS_GET_MEDIA = database.prepareStatement("SELECT items.id, items.added, media.gid, media.page, media.no_similar, media.path, media.md5, media.hist_a, media.hist_r, media.hist_g, media.hist_b FROM media JOIN items ON items.id=media.id;");
-        PS_GET_GROUPS = database.prepareStatement("SELECT items.id, items.added, groups.title FROM groups JOIN items ON items.id=groups.id;");
-        PS_GET_ITEM_COUNT = database.prepareStatement("SELECT count(*) FROM items;");
-        PS_GET_TAGS_FOR_ITEM = database.prepareStatement("SELECT tagged.tag_id FROM tagged WHERE tagged.item_id=?;");
-        PS_GET_TAG_NOTES = database.prepareStatement("SELECT * FROM tag_notes;");
         // Teardown
         PS_SHUTDOWN_DEFRAG = database.prepareStatement("SHUTDOWN DEFRAG;");
     }
@@ -739,6 +746,44 @@ public class DatabaseManager extends Thread {
         });
     }
 
+    public void addNonDuplicate(int id1, int id2) throws SQLException {
+        synchronized (PS_ADD_NON_DUPE) {
+            PS_ADD_NON_DUPE.setInt(1, id1);
+            PS_ADD_NON_DUPE.setInt(2, id2);
+            PS_ADD_NON_DUPE.executeUpdate();
+        }
+    }
+
+    public void addNonDuplicateAsync(int id1, int id2) {
+        queue.add(() -> {
+            try {
+                addNonDuplicate(id1, id2);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, "Failed to add to non_dupes: " + id1 + ", " + id2, e);
+            }
+        });
+    }
+
+    public void removeNonDuplicate(int id1, int id2) throws SQLException {
+        synchronized (PS_REMOVE_NON_DUPE) {
+            PS_REMOVE_NON_DUPE.setInt(1, id1);
+            PS_REMOVE_NON_DUPE.setInt(2, id2);
+            PS_REMOVE_NON_DUPE.setInt(3, id1);
+            PS_REMOVE_NON_DUPE.setInt(4, id2);
+            PS_REMOVE_NON_DUPE.executeUpdate();
+        }
+    }
+
+    public void removeNonDuplicateAsync(int id1, int id2) {
+        queue.add(() -> {
+            try {
+                removeNonDuplicate(id1, id2);
+            } catch (SQLException e) {
+                Main.log.log(Level.SEVERE, "Failed to remove from non_dupes: " + id1 + ", " + id2, e);
+            }
+        });
+    }
+
     /**
      * Finds the highest item ID value.
      *
@@ -792,6 +837,8 @@ public class DatabaseManager extends Thread {
         Main.log.info("Finished loading " + menagerie.getItems().size() + " items from database");
         loadTagsForItems(menagerie);
         Main.log.info("Finished loading tags for " + menagerie.getItems().size() + " items from database");
+        loadNonDupes(menagerie);
+        Main.log.info("Finished loading " + menagerie.getNonDuplicates().size() + " non-duplicates from database");
     }
 
     /**
@@ -855,6 +902,16 @@ public class DatabaseManager extends Thread {
                     i++;
                     menagerie.getTags().add(new Tag(menagerie, rs.getInt("id"), rs.getNString("name"), rs.getNString("color")));
                     if (loadListener != null) loadListener.tagsLoading(i, total);
+                }
+            }
+        }
+    }
+
+    private void loadNonDupes(Menagerie menagerie) throws SQLException {
+        synchronized (PS_GET_NON_DUPES) {
+            try (ResultSet rs = PS_GET_NON_DUPES.executeQuery()) {
+                while (rs.next()) {
+                    menagerie.getNonDuplicates().add(new SimilarPair<>((MediaItem) menagerie.getItemByID(rs.getInt(1)), (MediaItem) menagerie.getItemByID(rs.getInt(2)), 0));
                 }
             }
         }

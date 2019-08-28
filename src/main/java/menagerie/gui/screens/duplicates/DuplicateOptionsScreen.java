@@ -315,7 +315,8 @@ public class DuplicateOptionsScreen extends Screen {
 
                         final double similarity = ((MediaItem) i1).getSimilarityTo((MediaItem) i2);
                         if (similarity >= confidenceSquare || (similarity >= confidence && ((MediaItem) i1).getHistogram().isColorful() && ((MediaItem) i2).getHistogram().isColorful())) {
-                            pairs.add(new SimilarPair<>((MediaItem) i1, (MediaItem) i2, similarity));
+                            SimilarPair<MediaItem> pair = new SimilarPair<>((MediaItem) i1, (MediaItem) i2, similarity);
+                            if (!menagerie.hasNonDuplicate(pair)) pairs.add(pair);
                         }
                     }
 

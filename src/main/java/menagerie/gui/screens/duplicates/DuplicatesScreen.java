@@ -45,7 +45,6 @@ import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.util.listeners.ObjectListener;
-import menagerie.util.listeners.PokeListener;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -60,6 +59,7 @@ public class DuplicatesScreen extends Screen {
     private final ListView<Tag> rightTagList = new ListView<>();
     private final ItemInfoBox leftInfoBox = new ItemInfoBox();
     private final ItemInfoBox rightInfoBox = new ItemInfoBox();
+    private final CheckBox nonDupeCheckBox = new CheckBox("Not a duplicate");
 
     private final Label similarityLabel = new Label("N/A");
 
@@ -109,21 +109,31 @@ public class DuplicatesScreen extends Screen {
         // ---------------------------------------------- Center Element -----------------------------------------------
         leftMediaView.setOnContextMenuRequested(event -> {
             MenuItem select = new MenuItem("Select in explorer");
-            ContextMenu cm = new ContextMenu(select);
+            MenuItem combineTags = new MenuItem("Add tags to other -->");
+            ContextMenu cm = new ContextMenu(select, combineTags);
             select.setOnAction(event1 -> {
                 if (selectListener != null) selectListener.pass(currentPair.getObject1());
                 cm.hide();
                 close();
             });
+            combineTags.setOnAction(event1 -> {
+                currentPair.getObject1().getTags().forEach(tag -> currentPair.getObject2().addTag(tag));
+                cm.hide();
+            });
             cm.show(leftMediaView, event.getScreenX(), event.getScreenY());
         });
         rightMediaView.setOnContextMenuRequested(event -> {
             MenuItem select = new MenuItem("Select in explorer");
-            ContextMenu cm = new ContextMenu(select);
+            MenuItem combineTags = new MenuItem("<-- Add tags to other");
+            ContextMenu cm = new ContextMenu(select, combineTags);
             select.setOnAction(event1 -> {
                 if (selectListener != null) selectListener.pass(currentPair.getObject2());
                 cm.hide();
                 close();
+            });
+            combineTags.setOnAction(event1 -> {
+                currentPair.getObject1().getTags().forEach(tag -> currentPair.getObject2().addTag(tag));
+                cm.hide();
             });
             cm.show(rightMediaView, event.getScreenX(), event.getScreenY());
         });
@@ -204,11 +214,7 @@ public class DuplicatesScreen extends Screen {
         VBox bottom = new VBox(5);
         bottom.setPadding(new Insets(5));
         // Construct first element
-        Button combineLeft = new Button("<- Combine tags");
-        combineLeft.setOnAction(event -> currentPair.getObject2().getTags().forEach(tag -> currentPair.getObject1().addTag(tag)));
-        Button combineRight = new Button("Combine tags ->");
-        combineRight.setOnAction(event -> currentPair.getObject1().getTags().forEach(tag -> currentPair.getObject2().addTag(tag)));
-        HBox hbc = new HBox(5, combineLeft, similarityLabel, combineRight);
+        HBox hbc = new HBox(5, similarityLabel);
         hbc.setAlignment(Pos.CENTER);
         Button leftDeleteButton = new Button("Delete");
         leftDeleteButton.setOnAction(event -> deleteItem(currentPair.getObject1()));
@@ -226,7 +232,14 @@ public class DuplicatesScreen extends Screen {
         closeButton.setOnAction(event -> close());
         Button nextPairButton = new Button("->");
         nextPairButton.setOnAction(event -> previewNext());
-        HBox hb = new HBox(5, prevPairButton, closeButton, nextPairButton);
+        nonDupeCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                menagerie.addNonDuplicate(currentPair);
+            } else {
+                menagerie.removeNonDuplicate(currentPair);
+            }
+        });
+        HBox hb = new HBox(5, prevPairButton, closeButton, nextPairButton, nonDupeCheckBox);
         hb.setAlignment(Pos.CENTER);
         bottom.getChildren().add(hb);
         setBottom(bottom);
@@ -245,10 +258,10 @@ public class DuplicatesScreen extends Screen {
     public void open(ScreenPane manager, Menagerie menagerie, List<SimilarPair<MediaItem>> pairs) {
         if (manager == null || menagerie == null || pairs == null || pairs.isEmpty()) return;
 
+        openWithOldPairs(manager, menagerie);
+
         this.pairs = pairs;
         preview(pairs.get(0));
-
-        openWithOldPairs(manager, menagerie);
     }
 
     public void openWithOldPairs(ScreenPane manager, Menagerie menagerie) {
@@ -314,15 +327,6 @@ public class DuplicatesScreen extends Screen {
             leftMediaView.preview(pair.getObject1());
             rightMediaView.preview(pair.getObject2());
 
-            PokeListener tagListener = () -> {
-                leftTagList.getItems().clear();
-                leftTagList.getItems().addAll(pair.getObject1().getTags());
-                leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
-
-                rightTagList.getItems().clear();
-                rightTagList.getItems().addAll(pair.getObject2().getTags());
-                rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
-            };
             leftTagList.getItems().clear();
             leftTagList.getItems().addAll(pair.getObject1().getTags());
             leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
@@ -338,6 +342,8 @@ public class DuplicatesScreen extends Screen {
 
             DecimalFormat df = new DecimalFormat("#.##");
             similarityLabel.setText((pairs.indexOf(pair) + 1) + "/" + pairs.size() + ": " + df.format(pair.getSimilarity() * 100) + "%");
+
+            nonDupeCheckBox.setSelected(menagerie.hasNonDuplicate(pair));
         } else {
             leftMediaView.preview(null);
             rightMediaView.preview(null);
@@ -349,6 +355,7 @@ public class DuplicatesScreen extends Screen {
             rightInfoBox.setItem(null);
 
             similarityLabel.setText("N/A");
+            nonDupeCheckBox.setSelected(false);
         }
     }
 
