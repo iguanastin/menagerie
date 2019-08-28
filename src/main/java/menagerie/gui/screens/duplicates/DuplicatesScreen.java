@@ -132,7 +132,7 @@ public class DuplicatesScreen extends Screen {
                 close();
             });
             combineTags.setOnAction(event1 -> {
-                currentPair.getObject1().getTags().forEach(tag -> currentPair.getObject2().addTag(tag));
+                currentPair.getObject2().getTags().forEach(tag -> currentPair.getObject1().addTag(tag));
                 cm.hide();
             });
             cm.show(rightMediaView, event.getScreenX(), event.getScreenY());

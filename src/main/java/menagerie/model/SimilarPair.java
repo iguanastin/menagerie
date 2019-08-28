@@ -29,7 +29,7 @@ package menagerie.model;
  *
  * @param <T> Object type.
  */
-public class SimilarPair<T> implements Comparable<SimilarPair<T>> {
+public class SimilarPair<T> {
 
     private final T obj1, obj2;
     private final double similarity;
@@ -89,16 +89,6 @@ public class SimilarPair<T> implements Comparable<SimilarPair<T>> {
     @Override
     public int hashCode() {
         return obj1.hashCode() + obj2.hashCode();
-    }
-
-    @Override
-    public int compareTo(SimilarPair<T> o) {
-        if (getSimilarity() < o.getSimilarity()) {
-            return 1;
-        } else if (getSimilarity() > o.getSimilarity()) {
-            return -1;
-        }
-        return 0;
     }
 
 }

@@ -49,12 +49,15 @@ import menagerie.util.CancellableThread;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Level;
 
 public class DuplicateOptionsScreen extends Screen {
 
     private static final double DEFAULT_CONFIDENCE = 0.95;
+    private static final long PROGRESS_UPDATE_INTERVAL = 16;
 
     private enum Scope {
         SELECTED, SEARCHED, ALL
@@ -293,6 +296,7 @@ public class DuplicateOptionsScreen extends Screen {
 
                 final int ffs = compare.size();
                 Platform.runLater(() -> ps.setProgress(0, ffs));
+                long lastProgressUpdate = 0;
 
                 //Find duplicates
                 int i = 0;
@@ -316,21 +320,26 @@ public class DuplicateOptionsScreen extends Screen {
                         final double similarity = ((MediaItem) i1).getSimilarityTo((MediaItem) i2);
                         if (similarity >= confidenceSquare || (similarity >= confidence && ((MediaItem) i1).getHistogram().isColorful() && ((MediaItem) i2).getHistogram().isColorful())) {
                             SimilarPair<MediaItem> pair = new SimilarPair<>((MediaItem) i1, (MediaItem) i2, similarity);
-                            if (!menagerie.hasNonDuplicate(pair) && !pairs.contains(pair)) pairs.add(pair);
+                            if (!menagerie.hasNonDuplicate(pair)) pairs.add(pair);
                         }
                     }
 
-                    // Update GUI
-                    final int finalI = i;
-                    final int finalTotal = compare.size();
-                    Platform.runLater(() -> ps.setProgress(finalI, finalTotal));
+                    long time = System.currentTimeMillis();
+                    if (time - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
+                        lastProgressUpdate = time;
+
+                        // Update GUI
+                        final int finalI = i;
+                        final int finalTotal = compare.size();
+                        Platform.runLater(() -> ps.setProgress(finalI, finalTotal));
+                    }
 
                     // Increment counter
                     i++;
                 }
 
                 if (sortedCheckBox.isSelected()) {
-                    pairs.sort(null);
+                    pairs.sort(Collections.reverseOrder(Comparator.comparing(SimilarPair::getSimilarity)));
                 }
 
                 Platform.runLater(() -> {
