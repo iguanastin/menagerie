@@ -26,7 +26,9 @@ package menagerie.model.menagerie.db;
 
 public interface MenagerieDatabaseLoadListener {
 
-    void startItemLoading(int total);
+    void startedItemLoading(int total);
+
+    void gettingItemList();
 
     void itemsLoading(int count, int total);
 

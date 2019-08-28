@@ -877,7 +877,6 @@ public class DatabaseManager extends Thread {
                 }
             }
         }
-        if (loadListener != null) loadListener.startItemLoading(total);
 
         int i = 0;
         synchronized (PS_GET_GROUPS) {
@@ -890,8 +889,10 @@ public class DatabaseManager extends Thread {
             }
         }
 
+        if (loadListener != null) loadListener.gettingItemList();
         synchronized (PS_GET_MEDIA) {
             try (ResultSet rs = PS_GET_MEDIA.executeQuery()) {
+                if (loadListener != null) loadListener.startedItemLoading(total);
                 while (rs.next()) {
                     i++;
 

@@ -171,8 +171,16 @@ public class SplashController {
             }
             databaseManager.setLoadListener(new MenagerieDatabaseLoadListener() {
                 @Override
-                public void startItemLoading(int total) {
+                public void startedItemLoading(int total) {
                     Platform.runLater(() -> statusLabel.setText("Loading " + total + " items..."));
+                }
+
+                @Override
+                public void gettingItemList() {
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Getting list of items from database...");
+                        progressBar.setProgress(-1);
+                    });
                 }
 
                 @Override
