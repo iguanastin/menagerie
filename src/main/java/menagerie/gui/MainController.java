@@ -38,7 +38,6 @@ import javafx.scene.input.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import menagerie.gui.grid.ItemGridCell;
@@ -120,6 +119,7 @@ public class MainController {
     private DuplicateOptionsScreen duplicateOptionsScreen;
     private ImportDialogScreen importDialogScreen;
     private GroupDialogScreen groupDialogScreen;
+    private MoveFilesScreen moveFilesScreen;
 
     // --------------------------------- Menagerie vars ------------------------------
     /**
@@ -300,8 +300,13 @@ public class MainController {
         initLogScreen();
         initImportDialogScreen();
         initGroupDialogScreen();
+        initMoveFilesScreen();
 
         screenPane.currentProperty().addListener((observable, oldValue, newValue) -> explorerRootPane.setDisable(newValue != null));
+    }
+
+    private void initMoveFilesScreen() {
+        moveFilesScreen = new MoveFilesScreen();
     }
 
     private void initGroupDialogScreen() {
@@ -899,7 +904,7 @@ public class MainController {
             slideshow.getItems().addAll(grabbed, searched, all);
 
             MenuItem moveFiles = new MenuItem("Move Files");
-            moveFiles.setOnAction(event -> moveFilesDialog(selected));
+            moveFiles.setOnAction(event -> moveFilesScreen.open(screenPane, selected));
 
             MenuItem findDupes = new MenuItem("Find Duplicates");
             findDupes.setOnAction(event -> duplicateOptionsScreen.open(screenPane, menagerie, selected, currentSearch.getResults(), menagerie.getItems()));
@@ -1051,63 +1056,6 @@ public class MainController {
             }
         }
         slideshowScreen.open(screenPane, menagerie, items);
-    }
-
-    /**
-     * Opens a dialog asking for user confirmation to move files to a new folder. All files will be direct children of specified folder after moving.
-     *
-     * @param items Set of items to move. Groups will be expanded to include group elements.
-     */
-    private void moveFilesDialog(List<Item> items) {
-        items = new ArrayList<>(items);
-        for (int i = 0; i < items.size(); i++) {
-            if (items.get(i) instanceof GroupItem) {
-                GroupItem group = (GroupItem) items.remove(i);
-                items.addAll(i, group.getElements());
-            }
-        }
-        List<Item> finalItems = items;
-
-        DirectoryChooser dc = new DirectoryChooser();
-        dc.setTitle("Move files to folder...");
-        String folder = settings.defaultFolder.getValue();
-        if (folder != null && !folder.isEmpty()) dc.setInitialDirectory(new File(folder));
-        File result = dc.showDialog(rootPane.getScene().getWindow());
-
-        if (result != null) {
-            ProgressScreen ps = new ProgressScreen();
-            CancellableThread ct = new CancellableThread() {
-                @Override
-                public void run() {
-                    final int total = finalItems.size();
-                    int i = 0;
-
-                    for (Item item : finalItems) {
-                        if (!running) break;
-
-                        i++;
-
-                        if (item instanceof MediaItem) {
-                            File f = result.toPath().resolve(((MediaItem) item).getFile().getName()).toFile();
-                            if (!((MediaItem) item).getFile().equals(f)) {
-                                File dest = MainController.resolveDuplicateFilename(f);
-
-                                if (!((MediaItem) item).moveFile(dest)) {
-                                    Main.log.severe("Failed to rename " + ((MediaItem) item).getFile() + " to " + dest);
-                                }
-                            }
-                        }
-
-                        final int finalI = i; // Lambda workaround
-                        Platform.runLater(() -> ps.setProgress(finalI, total));
-                    }
-
-                    Platform.runLater(ps::close);
-                }
-            };
-            ps.open(screenPane, "Moving files", "Moving files to: " + result.getAbsolutePath(), ct::cancel);
-            ct.start();
-        }
     }
 
     /**
@@ -1674,7 +1622,7 @@ public class MainController {
                     event.consume();
                     break;
                 case M:
-                    new MoveFilesScreen().open(screenPane, itemGridView.getSelected());
+                    moveFilesScreen.open(screenPane, itemGridView.getSelected());
                     event.consume();
                     break;
                 default:
