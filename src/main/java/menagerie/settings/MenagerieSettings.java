@@ -31,7 +31,7 @@ public class MenagerieSettings extends Settings {
     public GroupSetting importGroup, autoImportGroup, duplicateGroup, videoGroup, dbGroup, explorerGroup;
     public FolderSetting defaultFolder, autoImportFolder, vlcFolder, lastImportFolder;
     public StringSetting userFileTypes, dbUrl, dbUser, dbPass, tagWithOnImport, importItemsIntoGroupName, importOrder;
-    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport;
+    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesSorted;
     public DoubleSetting duplicateConfidence;
     public IntSetting gridWidth, licensesAgreed, windowX, windowY, windowWidth, windowHeight;
 
@@ -53,7 +53,8 @@ public class MenagerieSettings extends Settings {
 
         duplicateGroup = new GroupSetting("duplicate-group").label("Duplicate Finding");
         duplicateConfidence = new DoubleSetting("duplicate-confidence", 0.95).range(0.9, 1.0).label("Duplicate Confidence").tip("Value between 0.90 and 1.00");
-        duplicateGroup.getChildren().add(duplicateConfidence);
+        duplicatesSorted = new BooleanSetting("duplicates-sorted", true).label("Sort Duplicates by Confidence").tip("Shows duplicates ordered by similarity. Most similar first");
+        Collections.addAll(duplicateGroup.getChildren(), duplicateConfidence, duplicatesSorted);
         getSettings().add(duplicateGroup);
 
         videoGroup = new GroupSetting("video-group").label("Video Playback");

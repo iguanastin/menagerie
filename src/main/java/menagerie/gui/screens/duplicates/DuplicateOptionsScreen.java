@@ -67,6 +67,7 @@ public class DuplicateOptionsScreen extends Screen {
     private final Label compareCountLabel = new Label("~N/A comparisons"), firstCountLabel = new Label("0"), secondCountLabel = new Label("0");
     private final ChoiceBox<Scope> compareChoiceBox = new ChoiceBox<>(), toChoiceBox = new ChoiceBox<>();
     private final TextField confidenceTextField = new TextField();
+    private final CheckBox sortedCheckBox = new CheckBox();
     private final CheckBox includeGroupElementsCheckBox = new CheckBox("Include group elements");
 
     private List<Item> selected = null, searched = null, all = null;
@@ -134,6 +135,10 @@ public class DuplicateOptionsScreen extends Screen {
         contents.getChildren().add(h);
 
         contents.getChildren().add(includeGroupElementsCheckBox);
+
+        sortedCheckBox.setText(settings.duplicatesSorted.getLabel());
+        sortedCheckBox.setTooltip(new Tooltip("Sorts similar pairs by confidence"));
+        contents.getChildren().add(sortedCheckBox);
 
         confidenceTextField.setPromptText(MediaItem.MIN_CONFIDENCE + "-" + MediaItem.MAX_CONFIDENCE);
         confidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
@@ -228,6 +233,7 @@ public class DuplicateOptionsScreen extends Screen {
     private void saveSettings() {
         try {
             settings.duplicateConfidence.setValue(Double.parseDouble(confidenceTextField.getText()));
+            settings.duplicatesSorted.setValue(sortedCheckBox.isSelected());
         } catch (NumberFormatException e) {
             Main.log.log(Level.WARNING, "Failed to convert DuplicateOptionsScreen confidenceTextField to double for saving settings", e);
         }
@@ -313,6 +319,10 @@ public class DuplicateOptionsScreen extends Screen {
                     i++;
                 }
 
+                if (sortedCheckBox.isSelected()) {
+                    pairs.sort(null);
+                }
+
                 Platform.runLater(() -> {
                     duplicateScreen.open(getManager(), menagerie, pairs);
                     ps.close();
@@ -333,6 +343,7 @@ public class DuplicateOptionsScreen extends Screen {
         updateCounts();
 
         confidenceTextField.setText(settings.duplicateConfidence.getValue() + "");
+        sortedCheckBox.setSelected(settings.duplicatesSorted.getValue());
     }
 
     /**
