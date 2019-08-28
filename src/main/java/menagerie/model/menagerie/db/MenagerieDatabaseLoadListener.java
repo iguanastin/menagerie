@@ -36,4 +36,10 @@ public interface MenagerieDatabaseLoadListener {
 
     void tagsLoading(int count, int total);
 
+    void gettingNonDupeList();
+
+    void startNonDupeLoading(int total);
+
+    void nonDupeLoading(int count, int total);
+
 }

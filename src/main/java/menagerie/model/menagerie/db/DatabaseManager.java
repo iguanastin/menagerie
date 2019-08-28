@@ -60,6 +60,7 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_ADD_NON_DUPE;
     private final PreparedStatement PS_REMOVE_NON_DUPE;
     private final PreparedStatement PS_GET_NON_DUPES;
+    private final PreparedStatement PS_GET_NON_DUPES_COUNT;
     // Groups
     private final PreparedStatement PS_GET_GROUPS;
     private final PreparedStatement PS_CREATE_GROUP;
@@ -114,6 +115,7 @@ public class DatabaseManager extends Thread {
         PS_GET_NON_DUPES = database.prepareStatement("SELECT item_1, item_2 FROM non_dupes;");
         PS_ADD_NON_DUPE = database.prepareStatement("INSERT INTO non_dupes(item_1, item_2) VALUES(?, ?);");
         PS_REMOVE_NON_DUPE = database.prepareStatement("DELETE FROM non_dupes WHERE (item_1=? AND item_2=?) OR (item_2=? AND item_1=?);");
+        PS_GET_NON_DUPES_COUNT = database.prepareStatement("SELECT count(*) FROM non_dupes;");
         // Groups
         PS_GET_GROUPS = database.prepareStatement("SELECT items.id, items.added, groups.title FROM groups JOIN items ON items.id=groups.id;");
         PS_CREATE_GROUP = database.prepareStatement("INSERT INTO groups(id, title) VALUES (?, ?);");
@@ -908,10 +910,25 @@ public class DatabaseManager extends Thread {
     }
 
     private void loadNonDupes(Menagerie menagerie) throws SQLException {
+        if (loadListener != null) loadListener.gettingNonDupeList();
+
+        int total = 0;
+        synchronized (PS_GET_NON_DUPES_COUNT) {
+            try (ResultSet rs = PS_GET_NON_DUPES_COUNT.executeQuery()) {
+                if (rs.next()) {
+                    total = rs.getInt(1);
+                }
+            }
+        }
+        if (loadListener != null) loadListener.startNonDupeLoading(total);
+
         synchronized (PS_GET_NON_DUPES) {
             try (ResultSet rs = PS_GET_NON_DUPES.executeQuery()) {
+                int i = 0;
                 while (rs.next()) {
+                    i++;
                     menagerie.getNonDuplicates().add(new SimilarPair<>((MediaItem) menagerie.getItemByID(rs.getInt(1)), (MediaItem) menagerie.getItemByID(rs.getInt(2)), 0));
+                    if (loadListener != null) loadListener.nonDupeLoading(i, total);
                 }
             }
         }
@@ -926,6 +943,8 @@ public class DatabaseManager extends Thread {
      * @throws SQLException When database query fails.
      */
     private void loadItems(Menagerie menagerie) throws SQLException {
+        if (loadListener != null) loadListener.gettingItemList();
+
         int total = 0;
         synchronized (PS_GET_ITEM_COUNT) {
             try (ResultSet rs = PS_GET_ITEM_COUNT.executeQuery()) {
@@ -946,7 +965,6 @@ public class DatabaseManager extends Thread {
             }
         }
 
-        if (loadListener != null) loadListener.gettingItemList();
         synchronized (PS_GET_MEDIA) {
             try (ResultSet rs = PS_GET_MEDIA.executeQuery()) {
                 if (loadListener != null) loadListener.startedItemLoading(total);

@@ -57,7 +57,8 @@ import java.util.logging.Level;
 
 public class SplashController {
 
-    public static final int PROGRESS_UPDATE_INTERVAL = 16;
+    private static final int PROGRESS_UPDATE_INTERVAL = 16;
+
     public StackPane rootPane;
     public ImageView backgroundImageView;
     public Label titleLabel;
@@ -199,7 +200,33 @@ public class SplashController {
 
                 @Override
                 public void tagsLoading(int count, int total) {
-                    Platform.runLater(() -> progressBar.setProgress((double) count / total));
+                    long time = System.currentTimeMillis();
+                    if (time - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
+                        lastProgressUpdate = time;
+                        Platform.runLater(() -> progressBar.setProgress((double) count / total));
+                    }
+                }
+
+                @Override
+                public void gettingNonDupeList() {
+                    Platform.runLater(() -> {
+                        statusLabel.setText("Getting non-duplicates list from database...");
+                        progressBar.setProgress(-1);
+                    });
+                }
+
+                @Override
+                public void startNonDupeLoading(int total) {
+                    Platform.runLater(() -> statusLabel.setText("Loading " + total + " non-duplicates..."));
+                }
+
+                @Override
+                public void nonDupeLoading(int count, int total) {
+                    long time = System.currentTimeMillis();
+                    if (time - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
+                        lastProgressUpdate = time;
+                        Platform.runLater(() -> progressBar.setProgress((double) count / total));
+                    }
                 }
             });
             databaseManager.setDaemon(true);
