@@ -322,7 +322,7 @@ public class MainController {
     }
 
     private void initImportScreen() {
-        importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), item -> itemGridView.select(item, false, false));
+        importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), this::selectItemInGridView);
         importerScreen.setKeepAfterClose(true);
         screenPane.add(importerScreen);
         importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> {
@@ -355,7 +355,7 @@ public class MainController {
         screenPane.add(duplicateOptionsScreen);
         duplicateOptionsScreen.getDuplicatesScreen().setKeepAfterClose(true);
         screenPane.add(duplicateOptionsScreen.getDuplicatesScreen());
-        duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(item -> itemGridView.select(item, false, false));
+        duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(this::selectItemInGridView);
         duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
         duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
     }
@@ -369,11 +369,24 @@ public class MainController {
     private void initSlideshowScreen() {
         slideshowScreen = new SlideshowScreen(item -> {
             slideshowScreen.close();
-            itemGridView.select(item, false, false);
+            selectItemInGridView(item);
         });
         slideshowScreen.setKeepAfterClose(true);
         slideshowScreen.getInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
         screenPane.add(slideshowScreen);
+    }
+
+    private void selectItemInGridView(Item item) {
+        if (itemGridView.getItems().contains(item)) {
+            itemGridView.select(item, false, false);
+        } else if (item instanceof MediaItem) {
+            GroupItem group = ((MediaItem) item).getGroup();
+            if (group != null && itemGridView.getItems().contains(group)) {
+                itemGridView.select(group, false, false);
+            } else {
+                Toolkit.getDefaultToolkit().beep();
+            }
+        }
     }
 
     /**
