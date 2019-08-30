@@ -909,11 +909,11 @@ public class MainController {
         if (groupCount > 0 || mediaCount > 0) {
             Menu slideshow = new Menu("Slideshow...");
             MenuItem grabbed = new MenuItem("Selected");
-            grabbed.setOnAction(event -> openSlideShow(selected));
+            grabbed.setOnAction(event -> openSlideShow(selected, false));
             MenuItem searched = new MenuItem("Searched");
-            searched.setOnAction(event -> openSlideShow(currentSearch.getResults()));
+            searched.setOnAction(event -> openSlideShow(currentSearch.getResults(), true));
             MenuItem all = new MenuItem("All");
-            all.setOnAction(event -> openSlideShow(menagerie.getItems()));
+            all.setOnAction(event -> openSlideShow(menagerie.getItems(), true));
             slideshow.getItems().addAll(grabbed, searched, all);
 
             MenuItem moveFiles = new MenuItem("Move Files");
@@ -1060,7 +1060,7 @@ public class MainController {
      *
      * @param items Set of items to show in the slideshow.
      */
-    private void openSlideShow(List<Item> items) {
+    private void openSlideShow(List<Item> items, boolean reversed) {
         items = new ArrayList<>(items);
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i) instanceof GroupItem) {
@@ -1068,6 +1068,7 @@ public class MainController {
                 items.addAll(i, group.getElements());
             }
         }
+        if (reversed) Collections.reverse(items);
         slideshowScreen.open(screenPane, menagerie, items);
     }
 
