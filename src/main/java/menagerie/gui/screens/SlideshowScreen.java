@@ -28,6 +28,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -50,7 +51,8 @@ public class SlideshowScreen extends Screen {
 
     private final DynamicMediaView mediaView = new DynamicMediaView();
     private final ItemInfoBox infoBox = new ItemInfoBox();
-    private final Label countLabel = new Label("0/0");
+    private final Label totalLabel = new Label("0");
+    private final TextField indexTextField = new TextField("/0");
 
     private final List<Item> items = new ArrayList<>();
     private Item showing = null;
@@ -119,7 +121,25 @@ public class SlideshowScreen extends Screen {
         Button right = new Button("->");
         right.setOnAction(event -> previewNext());
 
-        HBox h = new HBox(5, left, select, right, countLabel);
+        indexTextField.setOnAction(event -> {
+            int i = items.indexOf(showing);
+            try {
+                int temp = Integer.parseInt(indexTextField.getText()) - 1;
+                if (temp >= 0 && temp < items.size()) {
+                    i = temp;
+                }
+            } catch (NumberFormatException e) {
+                // Nothing
+            }
+
+            preview(items.get(i));
+            requestFocus();
+        });
+        indexTextField.setPrefWidth(50);
+        indexTextField.setAlignment(Pos.CENTER_RIGHT);
+        HBox countHBox = new HBox(indexTextField, totalLabel);
+        countHBox.setAlignment(Pos.CENTER);
+        HBox h = new HBox(5, left, select, right, countHBox);
         h.setAlignment(Pos.CENTER);
         bp = new BorderPane(h, null, close, null, new HBox(5, shuffle, reverse));
         bp.setPadding(new Insets(5));
@@ -242,9 +262,11 @@ public class SlideshowScreen extends Screen {
      */
     private void updateCountLabel() {
         if (showing != null) {
-            countLabel.setText(String.format("%d/%d", items.indexOf(showing) + 1, items.size()));
+            indexTextField.setText("" + (items.indexOf(showing) + 1));
+            totalLabel.setText("/" + items.size());
         } else {
-            countLabel.setText("" + items.size());
+            indexTextField.setText(null);
+            totalLabel.setText("" + items.size());
         }
     }
 
