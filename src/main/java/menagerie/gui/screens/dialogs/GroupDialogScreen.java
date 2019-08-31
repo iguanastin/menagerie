@@ -24,6 +24,8 @@
 
 package menagerie.gui.screens.dialogs;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -39,7 +41,6 @@ import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
-import menagerie.settings.MenagerieSettings;
 import menagerie.util.listeners.ObjectListener;
 
 import java.util.ArrayList;
@@ -52,10 +53,10 @@ public class GroupDialogScreen extends Screen {
     private final CheckBox elementTagsCheckBox = new CheckBox("Tag group with element tags");
 
     private Menagerie menagerie = null;
-    private MenagerieSettings settings = null;
     private List<Item> toGroup = null;
 
     private ObjectListener<GroupItem> groupListener = null;
+    private BooleanProperty tagTagme = new SimpleBooleanProperty(true);
 
 
     public GroupDialogScreen() {
@@ -106,10 +107,9 @@ public class GroupDialogScreen extends Screen {
      * @param manager Manager to open in.
      * @param text    Default textfield text.
      */
-    public void open(ScreenPane manager, Menagerie menagerie, MenagerieSettings settings, String text, List<Item> toGroup, ObjectListener<GroupItem> groupListener) {
+    public void open(ScreenPane manager, Menagerie menagerie, String text, List<Item> toGroup, ObjectListener<GroupItem> groupListener) {
         this.groupListener = groupListener;
         this.menagerie = menagerie;
-        this.settings = settings;
         int itemCount = 0;
         if (toGroup != null) {
             this.toGroup = new ArrayList<>(toGroup);
@@ -139,10 +139,10 @@ public class GroupDialogScreen extends Screen {
     private void confirm() {
         close();
 
-        if (menagerie != null && settings != null && toGroup != null && !toGroup.isEmpty()) {
+        if (menagerie != null && toGroup != null && !toGroup.isEmpty()) {
             GroupItem group = menagerie.createGroup(toGroup, textField.getText());
             if (group != null) {
-                if (settings.tagTagme.getValue()) {
+                if (isTagTagme()) {
                     Tag tagme = menagerie.getTagByName("tagme");
                     if (tagme == null) tagme = menagerie.createTag("tagme");
                     group.addTag(tagme);
@@ -154,6 +154,18 @@ public class GroupDialogScreen extends Screen {
                 if (groupListener != null) groupListener.pass(group);
             }
         }
+    }
+
+    public BooleanProperty tagTagmeProperty() {
+        return tagTagme;
+    }
+
+    public boolean isTagTagme() {
+        return tagTagme.get();
+    }
+
+    public void setTagTagme(boolean b) {
+        tagTagme.set(b);
     }
 
 }

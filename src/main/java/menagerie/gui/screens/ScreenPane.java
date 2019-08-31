@@ -93,8 +93,6 @@ public class ScreenPane extends StackPane {
             screen.setOpacity(0);
             screen.setDisable(true);
 
-            if (!screen.isKeepAfterClose()) getChildren().remove(screen);
-
             if (screen.equals(current.get())) {
                 if (openStack.empty()) {
                     current.set(null);

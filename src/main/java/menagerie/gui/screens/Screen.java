@@ -36,8 +36,6 @@ public abstract class Screen extends BorderPane {
 
     private Node defaultFocusNode = this;
 
-    private boolean keepAfterClose = false;
-
 
     /**
      * Closes this screen if it is open in a manager.
@@ -76,14 +74,6 @@ public abstract class Screen extends BorderPane {
      */
     void focusDefaultNode() {
         defaultFocusNode.requestFocus();
-    }
-
-    public boolean isKeepAfterClose() {
-        return keepAfterClose;
-    }
-
-    public void setKeepAfterClose(boolean b) {
-        keepAfterClose = b;
     }
 
     /**

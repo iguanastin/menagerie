@@ -311,19 +311,17 @@ public class MainController {
 
     private void initGroupDialogScreen() {
         groupDialogScreen = new GroupDialogScreen();
-        groupDialogScreen.setKeepAfterClose(true);
+        groupDialogScreen.tagTagmeProperty().bind(settings.tagTagme.valueProperty());
         screenPane.add(groupDialogScreen);
     }
 
     private void initImportDialogScreen() {
         importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
-        importDialogScreen.setKeepAfterClose(true);
         screenPane.add(importDialogScreen);
     }
 
     private void initImportScreen() {
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), this::selectItemInGridView);
-        importerScreen.setKeepAfterClose(true);
         screenPane.add(importerScreen);
         importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> {
             int count = c.getList().size() + importerScreen.getSimilar().size();
@@ -351,9 +349,7 @@ public class MainController {
 
     private void initDuplicatesScreen() {
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
-        duplicateOptionsScreen.setKeepAfterClose(true);
         screenPane.add(duplicateOptionsScreen);
-        duplicateOptionsScreen.getDuplicatesScreen().setKeepAfterClose(true);
         screenPane.add(duplicateOptionsScreen.getDuplicatesScreen());
         duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(this::selectItemInGridView);
         duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
@@ -362,7 +358,6 @@ public class MainController {
 
     private void initHelpScreen() {
         helpScreen = new HelpScreen();
-        helpScreen.setKeepAfterClose(true);
         screenPane.add(helpScreen);
     }
 
@@ -371,24 +366,10 @@ public class MainController {
             slideshowScreen.close();
             selectItemInGridView(item);
         });
-        slideshowScreen.setKeepAfterClose(true);
         slideshowScreen.getInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
         slideshowScreen.intervalProperty().bind(settings.slideshowInterval.valueProperty());
         slideshowScreen.preloadProperty().bind(settings.slideshowPreload.valueProperty());
         screenPane.add(slideshowScreen);
-    }
-
-    private void selectItemInGridView(Item item) {
-        if (itemGridView.getItems().contains(item)) {
-            itemGridView.select(item, false, false);
-        } else if (item instanceof MediaItem) {
-            GroupItem group = ((MediaItem) item).getGroup();
-            if (group != null && itemGridView.getItems().contains(group)) {
-                itemGridView.select(group, false, false);
-            } else {
-                Toolkit.getDefaultToolkit().beep();
-            }
-        }
     }
 
     /**
@@ -416,7 +397,6 @@ public class MainController {
      */
     private void initSettingsScreen() {
         settingsScreen = new SettingsScreen();
-        settingsScreen.setKeepAfterClose(true);
         screenPane.add(settingsScreen);
     }
 
@@ -425,7 +405,6 @@ public class MainController {
      */
     private void initTagListScreen() {
         tagListScreen = new TagListScreen();
-        tagListScreen.setKeepAfterClose(true);
         tagListScreen.setCellFactory(param -> {
             TagListCell c = new TagListCell();
             c.setOnContextMenuRequested(event -> {
@@ -460,7 +439,6 @@ public class MainController {
      */
     private void initLogScreen() {
         logScreen = new LogScreen();
-        logScreen.setKeepAfterClose(true);
         screenPane.add(logScreen);
         logScreen.getListView().setCellFactory(param -> new LogListCell());
         Main.log.addHandler(new Handler() {
@@ -1049,7 +1027,7 @@ public class MainController {
                 break;
             }
         }
-        groupDialogScreen.open(screenPane, menagerie, settings, title, toGroup, group -> {
+        groupDialogScreen.open(screenPane, menagerie, title, toGroup, group -> {
             Main.log.info("Created group: " + group);
             Platform.runLater(() -> {
                 if (currentSearch.getResults().contains(group)) itemGridView.select(group, false, false);
@@ -1224,6 +1202,19 @@ public class MainController {
             menagerie.refreshInSearches(changed);
 
             tagEditHistory.push(new TagEditEvent(added, removed));
+        }
+    }
+
+    private void selectItemInGridView(Item item) {
+        if (itemGridView.getItems().contains(item)) {
+            itemGridView.select(item, false, false);
+        } else if (item instanceof MediaItem) {
+            GroupItem group = ((MediaItem) item).getGroup();
+            if (group != null && itemGridView.getItems().contains(group)) {
+                itemGridView.select(group, false, false);
+            } else {
+                Toolkit.getDefaultToolkit().beep();
+            }
         }
     }
 
