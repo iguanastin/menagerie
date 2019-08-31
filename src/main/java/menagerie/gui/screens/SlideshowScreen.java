@@ -57,6 +57,7 @@ public class SlideshowScreen extends Screen {
     private final ItemInfoBox infoBox = new ItemInfoBox();
     private final Label totalLabel = new Label("0");
     private final TextField indexTextField = new TextField("/0");
+    private final Button playPauseButton = new Button("Play");
 
     private final List<Item> items = new ArrayList<>();
     private Item showing = null;
@@ -122,15 +123,14 @@ public class SlideshowScreen extends Screen {
         Button right = new Button("->");
         right.setOnAction(event -> previewNext());
 
-        Button playPause = new Button("Play");
-        playPause.setOnAction(event -> {
+        playPauseButton.setOnAction(event -> {
             if (currentTimerTask == null) {
                 startSlideShow();
-                playPause.setText("Pause");
+                playPauseButton.setText("Pause");
             } else {
                 currentTimerTask.cancel();
                 currentTimerTask = null;
-                playPause.setText("Play");
+                playPauseButton.setText("Play");
             }
         });
 
@@ -159,7 +159,7 @@ public class SlideshowScreen extends Screen {
         indexTextField.setAlignment(Pos.CENTER_RIGHT);
         HBox countHBox = new HBox(indexTextField, totalLabel);
         countHBox.setAlignment(Pos.CENTER);
-        HBox h = new HBox(5, left, select, playPause, right, countHBox);
+        HBox h = new HBox(5, left, select, playPauseButton, right, countHBox);
         h.setAlignment(Pos.CENTER);
         bp = new BorderPane(h, null, close, null, new HBox(5, shuffle, reverse));
         bp.setPadding(new Insets(5));
@@ -370,6 +370,7 @@ public class SlideshowScreen extends Screen {
             @Override
             public boolean cancel() {
                 currentTimerTask = null;
+                Platform.runLater(() -> playPauseButton.setText("Play"));
                 return super.cancel();
             }
         };
