@@ -127,6 +127,11 @@ public class ProgressScreen extends Screen {
         progress.setProgress((double) i / total);
     }
 
+    public void setProgress(double progress) {
+        count.setText(df.format(progress * 100) + "%");
+        this.progress.setProgress(progress);
+    }
+
     @Override
     protected void onClose() {
         if (cancelListener != null) cancelListener.poke();

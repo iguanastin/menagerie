@@ -31,7 +31,7 @@ public class MenagerieSettings extends Settings {
     public GroupSetting importGroup, autoImportGroup, duplicatesGroup, videoGroup, dbGroup, explorerGroup, slideshowGroup;
     public FolderSetting defaultFolder, autoImportFolder, vlcFolder, lastImportFolder;
     public StringSetting userFileTypes, dbUrl, dbUser, dbPass, tagWithOnImport, importItemsIntoGroupName, importOrder;
-    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesSorted, duplicatesIncludeGroups, slideshowPreload;
+    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesIncludeGroups, slideshowPreload;
     public DoubleSetting duplicatesConfidence, slideshowInterval;
     public IntSetting gridWidth, licensesAgreed, windowX, windowY, windowWidth, windowHeight;
 
@@ -53,9 +53,8 @@ public class MenagerieSettings extends Settings {
 
         duplicatesGroup = new GroupSetting("duplicate-group").label("Duplicate Finding");
         duplicatesConfidence = new DoubleSetting("duplicate-confidence", 0.95).range(0.9, 1.0).label("Duplicate Confidence").tip("Value between 0.90 and 1.00");
-        duplicatesSorted = new BooleanSetting("duplicates-sorted", true).label("Sort duplicates by confidence").tip("Shows duplicates ordered by similarity. Most similar first");
         duplicatesIncludeGroups = new BooleanSetting("duplicates-groups", true).label("Include items in groups").tip("Include group items in duplicate comparisons");
-        Collections.addAll(duplicatesGroup.getChildren(), duplicatesConfidence, duplicatesSorted, duplicatesIncludeGroups);
+        Collections.addAll(duplicatesGroup.getChildren(), duplicatesConfidence, duplicatesIncludeGroups);
         getSettings().add(duplicatesGroup);
 
         slideshowGroup = new GroupSetting("slideshow-group").label("Slideshow");

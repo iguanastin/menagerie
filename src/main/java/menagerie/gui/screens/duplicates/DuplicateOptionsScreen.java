@@ -39,19 +39,15 @@ import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.gui.screens.dialogs.ProgressScreen;
-import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.settings.MenagerieSettings;
-import menagerie.util.CancellableThread;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -59,6 +55,7 @@ public class DuplicateOptionsScreen extends Screen {
 
     private static final double DEFAULT_CONFIDENCE = 0.95;
     private static final long PROGRESS_UPDATE_INTERVAL = 16;
+    private long lastProgressUpdate = 0;
 
     private enum Scope {
         SELECTED, SEARCHED, ALL
@@ -71,7 +68,6 @@ public class DuplicateOptionsScreen extends Screen {
     private final Label compareCountLabel = new Label("~N/A comparisons"), firstCountLabel = new Label("0"), secondCountLabel = new Label("0");
     private final ChoiceBox<Scope> compareChoiceBox = new ChoiceBox<>(), toChoiceBox = new ChoiceBox<>();
     private final TextField confidenceTextField = new TextField();
-    private final CheckBox sortedCheckBox = new CheckBox();
     private final CheckBox includeGroupElementsCheckBox = new CheckBox("Include group elements");
     private final Button previousButton = new Button("Open last");
 
@@ -143,17 +139,14 @@ public class DuplicateOptionsScreen extends Screen {
 
         contents.getChildren().add(includeGroupElementsCheckBox);
 
-        sortedCheckBox.setText(settings.duplicatesSorted.getLabel());
-        sortedCheckBox.setTooltip(new Tooltip("Sorts similar pairs by confidence"));
-        contents.getChildren().add(sortedCheckBox);
-
         confidenceTextField.setPromptText(MediaItem.MIN_CONFIDENCE + "-" + MediaItem.MAX_CONFIDENCE);
         confidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) {
                 try {
                     double value = Double.parseDouble(confidenceTextField.getText());
                     if (value < MediaItem.MIN_CONFIDENCE) confidenceTextField.setText("" + MediaItem.MIN_CONFIDENCE);
-                    else if (value > MediaItem.MAX_CONFIDENCE) confidenceTextField.setText("" + MediaItem.MAX_CONFIDENCE);
+                    else if (value > MediaItem.MAX_CONFIDENCE)
+                        confidenceTextField.setText("" + MediaItem.MAX_CONFIDENCE);
                 } catch (NumberFormatException e) {
                     confidenceTextField.setText("" + DEFAULT_CONFIDENCE);
                 }
@@ -245,7 +238,6 @@ public class DuplicateOptionsScreen extends Screen {
     private void saveSettings() {
         try {
             settings.duplicatesConfidence.setValue(Double.parseDouble(confidenceTextField.getText()));
-            settings.duplicatesSorted.setValue(sortedCheckBox.isSelected());
             settings.duplicatesIncludeGroups.setValue(includeGroupElementsCheckBox.isSelected());
         } catch (NumberFormatException e) {
             Main.log.log(Level.WARNING, "Failed to convert DuplicateOptionsScreen confidenceTextField to double for saving settings", e);
@@ -261,105 +253,51 @@ public class DuplicateOptionsScreen extends Screen {
     private void compareButtonOnAction() {
         saveSettings();
 
-        final List<SimilarPair<MediaItem>> pairs = new ArrayList<>();
-        final double confidence = settings.duplicatesConfidence.getValue();
-        final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
         ProgressScreen ps = new ProgressScreen();
-        CancellableThread ct = new CancellableThread() {
-            @Override
-            public void run() {
-                //Find lists to compare
-                List<Item> compare = all;
-                if (compareChoiceBox.getValue() == Scope.SELECTED) {
-                    compare = selected;
-                } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
-                    compare = searched;
-                }
-                if (includeGroupElementsCheckBox.isSelected()) {
-                    compare = expandGroups(compare);
-                } else {
-                    compare = new ArrayList<>(compare);
-                }
-                List<Item> to = all;
-                if (toChoiceBox.getValue() == Scope.SELECTED) {
-                    to = selected;
-                } else if (toChoiceBox.getValue() == Scope.SEARCHED) {
-                    to = searched;
-                }
-                if (includeGroupElementsCheckBox.isSelected()) {
-                    to = expandGroups(to);
-                } else {
-                    to = new ArrayList<>(to);
-                }
 
-                compare.removeIf(item -> !(item instanceof MediaItem) || ((MediaItem) item).hasNoSimilar());
-                to.removeIf(item -> !(item instanceof MediaItem) || ((MediaItem) item).hasNoSimilar());
+        List<Item> compare = getComparableItems(compareChoiceBox);
+        List<Item> to = getComparableItems(toChoiceBox);
 
-                final int ffs = compare.size();
-                Platform.runLater(() -> ps.setProgress(0, ffs));
-                long lastProgressUpdate = 0;
+        Platform.runLater(() -> ps.setProgress(0));
 
-                //Find duplicates
-                int i = 0;
-                for (Item i1 : compare) {
-                    if (!running) {
-                        Platform.runLater(ps::close);
-                        return;
-                    }
-
-                    if (!(i1 instanceof MediaItem)) continue;
-                    if (((MediaItem) i1).hasNoSimilar()) continue;
-
-                    // Ensures no comparing to self
-                    to.remove(i1);
-
-                    // Find duplicates of i1
-                    for (Item i2 : to) {
-                        if (!(i2 instanceof MediaItem)) continue;
-                        if (((MediaItem) i2).hasNoSimilar()) continue;
-
-                        final double similarity = ((MediaItem) i1).getSimilarityTo((MediaItem) i2);
-                        if (similarity >= confidenceSquare || (similarity >= confidence && ((MediaItem) i1).getHistogram().isColorful() && ((MediaItem) i2).getHistogram().isColorful())) {
-                            SimilarPair<MediaItem> pair = new SimilarPair<>((MediaItem) i1, (MediaItem) i2, similarity);
-                            if (!menagerie.hasNonDuplicate(pair)) pairs.add(pair);
-                        }
-                    }
-
-                    long time = System.currentTimeMillis();
-                    if (time - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
-                        lastProgressUpdate = time;
-
-                        // Update GUI
-                        final int finalI = i;
-                        final int finalTotal = compare.size();
-                        Platform.runLater(() -> ps.setProgress(finalI, finalTotal));
-                    }
-
-                    // Increment counter
-                    i++;
-                }
-
-                if (sortedCheckBox.isSelected()) {
-                    pairs.sort(Collections.reverseOrder(Comparator.comparing(SimilarPair::getSimilarity)));
-                }
-
-                Platform.runLater(() -> {
-                    ps.close();
-                    close();
-                    if (pairs.isEmpty()) {
-                        new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
-                    } else {
-                        duplicateScreen.open(getManager(), menagerie, pairs);
-                    }
-                });
+        DuplicateManagerThread finder = new DuplicateManagerThread(menagerie, compare, to, settings.duplicatesConfidence.getValue(), progress -> Platform.runLater(() -> {
+            long time = System.currentTimeMillis();
+            if (time - getLastProgressUpdate() > PROGRESS_UPDATE_INTERVAL) {
+                setLastProgressUpdate(time);
+                Platform.runLater(() -> ps.setProgress(progress));
             }
-        };
+        }), results -> Platform.runLater(() -> {
+            ps.close();
+            close();
+            if (results.isEmpty()) {
+                new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
+            } else {
+                duplicateScreen.open(getManager(), menagerie, results);
+            }
+        }));
+
         ps.open(getManager(), "Finding similar items", "Comparing items...", () -> {
-            ct.cancel();
+            finder.cancel();
             close();
         });
-        ct.setDaemon(true);
-        ct.start();
+
+        finder.start();
+    }
+
+    private List<Item> getComparableItems(ChoiceBox<Scope> compareChoiceBox) {
+        List<Item> compare = all;
+        if (compareChoiceBox.getValue() == Scope.SELECTED) {
+            compare = selected;
+        } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
+            compare = searched;
+        }
+        if (includeGroupElementsCheckBox.isSelected()) {
+            compare = expandGroups(compare);
+        } else {
+            compare = new ArrayList<>(compare);
+        }
+        compare.removeIf(item -> !(item instanceof MediaItem) || ((MediaItem) item).hasNoSimilar());
+        return compare;
     }
 
     @Override
@@ -367,9 +305,16 @@ public class DuplicateOptionsScreen extends Screen {
         updateCounts();
 
         confidenceTextField.setText(settings.duplicatesConfidence.getValue() + "");
-        sortedCheckBox.setSelected(settings.duplicatesSorted.getValue());
         includeGroupElementsCheckBox.setSelected(settings.duplicatesIncludeGroups.getValue());
         previousButton.setDisable(duplicateScreen.getPairs() == null || duplicateScreen.getPairs().isEmpty());
+    }
+
+    private long getLastProgressUpdate() {
+        return lastProgressUpdate;
+    }
+
+    private void setLastProgressUpdate(long lastProgressUpdate) {
+        this.lastProgressUpdate = lastProgressUpdate;
     }
 
     /**
