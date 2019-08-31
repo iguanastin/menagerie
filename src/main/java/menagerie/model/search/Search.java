@@ -53,7 +53,7 @@ public class Search {
     /**
      * Constructs a search with given rules.
      *
-     * @param search         User input string to parse.
+     * @param search      User input string to parse.
      * @param descending  Sort the results descending.
      * @param showGrouped Show items that are part of a group.
      */
