@@ -125,9 +125,7 @@ public class SlideshowScreen extends Screen {
             int i = items.indexOf(showing);
             try {
                 int temp = Integer.parseInt(indexTextField.getText()) - 1;
-                if (temp >= 0 && temp < items.size()) {
-                    i = temp;
-                }
+                i = Math.max(0, Math.min(temp, items.size() - 1)); // Clamp to valid indices
             } catch (NumberFormatException e) {
                 // Nothing
             }

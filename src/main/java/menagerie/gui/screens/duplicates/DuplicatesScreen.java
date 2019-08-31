@@ -62,6 +62,7 @@ public class DuplicatesScreen extends Screen {
     private final CheckBox nonDupeCheckBox = new CheckBox("Not a duplicate");
 
     private final Label similarityLabel = new Label("N/A");
+    private final TextField indexTextField = new TextField("0");
 
     private Menagerie menagerie = null;
     private List<SimilarPair<MediaItem>> pairs = null;
@@ -214,7 +215,21 @@ public class DuplicatesScreen extends Screen {
         VBox bottom = new VBox(5);
         bottom.setPadding(new Insets(5));
         // Construct first element
-        HBox hbc = new HBox(5, similarityLabel);
+        indexTextField.setAlignment(Pos.CENTER_RIGHT);
+        indexTextField.setPrefWidth(50);
+        indexTextField.setOnAction(event -> {
+            int i = pairs.indexOf(currentPair);
+            try {
+                int temp = Integer.parseInt(indexTextField.getText()) - 1;
+                i = Math.max(0, Math.min(temp, pairs.size() - 1)); // Clamp to valid indices
+            } catch (NumberFormatException e) {
+                // Nothing
+            }
+
+            preview(pairs.get(i));
+            requestFocus();
+        });
+        HBox hbc = new HBox(indexTextField, similarityLabel);
         hbc.setAlignment(Pos.CENTER);
         Button leftDeleteButton = new Button("Delete");
         leftDeleteButton.setOnAction(event -> deleteItem(currentPair.getObject1()));
@@ -341,7 +356,8 @@ public class DuplicatesScreen extends Screen {
             rightInfoBox.setItem(pair.getObject2());
 
             DecimalFormat df = new DecimalFormat("#.##");
-            similarityLabel.setText((pairs.indexOf(pair) + 1) + "/" + pairs.size() + ": " + df.format(pair.getSimilarity() * 100) + "%");
+            indexTextField.setText((pairs.indexOf(pair) + 1) + "");
+            similarityLabel.setText("/" + pairs.size() + ": " + df.format(pair.getSimilarity() * 100) + "%");
 
             nonDupeCheckBox.setSelected(menagerie.hasNonDuplicate(pair));
         } else {

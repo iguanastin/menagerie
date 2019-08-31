@@ -37,6 +37,7 @@ import javafx.scene.layout.VBox;
 import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
+import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.gui.screens.dialogs.ProgressScreen;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.GroupItem;
@@ -343,9 +344,13 @@ public class DuplicateOptionsScreen extends Screen {
                 }
 
                 Platform.runLater(() -> {
-                    duplicateScreen.open(getManager(), menagerie, pairs);
                     ps.close();
                     close();
+                    if (pairs.isEmpty()) {
+                        new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
+                    } else {
+                        duplicateScreen.open(getManager(), menagerie, pairs);
+                    }
                 });
             }
         };
