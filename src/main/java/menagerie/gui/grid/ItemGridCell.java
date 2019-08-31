@@ -48,10 +48,13 @@ public class ItemGridCell extends GridCell<Item> {
     private static final String UNSELECTED_BG_CSS = "-fx-background-color: -item-unselected-color";
     private static final String SELECTED_BG_CSS = "-fx-background-color: -item-selected-color";
 
-    private static final Font LARGE_FONT = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 28);
-    private static final Font SMALL_FONT = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 14);
+    private static final Font SMALL_FONT = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 12);
 
-    private final ImageView view = new ImageView();
+    private static Image groupTagImage = null;
+    private static Image videoTagImage = null;
+
+    private final ImageView thumbnailView = new ImageView();
+    private final ImageView tagView = new ImageView();
     private final Label centerLabel = new Label();
     private final Label bottomRightLabel = new Label();
 
@@ -63,7 +66,7 @@ public class ItemGridCell extends GridCell<Item> {
         this.getStyleClass().add("item-grid-cell");
 
         centerLabel.setPadding(new Insets(5));
-        centerLabel.setFont(LARGE_FONT);
+        centerLabel.setFont(SMALL_FONT);
         DropShadow effect = new DropShadow();
         effect.setSpread(0.5);
         centerLabel.setEffect(effect);
@@ -75,12 +78,17 @@ public class ItemGridCell extends GridCell<Item> {
         bottomRightLabel.setEffect(new DropShadow());
         StackPane.setAlignment(bottomRightLabel, Pos.BOTTOM_RIGHT);
 
-        setGraphic(new StackPane(view, centerLabel, bottomRightLabel));
+        tagView.setTranslateX(-3);
+        tagView.setTranslateY(-5);
+        StackPane.setAlignment(tagView, Pos.BOTTOM_LEFT);
+        if (groupTagImage == null) groupTagImage = new Image(getClass().getResource("/misc/group_tag.png").toString());
+        if (videoTagImage == null) videoTagImage = new Image(getClass().getResource("/misc/video_tag.png").toString());
+
+        setGraphic(new StackPane(thumbnailView, centerLabel, bottomRightLabel, tagView));
         setAlignment(Pos.CENTER);
         setStyle(UNSELECTED_BG_CSS);
 
-        imageReadyListener = image -> Platform.runLater(() -> view.setImage(image));
-
+        imageReadyListener = image -> Platform.runLater(() -> thumbnailView.setImage(image));
     }
 
     @Override
@@ -92,28 +100,26 @@ public class ItemGridCell extends GridCell<Item> {
         }
 
         if (empty) {
-            view.setImage(null);
+            thumbnailView.setImage(null);
             centerLabel.setText(null);
             bottomRightLabel.setText(null);
+            tagView.setImage(null);
         } else {
             if (item.getThumbnail() != null) {
                 item.getThumbnail().want();
                 if (item.getThumbnail().getImage() != null) {
-                    view.setImage(item.getThumbnail().getImage());
+                    thumbnailView.setImage(item.getThumbnail().getImage());
                 } else {
                     item.getThumbnail().want();
-                    view.setImage(null);
+                    thumbnailView.setImage(null);
                     item.getThumbnail().addImageReadyListener(imageReadyListener);
                 }
             }
             if (item instanceof MediaItem) {
                 if (((MediaItem) item).isVideo()) {
-                    if (Main.isVlcjLoaded()) {
-                        centerLabel.setText("Video");
-                        centerLabel.setFont(LARGE_FONT);
-                    } else {
+                    tagView.setImage(videoTagImage);
+                    if (!Main.isVlcjLoaded()) {
                         centerLabel.setText(((MediaItem) item).getFile().getName());
-                        centerLabel.setFont(SMALL_FONT);
                     }
                 } else {
                     centerLabel.setText(null);
@@ -125,20 +131,19 @@ public class ItemGridCell extends GridCell<Item> {
                 }
                 if (!((MediaItem) item).isImage() && !((MediaItem) item).isVideo()) {
                     centerLabel.setText(((MediaItem) item).getFile().getName());
-                    centerLabel.setFont(SMALL_FONT);
                     //                    Icon icon = FileSystemView.getFileSystemView().getSystemIcon(((MediaItem) item).getFile());
                     //                    ImageIcon imgIcon = (ImageIcon) icon;
                     //                    BufferedImage bi = new BufferedImage(imgIcon.getIconWidth(), imgIcon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
                     //                    Graphics2D g2d = bi.createGraphics();
                     //                    g2d.drawImage(imgIcon.getImage(), 0, 0, null);
-                    //                    view.setImage(SwingFXUtils.toFXImage(bi, null));
+                    //                    thumbnailView.setImage(SwingFXUtils.toFXImage(bi, null));
                 }
                 Tooltip tt = new Tooltip(((MediaItem) item).getFile().getAbsolutePath());
                 tt.setWrapText(true);
                 setTooltip(tt);
             } else if (item instanceof GroupItem) {
                 centerLabel.setText(((GroupItem) item).getTitle());
-                centerLabel.setFont(SMALL_FONT);
+                tagView.setImage(groupTagImage);
                 bottomRightLabel.setText(((GroupItem) item).getElements().size() + "");
                 Tooltip tt = new Tooltip(((GroupItem) item).getTitle());
                 tt.setWrapText(true);
