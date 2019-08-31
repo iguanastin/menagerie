@@ -28,11 +28,11 @@ import java.util.Collections;
 
 public class MenagerieSettings extends Settings {
 
-    public GroupSetting importGroup, autoImportGroup, duplicatesGroup, videoGroup, dbGroup, explorerGroup;
+    public GroupSetting importGroup, autoImportGroup, duplicatesGroup, videoGroup, dbGroup, explorerGroup, slideshowGroup;
     public FolderSetting defaultFolder, autoImportFolder, vlcFolder, lastImportFolder;
     public StringSetting userFileTypes, dbUrl, dbUser, dbPass, tagWithOnImport, importItemsIntoGroupName, importOrder;
-    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesSorted, duplicatesIncludeGroups;
-    public DoubleSetting duplicatesConfidence;
+    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesSorted, duplicatesIncludeGroups, slideshowPreload;
+    public DoubleSetting duplicatesConfidence, slideshowInterval;
     public IntSetting gridWidth, licensesAgreed, windowX, windowY, windowWidth, windowHeight;
 
 
@@ -57,6 +57,12 @@ public class MenagerieSettings extends Settings {
         duplicatesIncludeGroups = new BooleanSetting("duplicates-groups", true).label("Include items in groups").tip("Include group items in duplicate comparisons");
         Collections.addAll(duplicatesGroup.getChildren(), duplicatesConfidence, duplicatesSorted, duplicatesIncludeGroups);
         getSettings().add(duplicatesGroup);
+
+        slideshowGroup = new GroupSetting("slideshow-group").label("Slideshow");
+        slideshowInterval = new DoubleSetting("slideshow-interval", 10).label("Slideshow interval (seconds)").min(0.1);
+        slideshowPreload = new BooleanSetting("slideshow-preload", true).label("Preload previous/next images");
+        Collections.addAll(slideshowGroup.getChildren(), slideshowInterval, slideshowPreload);
+        getSettings().add(slideshowGroup);
 
         videoGroup = new GroupSetting("video-group").label("Video Playback");
         repeatVideo = new BooleanSetting("repeat-video", true).label("Repeat video");

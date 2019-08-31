@@ -24,11 +24,17 @@
 
 package menagerie.gui.screens;
 
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -43,9 +49,7 @@ import menagerie.model.menagerie.Menagerie;
 import menagerie.util.listeners.ObjectListener;
 import menagerie.util.listeners.PokeListener;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class SlideshowScreen extends Screen {
 
@@ -57,6 +61,12 @@ public class SlideshowScreen extends Screen {
     private final List<Item> items = new ArrayList<>();
     private Item showing = null;
     private Menagerie menagerie;
+
+    private final Timer timer = new Timer(true);
+    private TimerTask currentTimerTask = null;
+    private final DoubleProperty interval = new SimpleDoubleProperty(10);
+    private final BooleanProperty preload = new SimpleBooleanProperty(true);
+    private Image preloadPrev = null, preloadNext = null;
 
 
     public SlideshowScreen(ObjectListener<Item> selectListener) {
@@ -109,6 +119,21 @@ public class SlideshowScreen extends Screen {
             if (showing != null && selectListener != null) selectListener.pass(showing);
         });
 
+        Button right = new Button("->");
+        right.setOnAction(event -> previewNext());
+
+        Button playPause = new Button("Play");
+        playPause.setOnAction(event -> {
+            if (currentTimerTask == null) {
+                startSlideShow();
+                playPause.setText("Pause");
+            } else {
+                currentTimerTask.cancel();
+                currentTimerTask = null;
+                playPause.setText("Play");
+            }
+        });
+
         Button close = new Button("Close");
         close.setOnAction(event -> close());
 
@@ -117,9 +142,6 @@ public class SlideshowScreen extends Screen {
 
         Button reverse = new Button("Reverse");
         reverse.setOnAction(event -> reverse());
-
-        Button right = new Button("->");
-        right.setOnAction(event -> previewNext());
 
         indexTextField.setOnAction(event -> {
             int i = items.indexOf(showing);
@@ -137,7 +159,7 @@ public class SlideshowScreen extends Screen {
         indexTextField.setAlignment(Pos.CENTER_RIGHT);
         HBox countHBox = new HBox(indexTextField, totalLabel);
         countHBox.setAlignment(Pos.CENTER);
-        HBox h = new HBox(5, left, select, right, countHBox);
+        HBox h = new HBox(5, left, select, playPause, right, countHBox);
         h.setAlignment(Pos.CENTER);
         bp = new BorderPane(h, null, close, null, new HBox(5, shuffle, reverse));
         bp.setPadding(new Insets(5));
@@ -189,6 +211,10 @@ public class SlideshowScreen extends Screen {
     @Override
     protected void onClose() {
         items.clear();
+        if (currentTimerTask != null) {
+            currentTimerTask.cancel();
+        }
+
         preview(null);
     }
 
@@ -208,7 +234,7 @@ public class SlideshowScreen extends Screen {
      *
      * @param deleteFile Delete the file after removing from the Menagerie.
      */
-    public void tryDeleteCurrent(boolean deleteFile) {
+    private void tryDeleteCurrent(boolean deleteFile) {
         PokeListener onFinish = () -> {
             if (deleteFile) {
                 menagerie.deleteItem(getShowing());
@@ -245,11 +271,25 @@ public class SlideshowScreen extends Screen {
     private void preview(Item item) {
         showing = item;
 
+        preloadPrev = null;
+        preloadNext = null;
+        int i = items.indexOf(showing);
+        if (isPreload() && i >= 0) {
+            if (i > 0) {
+                Item previous = items.get(i - 1);
+                if (previous instanceof MediaItem) preloadPrev = ((MediaItem) previous).getImage();
+            }
+            if (i < items.size()) {
+                Item next = items.get(i + 1);
+                if (next instanceof MediaItem) preloadNext = ((MediaItem) next).getImage();
+            }
+        }
+
         updateCountLabel();
 
         if (item instanceof MediaItem) {
-            mediaView.preview((MediaItem) item);
-            infoBox.setItem((MediaItem) item);
+            mediaView.preview(item);
+            infoBox.setItem(item);
         } else {
             mediaView.preview(null);
         }
@@ -304,6 +344,62 @@ public class SlideshowScreen extends Screen {
                 preview(items.get(index - 1));
             }
         }
+    }
+
+    public void startSlideShow() {
+        if (currentTimerTask != null) currentTimerTask.cancel();
+
+        currentTimerTask = new TimerTask() {
+            @Override
+            public void run() {
+                if (showing == null) {
+                    cancel();
+                    return;
+                }
+
+                int i = items.indexOf(showing);
+                if (i < 0) {
+                    cancel();
+                } else if (i >= items.size() - 1) {
+                    Platform.runLater(() -> preview(items.get(0)));
+                } else {
+                    Platform.runLater(() -> preview(items.get(i + 1)));
+                }
+            }
+
+            @Override
+            public boolean cancel() {
+                currentTimerTask = null;
+                return super.cancel();
+            }
+        };
+
+        final long interval = (long) (getInterval() * 1000);
+        timer.schedule(currentTimerTask, interval, interval);
+    }
+
+    public DoubleProperty intervalProperty() {
+        return interval;
+    }
+
+    public double getInterval() {
+        return interval.get();
+    }
+
+    public void setInterval(double d) {
+        interval.set(d);
+    }
+
+    public boolean isPreload() {
+        return preload.get();
+    }
+
+    public BooleanProperty preloadProperty() {
+        return preload;
+    }
+
+    public void setPreload(boolean b) {
+        preload.set(b);
     }
 
     /**

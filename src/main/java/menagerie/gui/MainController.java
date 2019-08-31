@@ -373,6 +373,8 @@ public class MainController {
         });
         slideshowScreen.setKeepAfterClose(true);
         slideshowScreen.getInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
+        slideshowScreen.intervalProperty().bind(settings.slideshowInterval.valueProperty());
+        slideshowScreen.preloadProperty().bind(settings.slideshowPreload.valueProperty());
         screenPane.add(slideshowScreen);
     }
 
