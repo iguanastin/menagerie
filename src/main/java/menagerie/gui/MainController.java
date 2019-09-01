@@ -95,6 +95,7 @@ public class MainController {
     public PredictiveTextField editTagsTextField;
     public ToggleButton listDescendingToggleButton;
     public ToggleButton showGroupedToggleButton;
+    public ToggleButton shuffledSearchButton;
     public ItemGridView itemGridView;
     public DynamicMediaView previewMediaView;
     public ItemInfoBox itemInfoBox;
@@ -255,7 +256,7 @@ public class MainController {
             rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
 
             // Apply a default search
-            applySearch(null, null, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+            applySearch(null, null, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
 
             // Init folder watcher
             if (settings.autoImportGroup.isEnabled())
@@ -417,7 +418,7 @@ public class MainController {
                     tagListScreen.close();
                     GroupItem scope = null;
                     if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                    applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+                    applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
                 });
                 ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1);
                 m.show(c, event.getScreenX(), event.getScreenY());
@@ -607,7 +608,7 @@ public class MainController {
                         }
                         GroupItem scope = null;
                         if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
                     });
                     MenuItem i2 = new MenuItem("Exclude from search");
                     i2.setOnAction(event1 -> {
@@ -618,7 +619,7 @@ public class MainController {
                         }
                         GroupItem scope = null;
                         if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
                     });
                     MenuItem i3 = new MenuItem("Remove from selected");
                     i3.setOnAction(event1 -> {
@@ -1063,8 +1064,9 @@ public class MainController {
 
             listDescendingToggleButton.setSelected(history.isDescending());
             showGroupedToggleButton.setSelected(history.isShowGrouped());
+            shuffledSearchButton.setSelected(history.isShuffled());
             searchTextField.setText(history.getSearch());
-            applySearch(history.getSearch(), history.getGroupScope(), history.isDescending(), history.isShowGrouped());
+            applySearch(history.getSearch(), history.getGroupScope(), history.isDescending(), history.isShowGrouped(), history.isShuffled());
             searchHistory.pop(); // Pop history item that was JUST created by the new search.
 
             if (searchHistory.isEmpty()) backButton.setDisable(true);
@@ -1087,7 +1089,7 @@ public class MainController {
      */
     private void explorerOpenGroup(GroupItem group) {
         searchTextField.setText(null);
-        applySearch(searchTextField.getText(), group, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+        applySearch(searchTextField.getText(), group, listDescendingToggleButton.isSelected(), true, false);
     }
 
     /**
@@ -1097,14 +1099,14 @@ public class MainController {
      * @param descending  Order results in descending order.
      * @param showGrouped Show MediaItems that are in a group.
      */
-    private void applySearch(String search, GroupItem groupScope, boolean descending, boolean showGrouped) {
-        Main.log.info("Searching: \"" + search + "\", group:" + groupScope + ", descending:" + descending + ", showGrouped:" + showGrouped);
+    private void applySearch(String search, GroupItem groupScope, boolean descending, boolean showGrouped, boolean shuffled) {
+        Main.log.info("Searching: \"" + search + "\", group:" + groupScope + ", descending:" + descending + ", showGrouped:" + showGrouped + ", shuffled:" + shuffled);
 
         // Clean up previous search
         if (currentSearch != null) {
             GroupItem scope = null;
             if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-            searchHistory.push(new SearchHistory(currentSearch.getSearchString(), scope, itemGridView.getSelected(), currentSearch.isDescending(), currentSearch.isShowGrouped()));
+            searchHistory.push(new SearchHistory(currentSearch.getSearchString(), scope, itemGridView.getSelected(), currentSearch.isDescending(), currentSearch.isShowGrouped(), currentSearch.isShuffled()));
             backButton.setDisable(false);
 
             menagerie.unregisterSearch(currentSearch);
@@ -1114,11 +1116,19 @@ public class MainController {
 
         // Create new search
         if (groupScope == null) {
-            currentSearch = new Search(search, descending, showGrouped);
+            showGroupedToggleButton.setDisable(false);
+            showGroupedToggleButton.setSelected(showGrouped);
+            shuffledSearchButton.setDisable(false);
+            shuffledSearchButton.setSelected(shuffled);
+            currentSearch = new Search(search, descending, showGrouped, shuffled);
             scopeLabel.setText("Scope: All");
             scopeLabel.setTooltip(null);
         } else {
-            currentSearch = new GroupSearch(search, groupScope, descending);
+            showGroupedToggleButton.setSelected(true);
+            showGroupedToggleButton.setDisable(true);
+            shuffledSearchButton.setSelected(false);
+            shuffledSearchButton.setDisable(true);
+            currentSearch = new GroupSearch(search, groupScope, descending, shuffled);
             scopeLabel.setText("Scope: " + groupScope.getTitle());
             Tooltip tt = new Tooltip(groupScope.getTitle());
             tt.setWrapText(true);
@@ -1338,7 +1348,7 @@ public class MainController {
     public void searchButtonOnAction(ActionEvent event) {
         GroupItem scope = null;
         if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
         itemGridView.requestFocus();
         event.consume();
     }
@@ -1346,7 +1356,7 @@ public class MainController {
     public void searchTextFieldOnAction(ActionEvent event) {
         GroupItem scope = null;
         if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected());
+        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
         itemGridView.requestFocus();
         event.consume();
     }

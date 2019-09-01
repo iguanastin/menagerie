@@ -43,6 +43,7 @@ public class Search {
     private final List<SearchRule> rules = new ArrayList<>();
     private final boolean showGrouped;
     private final boolean descending;
+    private final boolean shuffled;
     private final String searchString;
 
     private final ObservableList<Item> results = FXCollections.observableArrayList();
@@ -57,15 +58,17 @@ public class Search {
      * @param descending  Sort the results descending.
      * @param showGrouped Show items that are part of a group.
      */
-    public Search(String search, boolean descending, boolean showGrouped) {
+    public Search(String search, boolean descending, boolean showGrouped, boolean shuffled) {
         this.descending = descending;
         this.showGrouped = showGrouped;
+        this.shuffled = shuffled;
         this.searchString = search;
 
         if (search != null && !search.isEmpty()) parseRules(search);
         rules.sort(null);
 
         comparator = (o1, o2) -> {
+            if (shuffled) return 0;
             if (descending) {
                 return o2.getId() - o1.getId();
             } else {
@@ -184,6 +187,10 @@ public class Search {
         return showGrouped;
     }
 
+    public boolean isShuffled() {
+        return shuffled;
+    }
+
     /**
      * @return The comparator being used to sort search results.
      */
@@ -212,7 +219,11 @@ public class Search {
         sort();
 
         results.removeAll(toRemove);
-        results.addAll(toAdd);
+        if (isShuffled()) {
+            toAdd.forEach(item -> results.add((int) Math.floor(Math.random() * results.size()), item));
+        } else {
+            results.addAll(toAdd);
+        }
     }
 
     protected boolean isItemValid(Item item) {

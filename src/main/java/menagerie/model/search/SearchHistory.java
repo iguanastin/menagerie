@@ -36,14 +36,16 @@ public class SearchHistory {
     private final String search;
     private final boolean descending;
     private final boolean showGrouped;
+    private final boolean shuffled;
     private final GroupItem groupScope;
 
 
-    public SearchHistory(String search, GroupItem scope, List<Item> selected, boolean descending, boolean showGrouped) {
+    public SearchHistory(String search, GroupItem scope, List<Item> selected, boolean descending, boolean showGrouped, boolean shuffled) {
         this.search = search;
         this.groupScope = scope;
         this.descending = descending;
         this.showGrouped = showGrouped;
+        this.shuffled = shuffled;
         this.selected.addAll(selected);
     }
 
@@ -65,6 +67,10 @@ public class SearchHistory {
 
     public boolean isShowGrouped() {
         return showGrouped;
+    }
+
+    public boolean isShuffled() {
+        return shuffled;
     }
 
 }

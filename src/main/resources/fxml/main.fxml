@@ -90,6 +90,8 @@
                                                   selected="true" text="Descending"/>
                                     <ToggleButton fx:id="showGroupedToggleButton" mnemonicParsing="false"
                                                   text="Show Grouped"/>
+                                    <ToggleButton fx:id="shuffledSearchButton" mnemonicParsing="false"
+                                                  text="Randomized"/>
                                 </HBox>
                             </left>
                         </BorderPane>

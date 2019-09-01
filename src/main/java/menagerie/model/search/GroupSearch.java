@@ -40,8 +40,8 @@ public class GroupSearch extends Search {
      * @param group      Group scope of this search.
      * @param descending Sort the results descending.
      */
-    public GroupSearch(String search, GroupItem group, boolean descending) {
-        super(search, descending, true);
+    public GroupSearch(String search, GroupItem group, boolean descending, boolean shuffled) {
+        super(search, descending, true, shuffled);
         this.group = group;
 
         comparator = (o1, o2) -> {
