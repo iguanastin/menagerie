@@ -66,11 +66,11 @@ public class DuplicateManagerThread extends CancellableThread {
         total = compareFrom.size();
         finished = 0;
 
-        final int cores = Runtime.getRuntime().availableProcessors();
-        final int chunk = (int) Math.ceil((double) compareFrom.size() / cores);
+        final int threads = Math.min(Runtime.getRuntime().availableProcessors(), compareFrom.size());
+        final int chunk = (int) Math.ceil((double) compareFrom.size() / threads);
         final Lock finishLock = new ReentrantLock();
-        final CountDownLatch finishLatch = new CountDownLatch(cores);
-        for (int i = 0; i < cores; i++) {
+        final CountDownLatch finishLatch = new CountDownLatch(threads);
+        for (int i = 0; i < threads; i++) {
             DuplicateFinderThread finder = new DuplicateFinderThread(menagerie, compareFrom.subList(i * chunk, Math.min((i + 1) * chunk, compareFrom.size())), compareTo, confidence, () -> {
                 finished++;
                 if (progressListener != null) progressListener.pass(getProgress());

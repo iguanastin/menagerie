@@ -353,6 +353,7 @@ public class MainController {
         screenPane.add(duplicateOptionsScreen);
         screenPane.add(duplicateOptionsScreen.getDuplicatesScreen());
         duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(this::selectItemInGridView);
+        duplicateOptionsScreen.getDuplicatesScreen().preloadProperty().bind(settings.duplicatePreload.valueProperty());
         duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
         duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
     }

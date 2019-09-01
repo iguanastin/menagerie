@@ -24,10 +24,13 @@
 
 package menagerie.gui.screens.duplicates;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -68,16 +71,16 @@ public class DuplicatesScreen extends Screen {
     private List<SimilarPair<MediaItem>> pairs = null;
     private SimilarPair<MediaItem> currentPair = null;
 
-    private boolean deleteFile = true;
+    private BooleanProperty deleteFile = new SimpleBooleanProperty(true);
+    private BooleanProperty preload = new SimpleBooleanProperty(true);
+    private Image preloadPrevLeft = null, preloadPrevRight = null, preloadNextLeft = null, preloadNextRight = null;
 
     private ObjectListener<Item> selectListener = null;
-
     private ListChangeListener<Tag> leftTagListener = c -> {
         while (c.next()) {
             repopulateTagLists();
         }
     };
-
     private ListChangeListener<Tag> rightTagListener = c -> {
         while (c.next()) {
             repopulateTagLists();
@@ -338,16 +341,18 @@ public class DuplicatesScreen extends Screen {
         }
         currentPair = pair;
 
+        leftTagList.getItems().clear();
+        rightTagList.getItems().clear();
+        updatePreload(pair);
+
         if (pair != null) {
             leftMediaView.preview(pair.getObject1());
             rightMediaView.preview(pair.getObject2());
 
-            leftTagList.getItems().clear();
             leftTagList.getItems().addAll(pair.getObject1().getTags());
             leftTagList.getItems().sort(Comparator.comparing(Tag::getName));
             currentPair.getObject1().getTags().addListener(leftTagListener);
 
-            rightTagList.getItems().clear();
             rightTagList.getItems().addAll(pair.getObject2().getTags());
             rightTagList.getItems().sort(Comparator.comparing(Tag::getName));
             currentPair.getObject2().getTags().addListener(rightTagListener);
@@ -364,14 +369,30 @@ public class DuplicatesScreen extends Screen {
             leftMediaView.preview(null);
             rightMediaView.preview(null);
 
-            leftTagList.getItems().clear();
-            rightTagList.getItems().clear();
-
             leftInfoBox.setItem(null);
             rightInfoBox.setItem(null);
 
             similarityLabel.setText("N/A");
             nonDupeCheckBox.setSelected(false);
+        }
+    }
+
+    private void updatePreload(SimilarPair<MediaItem> pair) {
+        preloadPrevLeft = preloadPrevRight = preloadNextLeft = preloadNextRight = null;
+        if (isPreload()) {
+            int i = pairs.indexOf(pair);
+            if (i >= 0) {
+                if (i > 0) {
+                    SimilarPair<MediaItem> p = pairs.get(i - 1);
+                    preloadPrevLeft = p.getObject1().getImage();
+                    preloadPrevRight = p.getObject2().getImage();
+                }
+                if (i < pairs.size() - 1) {
+                    SimilarPair<MediaItem> p = pairs.get(i + 1);
+                    preloadNextLeft = p.getObject1().getImage();
+                    preloadNextRight = p.getObject2().getImage();
+                }
+            }
         }
     }
 
@@ -432,18 +453,20 @@ public class DuplicatesScreen extends Screen {
         return pairs;
     }
 
-    /**
-     * @return True if this duplicate screen will delete the file when deleting the duplicate.
-     */
     public boolean isDeleteFile() {
+        return deleteFile.get();
+    }
+
+    public BooleanProperty deleteFileProperty() {
         return deleteFile;
     }
 
-    /**
-     * @param deleteFile Delete the file when deleting duplicates.
-     */
-    public void setDeleteFile(boolean deleteFile) {
-        this.deleteFile = deleteFile;
+    public boolean isPreload() {
+        return preload.get();
+    }
+
+    public BooleanProperty preloadProperty() {
+        return preload;
     }
 
     /**
