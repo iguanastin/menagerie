@@ -87,11 +87,9 @@
                             <left>
                                 <HBox spacing="5.0" BorderPane.alignment="CENTER">
                                     <ToggleButton fx:id="listDescendingToggleButton" mnemonicParsing="false"
-                                                  selected="true" text="Descending"/>
-                                    <ToggleButton fx:id="showGroupedToggleButton" mnemonicParsing="false"
-                                                  text="Show Grouped"/>
-                                    <ToggleButton fx:id="shuffledSearchButton" mnemonicParsing="false"
-                                                  text="Randomized"/>
+                                                  selected="true"/>
+                                    <ToggleButton fx:id="showGroupedToggleButton" mnemonicParsing="false"/>
+                                    <ToggleButton fx:id="shuffledSearchButton" mnemonicParsing="false"/>
                                 </HBox>
                             </left>
                         </BorderPane>

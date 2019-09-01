@@ -31,6 +31,8 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -50,7 +52,7 @@ public class TagListScreen extends Screen {
     private final ListView<Tag> listView = new ListView<>();
     private final TextField searchField = new TextField();
     private final ChoiceBox<String> orderBox = new ChoiceBox<>();
-    private final ToggleButton descendingButton = new ToggleButton("Descending");
+    private final ToggleButton descendingButton = new ToggleButton();
     private final CheckBox regexCheckBox = new CheckBox("Regex");
 
     private final ObservableList<Tag> tags = FXCollections.observableArrayList();
@@ -83,6 +85,8 @@ public class TagListScreen extends Screen {
         orderBox.getItems().addAll("Frequency", "Name", "ID", "Color");
         orderBox.getSelectionModel().clearAndSelect(0);
         orderBox.setOnAction(event -> updateListOrder());
+        descendingButton.setGraphic(new ImageView(new Image(getClass().getResource("/misc/descending.png").toString())));
+        descendingButton.setTooltip(new Tooltip("Descending order"));
         descendingButton.selectedProperty().addListener((observable, oldValue, newValue) -> updateListOrder());
         HBox orderHBox = new HBox(5, new Label("Order by:"), orderBox, descendingButton);
         orderHBox.setAlignment(Pos.CENTER_LEFT);
