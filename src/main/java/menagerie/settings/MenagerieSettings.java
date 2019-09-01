@@ -31,7 +31,7 @@ public class MenagerieSettings extends Settings {
     public GroupSetting importGroup, autoImportGroup, duplicatesGroup, videoGroup, dbGroup, explorerGroup, slideshowGroup;
     public FolderSetting defaultFolder, autoImportFolder, vlcFolder, lastImportFolder;
     public StringSetting userFileTypes, dbUrl, dbUser, dbPass, tagWithOnImport, importItemsIntoGroupName, importOrder;
-    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesIncludeGroups, slideshowPreload, duplicatePreload;
+    public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesIncludeGroups, slideshowPreload, duplicatePreload, explorerGroupAscending;
     public DoubleSetting duplicatesConfidence, slideshowInterval;
     public IntSetting gridWidth, licensesAgreed, windowX, windowY, windowWidth, windowHeight;
 
@@ -50,6 +50,12 @@ public class MenagerieSettings extends Settings {
         Collections.addAll(autoImportGroup.getChildren(), autoImportFolder, autoImportMove);
         Collections.addAll(importGroup.getChildren(), defaultFolder, userFileTypes, urlFilename, tagImages, tagVideos, tagTagme, autoImportGroup);
         getSettings().add(importGroup);
+
+        explorerGroup = new GroupSetting("explorer-group").label("Explorer");
+        gridWidth = new IntSetting("grid-width", 3).range(1, 8).label("Grid width");
+        explorerGroupAscending = new BooleanSetting("group-ascending", true).label("Open groups in ascending order");
+        Collections.addAll(explorerGroup.getChildren(), explorerGroupAscending, gridWidth);
+        getSettings().add(explorerGroup);
 
         duplicatesGroup = new GroupSetting("duplicate-group").label("Duplicate Finding");
         duplicatesConfidence = new DoubleSetting("duplicate-confidence", 0.95).range(0.9, 1.0).label("Duplicate Confidence").tip("Value between 0.90 and 1.00");
@@ -79,11 +85,6 @@ public class MenagerieSettings extends Settings {
         Collections.addAll(dbGroup.getChildren(), dbUrl, dbUser, dbPass, dbBackup);
         getSettings().add(dbGroup);
 
-        explorerGroup = new GroupSetting("explorer-group").label("Explorer");
-        gridWidth = new IntSetting("grid-width", 3).range(1, 8).label("Grid width");
-        explorerGroup.getChildren().add(gridWidth);
-        getSettings().add(explorerGroup);
-
         helpOnStart = new BooleanSetting("help-on-start", true).hide();
         windowMaximized = new BooleanSetting("window-maximized", false).hide();
         expandItemInfo = new BooleanSetting("expand-item-info", false).hide();
@@ -102,7 +103,7 @@ public class MenagerieSettings extends Settings {
         tagWithOnImport = new StringSetting("import-tag-with").hide();
         doTagWithOnImport = new BooleanSetting("import-do-tag-with", false).hide();
         importItemsIntoGroupName = new StringSetting("import-items-into-group").hide();
-        doImportItemsIntoGroup = new BooleanSetting("do-import-items-into-group", false);
+        doImportItemsIntoGroup = new BooleanSetting("do-import-items-into-group", false).hide();
         Collections.addAll(getSettings(), importOrder, lastImportFolder, recursivelyImport, tagParentFolderOnImport, renameToHashOnImport, tagWithOnImport, doTagWithOnImport, importItemsIntoGroupName, doImportItemsIntoGroup);
     }
 

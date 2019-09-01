@@ -1090,6 +1090,7 @@ public class MainController {
      */
     private void explorerOpenGroup(GroupItem group) {
         searchTextField.setText(null);
+        if (settings.explorerGroupAscending.getValue()) listDescendingToggleButton.setSelected(false);
         applySearch(searchTextField.getText(), group, listDescendingToggleButton.isSelected(), true, false);
     }
 
