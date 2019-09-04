@@ -127,6 +127,15 @@
             <artifactId>json</artifactId>
             <version>20180813</version>
         </dependency>
+        <dependency>
+            <groupId>men.age.rie</groupId>
+            <artifactId>plugin-interface</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>D:\Programming\Java
+                Projects\MenageriePluginInterface\target\plugin-interface-1.0-SNAPSHOT-jar-with-dependencies.jar
+            </systemPath>
+        </dependency>
         <!--&lt;!&ndash; https://mvnrepository.com/artifact/org.openjfx/javafx-controls &ndash;&gt;-->
         <!--<dependency>-->
         <!--<groupId>org.openjfx</groupId>-->

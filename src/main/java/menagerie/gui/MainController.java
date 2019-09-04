@@ -42,6 +42,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import menagerie.ErrorListener;
+import menagerie.MenageriePlugin;
 import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
@@ -57,6 +59,7 @@ import menagerie.gui.screens.move.MoveFilesScreen;
 import menagerie.gui.screens.settings.SettingsScreen;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListPopup;
+import menagerie.model.PluginLoader;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.db.DatabaseManager;
@@ -133,6 +136,8 @@ public class MainController {
      * History of tag edit events.
      */
     private final Stack<TagEditEvent> tagEditHistory = new Stack<>();
+
+    private List<MenageriePlugin> plugins = null;
 
     // ------------------------------- Explorer screen vars --------------------------
     /**
@@ -216,6 +221,7 @@ public class MainController {
 
     private static final int TARGET_LICENSE_VERSION = 1;
     private static final File licensesFolder = new File("./licenses");
+    private static final File pluginsFolder = new File("./plugins");
 
     // ------------------------------ Video preview status ---------------------------
     /**
@@ -248,6 +254,8 @@ public class MainController {
 
         // Init screens
         initScreens();
+
+        initPlugins();
 
         // Things to run on first "tick"
         Platform.runLater(() -> {
@@ -285,6 +293,26 @@ public class MainController {
                 }
             });
         });
+    }
+
+    private void initPlugins() {
+        Main.log.info("Loading plugins from: " + pluginsFolder.getAbsolutePath());
+        plugins = PluginLoader.loadPlugins(pluginsFolder);
+        plugins.forEach(plugin -> {
+            Main.log.info("Loaded plugin: " + plugin.getPluginName());
+            plugin.addErrorListener(new ErrorListener() {
+                @Override
+                public void postMessage(String s) {
+                    Main.log.info(s);
+                }
+
+                @Override
+                public void postException(Exception e) {
+                    Main.log.log(Level.SEVERE, "Error in plugin: " + plugin.getPluginName(), e);
+                }
+            });
+        });
+        Main.log.info("Loaded " + plugins.size() + " plugins");
     }
 
     /**

@@ -34,6 +34,7 @@ menagerie.iml
 # Build files
 target/
 out/
+plugins/
 
 # Other
 menagerie.properties
