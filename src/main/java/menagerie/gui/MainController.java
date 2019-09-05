@@ -307,8 +307,8 @@ public class MainController {
                 }
 
                 @Override
-                public void postException(Exception e) {
-                    Main.log.log(Level.SEVERE, "Error in plugin: " + plugin.getPluginName(), e);
+                public void postException(String s, Exception e) {
+                    Main.log.log(Level.SEVERE, s, e);
                 }
             });
         });
@@ -1341,6 +1341,11 @@ public class MainController {
         slideshowScreen.releaseVLCJ();
         duplicateOptionsScreen.releaseVLCJ();
         Thumbnail.releaseVLCJResources();
+
+        plugins.forEach(plugin -> {
+            Main.log.info("Attempting to close plugin: " + plugin.getPluginName());
+            plugin.close();
+        });
 
         try {
             settings.save(new File(Main.SETTINGS_PATH));
