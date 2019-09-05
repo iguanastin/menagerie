@@ -24,8 +24,12 @@
 
 package menagerie.gui.screens.findonline;
 
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.Label;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import menagerie.duplicates.Match;
 import menagerie.gui.media.DynamicImageView;
 import org.controlsfx.control.GridCell;
@@ -37,6 +41,9 @@ import java.util.Map;
 public class MatchGridCell extends GridCell<Match> {
 
     private final DynamicImageView view = new DynamicImageView();
+    private final Label sourceLabel = new Label();
+    private final Label resSimLabel = new Label();
+
     private static final Map<String, SoftReference<Image>> thumbCache = new HashMap<>();
 
 
@@ -46,7 +53,16 @@ public class MatchGridCell extends GridCell<Match> {
 
         view.setFitWidth(150);
         view.setFitHeight(150);
-        setGraphic(new BorderPane(view));
+        sourceLabel.setPadding(new Insets(5));
+        resSimLabel.setPadding(new Insets(5));
+        DropShadow ds = new DropShadow();
+        ds.setSpread(0.5);
+        sourceLabel.setEffect(ds);
+        resSimLabel.setEffect(ds);
+        StackPane.setAlignment(view, Pos.CENTER);
+        StackPane.setAlignment(sourceLabel, Pos.TOP_LEFT);
+        StackPane.setAlignment(resSimLabel, Pos.BOTTOM_RIGHT);
+        setGraphic(new StackPane(view, sourceLabel, resSimLabel));
         setPrefSize(156, 156);
         setMinSize(USE_PREF_SIZE, USE_PREF_SIZE);
         setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
@@ -61,7 +77,6 @@ public class MatchGridCell extends GridCell<Match> {
             view.setImage(null);
         } else {
             SoftReference<Image> ref = thumbCache.get(item.getThumbnailURL());
-
             Image image;
             if (ref == null) {
                 image = new Image(item.getThumbnailURL(), 150, 150, true, true, true);
@@ -69,10 +84,11 @@ public class MatchGridCell extends GridCell<Match> {
             } else {
                 image = ref.get();
                 if (image == null) image = new Image(item.getThumbnailURL(), 150, 150, true, true, true);
-                ;
             }
-
             view.setImage(image);
+
+            sourceLabel.setText(item.getPageURL().replace("http://", "").replace("https://", "").replaceAll("/.*", ""));
+            resSimLabel.setText(item.getWidth() + "x" + item.getHeight() + " - " + (int) (item.getSimilarity() * 100) + "%");
         }
     }
 

@@ -26,14 +26,16 @@ package menagerie.gui.screens.findonline;
 
 import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
-import javafx.scene.control.SplitPane;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.*;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.input.MouseButton;
+import javafx.scene.layout.*;
 import menagerie.duplicates.DuplicateFinder;
 import menagerie.duplicates.Match;
 import menagerie.gui.Main;
@@ -58,10 +60,14 @@ public class FindOnlineScreen extends Screen {
 
     private final GridView<Match> matchGridView = new GridView<>();
     private final DynamicImageView currentItemView = new DynamicImageView();
+    private final Label yourResLabel = new Label();
+    private final ProgressIndicator loadingIndicator = new ProgressIndicator();
 
     private List<MediaItem> items = null;
     private List<DuplicateFinder> finders = null;
     private MediaItem currentItem = null;
+
+    private final CompareToOnlineScreen compareScreen = new CompareToOnlineScreen();
 
 
     public FindOnlineScreen() {
@@ -95,11 +101,22 @@ public class FindOnlineScreen extends Screen {
         matchGridView.setCellFactory(param -> {
             MatchGridCell c = new MatchGridCell();
             c.setOnMouseClicked(event -> {
-                try {
-                    Desktop.getDesktop().browse(new URI(c.getItem().getPageURL()));
-                } catch (IOException | URISyntaxException e) {
-                    Main.log.log(Level.SEVERE, "Failed trying to open url in default browser", e);
+                if (event.getButton() == MouseButton.PRIMARY) {
+                    compareScreen.open(getManager(), currentItem, c.getItem());
                 }
+            });
+            c.setOnContextMenuRequested(event -> {
+                MenuItem open = new MenuItem("Go to URL");
+                open.setOnAction(event1 -> {
+                    try {
+                        Desktop.getDesktop().browse(new URI(c.getItem().getPageURL()));
+                    } catch (IOException | URISyntaxException e) {
+                        Main.log.log(Level.SEVERE, "Failed trying to open url in default browser: " + c.getItem().getPageURL(), e);
+                    }
+                });
+
+                ContextMenu cm = new ContextMenu(open);
+                cm.show(c, event.getScreenX(), event.getScreenY());
             });
             return c;
         });
@@ -107,9 +124,19 @@ public class FindOnlineScreen extends Screen {
         matchGridView.setCellHeight(156);
         matchGridView.setHorizontalCellSpacing(3);
         matchGridView.setVerticalCellSpacing(3);
-        SplitPane sp = new SplitPane(currentItemView, matchGridView);
-        sp.setPadding(ALL5);
-        root.setCenter(sp);
+        matchGridView.setMaxHeight(350);
+        matchGridView.setMinHeight(350);
+        HBox h = new HBox(10, new Label("Your image:"), currentItemView, yourResLabel);
+        h.setPadding(ALL5);
+        h.setAlignment(Pos.CENTER);
+        loadingIndicator.setMaxSize(100, 100);
+        StackPane.setAlignment(loadingIndicator, Pos.CENTER);
+        StackPane.setAlignment(matchGridView, Pos.TOP_CENTER);
+        StackPane sp = new StackPane(matchGridView, loadingIndicator);
+        VBox.setVgrow(sp, Priority.ALWAYS);
+        VBox v = new VBox(5, h, new Separator(), new Label("Found online:"), sp);
+        v.setPadding(ALL5);
+        root.setCenter(v);
     }
 
     public void open(ScreenPane manager, List<MediaItem> items, List<DuplicateFinder> finders) {
@@ -132,12 +159,16 @@ public class FindOnlineScreen extends Screen {
         displayItem(items.get(0));
     }
 
-    public void displayItem(MediaItem item) {
+    private void displayItem(MediaItem item) {
         setCurrentItem(item);
         matchGridView.getItems().clear();
+        yourResLabel.setText("Loading...");
 
         if (item != null) {
-            currentItemView.setImage(item.getImage());
+            currentItemView.setImage(item.getThumbnail().getImage());
+            loadingIndicator.setOpacity(1);
+            loadingIndicator.setDisable(false);
+            yourResLabel.setText((int) item.getImage().getWidth() + "x" + (int) item.getImage().getHeight());
 
             Thread t = new Thread(() -> {
                 List<Match> matches = new ArrayList<>();
@@ -170,13 +201,19 @@ public class FindOnlineScreen extends Screen {
     private void displayMatches(List<Match> matches) {
         matchGridView.getItems().clear();
         matchGridView.getItems().addAll(matches);
+        loadingIndicator.setOpacity(0);
+        loadingIndicator.setDisable(true);
     }
 
-    public synchronized MediaItem getCurrentItem() {
+    public CompareToOnlineScreen getCompareScreen() {
+        return compareScreen;
+    }
+
+    private synchronized MediaItem getCurrentItem() {
         return currentItem;
     }
 
-    public synchronized void setCurrentItem(MediaItem currentItem) {
+    private synchronized void setCurrentItem(MediaItem currentItem) {
         this.currentItem = currentItem;
     }
 

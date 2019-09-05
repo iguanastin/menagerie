@@ -342,6 +342,7 @@ public class MainController {
 
     private void initFindOnlineScreen() {
         findOnlineScreen = new FindOnlineScreen();
+        screenPane.add(findOnlineScreen.getCompareScreen());
     }
 
     private void initMoveFilesScreen() {
@@ -1025,9 +1026,17 @@ public class MainController {
         List<MediaItem> items = new ArrayList<>();
         for (Item item : selected) {
             if (item instanceof MediaItem) {
-                items.add((MediaItem) item);
+                final String name = ((MediaItem) item).getFile().getName().toLowerCase();
+                if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".bmp")) {
+                    items.add((MediaItem) item);
+                }
             } else if (item instanceof GroupItem) {
-                items.addAll(((GroupItem) item).getElements());
+                for (MediaItem element : ((GroupItem) item).getElements()) {
+                    final String name = element.getFile().getName().toLowerCase();
+                    if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".bmp")) {
+                        items.add(element);
+                    }
+                }
             }
         }
 

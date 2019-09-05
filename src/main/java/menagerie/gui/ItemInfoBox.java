@@ -33,6 +33,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.VBox;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
+import menagerie.util.Util;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -71,19 +72,6 @@ public class ItemInfoBox extends VBox {
         addEventHandler(MouseEvent.MOUSE_EXITED, event -> getScene().setCursor(Cursor.DEFAULT));
 
         getChildren().addAll(resolutionLabel, fileSizeLabel);
-    }
-
-    /**
-     * Converts a byte count into a pretty string for user's viewing pleasure.
-     *
-     * @param bytes Byte count
-     * @return A string in the format: [0-9]+\.[0-9]{2}(B|KB|MB|GB) E.g. "123.45KB"
-     */
-    private static String bytesToPrettyString(long bytes) {
-        if (bytes > 1024 * 1024 * 1024) return String.format("%.2fGB", bytes / 1024.0 / 1024 / 1024);
-        else if (bytes > 1024 * 1024) return String.format("%.2fMB", bytes / 1024.0 / 1024);
-        else if (bytes > 1024) return String.format("%.2fKB", bytes / 1024.0);
-        else return String.format("%dB", bytes);
     }
 
     /**
@@ -134,7 +122,7 @@ public class ItemInfoBox extends VBox {
         }
 
         if (item instanceof MediaItem) {
-            fileSizeLabel.setText(bytesToPrettyString(((MediaItem) item).getFile().length()));
+            fileSizeLabel.setText(Util.bytesToPrettyString(((MediaItem) item).getFile().length()));
             filePathLabel.setText(((MediaItem) item).getFile().toString());
             if (((MediaItem) item).isImage()) { //TODO: Support for video resolution (May be possible in latest VLCJ api)
                 if (((MediaItem) item).getImage().isBackgroundLoading() && ((MediaItem) item).getImage().getProgress() != 1) {

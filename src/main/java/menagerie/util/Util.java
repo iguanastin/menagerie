@@ -36,4 +36,17 @@ public abstract class Util {
         return false;
     }
 
+    /**
+     * Converts a byte count into a pretty string for user's viewing pleasure.
+     *
+     * @param bytes Byte count
+     * @return A string in the format: [0-9]+\.[0-9]{2}(B|KB|MB|GB) E.g. "123.45KB"
+     */
+    public static String bytesToPrettyString(long bytes) {
+        if (bytes > 1024 * 1024 * 1024) return String.format("%.2fGB", bytes / 1024.0 / 1024 / 1024);
+        else if (bytes > 1024 * 1024) return String.format("%.2fMB", bytes / 1024.0 / 1024);
+        else if (bytes > 1024) return String.format("%.2fKB", bytes / 1024.0);
+        else return String.format("%dB", bytes);
+    }
+
 }
