@@ -44,6 +44,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import menagerie.ErrorListener;
 import menagerie.MenageriePlugin;
+import menagerie.duplicates.DuplicateFinder;
 import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
@@ -51,6 +52,7 @@ import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.*;
 import menagerie.gui.screens.dialogs.*;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
+import menagerie.gui.screens.findonline.FindOnlineScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
 import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
@@ -126,6 +128,7 @@ public class MainController {
     private ImportDialogScreen importDialogScreen;
     private GroupDialogScreen groupDialogScreen;
     private MoveFilesScreen moveFilesScreen;
+    private FindOnlineScreen findOnlineScreen;
 
     // --------------------------------- Menagerie vars ------------------------------
     /**
@@ -332,8 +335,13 @@ public class MainController {
         initImportDialogScreen();
         initGroupDialogScreen();
         initMoveFilesScreen();
+        initFindOnlineScreen();
 
         screenPane.currentProperty().addListener((observable, oldValue, newValue) -> explorerRootPane.setDisable(newValue != null));
+    }
+
+    private void initFindOnlineScreen() {
+        findOnlineScreen = new FindOnlineScreen();
     }
 
     private void initMoveFilesScreen() {
@@ -926,6 +934,9 @@ public class MainController {
         }
 
         if (groupCount > 0 || mediaCount > 0) {
+            MenuItem findOnline = new MenuItem("Find online");
+            findOnline.setOnAction(event -> findOnlineDialog(selected));
+
             Menu slideshow = new Menu("Slideshow...");
             MenuItem grabbed = new MenuItem("Selected");
             grabbed.setOnAction(event -> openSlideShow(selected, false));
@@ -941,7 +952,7 @@ public class MainController {
             MenuItem findDupes = new MenuItem("Find Duplicates");
             findDupes.setOnAction(event -> duplicateOptionsScreen.open(screenPane, menagerie, selected, currentSearch.getResults(), menagerie.getItems()));
 
-            cm.getItems().addAll(slideshow, moveFiles, findDupes);
+            cm.getItems().addAll(findOnline, slideshow, moveFiles, findDupes);
         }
 
         if (mediaCount > 0) {
@@ -1008,6 +1019,26 @@ public class MainController {
         }
 
         if (item != null) item.getTags().addListener(previewTagListener);
+    }
+
+    private void findOnlineDialog(List<Item> selected) {
+        List<MediaItem> items = new ArrayList<>();
+        for (Item item : selected) {
+            if (item instanceof MediaItem) {
+                items.add((MediaItem) item);
+            } else if (item instanceof GroupItem) {
+                items.addAll(((GroupItem) item).getElements());
+            }
+        }
+
+        List<DuplicateFinder> finders = new ArrayList<>();
+        for (MenageriePlugin plugin : plugins) {
+            if (plugin instanceof DuplicateFinder) {
+                finders.add((DuplicateFinder) plugin);
+            }
+        }
+
+        findOnlineScreen.open(screenPane, items, finders);
     }
 
     /**
