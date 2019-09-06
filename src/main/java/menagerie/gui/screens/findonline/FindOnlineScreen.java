@@ -32,6 +32,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
@@ -51,7 +52,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
 public class FindOnlineScreen extends Screen {
@@ -62,8 +65,13 @@ public class FindOnlineScreen extends Screen {
     private final DynamicImageView currentItemView = new DynamicImageView();
     private final Label yourResLabel = new Label();
     private final ProgressIndicator loadingIndicator = new ProgressIndicator();
+    private final Button prevButton = new Button("Previous");
+    private final Label indexLabel = new Label("0/0");
+    private final Button nextButton = new Button("Next");
+    private final ProgressIndicator nextLoadingIndicator = new ProgressIndicator(-1);
 
     private List<MediaItem> items = null;
+    private Map<MediaItem, List<Match>> matches = new HashMap<>();
     private List<DuplicateFinder> finders = null;
     private MediaItem currentItem = null;
 
@@ -74,6 +82,10 @@ public class FindOnlineScreen extends Screen {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
+            } else if (event.getCode() == KeyCode.LEFT) {
+                displayPrevious();
+            } else if (event.getCode() == KeyCode.RIGHT) {
+                displayNext();
             }
         });
 
@@ -138,6 +150,14 @@ public class FindOnlineScreen extends Screen {
         VBox v = new VBox(5, h, new Separator(), new Label("Found online:"), sp);
         v.setPadding(ALL5);
         root.setCenter(v);
+
+        prevButton.setOnAction(event -> displayPrevious());
+        nextButton.setOnAction(event -> displayNext());
+        nextLoadingIndicator.setMaxSize(25, 25);
+        HBox bottom = new HBox(5, prevButton, indexLabel, nextButton, nextLoadingIndicator);
+        bottom.setAlignment(Pos.CENTER);
+        bottom.setPadding(ALL5);
+        root.setBottom(bottom);
     }
 
     public void open(ScreenPane manager, List<MediaItem> items, List<DuplicateFinder> finders) {
@@ -161,43 +181,102 @@ public class FindOnlineScreen extends Screen {
         displayItem(items.get(0));
     }
 
+    private void displayPrevious() {
+        if (prevButton.isDisabled()) return;
+
+        int i = items.indexOf(currentItem);
+        if (i > 0) {
+            displayItem(items.get(i - 1));
+        }
+    }
+
+    private void displayNext() {
+        if (nextButton.isDisabled()) return;
+
+        int i = items.indexOf(currentItem);
+        if (i + 1 < items.size()) {
+            displayItem(items.get(i + 1));
+        }
+    }
+
     private void displayItem(MediaItem item) {
         setCurrentItem(item);
         matchGridView.getItems().clear();
-        yourResLabel.setText("Loading...");
+        yourResLabel.setText("N/A");
+        nextLoadingIndicator.setOpacity(0);
+
+        final int i = items.indexOf(item);
+
+        if (i + 1 >= items.size() || matches.get(items.get(i + 1)) == null) nextButton.setDisable(true);
+
+        prevButton.setDisable(i == 0);
+        indexLabel.setText((i + 1) + "/" + items.size());
 
         if (item != null) {
             currentItemView.setImage(item.getThumbnail().getImage());
             loadingIndicator.setOpacity(1);
             loadingIndicator.setDisable(false);
-            yourResLabel.setText((int) item.getImage().getWidth() + "x" + (int) item.getImage().getHeight());
+
+            Image img = item.getImage();
+            if (!img.isBackgroundLoading() || img.getProgress() == 1) {
+                yourResLabel.setText((int) img.getWidth() + "x" + (int) img.getHeight());
+            } else {
+                img.progressProperty().addListener((observable, oldValue, newValue) -> {
+                    if (!img.isError() && newValue.doubleValue() == 1) {
+                        yourResLabel.setText((int) img.getWidth() + "x" + (int) img.getHeight());
+                    }
+                });
+            }
 
             Thread t = new Thread(() -> {
-                List<Match> matches = new ArrayList<>();
-                for (DuplicateFinder finder : finders) {
-                    try {
-                        matches.addAll(finder.getMatchesFor(item.getFile()));
-                    } catch (IOException e) {
-                        Main.log.log(Level.SEVERE, "Failed to get image info from web (1st try)", e);
-                        try {
-                            matches.addAll(finder.getMatchesFor(item.getFile()));
-                        } catch (IOException ex) {
-                            Main.log.log(Level.SEVERE, "Failed to get image info from web (2nd try, giving up)", ex);
-                            Platform.runLater(() -> {
-                                AlertDialogScreen a = new AlertDialogScreen();
-                                a.open(getManager(), "Failed web get", "Repeatedly failed to get image info online", null);
-                            });
-                        }
-                    }
-                }
+                List<Match> matches = getMatches(item);
 
                 if (getCurrentItem().equals(item)) {
                     Platform.runLater(() -> displayMatches(matches));
+                }
+
+                final int i2 = items.indexOf(item);
+                if (i2 + 1 < items.size()) {
+                    Platform.runLater(() -> nextLoadingIndicator.setOpacity(1));
+                    getMatches(items.get(i2 + 1));
+                    Platform.runLater(() -> {
+                        nextLoadingIndicator.setOpacity(0);
+                        nextButton.setDisable(false);
+                    });
                 }
             });
             t.setDaemon(true);
             t.start();
         }
+    }
+
+    private List<Match> getMatches(MediaItem item) {
+        List<Match> matches = this.matches.get(item);
+        if (matches != null) {
+            return matches;
+        } else {
+            matches = new ArrayList<>();
+        }
+
+        for (DuplicateFinder finder : finders) {
+            try {
+                matches.addAll(finder.getMatchesFor(item.getFile()));
+            } catch (IOException e) {
+                Main.log.log(Level.WARNING, "Failed to get image info from web (1st try)", e);
+                try {
+                    matches.addAll(finder.getMatchesFor(item.getFile()));
+                } catch (IOException ex) {
+                    Main.log.log(Level.SEVERE, "Failed to get image info from web (2nd try, giving up)", ex);
+                    Platform.runLater(() -> {
+                        AlertDialogScreen a = new AlertDialogScreen();
+                        a.open(getManager(), "Failed web get", "Repeatedly failed to get image info online", null);
+                    });
+                }
+            }
+        }
+
+        this.matches.put(item, matches);
+        return matches;
     }
 
     private void displayMatches(List<Match> matches) {
