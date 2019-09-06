@@ -216,25 +216,11 @@ public class FindOnlineScreen extends Screen {
         indexLabel.setText((i + 1) + "/" + items.size());
 
         if (item != null) {
-            Thumbnail thumb = item.getThumbnail();
-            if (thumb.isLoaded()) {
-                currentItemView.setImage(thumb.getImage());
-            } else {
-                thumb.addImageReadyListener(currentItemView::setImage);
-            }
             loadingIndicator.setOpacity(1);
             loadingIndicator.setDisable(false);
 
-            Image img = item.getImage();
-            if (!img.isBackgroundLoading() || img.getProgress() == 1) {
-                yourImageInfoLabel.setText(item.getFile() + "\n" + (int) img.getWidth() + "x" + (int) img.getHeight() + "\n" + Util.bytesToPrettyString(item.getFile().length()));
-            } else {
-                img.progressProperty().addListener((observable, oldValue, newValue) -> {
-                    if (!img.isError() && newValue.doubleValue() == 1) {
-                        yourImageInfoLabel.setText(item.getFile() + "\n" + (int) img.getWidth() + "x" + (int) img.getHeight() + "\n" + Util.bytesToPrettyString(item.getFile().length()));
-                    }
-                });
-            }
+            setThumbnail(item);
+            setFileInfo(item);
 
             Thread t = new Thread(() -> {
                 List<Match> matches = getMatches(item);
@@ -253,8 +239,31 @@ public class FindOnlineScreen extends Screen {
                     });
                 }
             });
+            t.setUncaughtExceptionHandler((t1, e) -> Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + t.toString(), e));
             t.setDaemon(true);
             t.start();
+        }
+    }
+
+    private void setThumbnail(MediaItem item) {
+        Thumbnail thumb = item.getThumbnail();
+        if (thumb.isLoaded()) {
+            currentItemView.setImage(thumb.getImage());
+        } else {
+            thumb.addImageReadyListener(currentItemView::setImage);
+        }
+    }
+
+    private void setFileInfo(MediaItem item) {
+        Image img = item.getImage();
+        if (!img.isBackgroundLoading() || img.getProgress() == 1) {
+            yourImageInfoLabel.setText(item.getFile() + "\n" + (int) img.getWidth() + "x" + (int) img.getHeight() + "\n" + Util.bytesToPrettyString(item.getFile().length()));
+        } else {
+            img.progressProperty().addListener((observable, oldValue, newValue) -> {
+                if (!img.isError() && newValue.doubleValue() == 1) {
+                    yourImageInfoLabel.setText(item.getFile() + "\n" + (int) img.getWidth() + "x" + (int) img.getHeight() + "\n" + Util.bytesToPrettyString(item.getFile().length()));
+                }
+            });
         }
     }
 
