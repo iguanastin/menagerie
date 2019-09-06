@@ -126,6 +126,10 @@ public class MediaItem extends Item {
         thumbnail = null;
     }
 
+    public void purgeImage() {
+        image = null;
+    }
+
     /**
      * @return The full size image, if this item represents an image.
      */
@@ -181,8 +185,6 @@ public class MediaItem extends Item {
      * Computes the MD5 of the file. No operation if MD5 already exists.
      */
     public void initializeMD5() {
-        if (md5 != null) return;
-
         try {
             md5 = HexBin.encode(MD5Hasher.hash(getFile()));
             if (hasDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);

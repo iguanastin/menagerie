@@ -149,7 +149,7 @@ public class PanZoomImageView extends DynamicImageView {
     /**
      * Fits the image to the view at 100% scale if possible. If image is larger than view, scales down to fit whole image in view.
      */
-    private void fitImageToView() {
+    public void fitImageToView() {
         deltaX = deltaY = 0;
         scale.set(1);
 

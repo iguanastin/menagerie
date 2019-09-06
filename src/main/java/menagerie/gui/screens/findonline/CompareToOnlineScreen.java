@@ -24,35 +24,50 @@
 
 package menagerie.gui.screens.findonline;
 
+import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
+import javafx.scene.control.SplitPane;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import menagerie.duplicates.Match;
+import menagerie.gui.Main;
 import menagerie.gui.media.PanZoomImageView;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
+import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.model.menagerie.MediaItem;
+
+import java.awt.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Paths;
+import java.util.logging.Level;
 
 public class CompareToOnlineScreen extends Screen {
 
     private final static Insets ALL5 = new Insets(5);
 
-    private final PanZoomImageView itemView = new PanZoomImageView();
-    private final PanZoomImageView matchView = new PanZoomImageView();
-    private final Label itemLabel = new Label();
-    private final ProgressIndicator loadingIndicator = new ProgressIndicator(-1);
-
-    private Image matchImage = null;
+    private final PanZoomImageView itemView = new PanZoomImageView(), matchView = new PanZoomImageView();
 
     private MediaItem currentItem = null;
     private Match currentMatch = null;
+    private final ObjectProperty<File> tempImageFile = new SimpleObjectProperty<>();
 
 
     public CompareToOnlineScreen() {
@@ -83,13 +98,63 @@ public class CompareToOnlineScreen extends Screen {
 
         header.setBottom(new Separator());
 
-        VBox leftVBox = new VBox(5, new Label("Your image:"), itemView);
-        StackPane.setAlignment(loadingIndicator, Pos.CENTER);
-        loadingIndicator.setMaxSize(100, 100);
-        VBox rightVBox = new VBox(5, new Label("Match:"), new StackPane(matchView, loadingIndicator));
+        VBox leftVBox = new VBox(5, new Label("Your image"), itemView);
+        VBox rightVBox = new VBox(5, new Label("Online Match"), matchView);
         rightVBox.setAlignment(Pos.TOP_RIGHT);
         SplitPane sp = new SplitPane(leftVBox, rightVBox);
         root.setCenter(sp);
+
+
+        Button openPage = new Button("Open web page");
+        openPage.setOnAction(event -> {
+            try {
+                Desktop.getDesktop().browse(URI.create(currentMatch.getPageURL()));
+            } catch (IOException e) {
+                Main.log.log(Level.SEVERE, "Unable to open page url: " + currentMatch.getPageURL(), e);
+            }
+        });
+        Button replace = new Button("Replace local");
+        replace.setDisable(true);
+        replace.setOnAction(event -> replaceOnAction());
+        tempImageFile.addListener((observable, oldValue, newValue) -> replace.setDisable(newValue == null));
+        BorderPane bottom = new BorderPane(null, null, replace, null, openPage);
+        bottom.setPadding(ALL5);
+        root.setBottom(bottom);
+    }
+
+    private void replaceOnAction() {
+        if (tempImageFile.get() != null && tempImageFile.get().exists()) {
+            if (tempImageFile.get().renameTo(currentItem.getFile())) {
+                reInitCurrentItem();
+                new AlertDialogScreen().open(getManager(), "Successfully replaced file with online file", "Successfully replaced: " + currentItem.getFile(), this::close);
+            } else {
+                File temp = Paths.get(System.getProperty("java.io.tmpdir")).resolve("menagerie-compare-temp").toFile();
+                temp.delete();
+
+                File target = new File(currentItem.getFile().getAbsolutePath());
+
+                if (currentItem.getFile().renameTo(temp)) {
+                    if (tempImageFile.get().renameTo(target)) {
+                        temp.delete();
+                        reInitCurrentItem();
+                        new AlertDialogScreen().open(getManager(), "Successfully replaced file with online file", "Successfully replaced: " + currentItem.getFile(), this::close);
+                    } else {
+                        currentItem.getFile().renameTo(target);
+                        new AlertDialogScreen().open(getManager(), "Unable to replace", "Failed to replace file. System does not allow file replace", null);
+                    }
+                } else {
+                    new AlertDialogScreen().open(getManager(), "Unable to replace", "Failed to replace file. System does not allow file replace", null);
+                }
+            }
+        }
+    }
+
+    private void reInitCurrentItem() {
+        currentItem.initializeMD5();
+        currentItem.initializeHistogram();
+        currentItem.setHasNoSimilar(false);
+        currentItem.purgeThumbnail();
+        currentItem.purgeImage();
     }
 
     public void open(ScreenPane manager, MediaItem item, Match match) {
@@ -97,29 +162,52 @@ public class CompareToOnlineScreen extends Screen {
             throw new NullPointerException("Must not be null");
         }
 
-        if (matchImage != null) {
-            matchImage.cancel();
-            matchImage = null;
-        }
-
         manager.open(this);
         this.currentItem = item;
         this.currentMatch = match;
+        tempImageFile.set(null);
 
         itemView.setImage(item.getImage());
         matchView.setImage(null);
-        if (match.getImageURL() != null) {
-            loadingIndicator.setDisable(false);
-            loadingIndicator.setOpacity(1);
 
-            matchImage = new Image(match.getImageURL(), true);
-            matchImage.progressProperty().addListener((observable, oldValue, newValue) -> {
-                if (!matchImage.isError() && newValue.doubleValue() == 1) {
-                    matchView.setImage(matchImage);
-                    loadingIndicator.setDisable(true);
-                    loadingIndicator.setOpacity(0);
+        if (match.getImageURL() != null && !match.getImageURL().isEmpty()) {
+            try {
+                tempImageFile.set(File.createTempFile("menagerie", match.getImageURL().substring(match.getImageURL().lastIndexOf("."))));
+
+                // Download to temp file
+                HttpURLConnection conn = (HttpURLConnection) new URL(match.getImageURL()).openConnection();
+                conn.addRequestProperty("User-Agent", "Mozilla/4.0");
+                ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
+                try (FileOutputStream fos = new FileOutputStream(tempImageFile.get())) {
+                    final long size = conn.getContentLengthLong();
+                    final int chunkSize = 4096;
+                    for (int i = 0; i < size; i += chunkSize) {
+                        fos.getChannel().transferFrom(rbc, i, chunkSize);
+                    }
+
                 }
-            });
+                rbc.close();
+                conn.disconnect();
+
+                tempImageFile.get().deleteOnExit();
+                matchView.setImage(new Image(tempImageFile.get().toURI().toString()));
+            } catch (IOException e) {
+                Main.log.log(Level.SEVERE, "Failed to download image", e);
+            }
+        } else {
+            matchView.setImage(new Image(match.getThumbnailURL()));
+        }
+        Platform.runLater(() -> {
+            itemView.fitImageToView();
+            matchView.fitImageToView();
+        });
+    }
+
+    @Override
+    protected void onClose() {
+        if (tempImageFile.get() != null) {
+            tempImageFile.get().delete();
+            tempImageFile.set(null);
         }
     }
 

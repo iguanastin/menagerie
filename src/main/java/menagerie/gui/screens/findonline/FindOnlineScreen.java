@@ -103,6 +103,7 @@ public class FindOnlineScreen extends Screen {
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY) {
                     compareScreen.open(getManager(), currentItem, c.getItem());
+                    event.consume();
                 }
             });
             c.setOnContextMenuRequested(event -> {
@@ -153,6 +154,7 @@ public class FindOnlineScreen extends Screen {
         }
 
         manager.open(this);
+        manager.add(compareScreen);
         this.items = items;
         this.finders = finders;
 
