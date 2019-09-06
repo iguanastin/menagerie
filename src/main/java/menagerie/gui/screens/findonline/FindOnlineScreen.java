@@ -40,11 +40,13 @@ import javafx.scene.layout.*;
 import menagerie.duplicates.DuplicateFinder;
 import menagerie.duplicates.Match;
 import menagerie.gui.Main;
+import menagerie.gui.Thumbnail;
 import menagerie.gui.media.DynamicImageView;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.model.menagerie.MediaItem;
+import menagerie.util.Util;
 import org.controlsfx.control.GridView;
 
 import java.awt.*;
@@ -63,7 +65,7 @@ public class FindOnlineScreen extends Screen {
 
     private final GridView<Match> matchGridView = new GridView<>();
     private final DynamicImageView currentItemView = new DynamicImageView();
-    private final Label yourResLabel = new Label();
+    private final Label yourImageInfoLabel = new Label();
     private final ProgressIndicator loadingIndicator = new ProgressIndicator();
     private final Button prevButton = new Button("Previous");
     private final Label indexLabel = new Label("0/0");
@@ -139,7 +141,8 @@ public class FindOnlineScreen extends Screen {
         matchGridView.setVerticalCellSpacing(3);
         matchGridView.setMaxHeight(350);
         matchGridView.setMinHeight(350);
-        HBox h = new HBox(10, new Label("Your image:"), currentItemView, yourResLabel);
+        yourImageInfoLabel.setWrapText(true);
+        HBox h = new HBox(10, new Label("Your image:"), currentItemView, yourImageInfoLabel);
         h.setPadding(ALL5);
         h.setAlignment(Pos.CENTER);
         loadingIndicator.setMaxSize(100, 100);
@@ -202,7 +205,7 @@ public class FindOnlineScreen extends Screen {
     private void displayItem(MediaItem item) {
         setCurrentItem(item);
         matchGridView.getItems().clear();
-        yourResLabel.setText("N/A");
+        yourImageInfoLabel.setText("N/A");
         nextLoadingIndicator.setOpacity(0);
 
         final int i = items.indexOf(item);
@@ -213,17 +216,22 @@ public class FindOnlineScreen extends Screen {
         indexLabel.setText((i + 1) + "/" + items.size());
 
         if (item != null) {
-            currentItemView.setImage(item.getThumbnail().getImage());
+            Thumbnail thumb = item.getThumbnail();
+            if (thumb.isLoaded()) {
+                currentItemView.setImage(thumb.getImage());
+            } else {
+                thumb.addImageReadyListener(currentItemView::setImage);
+            }
             loadingIndicator.setOpacity(1);
             loadingIndicator.setDisable(false);
 
             Image img = item.getImage();
             if (!img.isBackgroundLoading() || img.getProgress() == 1) {
-                yourResLabel.setText((int) img.getWidth() + "x" + (int) img.getHeight());
+                yourImageInfoLabel.setText(item.getFile() + "\n" + (int) img.getWidth() + "x" + (int) img.getHeight() + "\n" + Util.bytesToPrettyString(item.getFile().length()));
             } else {
                 img.progressProperty().addListener((observable, oldValue, newValue) -> {
                     if (!img.isError() && newValue.doubleValue() == 1) {
-                        yourResLabel.setText((int) img.getWidth() + "x" + (int) img.getHeight());
+                        yourImageInfoLabel.setText(item.getFile() + "\n" + (int) img.getWidth() + "x" + (int) img.getHeight() + "\n" + Util.bytesToPrettyString(item.getFile().length()));
                     }
                 });
             }
