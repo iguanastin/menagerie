@@ -203,6 +203,9 @@ public class FindOnlineScreen extends Screen {
     }
 
     private void displayItem(MediaItem item) {
+        if (getCurrentItem() != null && !getCurrentItem().getThumbnail().isLoaded()) {
+            getCurrentItem().getThumbnail().doNotWant();
+        }
         setCurrentItem(item);
         matchGridView.getItems().clear();
         yourImageInfoLabel.setText("N/A");
@@ -247,10 +250,13 @@ public class FindOnlineScreen extends Screen {
 
     private void setThumbnail(MediaItem item) {
         Thumbnail thumb = item.getThumbnail();
+        thumb.want();
         if (thumb.isLoaded()) {
             currentItemView.setImage(thumb.getImage());
         } else {
-            thumb.addImageReadyListener(currentItemView::setImage);
+            thumb.addImageReadyListener(thing -> {
+                currentItemView.setImage(thing);
+            });
         }
     }
 
