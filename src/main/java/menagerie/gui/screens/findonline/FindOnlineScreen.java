@@ -112,6 +112,10 @@ public class FindOnlineScreen extends Screen {
 
         header.setBottom(new Separator());
 
+        BorderPane currentItemBP = new BorderPane(currentItemView);
+        currentItemBP.setStyle("-fx-background-color: derive(-fx-color, 25%);");
+        currentItemBP.setMaxSize(156, 156);
+        currentItemBP.setMinSize(156, 156);
         matchGridView.setCellFactory(param -> {
             MatchGridCell c = new MatchGridCell();
             c.setOnMouseClicked(event -> {
@@ -142,7 +146,7 @@ public class FindOnlineScreen extends Screen {
         matchGridView.setMaxHeight(350);
         matchGridView.setMinHeight(350);
         yourImageInfoLabel.setWrapText(true);
-        HBox h = new HBox(10, new Label("Your image:"), currentItemView, yourImageInfoLabel);
+        HBox h = new HBox(10, new Label("Your image:"), currentItemBP, yourImageInfoLabel);
         h.setPadding(ALL5);
         h.setAlignment(Pos.CENTER);
         loadingIndicator.setMaxSize(100, 100);
