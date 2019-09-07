@@ -94,3 +94,7 @@
     -item-unselected-color: derive(-fx-color, 25%);
     -fx-background-color: -item-unselected-color;
 }
+
+.progress-indicator {
+    -fx-progress-color: derive(-fx-accent, 75%);
+}

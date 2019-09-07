@@ -259,7 +259,7 @@ public class FindOnlineScreen extends Screen {
             currentItemView.setImage(thumb.getImage());
         } else {
             thumb.addImageReadyListener(thing -> {
-                currentItemView.setImage(thing);
+                Platform.runLater(() -> currentItemView.setImage(thing));
             });
         }
     }
@@ -278,6 +278,8 @@ public class FindOnlineScreen extends Screen {
     }
 
     private List<Match> getMatches(MediaItem item) {
+        if (item == null) return null;
+
         List<Match> matches = this.matches.get(item);
         if (matches != null) {
             return matches;
