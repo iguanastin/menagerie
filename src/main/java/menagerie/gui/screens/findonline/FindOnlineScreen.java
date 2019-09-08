@@ -165,6 +165,8 @@ public class FindOnlineScreen extends Screen {
         bottom.setAlignment(Pos.CENTER);
         bottom.setPadding(ALL5);
         root.setBottom(bottom);
+
+        compareScreen.addSuccessListener(() -> displayItem(currentItem));
     }
 
     public void open(ScreenPane manager, List<MediaItem> items, List<DuplicateFinder> finders) {
@@ -180,8 +182,8 @@ public class FindOnlineScreen extends Screen {
             return;
         }
 
-        manager.open(this);
         manager.add(compareScreen);
+        manager.open(this);
         this.items = items;
         this.finders = finders;
 

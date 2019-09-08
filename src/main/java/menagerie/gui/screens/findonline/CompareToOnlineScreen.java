@@ -46,6 +46,7 @@ import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.model.menagerie.MediaItem;
+import menagerie.util.listeners.PokeListener;
 
 import java.awt.*;
 import java.io.File;
@@ -57,6 +58,8 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 
 public class CompareToOnlineScreen extends Screen {
@@ -69,8 +72,10 @@ public class CompareToOnlineScreen extends Screen {
     private Match currentMatch = null;
     private final ObjectProperty<File> tempImageFile = new SimpleObjectProperty<>();
 
+    private final Set<PokeListener> successListeners = new HashSet<>();
 
-    public CompareToOnlineScreen() {
+
+    CompareToOnlineScreen() {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
@@ -126,20 +131,22 @@ public class CompareToOnlineScreen extends Screen {
         if (tempImageFile.get() != null && tempImageFile.get().exists()) {
             if (tempImageFile.get().renameTo(currentItem.getFile())) {
                 reInitCurrentItem();
-                new AlertDialogScreen().open(getManager(), "Successfully replaced file with online file", "Successfully replaced: " + currentItem.getFile(), this::close);
+                pokeSuccessListeners();
+                close();
             } else {
                 File temp = Paths.get(System.getProperty("java.io.tmpdir")).resolve("menagerie-compare-temp").toFile();
-                temp.delete();
+                if (temp.delete()) Main.log.info("Deleted existing temp file: " + temp);
 
                 File target = new File(currentItem.getFile().getAbsolutePath());
 
                 if (currentItem.getFile().renameTo(temp)) {
                     if (tempImageFile.get().renameTo(target)) {
-                        temp.delete();
+                        if (!temp.delete()) Main.log.warning("Failed to delete temp file: " + temp);
                         reInitCurrentItem();
-                        new AlertDialogScreen().open(getManager(), "Successfully replaced file with online file", "Successfully replaced: " + currentItem.getFile(), this::close);
+                        pokeSuccessListeners();
+                        close();
                     } else {
-                        currentItem.getFile().renameTo(target);
+                        if (!currentItem.getFile().renameTo(target)) Main.log.severe("Failed to put original file (" + currentItem.getFile() + ") back in place: " + target);
                         new AlertDialogScreen().open(getManager(), "Unable to replace", "Failed to replace file. System does not allow file replace", null);
                     }
                 } else {
@@ -205,10 +212,23 @@ public class CompareToOnlineScreen extends Screen {
 
     @Override
     protected void onClose() {
-        if (tempImageFile.get() != null) {
-            tempImageFile.get().delete();
+        File f = tempImageFile.get();
+        if (f != null) {
+            if (f.exists() && !f.delete()) Main.log.warning("Failed to delete image temp file: " + f);
             tempImageFile.set(null);
         }
+    }
+
+    private void pokeSuccessListeners() {
+        successListeners.forEach(PokeListener::poke);
+    }
+
+    public boolean addSuccessListener(PokeListener listener) {
+        return successListeners.add(listener);
+    }
+
+    public boolean removeSuccessListener(PokeListener listener) {
+        return successListeners.remove(listener);
     }
 
 }
