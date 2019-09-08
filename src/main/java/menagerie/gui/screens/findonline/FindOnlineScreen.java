@@ -25,11 +25,15 @@
 package menagerie.gui.screens.findonline;
 
 import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextField;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
@@ -59,6 +63,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 
 public class FindOnlineScreen extends Screen {
@@ -70,19 +75,23 @@ public class FindOnlineScreen extends Screen {
     private final Label yourImageInfoLabel = new Label();
     private final ProgressIndicator loadingIndicator = new ProgressIndicator();
     private final Button prevButton = new Button("Previous");
-    private final Label indexLabel = new Label("0/0");
+    private final Label indexLabel = new Label("/0");
+    private final TextField indexTextField = new TextField("0");
     private final Button nextButton = new Button("Next");
-    private final ProgressIndicator nextLoadingIndicator = new ProgressIndicator(-1);
     private final ListView<String> tagListView = new ListView<>();
+    private final VBox failedVBox = new VBox(5, new Label("Failed to get some or all results!"));
 
-    private List<MediaItem> items = null;
-    private Map<MediaItem, List<Match>> matches = new HashMap<>();
+
+    private final List<MatchGroup> matches = new ArrayList<>();
+    private final Map<MediaItem, MatchGroup> matchMap = new HashMap<>();
     private List<DuplicateFinder> finders = null;
-    private MediaItem currentItem = null;
+    private final ObjectProperty<MatchGroup> currentMatch = new SimpleObjectProperty<>();
+
+    private Thread searcherThread = null;
+
     private ObjectListener<MediaItem> selectListener = null;
 
     private final CompareToOnlineScreen compareScreen = new CompareToOnlineScreen();
-
 
 
     public FindOnlineScreen() {
@@ -101,8 +110,46 @@ public class FindOnlineScreen extends Screen {
         root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(root);
 
+        VBox v = new VBox(5, initYourItemHBox(), new Separator(), new Label("Found online:"), initMatchesStackPane());
+        v.setPadding(ALL5);
+
+        root.setTop(initHeader());
+        root.setCenter(v);
+        root.setBottom(initBottom());
+
+        compareScreen.addSuccessListener(() -> displayMatch(currentMatch.get()));
+
+        setDefaultFocusNode(root);
+
+        // Init searcher thread
+        initSearcherThread();
+    }
+
+    private HBox initBottom() {
+        prevButton.setOnAction(event -> displayPrevious());
+        nextButton.setOnAction(event -> displayNext());
+        indexTextField.setPrefWidth(50);
+        indexTextField.setAlignment(Pos.CENTER_RIGHT);
+        indexTextField.setOnAction(event -> {
+            int i = matches.indexOf(getCurrentMatch());
+            try {
+                int temp = Integer.parseInt(indexTextField.getText()) - 1;
+                i = Math.max(0, Math.min(temp, matches.size() - 1)); // Clamp to valid indices
+            } catch (NumberFormatException e) {
+                // Nothing
+            }
+
+            displayMatch(matches.get(i));
+            requestFocus();
+        });
+        HBox bottom = new HBox(5, prevButton, indexTextField, indexLabel, nextButton);
+        bottom.setAlignment(Pos.CENTER);
+        bottom.setPadding(ALL5);
+        return bottom;
+    }
+
+    private BorderPane initHeader() {
         BorderPane header = new BorderPane();
-        root.setTop(header);
 
         Label title = new Label("Find duplicates online");
         header.setLeft(title);
@@ -113,22 +160,15 @@ public class FindOnlineScreen extends Screen {
         exit.setOnAction(event -> close());
 
         header.setBottom(new Separator());
+        return header;
+    }
 
-        BorderPane currentItemBP = new BorderPane(currentItemView);
-        currentItemBP.getStyleClass().addAll(ItemGridCell.DEFAULT_STYLE_CLASS);
-        currentItemBP.setMaxSize(156, 156);
-        currentItemBP.setMinSize(156, 156);
-        currentItemBP.setOnMouseClicked(event -> {
-            if (selectListener != null) {
-                close();
-                selectListener.pass(currentItem);
-            }
-        });
+    private StackPane initMatchesStackPane() {
         matchGridView.setCellFactory(param -> {
             MatchGridCell c = new MatchGridCell();
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY) {
-                    compareScreen.open(getManager(), currentItem, c.getItem());
+                    compareScreen.open(getManager(), currentMatch.get().getItem(), c.getItem());
                     event.consume();
                 }
             });
@@ -153,22 +193,68 @@ public class FindOnlineScreen extends Screen {
         matchGridView.setVerticalCellSpacing(3);
         matchGridView.setMaxHeight(350);
         matchGridView.setMinHeight(350);
+        loadingIndicator.setMaxSize(100, 100);
+        StackPane.setAlignment(loadingIndicator, Pos.CENTER);
+        StackPane.setAlignment(matchGridView, Pos.TOP_CENTER);
+        HBox.setHgrow(matchGridView, Priority.ALWAYS);
+        StackPane sp = new StackPane(new HBox(5, matchGridView, initTagListVBox()), loadingIndicator, initFailedVBox());
+        VBox.setVgrow(sp, Priority.ALWAYS);
+        return sp;
+    }
+
+    private VBox initFailedVBox() {
+        Button retryButton = new Button("Retry");
+        retryButton.setOnAction(event -> {
+            getCurrentMatch().setStatus(MatchGroup.Status.WAITING);
+            searcherThread.interrupt();
+        });
+        Button closeButton = new Button("Close");
+        closeButton.setOnAction(event -> {
+            failedVBox.setOpacity(0);
+            failedVBox.setDisable(true);
+        });
+        HBox failedButtonHBox = new HBox(5, retryButton, closeButton);
+        failedButtonHBox.setAlignment(Pos.CENTER_RIGHT);
+        failedVBox.getChildren().add(failedButtonHBox);
+        failedVBox.setMaxSize(300, 100);
+        failedVBox.getStyleClass().addAll(ROOT_STYLE_CLASS);
+        return failedVBox;
+    }
+
+    private HBox initYourItemHBox() {
         yourImageInfoLabel.setWrapText(true);
+        BorderPane currentItemBP = new BorderPane(currentItemView);
+        currentItemBP.getStyleClass().addAll(ItemGridCell.DEFAULT_STYLE_CLASS);
+        currentItemBP.setMaxSize(156, 156);
+        currentItemBP.setMinSize(156, 156);
+        currentItemBP.setOnMouseClicked(event -> {
+            if (selectListener != null) {
+                close();
+                selectListener.pass(currentMatch.get().getItem());
+            }
+        });
+        HBox yourHBox = new HBox(10, new Label("Your image:"), currentItemBP, yourImageInfoLabel);
+        yourHBox.setPadding(ALL5);
+        yourHBox.setAlignment(Pos.CENTER);
+        return yourHBox;
+    }
+
+    private VBox initTagListVBox() {
         tagListView.setFocusTraversable(false);
         tagListView.setCellFactory(param -> {
             OnlineTagListCell c = new OnlineTagListCell(tagNeme -> {
-                for (Tag t : currentItem.getTags()) {
+                for (Tag t : currentMatch.get().getItem().getTags()) {
                     if (t.getName().equalsIgnoreCase(tagNeme)) return true;
                 }
                 return false;
             });
             c.setOnMouseClicked(event -> {
                 if (c.getItem() != null) {
-                    Tag t = currentItem.getMenagerie().getTagByName(c.getItem());
+                    Tag t = currentMatch.get().getItem().getMenagerie().getTagByName(c.getItem());
                     if (t == null) {
-                        t = currentItem.getMenagerie().createTag(c.getItem());
+                        t = currentMatch.get().getItem().getMenagerie().createTag(c.getItem());
                     }
-                    currentItem.addTag(t);
+                    currentMatch.get().getItem().addTag(t);
                     c.sharesTagProperty().set(true);
                     event.consume();
                 }
@@ -180,28 +266,57 @@ public class FindOnlineScreen extends Screen {
         VBox.setVgrow(tagListView, Priority.ALWAYS);
         tagListVBox.setMaxWidth(200);
         tagListVBox.setMinWidth(200);
-        StackPane.setAlignment(loadingIndicator, Pos.CENTER);
-        StackPane.setAlignment(matchGridView, Pos.TOP_CENTER);
-        HBox.setHgrow(matchGridView, Priority.ALWAYS);
-        StackPane sp = new StackPane(new HBox(5, matchGridView, tagListVBox), loadingIndicator);
-        VBox.setVgrow(sp, Priority.ALWAYS);
-        HBox yourHBox = new HBox(10, new Label("Your image:"), currentItemBP, yourImageInfoLabel);
-        yourHBox.setPadding(ALL5);
-        yourHBox.setAlignment(Pos.CENTER);
-        loadingIndicator.setMaxSize(100, 100);
-        VBox v = new VBox(5, yourHBox, new Separator(), new Label("Found online:"), sp);
-        v.setPadding(ALL5);
-        root.setCenter(v);
+        return tagListVBox;
+    }
 
-        prevButton.setOnAction(event -> displayPrevious());
-        nextButton.setOnAction(event -> displayNext());
-        nextLoadingIndicator.setMaxSize(25, 25);
-        HBox bottom = new HBox(5, prevButton, indexLabel, nextButton, nextLoadingIndicator);
-        bottom.setAlignment(Pos.CENTER);
-        bottom.setPadding(ALL5);
-        root.setBottom(bottom);
+    private void initSearcherThread() {
+        searcherThread = new Thread(() -> {
+            while (true) {
+                MatchGroup item = getCurrentMatch();
+                if (item == null) {
+                    blockUntilItemChanges();
+                } else {
+                    if (item.getStatus() == MatchGroup.Status.WAITING) {
+                        System.out.println("Loading current");
+                        item.retrieveMatches(finders);
+                        Platform.runLater(() -> {
+                            if (getCurrentMatch().equals(item)) displayMatches(item);
+                        });
+                    } else {
+                        int i = matches.indexOf(item);
+                        if (i + 1 < matches.size()) {
+                            MatchGroup next = matches.get(i + 1);
+                            if (next.getStatus() == MatchGroup.Status.WAITING) {
+                                System.out.println("Preloading next");
+                                next.retrieveMatches(finders);
+                                Platform.runLater(() -> {
+                                    if (getCurrentMatch().equals(next)) displayMatches(next);
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        searcherThread.setDaemon(true);
+        searcherThread.start();
+    }
 
-        compareScreen.addSuccessListener(() -> displayItem(currentItem));
+    private void blockUntilItemChanges() {
+        CountDownLatch cdl = new CountDownLatch(1);
+        ChangeListener<MatchGroup> changeListener = (observable, oldValue, newValue) -> {
+            cdl.countDown();
+        };
+        synchronized (currentMatch) {
+            currentMatch.addListener(changeListener);
+        }
+        try {
+            cdl.await();
+        } catch (InterruptedException ignore) {
+        }
+        synchronized (currentMatch) {
+            currentMatch.removeListener(changeListener);
+        }
     }
 
     public void open(ScreenPane manager, List<MediaItem> items, List<DuplicateFinder> finders, ObjectListener<MediaItem> selectListener) {
@@ -217,77 +332,77 @@ public class FindOnlineScreen extends Screen {
             return;
         }
 
-        manager.add(compareScreen);
-        manager.open(this);
-        this.items = items;
+        matches.clear();
+        for (MediaItem item : items) {
+            MatchGroup match = matchMap.get(item);
+            if (match == null) {
+                match = new MatchGroup(item);
+                matchMap.put(item, match);
+            }
+            matches.add(match);
+        }
+
         this.finders = finders;
         this.selectListener = selectListener;
 
-        displayItem(items.get(0));
+        displayMatch(matches.get(0));
+
+        manager.add(compareScreen);
+        manager.open(this);
     }
 
     private void displayPrevious() {
         if (prevButton.isDisabled()) return;
 
-        int i = items.indexOf(currentItem);
+        int i = matches.indexOf(currentMatch.get());
         if (i > 0) {
-            displayItem(items.get(i - 1));
+            displayMatch(matches.get(i - 1));
         }
     }
 
     private void displayNext() {
         if (nextButton.isDisabled()) return;
 
-        int i = items.indexOf(currentItem);
-        if (i + 1 < items.size()) {
-            displayItem(items.get(i + 1));
+        int i = matches.indexOf(currentMatch.get());
+        if (i + 1 < matches.size()) {
+            displayMatch(matches.get(i + 1));
         }
     }
 
-    private void displayItem(MediaItem item) {
-        if (getCurrentItem() != null && !getCurrentItem().getThumbnail().isLoaded()) {
-            getCurrentItem().getThumbnail().doNotWant();
+    private void displayMatch(MatchGroup item) {
+        synchronized (currentMatch) {
+            if (currentMatch.get() != null && !currentMatch.get().getItem().getThumbnail().isLoaded()) {
+                currentMatch.get().getItem().getThumbnail().doNotWant();
+            }
+            currentMatch.set(item);
         }
-        setCurrentItem(item);
         matchGridView.getItems().clear();
         yourImageInfoLabel.setText("N/A");
-        nextLoadingIndicator.setOpacity(0);
         tagListView.getItems().clear();
 
-        final int i = items.indexOf(item);
-
-        if (i + 1 >= items.size() || matches.get(items.get(i + 1)) == null) nextButton.setDisable(true);
-
+        final int i = matches.indexOf(item);
+        nextButton.setDisable(i + 1 >= matches.size());
         prevButton.setDisable(i == 0);
-        indexLabel.setText((i + 1) + "/" + items.size());
+        indexTextField.setText((i + 1) + "");
+        indexLabel.setText("/" + matches.size());
 
         if (item != null) {
-            loadingIndicator.setOpacity(1);
-            loadingIndicator.setDisable(false);
+            setThumbnail(item.getItem());
+            setFileInfo(item.getItem());
 
-            setThumbnail(item);
-            setFileInfo(item);
+            displayMatches(item);
 
-            Thread t = new Thread(() -> {
-                List<Match> matches = getMatches(item);
-
-                if (getCurrentItem().equals(item)) {
-                    Platform.runLater(() -> displayMatches(matches));
-                }
-
-                final int i2 = items.indexOf(item);
-                if (i2 + 1 < items.size()) {
-                    Platform.runLater(() -> nextLoadingIndicator.setOpacity(1));
-                    getMatches(items.get(i2 + 1));
-                    Platform.runLater(() -> {
-                        nextLoadingIndicator.setOpacity(0);
-                        nextButton.setDisable(false);
-                    });
-                }
-            });
-            t.setUncaughtExceptionHandler((t1, e) -> Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + t.toString(), e));
-            t.setDaemon(true);
-            t.start();
+            if (item.getStatus() == MatchGroup.Status.WAITING || item.getStatus() == MatchGroup.Status.PROCESSING) {
+                loadingIndicator.setOpacity(1);
+                loadingIndicator.setDisable(false);
+            }
+            if (item.getStatus() == MatchGroup.Status.FAILED) {
+                failedVBox.setOpacity(1);
+                failedVBox.setDisable(false);
+            } else {
+                failedVBox.setOpacity(0);
+                failedVBox.setDisable(true);
+            }
         }
     }
 
@@ -306,69 +421,55 @@ public class FindOnlineScreen extends Screen {
     private void setFileInfo(MediaItem item) {
         Image img = item.getImage();
         if (!img.isBackgroundLoading() || img.getProgress() == 1) {
-            yourImageInfoLabel.setText(item.getFile() + "\n" + (int) img.getWidth() + "x" + (int) img.getHeight() + "\n" + Util.bytesToPrettyString(item.getFile().length()));
+            setFileInfoLabelDirect(item);
         } else {
             img.progressProperty().addListener((observable, oldValue, newValue) -> {
                 if (!img.isError() && newValue.doubleValue() == 1) {
-                    yourImageInfoLabel.setText(item.getFile() + "\n" + (int) img.getWidth() + "x" + (int) img.getHeight() + "\n" + Util.bytesToPrettyString(item.getFile().length()));
+                    setFileInfoLabelDirect(item);
                 }
             });
         }
     }
 
-    private List<Match> getMatches(MediaItem item) {
-        if (item == null) return null;
-
-        List<Match> matches = this.matches.get(item);
-        if (matches != null) {
-            return matches;
-        } else {
-            matches = new ArrayList<>();
-        }
-
-        for (DuplicateFinder finder : finders) {
-            try {
-                matches.addAll(finder.getMatchesFor(item.getFile()));
-            } catch (IOException e) {
-                Main.log.log(Level.WARNING, "Failed to get image info from web (1st try)", e);
-                try {
-                    matches.addAll(finder.getMatchesFor(item.getFile()));
-                } catch (IOException ex) {
-                    Main.log.log(Level.SEVERE, "Failed to get image info from web (2nd try, giving up)", ex);
-                    Platform.runLater(() -> {
-                        AlertDialogScreen a = new AlertDialogScreen();
-                        a.open(getManager(), "Failed web get", "Repeatedly failed to get image info online", null);
-                    });
-                }
-            }
-        }
-
-        this.matches.put(item, matches);
-        return matches;
+    private void setFileInfoLabelDirect(MediaItem item) {
+        yourImageInfoLabel.setText(item.getFile() + "\n" + (int) item.getImage().getWidth() + "x" + (int) item.getImage().getHeight() + "\n" + Util.bytesToPrettyString(item.getFile().length()));
     }
 
-    private void displayMatches(List<Match> matches) {
+    private void displayMatches(MatchGroup item) {
         matchGridView.getItems().clear();
-        matchGridView.getItems().addAll(matches);
+        matchGridView.getItems().addAll(item.getMatches());
         loadingIndicator.setOpacity(0);
         loadingIndicator.setDisable(true);
         tagListView.getItems().clear();
-        matches.forEach(match -> match.getTags().forEach(s -> {
+        item.getMatches().forEach(match -> match.getTags().forEach(s -> {
             if (!tagListView.getItems().contains(s)) tagListView.getItems().add(s);
         }));
         tagListView.getItems().sort(String::compareTo);
+
+        if (item.getStatus() == MatchGroup.Status.FAILED) {
+            failedVBox.setOpacity(1);
+            failedVBox.setDisable(false);
+        }
     }
 
     public CompareToOnlineScreen getCompareScreen() {
         return compareScreen;
     }
 
-    private synchronized MediaItem getCurrentItem() {
-        return currentItem;
+    public ObjectProperty<MatchGroup> currentMatchProperty() {
+        return currentMatch;
     }
 
-    private synchronized void setCurrentItem(MediaItem currentItem) {
-        this.currentItem = currentItem;
+    private MatchGroup getCurrentMatch() {
+        synchronized (currentMatch) {
+            return currentMatch.get();
+        }
+    }
+
+    private void setCurrentMatch(MatchGroup match) {
+        synchronized (currentMatch) {
+            currentMatch.set(match);
+        }
     }
 
 }
