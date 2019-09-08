@@ -59,10 +59,8 @@ import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 
@@ -82,8 +80,8 @@ public class FindOnlineScreen extends Screen {
     private final VBox failedVBox = new VBox(5, new Label("Failed to get some or all results!"));
 
 
-    private final List<MatchGroup> matches = new ArrayList<>();
-    private final Map<MediaItem, MatchGroup> matchMap = new HashMap<>();
+    private final List<MatchGroup> matches = Collections.synchronizedList(new ArrayList<>());
+    private final Map<MediaItem, MatchGroup> matchMap = Collections.synchronizedMap(new HashMap<>());
     private List<DuplicateFinder> finders = null;
     private final ObjectProperty<MatchGroup> currentMatch = new SimpleObjectProperty<>();
 
@@ -281,22 +279,26 @@ public class FindOnlineScreen extends Screen {
                     blockUntilItemChanges();
                 } else {
                     if (item.getStatus() == MatchGroup.Status.WAITING) {
-                        System.out.println("Loading current");
                         item.retrieveMatches(finders);
                         Platform.runLater(() -> {
                             if (getCurrentMatch().equals(item)) displayMatches(item);
                         });
                     } else {
-                        int i = matches.indexOf(item);
-                        if (i + 1 < matches.size()) {
-                            MatchGroup next = matches.get(i + 1);
-                            if (next.getStatus() == MatchGroup.Status.WAITING) {
-                                System.out.println("Preloading next");
-                                next.retrieveMatches(finders);
-                                Platform.runLater(() -> {
-                                    if (getCurrentMatch().equals(next)) displayMatches(next);
-                                });
+                        MatchGroup next = null;
+
+                        synchronized (matches) {
+                            int i = matches.indexOf(item);
+                            if (i + 1 < matches.size()) {
+                                next = matches.get(i + 1);
                             }
+                        }
+
+                        if (next != null && next.getStatus() == MatchGroup.Status.WAITING) {
+                            next.retrieveMatches(finders);
+                            MatchGroup finalNext = next;
+                            Platform.runLater(() -> {
+                                if (getCurrentMatch().equals(finalNext)) displayMatches(finalNext);
+                            });
                         }
                     }
                 }
