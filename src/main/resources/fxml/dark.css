@@ -96,11 +96,17 @@
 }
 
 .item-grid-cell {
-    -item-selected-color: derive(-fx-accent, 75%);
-    -item-unselected-color: derive(-fx-color, 25%);
-    -fx-background-color: -item-unselected-color;
+    -fx-background-color: derive(-fx-color, +25%);
+}
+.item-grid-cell:selected {
+    -fx-background-color: derive(-fx-accent, +75%);
+}
+.item-grid-cell:hover {
+    -fx-border-style: solid;
+    -fx-border-width: 2px;
+    -fx-border-color: derive(-fx-accent, +50%);
 }
 
 .progress-indicator {
-    -fx-progress-color: derive(-fx-accent, 75%);
+    -fx-progress-color: derive(-fx-accent, +75%);
 }

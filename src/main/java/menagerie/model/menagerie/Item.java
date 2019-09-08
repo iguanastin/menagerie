@@ -29,6 +29,9 @@ import javafx.collections.ObservableList;
 import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.db.DatabaseManager;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Menagerie Item
  */
@@ -40,6 +43,7 @@ public abstract class Item implements Comparable<Item> {
     protected final int id;
     private final long dateAdded;
     private final ObservableList<Tag> tags = FXCollections.observableArrayList();
+    private final Map<String, Object> metadata = new HashMap<>();
 
 
     /**
@@ -189,6 +193,10 @@ public abstract class Item implements Comparable<Item> {
 
     public Menagerie getMenagerie() {
         return menagerie;
+    }
+
+    public Map<String, Object> getMetadata() {
+        return metadata;
     }
 
     @Override

@@ -25,6 +25,9 @@
 package menagerie.gui.grid;
 
 import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -45,9 +48,6 @@ import org.controlsfx.control.GridCell;
 
 public class ItemGridCell extends GridCell<Item> {
 
-    private static final String UNSELECTED_BG_CSS = "-fx-background-color: -item-unselected-color";
-    private static final String SELECTED_BG_CSS = "-fx-background-color: -item-selected-color";
-
     private static final Font SMALL_FONT = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 12);
 
     private static Image groupTagImage = null;
@@ -59,6 +59,7 @@ public class ItemGridCell extends GridCell<Item> {
     private final Label bottomRightLabel = new Label();
 
     private final ObjectListener<Image> imageReadyListener;
+    private final InvalidationListener selectedListener = observable -> updateSelected(((BooleanProperty) getItem().getMetadata().get("selected")).get());
 
 
     public ItemGridCell() {
@@ -86,77 +87,112 @@ public class ItemGridCell extends GridCell<Item> {
 
         setGraphic(new StackPane(thumbnailView, centerLabel, bottomRightLabel, tagView));
         setAlignment(Pos.CENTER);
-        setStyle(UNSELECTED_BG_CSS);
 
         imageReadyListener = image -> Platform.runLater(() -> thumbnailView.setImage(image));
     }
 
     @Override
     protected void updateItem(Item item, boolean empty) {
-        if (getItem() != null && getItem().getThumbnail() != null) {
-            getItem().getThumbnail().doNotWant();
-            if (!getItem().getThumbnail().isLoaded()) getItem().getThumbnail().doNotWant();
-            getItem().getThumbnail().removeImageReadyListener(imageReadyListener);
-        }
-
-        if (empty) {
-            thumbnailView.setImage(null);
-            centerLabel.setText(null);
-            bottomRightLabel.setText(null);
-            tagView.setImage(null);
-        } else {
-            if (item.getThumbnail() != null) {
-                item.getThumbnail().want();
-                if (item.getThumbnail().getImage() != null) {
-                    thumbnailView.setImage(item.getThumbnail().getImage());
-                } else {
-                    item.getThumbnail().want();
-                    thumbnailView.setImage(null);
-                    item.getThumbnail().addImageReadyListener(imageReadyListener);
-                }
-            }
-            if (item instanceof MediaItem) {
-                if (((MediaItem) item).isVideo()) {
-                    tagView.setImage(videoTagImage);
-                    if (!Main.isVlcjLoaded()) {
-                        centerLabel.setText(((MediaItem) item).getFile().getName());
-                    }
-                } else {
-                    centerLabel.setText(null);
-                }
-                if (((MediaItem) item).isInGroup()) {
-                    bottomRightLabel.setText(((MediaItem) item).getPageIndex() + "");
-                } else {
-                    bottomRightLabel.setText(null);
-                }
-                if (!((MediaItem) item).isImage() && !((MediaItem) item).isVideo()) {
-                    centerLabel.setText(((MediaItem) item).getFile().getName());
-                    //                    Icon icon = FileSystemView.getFileSystemView().getSystemIcon(((MediaItem) item).getFile());
-                    //                    ImageIcon imgIcon = (ImageIcon) icon;
-                    //                    BufferedImage bi = new BufferedImage(imgIcon.getIconWidth(), imgIcon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
-                    //                    Graphics2D g2d = bi.createGraphics();
-                    //                    g2d.drawImage(imgIcon.getImage(), 0, 0, null);
-                    //                    thumbnailView.setImage(SwingFXUtils.toFXImage(bi, null));
-                }
-                Tooltip tt = new Tooltip(((MediaItem) item).getFile().getAbsolutePath());
-                tt.setWrapText(true);
-                setTooltip(tt);
-            } else if (item instanceof GroupItem) {
-                centerLabel.setText(((GroupItem) item).getTitle());
-                tagView.setImage(groupTagImage);
-                bottomRightLabel.setText(((GroupItem) item).getElements().size() + "");
-                Tooltip tt = new Tooltip(((GroupItem) item).getTitle());
-                tt.setWrapText(true);
-                setTooltip(tt);
-            }
-        }
+        cleanUpOldItem();
 
         super.updateItem(item, empty);
 
-        if (getGridView() != null && getGridView() instanceof ItemGridView && ((ItemGridView) getGridView()).isSelected(item)) {
-            setStyle(SELECTED_BG_CSS);
+        if (empty) {
+            initEmpty();
         } else {
-            setStyle(UNSELECTED_BG_CSS);
+            initSelected(item);
+            initThumbnail(item);
+
+            if (item instanceof MediaItem) {
+                initMediaItem((MediaItem) item);
+            } else if (item instanceof GroupItem) {
+                initGroupItem((GroupItem) item);
+            }
+        }
+    }
+
+    private void cleanUpOldItem() {
+        if (getItem() != null) {
+            if (getItem().getThumbnail() != null) {
+                getItem().getThumbnail().doNotWant();
+                if (!getItem().getThumbnail().isLoaded()) getItem().getThumbnail().doNotWant();
+                getItem().getThumbnail().removeImageReadyListener(imageReadyListener);
+            }
+            Object obj = getItem().getMetadata().get("selected");
+            if (obj instanceof BooleanProperty) {
+                ((BooleanProperty) obj).removeListener(selectedListener);
+            }
+        }
+    }
+
+    private void initEmpty() {
+        thumbnailView.setImage(null);
+        centerLabel.setText(null);
+        bottomRightLabel.setText(null);
+        tagView.setImage(null);
+    }
+
+    private void initMediaItem(MediaItem item) {
+        if (item.isVideo()) {
+            tagView.setImage(videoTagImage);
+            if (!Main.isVlcjLoaded()) {
+                centerLabel.setText(item.getFile().getName());
+            }
+        } else {
+            centerLabel.setText(null);
+        }
+        if (item.isInGroup()) {
+            bottomRightLabel.setText(item.getPageIndex() + "");
+        } else {
+            bottomRightLabel.setText(null);
+        }
+        if (!item.isImage() && !item.isVideo()) {
+            centerLabel.setText(item.getFile().getName());
+            //                    Icon icon = FileSystemView.getFileSystemView().getSystemIcon(((MediaItem) item).getFile());
+            //                    ImageIcon imgIcon = (ImageIcon) icon;
+            //                    BufferedImage bi = new BufferedImage(imgIcon.getIconWidth(), imgIcon.getIconHeight(), BufferedImage.TYPE_INT_ARGB);
+            //                    Graphics2D g2d = bi.createGraphics();
+            //                    g2d.drawImage(imgIcon.getImage(), 0, 0, null);
+            //                    thumbnailView.setImage(SwingFXUtils.toFXImage(bi, null));
+        }
+        Tooltip tt = new Tooltip(item.getFile().getAbsolutePath());
+        tt.setWrapText(true);
+        setTooltip(tt);
+    }
+
+    private void initGroupItem(GroupItem item) {
+        centerLabel.setText(item.getTitle());
+        tagView.setImage(groupTagImage);
+        bottomRightLabel.setText(item.getElements().size() + "");
+        Tooltip tt = new Tooltip(item.getTitle());
+        tt.setWrapText(true);
+        setTooltip(tt);
+    }
+
+    private void initThumbnail(Item item) {
+        if (item.getThumbnail() != null) {
+            item.getThumbnail().want();
+            if (item.getThumbnail().getImage() != null) {
+                thumbnailView.setImage(item.getThumbnail().getImage());
+            } else {
+                item.getThumbnail().want();
+                thumbnailView.setImage(null);
+                item.getThumbnail().addImageReadyListener(imageReadyListener);
+            }
+        }
+    }
+
+    private void initSelected(Item item) {
+        Object obj = item.getMetadata().get("selected");
+        if (obj instanceof BooleanProperty) {
+            updateSelected(((BooleanProperty) obj).get());
+            ((BooleanProperty) obj).addListener(selectedListener);
+        } else {
+            final boolean sel = getGridView() != null && getGridView() instanceof ItemGridView && ((ItemGridView) getGridView()).isSelected(item);
+            BooleanProperty prop = new SimpleBooleanProperty(sel);
+            prop.addListener(selectedListener);
+            item.getMetadata().put("selected", prop);
+            updateSelected(sel);
         }
     }
 

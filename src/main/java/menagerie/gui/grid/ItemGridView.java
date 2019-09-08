@@ -25,6 +25,8 @@
 package menagerie.gui.grid;
 
 import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -57,20 +59,35 @@ public class ItemGridView extends GridView<Item> {
         setCellHeight(Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2);
 
         getItems().addListener((ListChangeListener<? super Item>) c -> {
-            boolean changed = false;
             while (c.next()) {
                 selected.removeAll(c.getRemoved());
-
-                changed = true;
             }
+        });
 
-            if (changed) updateCellSelectionCSS();
+        selected.addListener((ListChangeListener<? super Item>) c -> {
+            while (c.next()) {
+                for (Item item : c.getRemoved()) {
+                    Object obj = item.getMetadata().get("selected");
+                    if (obj instanceof BooleanProperty) {
+                        ((BooleanProperty) obj).set(false);
+                    } else {
+                        item.getMetadata().put("selected", new SimpleBooleanProperty(false));
+                    }
+                }
+                for (Item item : c.getAddedSubList()) {
+                    Object obj = item.getMetadata().get("selected");
+                    if (obj instanceof BooleanProperty) {
+                        ((BooleanProperty) obj).set(true);
+                    } else {
+                        item.getMetadata().put("selected", new SimpleBooleanProperty(true));
+                    }
+                }
+            }
         });
 
         setOnMouseReleased(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 selected.clear();
-                updateCellSelectionCSS();
                 event.consume();
             }
         });
@@ -122,7 +139,6 @@ public class ItemGridView extends GridView<Item> {
                         } else {
                             clearSelection();
                             selected.addAll(getItems());
-                            updateCellSelectionCSS();
                         }
                     }
                     event.consume();
@@ -185,7 +201,6 @@ public class ItemGridView extends GridView<Item> {
             } else {
                 selected.add(item);
             }
-            updateCellSelectionCSS();
         } else if (shiftDown) {
             Item first = getFirstSelected();
             if (first == null) {
@@ -193,7 +208,6 @@ public class ItemGridView extends GridView<Item> {
             } else {
                 selectRange(first, item);
             }
-            updateCellSelectionCSS();
         } else {
             if (isSelected(item) && selected.size() == 1) {
                 selected.clear();
@@ -201,7 +215,6 @@ public class ItemGridView extends GridView<Item> {
                 selected.clear();
                 selected.add(item);
             }
-            updateCellSelectionCSS();
         }
         lastSelected = item;
 
@@ -270,7 +283,6 @@ public class ItemGridView extends GridView<Item> {
      */
     public void clearSelection() {
         selected.clear();
-        updateCellSelectionCSS();
     }
 
     /**
@@ -295,25 +307,6 @@ public class ItemGridView extends GridView<Item> {
      */
     public boolean removeSelectionListener(ObjectListener<Item> listener) {
         return selectionListeners.remove(listener);
-    }
-
-    /**
-     * Updates the CSS of all cells. Shouldn't have to do this, but the library doesn't follow the JavaFX standard.
-     */
-    private void updateCellSelectionCSS() {
-        for (Node n : getChildren()) {
-            if (n instanceof VirtualFlow) {
-                ((VirtualFlow) n).rebuildCells();
-                break;
-            }
-        }
-    }
-
-    /**
-     * @param item Sets the last selected variable.
-     */
-    public void setLastSelected(Item item) {
-        lastSelected = item;
     }
 
 }
