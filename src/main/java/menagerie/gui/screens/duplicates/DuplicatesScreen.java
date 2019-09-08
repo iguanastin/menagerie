@@ -108,7 +108,7 @@ public class DuplicatesScreen extends Screen {
             }
         });
 
-        setStyle("-fx-background-color: -fx-base;");
+        getStyleClass().addAll(ROOT_STYLE_CLASS);
 
         // ---------------------------------------------- Center Element -----------------------------------------------
         leftMediaView.setOnContextMenuRequested(event -> {

@@ -28,7 +28,6 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -162,10 +161,7 @@ public class ImportDialogScreen extends Screen {
         // --------------------------------- Root ------------------------------------------
         BorderPane root = new BorderPane(center, header, null, bottom, null);
         root.setMaxSize(600, 250);
-        root.setStyle("-fx-background-color: -fx-base;");
-        DropShadow effect = new DropShadow();
-        effect.setSpread(0.5);
-        root.setEffect(effect);
+        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(root);
         setPadding(new Insets(25));
 

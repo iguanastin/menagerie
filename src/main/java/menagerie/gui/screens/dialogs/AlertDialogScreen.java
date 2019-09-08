@@ -29,7 +29,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import menagerie.gui.screens.Screen;
@@ -76,10 +75,7 @@ public class AlertDialogScreen extends Screen {
         BorderPane root = new BorderPane(messageLabel, top, null, ok, null);
         root.setPrefWidth(500);
         root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        DropShadow effect = new DropShadow();
-        effect.setSpread(0.5);
-        root.setEffect(effect);
-        root.setStyle("-fx-background-color: -fx-base;");
+        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(root);
         setPadding(new Insets(25));
 

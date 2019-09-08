@@ -31,7 +31,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -41,6 +40,7 @@ import menagerie.duplicates.DuplicateFinder;
 import menagerie.duplicates.Match;
 import menagerie.gui.Main;
 import menagerie.gui.Thumbnail;
+import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.media.DynamicImageView;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
@@ -95,10 +95,7 @@ public class FindOnlineScreen extends Screen {
 
         setPadding(new Insets(25));
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: -fx-base;");
-        DropShadow effect = new DropShadow();
-        effect.setSpread(0.5);
-        root.setEffect(effect);
+        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(root);
 
         BorderPane header = new BorderPane();
@@ -115,7 +112,7 @@ public class FindOnlineScreen extends Screen {
         header.setBottom(new Separator());
 
         BorderPane currentItemBP = new BorderPane(currentItemView);
-        currentItemBP.setStyle("-fx-background-color: derive(-fx-color, 25%);");
+        currentItemBP.getStyleClass().addAll(ItemGridCell.DEFAULT_STYLE_CLASS);
         currentItemBP.setMaxSize(156, 156);
         currentItemBP.setMinSize(156, 156);
         matchGridView.setCellFactory(param -> {

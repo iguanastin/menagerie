@@ -29,7 +29,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -91,10 +90,7 @@ public class GroupDialogScreen extends Screen {
         BorderPane root = new BorderPane(center, top, null, bottom, null);
         root.setPrefWidth(500);
         root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        DropShadow effect = new DropShadow();
-        effect.setSpread(0.5);
-        root.setEffect(effect);
-        root.setStyle("-fx-background-color: -fx-base;");
+        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(root);
         setPadding(new Insets(25));
 

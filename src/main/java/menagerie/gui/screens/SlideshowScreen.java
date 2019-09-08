@@ -99,7 +99,8 @@ public class SlideshowScreen extends Screen {
             }
         });
 
-        setStyle("-fx-background-color: -fx-base;");
+        getStyleClass().addAll(ROOT_STYLE_CLASS);
+
         mediaView.setRepeat(true);
         mediaView.setMute(false);
         infoBox.setMaxWidth(USE_PREF_SIZE);

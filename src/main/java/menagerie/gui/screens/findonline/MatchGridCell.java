@@ -31,6 +31,7 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.layout.StackPane;
 import menagerie.duplicates.Match;
+import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.media.DynamicImageView;
 import org.controlsfx.control.GridCell;
 
@@ -49,7 +50,7 @@ public class MatchGridCell extends GridCell<Match> {
 
     public MatchGridCell() {
         super();
-        this.getStyleClass().add("item-grid-cell");
+        this.getStyleClass().add(ItemGridCell.DEFAULT_STYLE_CLASS);
 
         view.setFitWidth(150);
         view.setFitHeight(150);
@@ -66,7 +67,6 @@ public class MatchGridCell extends GridCell<Match> {
         setPrefSize(156, 156);
         setMinSize(USE_PREF_SIZE, USE_PREF_SIZE);
         setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        setStyle("-fx-background-color: -item-unselected-color");
     }
 
     @Override

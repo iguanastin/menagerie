@@ -27,7 +27,6 @@ package menagerie.gui.screens.move;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -66,11 +65,8 @@ public class MoveFilesScreen extends Screen {
 
         //Init "Window"
         VBox v = new VBox(5);
-        v.setStyle("-fx-background-color: -fx-base;");
         v.setPadding(new Insets(5));
-        DropShadow dropShadow = new DropShadow();
-        dropShadow.setSpread(0.5);
-        v.setEffect(dropShadow);
+        v.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(v);
         setMargin(v, new Insets(100));
 

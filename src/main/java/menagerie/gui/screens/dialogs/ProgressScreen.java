@@ -29,7 +29,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -61,7 +60,7 @@ public class ProgressScreen extends Screen {
         });
 
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: -fx-base;");
+        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
         root.setPrefWidth(400);
         setCenter(root);
@@ -89,10 +88,6 @@ public class ProgressScreen extends Screen {
         count.setPadding(new Insets(5));
         bottom.setLeft(count);
         root.setBottom(bottom);
-
-        DropShadow effect = new DropShadow();
-        effect.setSpread(0.5);
-        root.setEffect(effect);
 
         setDefaultFocusNode(cancel);
     }

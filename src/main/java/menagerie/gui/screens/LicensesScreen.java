@@ -27,7 +27,6 @@ package menagerie.gui.screens;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -95,12 +94,9 @@ public class LicensesScreen extends Screen {
         bottom.setPadding(ALL5);
 
         BorderPane root = new BorderPane(center, top, null, bottom, null);
-        root.setStyle("-fx-background-color: -fx-base;");
+        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         root.setPrefSize(800, 800);
         root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        DropShadow effect = new DropShadow();
-        effect.setSpread(0.5);
-        root.setEffect(effect);
         setCenter(root);
 
         setDefaultFocusNode(agree);

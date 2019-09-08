@@ -49,6 +49,7 @@ import org.controlsfx.control.GridCell;
 public class ItemGridCell extends GridCell<Item> {
 
     private static final Font SMALL_FONT = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 12);
+    public static final String DEFAULT_STYLE_CLASS = "item-grid-cell";
 
     private static Image groupTagImage = null;
     private static Image videoTagImage = null;
@@ -64,7 +65,7 @@ public class ItemGridCell extends GridCell<Item> {
 
     public ItemGridCell() {
         super();
-        this.getStyleClass().add("item-grid-cell");
+        this.getStyleClass().add(DEFAULT_STYLE_CLASS);
 
         centerLabel.setPadding(new Insets(5));
         centerLabel.setFont(SMALL_FONT);

@@ -32,6 +32,8 @@ import javafx.scene.layout.BorderPane;
  */
 public abstract class Screen extends BorderPane {
 
+    public static final String ROOT_STYLE_CLASS = "screen-root";
+
     private ScreenPane manager = null;
 
     private Node defaultFocusNode = this;

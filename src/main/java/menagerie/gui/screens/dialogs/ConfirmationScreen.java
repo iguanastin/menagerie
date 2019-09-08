@@ -29,7 +29,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
@@ -80,10 +79,7 @@ public class ConfirmationScreen extends Screen {
         v.setPrefWidth(500);
         v.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
         v.setPadding(new Insets(5));
-        DropShadow effect = new DropShadow();
-        effect.setSpread(0.5);
-        v.setEffect(effect);
-        v.setStyle("-fx-background-color: -fx-base;");
+        v.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(v);
 
         setDefaultFocusNode(ok);

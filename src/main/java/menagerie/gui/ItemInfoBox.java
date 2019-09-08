@@ -43,6 +43,8 @@ import java.util.Locale;
 
 public class ItemInfoBox extends VBox {
 
+    private static final String DEFAULT_STYLE_CLASS = "item-info-box";
+
     private static final String DEFAULT_ID_TEXT = "ID: N/A";
     private static final String DEFAULT_DATE_TEXT = "N/A";
     private static final String DEFAULT_FILESIZE_TEXT = "0B";
@@ -63,7 +65,7 @@ public class ItemInfoBox extends VBox {
 
     public ItemInfoBox() {
         setPadding(new Insets(5));
-        setStyle("-fx-background-color: -fx-base;");
+        getStyleClass().addAll(DEFAULT_STYLE_CLASS);
         setSpacing(2);
 
         // Invert extended state on click

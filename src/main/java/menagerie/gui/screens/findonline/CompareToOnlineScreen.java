@@ -33,7 +33,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SplitPane;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -84,10 +83,7 @@ public class CompareToOnlineScreen extends Screen {
 
         setPadding(new Insets(25));
         BorderPane root = new BorderPane();
-        root.setStyle("-fx-background-color: -fx-base;");
-        DropShadow effect = new DropShadow();
-        effect.setSpread(0.5);
-        root.setEffect(effect);
+        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(root);
 
         BorderPane header = new BorderPane();

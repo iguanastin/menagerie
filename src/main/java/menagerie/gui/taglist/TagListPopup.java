@@ -28,7 +28,6 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
@@ -43,6 +42,8 @@ import java.util.logging.Level;
 
 public class TagListPopup extends Popup {
 
+    private static final String DEFAULT_STYLE_CLASS = "tag-list-popup";
+
     private final Label nameLabel = new Label();
     private final SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker(new String[]{"#609dff", "cyan", "#22e538", "yellow", "orange", "red", "#ff7ae6", "#bf51ff"}, null);
 
@@ -53,9 +54,8 @@ public class TagListPopup extends Popup {
 
     public TagListPopup() {
         VBox v = new VBox(5, nameLabel, new Separator(), colorPicker, new Separator(), noteListView);
-        v.setStyle("-fx-background-color: -fx-base;");
+        v.getStyleClass().addAll(DEFAULT_STYLE_CLASS);
         v.setPadding(new Insets(5));
-        v.setEffect(new DropShadow());
         getContent().add(v);
 
         noteListView.setCellFactory(param -> {
