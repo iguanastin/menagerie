@@ -24,15 +24,39 @@
 
 package menagerie.gui.screens.findonline;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
+import javafx.css.PseudoClass;
 import javafx.scene.control.ListCell;
 
 public class OnlineTagListCell extends ListCell<String> {
+
+    private static final String DEFAULT_STYLE_CLASS = "online-tag-cell";
+    private static final PseudoClass SHARES_TAG = PseudoClass.getPseudoClass("shares_tag");
+
+    private BooleanProperty sharesTag = new BooleanPropertyBase() {
+        @Override
+        protected void invalidated() {
+            pseudoClassStateChanged(SHARES_TAG, get());
+        }
+
+        @Override
+        public Object getBean() {
+            return OnlineTagListCell.this;
+        }
+
+        @Override
+        public String getName() {
+            return "shares_tag";
+        }
+    };
 
     private final OnlineTagCellCallback callback;
 
 
     public OnlineTagListCell(OnlineTagCellCallback callback) {
         super();
+        getStyleClass().addAll(DEFAULT_STYLE_CLASS);
         this.callback = callback;
     }
 
@@ -41,10 +65,11 @@ public class OnlineTagListCell extends ListCell<String> {
         super.updateItem(item, empty);
 
         setText(item);
-        setStyle(null);
-        if (!empty && item != null && callback.hasTag(item)) {
-            setStyle("-fx-background-color: -fx-accent;");
-        }
+        if (callback != null) sharesTag.set(!empty && item != null && callback.hasTag(item));
+    }
+
+    public BooleanProperty sharesTagProperty() {
+        return sharesTag;
     }
 
 }

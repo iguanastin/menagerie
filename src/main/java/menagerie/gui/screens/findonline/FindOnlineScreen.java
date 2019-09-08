@@ -157,13 +157,15 @@ public class FindOnlineScreen extends Screen {
                 return false;
             });
             c.setOnMouseClicked(event -> {
-                Tag t = currentItem.getMenagerie().getTagByName(c.getItem());
-                if (t == null) {
-                    t = currentItem.getMenagerie().createTag(c.getItem());
+                if (c.getItem() != null) {
+                    Tag t = currentItem.getMenagerie().getTagByName(c.getItem());
+                    if (t == null) {
+                        t = currentItem.getMenagerie().createTag(c.getItem());
+                    }
+                    currentItem.addTag(t);
+                    c.sharesTagProperty().set(true);
+                    event.consume();
                 }
-                currentItem.addTag(t);
-                c.setStyle("-fx-background-color: -fx-accent;");
-                event.consume();
             });
 
             return c;

@@ -88,6 +88,12 @@
 .list-cell:odd {
     -fx-background-color: derive(-fx-control-inner-background, +20%);
 }
+.online-tag-cell:shares_tag {
+    -fx-background-color: derive(-fx-accent, +20%);
+}
+.online-tag-cell:shares_tag:odd {
+    -fx-background-color: -fx-accent;
+}
 
 .item-grid-cell {
     -item-selected-color: derive(-fx-accent, 75%);
