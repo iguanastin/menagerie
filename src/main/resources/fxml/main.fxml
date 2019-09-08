@@ -64,7 +64,7 @@
                                   BorderPane.alignment="CENTER"/>
                 </center>
                 <top>
-                    <VBox spacing="5.0" BorderPane.alignment="CENTER">
+                    <VBox onKeyPressed="#searchVBoxOnKeyPressed" spacing="5.0" BorderPane.alignment="CENTER">
                         <HBox fx:id="scopeHBox" alignment="CENTER_LEFT" spacing="5.0">
                             <Button fx:id="backButton" disable="true" mnemonicParsing="false"
                                     onAction="#backButtonOnAction" text="🡄"/>

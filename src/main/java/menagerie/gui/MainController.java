@@ -1792,4 +1792,24 @@ public class MainController {
         }
     }
 
+    public void searchVBoxOnKeyPressed(KeyEvent event) {
+        if (event.isControlDown()) {
+            switch (event.getCode()) {
+                case D:
+                    listDescendingToggleButton.setSelected(!listDescendingToggleButton.isSelected());
+                    event.consume();
+                    break;
+                case G:
+                    showGroupedToggleButton.setSelected(!showGroupedToggleButton.isSelected());
+                    event.consume();
+                    break;
+                case S:
+                case R:
+                    shuffledSearchButton.setSelected(!shuffledSearchButton.isSelected());
+                    event.consume();
+                    break;
+            }
+        }
+    }
+
 }
