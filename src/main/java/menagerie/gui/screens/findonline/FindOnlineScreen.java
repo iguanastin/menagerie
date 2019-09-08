@@ -207,6 +207,10 @@ public class FindOnlineScreen extends Screen {
         retryButton.setOnAction(event -> {
             getCurrentMatch().setStatus(MatchGroup.Status.WAITING);
             searcherThread.interrupt();
+            loadingIndicator.setOpacity(1);
+            loadingIndicator.setDisable(false);
+            failedVBox.setOpacity(0);
+            failedVBox.setDisable(true);
         });
         Button closeButton = new Button("Close");
         closeButton.setOnAction(event -> {
