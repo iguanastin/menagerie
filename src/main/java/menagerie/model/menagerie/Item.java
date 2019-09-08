@@ -187,6 +187,10 @@ public abstract class Item implements Comparable<Item> {
         return invalidated;
     }
 
+    public Menagerie getMenagerie() {
+        return menagerie;
+    }
+
     @Override
     public boolean equals(Object obj) {
         return obj instanceof Item && ((Item) obj).getId() == getId();

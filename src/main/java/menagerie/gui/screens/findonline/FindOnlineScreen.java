@@ -46,6 +46,7 @@ import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Tag;
 import menagerie.util.Util;
 import org.controlsfx.control.GridView;
 
@@ -71,6 +72,7 @@ public class FindOnlineScreen extends Screen {
     private final Label indexLabel = new Label("0/0");
     private final Button nextButton = new Button("Next");
     private final ProgressIndicator nextLoadingIndicator = new ProgressIndicator(-1);
+    private final ListView<String> tagListView = new ListView<>();
 
     private List<MediaItem> items = null;
     private Map<MediaItem, List<Match>> matches = new HashMap<>();
@@ -146,15 +148,40 @@ public class FindOnlineScreen extends Screen {
         matchGridView.setMaxHeight(350);
         matchGridView.setMinHeight(350);
         yourImageInfoLabel.setWrapText(true);
-        HBox h = new HBox(10, new Label("Your image:"), currentItemBP, yourImageInfoLabel);
-        h.setPadding(ALL5);
-        h.setAlignment(Pos.CENTER);
-        loadingIndicator.setMaxSize(100, 100);
+        tagListView.setFocusTraversable(false);
+        tagListView.setCellFactory(param -> {
+            OnlineTagListCell c = new OnlineTagListCell(tagNeme -> {
+                for (Tag t : currentItem.getTags()) {
+                    if (t.getName().equalsIgnoreCase(tagNeme)) return true;
+                }
+                return false;
+            });
+            c.setOnMouseClicked(event -> {
+                Tag t = currentItem.getMenagerie().getTagByName(c.getItem());
+                if (t == null) {
+                    t = currentItem.getMenagerie().createTag(c.getItem());
+                }
+                currentItem.addTag(t);
+                c.setStyle("-fx-background-color: -fx-accent;");
+                event.consume();
+            });
+
+            return c;
+        });
+        VBox tagListVBox = new VBox(5, new Label("Found Tags (Click to add)"), tagListView);
+        VBox.setVgrow(tagListView, Priority.ALWAYS);
+        tagListVBox.setMaxWidth(200);
+        tagListVBox.setMinWidth(200);
         StackPane.setAlignment(loadingIndicator, Pos.CENTER);
         StackPane.setAlignment(matchGridView, Pos.TOP_CENTER);
-        StackPane sp = new StackPane(matchGridView, loadingIndicator);
+        HBox.setHgrow(matchGridView, Priority.ALWAYS);
+        StackPane sp = new StackPane(new HBox(5, matchGridView, tagListVBox), loadingIndicator);
         VBox.setVgrow(sp, Priority.ALWAYS);
-        VBox v = new VBox(5, h, new Separator(), new Label("Found online:"), sp);
+        HBox yourHBox = new HBox(10, new Label("Your image:"), currentItemBP, yourImageInfoLabel);
+        yourHBox.setPadding(ALL5);
+        yourHBox.setAlignment(Pos.CENTER);
+        loadingIndicator.setMaxSize(100, 100);
+        VBox v = new VBox(5, yourHBox, new Separator(), new Label("Found online:"), sp);
         v.setPadding(ALL5);
         root.setCenter(v);
 
@@ -216,6 +243,7 @@ public class FindOnlineScreen extends Screen {
         matchGridView.getItems().clear();
         yourImageInfoLabel.setText("N/A");
         nextLoadingIndicator.setOpacity(0);
+        tagListView.getItems().clear();
 
         final int i = items.indexOf(item);
 
@@ -315,6 +343,11 @@ public class FindOnlineScreen extends Screen {
         matchGridView.getItems().addAll(matches);
         loadingIndicator.setOpacity(0);
         loadingIndicator.setDisable(true);
+        tagListView.getItems().clear();
+        matches.forEach(match -> match.getTags().forEach(s -> {
+            if (!tagListView.getItems().contains(s)) tagListView.getItems().add(s);
+        }));
+        tagListView.getItems().sort(String::compareTo);
     }
 
     public CompareToOnlineScreen getCompareScreen() {
