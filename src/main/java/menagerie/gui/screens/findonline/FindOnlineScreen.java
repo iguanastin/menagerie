@@ -48,6 +48,7 @@ import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Tag;
 import menagerie.util.Util;
+import menagerie.util.listeners.ObjectListener;
 import org.controlsfx.control.GridView;
 
 import java.awt.*;
@@ -78,8 +79,10 @@ public class FindOnlineScreen extends Screen {
     private Map<MediaItem, List<Match>> matches = new HashMap<>();
     private List<DuplicateFinder> finders = null;
     private MediaItem currentItem = null;
+    private ObjectListener<MediaItem> selectListener = null;
 
     private final CompareToOnlineScreen compareScreen = new CompareToOnlineScreen();
+
 
 
     public FindOnlineScreen() {
@@ -115,6 +118,12 @@ public class FindOnlineScreen extends Screen {
         currentItemBP.getStyleClass().addAll(ItemGridCell.DEFAULT_STYLE_CLASS);
         currentItemBP.setMaxSize(156, 156);
         currentItemBP.setMinSize(156, 156);
+        currentItemBP.setOnMouseClicked(event -> {
+            if (selectListener != null) {
+                close();
+                selectListener.pass(currentItem);
+            }
+        });
         matchGridView.setCellFactory(param -> {
             MatchGridCell c = new MatchGridCell();
             c.setOnMouseClicked(event -> {
@@ -195,7 +204,7 @@ public class FindOnlineScreen extends Screen {
         compareScreen.addSuccessListener(() -> displayItem(currentItem));
     }
 
-    public void open(ScreenPane manager, List<MediaItem> items, List<DuplicateFinder> finders) {
+    public void open(ScreenPane manager, List<MediaItem> items, List<DuplicateFinder> finders, ObjectListener<MediaItem> selectListener) {
         if (items == null || finders == null) {
             throw new NullPointerException("Must not be null");
         } else if (items.isEmpty()) {
@@ -212,6 +221,7 @@ public class FindOnlineScreen extends Screen {
         manager.open(this);
         this.items = items;
         this.finders = finders;
+        this.selectListener = selectListener;
 
         displayItem(items.get(0));
     }

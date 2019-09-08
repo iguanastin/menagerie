@@ -1047,7 +1047,7 @@ public class MainController {
             }
         }
 
-        findOnlineScreen.open(screenPane, items, finders);
+        findOnlineScreen.open(screenPane, items, finders, this::selectItemInGridView);
     }
 
     /**
