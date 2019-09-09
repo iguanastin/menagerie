@@ -59,6 +59,8 @@ public class DuplicateManagerThread extends CancellableThread {
         this.confidence = confidence;
         this.progressListener = progressListener;
         this.finishListener = finishListener;
+
+        setName("Duplicate Finder Master");
     }
 
     @Override

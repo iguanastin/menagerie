@@ -1414,7 +1414,7 @@ public class MainController {
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, "SQL exception when shutting down with defrag", e);
             }
-        });
+        }, "Shutdown Menagerie");
         t.start();
 
         Platform.exit();

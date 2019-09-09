@@ -92,7 +92,7 @@ public class DatabaseManager extends Thread {
 
     private MenagerieDatabaseLoadListener loadListener = null;
 
-    private final Timer loggingTimer = new Timer(true);
+    private final Timer loggingTimer = new Timer("Logging Timer", true);
     private final Lock loggingLock = new ReentrantLock();
     private int databaseUpdates = 0;
     private long lastLog = System.currentTimeMillis();

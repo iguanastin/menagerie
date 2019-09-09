@@ -58,6 +58,7 @@ public class DuplicateFinderThread extends CancellableThread {
         this.progressListener = progressListener;
         this.finishListener = finishListener;
 
+        setName("Duplicate Finder");
         setDaemon(true);
     }
 

@@ -299,11 +299,13 @@ public class FindOnlineScreen extends Screen {
                             Platform.runLater(() -> {
                                 if (getCurrentMatch().equals(finalNext)) displayMatches(finalNext);
                             });
+                        } else {
+                            blockUntilItemChanges();
                         }
                     }
                 }
             }
-        });
+        }, "FindOnline Searcher");
         searcherThread.setDaemon(true);
         searcherThread.start();
     }
