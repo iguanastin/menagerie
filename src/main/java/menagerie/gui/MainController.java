@@ -25,7 +25,10 @@
 package menagerie.gui;
 
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
 import javafx.collections.ListChangeListener;
+import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -203,6 +206,41 @@ public class MainController {
                     if (newIndex >= 0) itemGridView.select(itemGridView.getItems().get(newIndex), false, false);
                 }
             }
+        }
+    };
+
+    private final PseudoClass logErrorPseudoClass = PseudoClass.getPseudoClass("error");
+    private final PseudoClass logWarningPseudoClass = PseudoClass.getPseudoClass("warning");
+    private final BooleanProperty logError = new BooleanPropertyBase() {
+        @Override
+        protected void invalidated() {
+            logButton.pseudoClassStateChanged(logErrorPseudoClass, get());
+        }
+
+        @Override
+        public Object getBean() {
+            return logButton.getClass();
+        }
+
+        @Override
+        public String getName() {
+            return "error";
+        }
+    };
+    private final BooleanProperty logWarning = new BooleanPropertyBase() {
+        @Override
+        protected void invalidated() {
+            logButton.pseudoClassStateChanged(logWarningPseudoClass, get());
+        }
+
+        @Override
+        public Object getBean() {
+            return logButton.getClass();
+        }
+
+        @Override
+        public String getName() {
+            return "warning";
         }
     };
 
@@ -482,6 +520,8 @@ public class MainController {
         logScreen = new LogScreen();
         screenPane.add(logScreen);
         logScreen.getListView().setCellFactory(param -> new LogListCell());
+        logButton.getStyleClass().addAll("log-button");
+
         Main.log.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {
@@ -497,10 +537,10 @@ public class MainController {
                     LogItem item;
                     if (record.getLevel() == Level.SEVERE) {
                         item = new LogItem(work.toString(), "-fx-text-fill: red;");
-                        logButton.setStyle("-fx-base: red;");
+                        logError.set(true);
                     } else if (record.getLevel() == Level.WARNING) {
                         item = new LogItem(work.toString(), "-fx-text-fill: yellow;");
-                        logButton.setStyle("-fx-base: yellow;");
+                        logWarning.set(true);
                     } else {
                         item = new LogItem(work.toString());
                     }
@@ -1114,6 +1154,12 @@ public class MainController {
         });
     }
 
+    private void openLog() {
+        logError.set(false);
+        logWarning.set(false);
+        screenPane.open(logScreen);
+    }
+
     /**
      * Opens the slideshow screen.
      *
@@ -1575,8 +1621,7 @@ public class MainController {
     }
 
     public void logButtonOnAction(ActionEvent event) {
-        screenPane.open(logScreen);
-        logButton.setStyle(null);
+        openLog();
         event.consume();
     }
 
@@ -1718,8 +1763,7 @@ public class MainController {
                     event.consume();
                     break;
                 case L:
-                    screenPane.open(logScreen);
-                    logButton.setStyle(null);
+                    openLog();
                     event.consume();
                     break;
                 case M:

@@ -147,3 +147,10 @@
     -fx-background-color: -fx-base;
     -fx-opacity: 0.75;
 }
+
+.log-button:warning {
+    -fx-background-color: yellow;
+}
+.log-button:error {
+    -fx-background-color: red;
+}
