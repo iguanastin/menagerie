@@ -36,6 +36,8 @@ import menagerie.model.menagerie.Tag;
 
 public class TagListCell extends ListCell<Tag> {
 
+    private static final String DEFAULT_STYLE_CLASS = "tag-list-cell";
+
     private final Label countLabel = new Label();
     private final Label nameLabel = new Label();
 
@@ -56,6 +58,8 @@ public class TagListCell extends ListCell<Tag> {
 
 
     public TagListCell() {
+        getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+
         countLabel.setMinWidth(USE_PREF_SIZE);
         BorderPane bp = new BorderPane(null, null, countLabel, null, nameLabel);
         setGraphic(bp);

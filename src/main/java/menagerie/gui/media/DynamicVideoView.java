@@ -65,6 +65,9 @@ import java.util.concurrent.Semaphore;
  */
 public class DynamicVideoView extends StackPane {
 
+    private static final String DEFAULT_STYLE_CLASS = "dynamic-video-view";
+    private static final String CONTROLS_STYLE_CLASS = "dynamic-video-controls";
+
     private final Image muteImage = new Image(getClass().getResource("/misc/mute.png").toString());
     private final Image unmuteImage = new Image(getClass().getResource("/misc/unmute.png").toString());
 
@@ -95,18 +98,17 @@ public class DynamicVideoView extends StackPane {
     public DynamicVideoView() {
         super();
         //        NativeLibrary.addSearchPath("vlclib", new DefaultWindowsNativeDiscoveryStrategy().discover());
+        getStyleClass().addAll(DEFAULT_STYLE_CLASS);
 
         canvas.widthProperty().bind(widthProperty());
         canvas.heightProperty().bind(heightProperty());
         getChildren().add(canvas);
         HBox bottomBarHBox = new HBox(5, durationLabel, slider, muteImageView);
+        bottomBarHBox.getStyleClass().addAll(CONTROLS_STYLE_CLASS);
         bottomBarHBox.setAlignment(Pos.CENTER);
-        bottomBarHBox.setStyle("-fx-background-color: -fx-base;");
-        bottomBarHBox.setOpacity(0.75);
         bottomBarHBox.setPadding(new Insets(3));
         BorderPane bp = new BorderPane(null, null, null, bottomBarHBox, null);
         HBox.setHgrow(slider, Priority.ALWAYS);
-        slider.setOpacity(0.75);
         slider.setFocusTraversable(false);
         slider.valueChangingProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue && !released && getMediaPlayer() != null)

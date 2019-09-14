@@ -25,8 +25,10 @@
 package menagerie.gui.screens.duplicates;
 
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
+import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -143,15 +145,30 @@ public class DuplicatesScreen extends Screen {
         });
         leftTagList.setCellFactory(param -> {
             TagListCell c = new TagListCell() {
+                private final PseudoClass otherHasPseudoClass = PseudoClass.getPseudoClass("other-missing");
+
+                private final BooleanProperty otherMissing = new BooleanPropertyBase() {
+                    @Override
+                    protected void invalidated() {
+                        pseudoClassStateChanged(otherHasPseudoClass, get());
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "otherMissing";
+                    }
+                };
+
                 @Override
                 protected void updateItem(Tag tag, boolean empty) {
                     super.updateItem(tag, empty);
 
-                    if (tag == null || currentPair.getObject2().hasTag(tag)) {
-                        setStyle(null);
-                    } else {
-                        setStyle("-fx-background-color: blue;");
-                    }
+                    otherMissing.set(tag != null && !currentPair.getObject2().hasTag(tag));
                 }
             };
 
@@ -166,15 +183,30 @@ public class DuplicatesScreen extends Screen {
         leftTagList.setPrefWidth(200);
         rightTagList.setCellFactory(param -> {
             TagListCell c = new TagListCell() {
+                private final PseudoClass otherHasPseudoClass = PseudoClass.getPseudoClass("other-missing");
+
+                private final BooleanProperty otherMissing = new BooleanPropertyBase() {
+                    @Override
+                    protected void invalidated() {
+                        pseudoClassStateChanged(otherHasPseudoClass, get());
+                    }
+
+                    @Override
+                    public Object getBean() {
+                        return this;
+                    }
+
+                    @Override
+                    public String getName() {
+                        return "otherMissing";
+                    }
+                };
+
                 @Override
                 protected void updateItem(Tag tag, boolean empty) {
                     super.updateItem(tag, empty);
 
-                    if (tag == null || currentPair.getObject1().hasTag(tag)) {
-                        setStyle(null);
-                    } else {
-                        setStyle("-fx-background-color: blue;");
-                    }
+                    otherMissing.set(tag != null && !currentPair.getObject1().hasTag(tag));
                 }
             };
 
