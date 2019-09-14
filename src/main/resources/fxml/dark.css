@@ -161,3 +161,11 @@
 .log-list-cell:error {
     -fx-text-background-color: red;
 }
+
+.pairs-button:has-pairs {
+    -fx-base: blue;
+}
+
+.imports-button:has-imports {
+    -fx-base: blue;
+}

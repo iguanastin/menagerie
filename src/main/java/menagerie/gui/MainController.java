@@ -27,6 +27,7 @@ package menagerie.gui;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
@@ -401,28 +402,23 @@ public class MainController {
     private void initImportScreen() {
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), this::selectItemInGridView);
         screenPane.add(importerScreen);
+
+        final PseudoClass hasImportsPseudoClass = PseudoClass.getPseudoClass("has-imports");
+        final BooleanProperty hasImports = new SimpleBooleanProperty();
+        hasImports.addListener(observable -> importsButton.pseudoClassStateChanged(hasImportsPseudoClass, hasImports.get()));
+        importsButton.getStyleClass().addAll("imports-button");
         importerScreen.getListView().getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> {
             int count = c.getList().size() + importerScreen.getSimilar().size();
             importsButton.setText("Imports: " + count);
 
-            if (count == 0) {
-                importsButton.setStyle(null);
-            } else {
-                importsButton.setStyle("-fx-base: blue;");
-            }
+            hasImports.set(count > 0);
         }));
-        importerScreen.getSimilar().addListener((ListChangeListener<? super SimilarPair<MediaItem>>) c -> {
-            Platform.runLater(() -> {
-                int count = c.getList().size() + importerScreen.getListView().getItems().size();
-                importsButton.setText("Imports: " + count);
+        importerScreen.getSimilar().addListener((ListChangeListener<? super SimilarPair<MediaItem>>) c -> Platform.runLater(() -> {
+            int count = c.getList().size() + importerScreen.getListView().getItems().size();
+            importsButton.setText("Imports: " + count);
 
-                if (count == 0) {
-                    importsButton.setStyle(null);
-                } else {
-                    importsButton.setStyle("-fx-base: blue;");
-                }
-            });
-        });
+            hasImports.set(count > 0);
+        }));
     }
 
     private void initDuplicatesScreen() {

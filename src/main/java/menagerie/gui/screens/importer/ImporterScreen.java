@@ -25,9 +25,10 @@
 package menagerie.gui.screens.importer;
 
 import javafx.application.Platform;
+import javafx.beans.InvalidationListener;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -47,6 +48,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ImporterScreen extends Screen {
+
+    private static final String PAIRS_STYLE_CLASS = "pairs-button";
+
+    private final PseudoClass pairsPseudoClass = PseudoClass.getPseudoClass("has-pairs");
 
     private final ListView<ImportJob> listView = new ListView<>();
 
@@ -95,23 +100,18 @@ public class ImporterScreen extends Screen {
             }
         });
         Button cancelAllButton = new Button("Cancel All");
-        cancelAllButton.setOnAction(event -> {
-            jobs.forEach(job -> {
-                if (job.getStatus() == ImportJob.Status.WAITING) {
-                    job.cancel();
-                    listView.getItems().remove(job);
-                }
-            });
-        });
-        Button pairsButton = new Button("Similar: 0");
-        similar.addListener((ListChangeListener<? super SimilarPair<MediaItem>>) c -> Platform.runLater(() -> {
-            pairsButton.setText("Similar: " + c.getList().size());
-            if (c.getList().isEmpty()) {
-                pairsButton.setStyle(null);
-            } else {
-                pairsButton.setStyle("-fx-base: blue;");
+        cancelAllButton.setOnAction(event -> jobs.forEach(job -> {
+            if (job.getStatus() == ImportJob.Status.WAITING) {
+                job.cancel();
+                listView.getItems().remove(job);
             }
         }));
+        Button pairsButton = new Button("Similar: 0");
+        pairsButton.getStyleClass().addAll(PAIRS_STYLE_CLASS);
+        similar.addListener((InvalidationListener) c -> {
+            Platform.runLater(() -> pairsButton.setText("Similar: " + similar.size()));
+            pairsButton.pseudoClassStateChanged(pairsPseudoClass, !similar.isEmpty());
+        });
         pairsButton.setOnAction(event -> {
             duplicateResolverListener.pass(new ArrayList<>(similar));
             similar.clear();
@@ -119,7 +119,7 @@ public class ImporterScreen extends Screen {
         BorderPane bottom = new BorderPane(pairsButton, null, playPauseButton, null, cancelAllButton);
         bottom.setPadding(new Insets(5));
 
-        listView.getItems().addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> title.setText("Imports: " + c.getList().size())));
+        listView.getItems().addListener((InvalidationListener) c -> Platform.runLater(() -> title.setText("Imports: " + listView.getItems().size())));
 
         BorderPane root = new BorderPane(listView, top, null, bottom, null);
         root.setPrefWidth(400);
@@ -160,7 +160,6 @@ public class ImporterScreen extends Screen {
     }
 
     /**
-     *
      * @return The list view of this import screen.
      */
     public ListView<ImportJob> getListView() {
@@ -168,7 +167,6 @@ public class ImporterScreen extends Screen {
     }
 
     /**
-     *
      * @return List of similar pairs of imports.
      */
     public ObservableList<SimilarPair<MediaItem>> getSimilar() {
