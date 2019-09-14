@@ -24,12 +24,14 @@
 
 package menagerie.gui.screens.log;
 
+import java.util.logging.Level;
+
 /**
  * A class representing a single log item.
  */
 public class LogItem {
 
-    private String css = null;
+    private Level level;
     private String text;
 
 
@@ -40,24 +42,25 @@ public class LogItem {
      */
     public LogItem(String text) {
         this.text = text;
+        level = Level.INFO;
     }
 
     /**
      * Creates a log item with specified CSS
      *
-     * @param text Log message.
-     * @param css  CSS styling.
+     * @param text  Log message.
+     * @param level Log level.
      */
-    public LogItem(String text, String css) {
+    public LogItem(String text, Level level) {
         this(text);
-        this.css = css;
+        this.level = level;
     }
 
     /**
-     * @return The CSS styling.
+     * @return Severity of log
      */
-    public String getCSS() {
-        return css;
+    public Level getLevel() {
+        return level;
     }
 
     /**

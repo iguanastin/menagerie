@@ -149,8 +149,15 @@
 }
 
 .log-button:warning {
-    -fx-background-color: yellow;
+    -fx-base: yellow;
 }
 .log-button:error {
-    -fx-background-color: red;
+    -fx-base: red;
+}
+
+.log-list-cell:warning {
+    -fx-text-background-color: yellow;
+}
+.log-list-cell:error {
+    -fx-text-background-color: red;
 }

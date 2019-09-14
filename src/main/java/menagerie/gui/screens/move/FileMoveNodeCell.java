@@ -44,7 +44,7 @@ public class FileMoveNodeCell extends VBox {
     private static final Insets INDENT = new Insets(0, 0, 0, 10);
     private static final Border BORDER = new Border(new BorderStroke(Color.BLACK, null, null, Color.BLACK, BorderStrokeStyle.SOLID, BorderStrokeStyle.NONE, BorderStrokeStyle.NONE, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT, null));
 
-    private final BooleanProperty expanded = new SimpleBooleanProperty(true);
+    private final BooleanProperty expanded = new SimpleBooleanProperty(true); // Use pseudoclass attached to this instead of background objects
     private final Button expandButton = new Button("-");
     private Label itemsLabel = null;
     private final List<FileMoveNodeCell> subNodes = new ArrayList<>();

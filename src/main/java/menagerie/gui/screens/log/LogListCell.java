@@ -24,6 +24,9 @@
 
 package menagerie.gui.screens.log;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.BooleanPropertyBase;
+import javafx.css.PseudoClass;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -31,13 +34,52 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 
+import java.util.logging.Level;
+
 public class LogListCell extends ListCell<LogItem> {
 
+    private final PseudoClass warningPseudoClass = PseudoClass.getPseudoClass("warning");
+    private final PseudoClass errorPseudoClass = PseudoClass.getPseudoClass("error");
+
     private Label label = new Label();
+
+    private final BooleanProperty warning = new BooleanPropertyBase() {
+        @Override
+        protected void invalidated() {
+            pseudoClassStateChanged(warningPseudoClass, get());
+        }
+
+        @Override
+        public Object getBean() {
+            return LogListCell.class;
+        }
+
+        @Override
+        public String getName() {
+            return "warning";
+        }
+    };
+    private final BooleanProperty error = new BooleanPropertyBase() {
+        @Override
+        protected void invalidated() {
+            pseudoClassStateChanged(errorPseudoClass, get());
+        }
+
+        @Override
+        public Object getBean() {
+            return LogListCell.class;
+        }
+
+        @Override
+        public String getName() {
+            return "error";
+        }
+    };
 
 
     public LogListCell() {
         super();
+        getStyleClass().addAll("log-list-cell");
 
         label.setWrapText(true);
         label.maxWidthProperty().bind(widthProperty().subtract(15));
@@ -60,12 +102,8 @@ public class LogListCell extends ListCell<LogItem> {
     protected void updateItem(LogItem item, boolean empty) {
         super.updateItem(item, empty);
 
-        if (item != null) {
-            label.setText(item.getText());
-            label.setStyle(item.getCSS());
-        } else {
-            label.setText(null);
-            label.setStyle(null);
-        }
+        warning.set(item != null && item.getLevel() == Level.WARNING);
+        error.set(item != null && item.getLevel() == Level.SEVERE);
+        label.setText(item != null ? item.getText() : null);
     }
 }

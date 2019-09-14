@@ -534,15 +534,11 @@ public class MainController {
                     }
                 }
                 Platform.runLater(() -> {
-                    LogItem item;
-                    if (record.getLevel() == Level.SEVERE) {
-                        item = new LogItem(work.toString(), "-fx-text-fill: red;");
+                    LogItem item = new LogItem(work.toString(), record.getLevel());
+                    if (item.getLevel() == Level.SEVERE) {
                         logError.set(true);
-                    } else if (record.getLevel() == Level.WARNING) {
-                        item = new LogItem(work.toString(), "-fx-text-fill: yellow;");
+                    } else if (item.getLevel() == Level.WARNING) {
                         logWarning.set(true);
-                    } else {
-                        item = new LogItem(work.toString());
                     }
                     logScreen.getListView().getItems().add(item);
                     if (logScreen.getListView().getItems().size() > 1000) logScreen.getListView().getItems().remove(0);
