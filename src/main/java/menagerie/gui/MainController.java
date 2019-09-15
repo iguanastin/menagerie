@@ -381,7 +381,7 @@ public class MainController {
 
     private void initFindOnlineScreen() {
         findOnlineScreen = new FindOnlineScreen();
-        screenPane.add(findOnlineScreen.getCompareScreen());
+//        screenPane.add(findOnlineScreen.getCompareScreen());
     }
 
     private void initMoveFilesScreen() {
@@ -967,25 +967,25 @@ public class MainController {
         }
 
         if (groupCount > 0 || mediaCount > 0) {
-            MenuItem findOnline = new MenuItem("Find online");
-            findOnline.setOnAction(event -> findOnlineDialog(selected));
 
-            Menu slideshow = new Menu("Slideshow...");
             MenuItem grabbed = new MenuItem("Selected");
             grabbed.setOnAction(event -> openSlideShow(selected, false));
             MenuItem searched = new MenuItem("Searched");
             searched.setOnAction(event -> openSlideShow(currentSearch.getResults(), true));
             MenuItem all = new MenuItem("All");
             all.setOnAction(event -> openSlideShow(menagerie.getItems(), true));
-            slideshow.getItems().addAll(grabbed, searched, all);
+            Menu slideshow = new Menu("Slideshow...", null, grabbed, searched, all);
 
             MenuItem moveFiles = new MenuItem("Move Files");
             moveFiles.setOnAction(event -> moveFilesScreen.open(screenPane, selected));
 
-            MenuItem findDupes = new MenuItem("Find Duplicates");
+            MenuItem findOnline = new MenuItem("Online");
+            findOnline.setOnAction(event -> findOnlineDialog(selected));
+            MenuItem findDupes = new MenuItem("Duplicates");
             findDupes.setOnAction(event -> duplicateOptionsScreen.open(screenPane, menagerie, selected, currentSearch.getResults(), menagerie.getItems()));
+            Menu find = new Menu("Find...", null, findOnline, findDupes);
 
-            cm.getItems().addAll(findOnline, slideshow, moveFiles, findDupes);
+            cm.getItems().addAll(find, slideshow, moveFiles);
         }
 
         if (mediaCount > 0) {
@@ -1550,8 +1550,6 @@ public class MainController {
                             break;
                         }
                     }
-
-                    if (i1.getId() == 48295) System.out.println(hasSimilar);
 
                     if (!hasSimilar) i1.setHasNoSimilar(true);
 
