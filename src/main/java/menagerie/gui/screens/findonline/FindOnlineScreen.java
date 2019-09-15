@@ -232,8 +232,9 @@ public class FindOnlineScreen extends Screen {
         currentItemBP.setMinSize(156, 156);
         currentItemBP.setOnMouseClicked(event -> {
             if (selectListener != null) {
+                MediaItem item = currentMatch.get().getItem();
                 close();
-                selectListener.pass(currentMatch.get().getItem());
+                selectListener.pass(item);
             }
         });
         HBox yourHBox = new HBox(10, new Label("Your image:"), currentItemBP, yourImageInfoLabel);
