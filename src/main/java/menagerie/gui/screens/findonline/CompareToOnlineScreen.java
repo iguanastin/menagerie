@@ -31,12 +31,13 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.Separator;
-import javafx.scene.control.SplitPane;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import menagerie.duplicates.Match;
 import menagerie.gui.Main;
@@ -44,9 +45,9 @@ import menagerie.gui.media.PanZoomImageView;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.AlertDialogScreen;
-import menagerie.gui.screens.dialogs.ProgressScreen;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.util.CancellableThread;
+import menagerie.util.Util;
 import menagerie.util.listeners.PokeListener;
 
 import java.awt.*;
@@ -68,6 +69,7 @@ public class CompareToOnlineScreen extends Screen {
     private final static Insets ALL5 = new Insets(5);
 
     private final PanZoomImageView itemView = new PanZoomImageView(), matchView = new PanZoomImageView();
+    private final ProgressIndicator loadingIndicator = new ProgressIndicator(-1);
 
     private MediaItem currentItem = null;
     private Match currentMatch = null;
@@ -101,8 +103,14 @@ public class CompareToOnlineScreen extends Screen {
 
         header.setBottom(new Separator());
 
-        VBox leftVBox = new VBox(5, new Label("Your image"), itemView);
-        VBox rightVBox = new VBox(5, new Label("Online Match"), matchView);
+        BorderPane leftBorderPane = new BorderPane(itemView);
+        VBox.setVgrow(leftBorderPane, Priority.ALWAYS);
+        VBox leftVBox = new VBox(5, new Label("Your image"), leftBorderPane);
+        loadingIndicator.setMaxSize(50, 50);
+        StackPane rightStackPane = new StackPane(matchView, loadingIndicator);
+        rightStackPane.setAlignment(Pos.CENTER);
+        VBox.setVgrow(rightStackPane, Priority.ALWAYS);
+        VBox rightVBox = new VBox(5, new Label("Online Match"), rightStackPane);
         rightVBox.setAlignment(Pos.TOP_RIGHT);
         SplitPane sp = new SplitPane(leftVBox, rightVBox);
         root.setCenter(sp);
@@ -174,12 +182,16 @@ public class CompareToOnlineScreen extends Screen {
 
         itemView.setImage(item.getImage());
         matchView.setImage(null);
+        loadingIndicator.setProgress(0);
+        loadingIndicator.setDisable(true);
+        loadingIndicator.setOpacity(0);
 
         if (match.getImageURL() != null && !match.getImageURL().isEmpty()) {
-            ProgressScreen ps = new ProgressScreen();
+            loadingIndicator.setDisable(false);
+            loadingIndicator.setOpacity(1);
             CancellableThread ct = new CancellableThread() {
                 long lastUpdate = 0;
-                final long UPDATE_INTERVAL = 16;
+                final long UPDATE_INTERVAL = 17;
 
                 @Override
                 public void run() {
@@ -189,26 +201,26 @@ public class CompareToOnlineScreen extends Screen {
                         // Download to temp file
                         HttpURLConnection conn = (HttpURLConnection) new URL(match.getImageURL()).openConnection();
                         conn.addRequestProperty("User-Agent", "Mozilla/4.0");
-                        ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
-                        try (FileOutputStream fos = new FileOutputStream(tempImageFile.get())) {
-                            final long size = conn.getContentLengthLong();
-                            final int chunkSize = 4096;
-                            for (int i = 0; i < size; i += chunkSize) {
-                                if (!running) {
-                                    break;
-                                }
-                                fos.getChannel().transferFrom(rbc, i, chunkSize);
+                        try (ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream())) {
+                            try (FileOutputStream fos = new FileOutputStream(tempImageFile.get())) {
+                                final long size = conn.getContentLengthLong();
+                                final int chunkSize = 4096;
+                                for (int i = 0; i < size; i += chunkSize) {
+                                    if (!Util.equalsNullable(match, currentMatch)) cancel();
+                                    if (!running) break;
+                                    fos.getChannel().transferFrom(rbc, i, chunkSize);
 
-                                final long time = System.currentTimeMillis();
-                                if (time > lastUpdate + UPDATE_INTERVAL) {
-                                    lastUpdate = time;
-                                    final double finalI = i;
-                                    Platform.runLater(() -> ps.setProgress(finalI / size));
+                                    final long time = System.currentTimeMillis();
+                                    if (time > lastUpdate + UPDATE_INTERVAL) {
+                                        lastUpdate = time;
+                                        final double finalI = i;
+                                        Platform.runLater(() -> loadingIndicator.setProgress(finalI / size));
+                                    }
                                 }
                             }
+                        } finally {
+                            conn.disconnect();
                         }
-                        rbc.close();
-                        conn.disconnect();
 
                         tempImageFile.get().deleteOnExit();
                         Platform.runLater(() -> {
@@ -216,7 +228,9 @@ public class CompareToOnlineScreen extends Screen {
                                 matchView.setImage(new Image(tempImageFile.get().toURI().toString()));
                                 Platform.runLater(matchView::fitImageToView);
                             }
-                            ps.close();
+
+                            loadingIndicator.setDisable(true);
+                            loadingIndicator.setOpacity(0);
                         });
                     } catch (IOException e) {
                         Main.log.log(Level.SEVERE, "Failed to download image", e);
@@ -225,8 +239,6 @@ public class CompareToOnlineScreen extends Screen {
             };
             ct.setDaemon(true);
             ct.start();
-            ps.setProgress(0);
-            ps.open(manager, "Loading image", "Getting: " + match.getImageURL(), ct::cancel);
         } else {
             matchView.setImage(new Image(match.getThumbnailURL()));
         }
