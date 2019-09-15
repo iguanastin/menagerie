@@ -400,6 +400,7 @@ public class MainController {
 
     private void initFindOnlineScreen() {
         findOnlineScreen = new FindOnlineScreen();
+        findOnlineScreen.loadAheadProperty().bind(settings.onlineLoadAhead.valueProperty());
     }
 
     private void initMoveFilesScreen() {

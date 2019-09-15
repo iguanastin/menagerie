@@ -28,12 +28,12 @@ import java.util.Collections;
 
 public class MenagerieSettings extends Settings {
 
-    public GroupSetting importGroup, autoImportGroup, duplicatesGroup, videoGroup, dbGroup, explorerGroup, slideshowGroup;
+    public GroupSetting importGroup, autoImportGroup, duplicatesGroup, videoGroup, dbGroup, explorerGroup, slideshowGroup, findOnlineGroup;
     public FolderSetting defaultFolder, autoImportFolder, vlcFolder, lastImportFolder;
     public StringSetting userFileTypes, dbUrl, dbUser, dbPass, tagWithOnImport, importItemsIntoGroupName, importOrder;
     public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesIncludeGroups, slideshowPreload, duplicatePreload, explorerGroupAscending;
     public DoubleSetting duplicatesConfidence, slideshowInterval;
-    public IntSetting gridWidth, licensesAgreed, windowX, windowY, windowWidth, windowHeight;
+    public IntSetting gridWidth, licensesAgreed, windowX, windowY, windowWidth, windowHeight, onlineLoadAhead;
 
 
     public MenagerieSettings() {
@@ -63,6 +63,11 @@ public class MenagerieSettings extends Settings {
         duplicatePreload = new BooleanSetting("duplicate-preload", true).label("Preload next/previous duplicates");
         Collections.addAll(duplicatesGroup.getChildren(), duplicatesConfidence, duplicatesIncludeGroups, duplicatePreload);
         getSettings().add(duplicatesGroup);
+
+        findOnlineGroup = new GroupSetting("").label("Find Online");
+        onlineLoadAhead = new IntSetting("online-load-ahead", 1).label("Load Next").min(0);
+        Collections.addAll(findOnlineGroup.getChildren(), onlineLoadAhead);
+        getSettings().add(findOnlineGroup);
 
         slideshowGroup = new GroupSetting("slideshow-group").label("Slideshow");
         slideshowInterval = new DoubleSetting("slideshow-interval", 10).label("Slideshow interval (seconds)").min(0.1);

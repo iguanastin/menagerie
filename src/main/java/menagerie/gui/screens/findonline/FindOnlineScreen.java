@@ -25,7 +25,9 @@
 package menagerie.gui.screens.findonline;
 
 import javafx.application.Platform;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
@@ -88,6 +90,7 @@ public class FindOnlineScreen extends Screen {
     private final ObjectProperty<MatchGroup> currentMatch = new SimpleObjectProperty<>();
 
     private Thread searcherThread = null;
+    private final IntegerProperty loadAhead = new SimpleIntegerProperty(1);
 
     private ObjectListener<MediaItem> selectListener = null;
 
@@ -203,12 +206,13 @@ public class FindOnlineScreen extends Screen {
         return matchesStackPane;
     }
 
-    private VBox initFailedVBox() {
+    private void initFailedVBox() {
         Button retryButton = new Button("Retry");
         retryButton.setOnAction(event -> {
             getCurrentMatch().setStatus(MatchGroup.Status.WAITING);
             searcherThread.interrupt();
-            if (!matchesStackPane.getChildren().contains(loadingIndicator)) matchesStackPane.getChildren().add(loadingIndicator);
+            if (!matchesStackPane.getChildren().contains(loadingIndicator))
+                matchesStackPane.getChildren().add(loadingIndicator);
             matchesStackPane.getChildren().remove(failedVBox);
         });
         Button closeButton = new Button("Close");
@@ -218,7 +222,6 @@ public class FindOnlineScreen extends Screen {
         failedVBox.getChildren().add(failedButtonHBox);
         failedVBox.setMaxSize(300, 100);
         failedVBox.getStyleClass().addAll(ROOT_STYLE_CLASS);
-        return failedVBox;
     }
 
     private HBox initYourItemHBox() {
@@ -282,23 +285,26 @@ public class FindOnlineScreen extends Screen {
                             if (getCurrentMatch().equals(item)) displayMatches(item);
                         });
                     } else {
-                        MatchGroup next = null;
+                        for (int shift = 1; shift <= loadAhead.get(); shift++) {
+                            MatchGroup next = null;
 
-                        synchronized (matches) {
-                            int i = matches.indexOf(item);
-                            if (i + 1 < matches.size()) {
-                                next = matches.get(i + 1);
+                            synchronized (matches) {
+                                int i = matches.indexOf(item);
+                                if (i + shift < matches.size()) {
+                                    next = matches.get(i + shift);
+                                }
                             }
-                        }
 
-                        if (next != null && next.getStatus() == MatchGroup.Status.WAITING) {
-                            next.retrieveMatches(finders);
-                            MatchGroup finalNext = next;
-                            Platform.runLater(() -> {
-                                if (getCurrentMatch().equals(finalNext)) displayMatches(finalNext);
-                            });
-                        } else {
-                            blockUntilItemChanges();
+                            if (next != null && next.getStatus() == MatchGroup.Status.WAITING) {
+                                next.retrieveMatches(finders);
+                                MatchGroup finalNext = next;
+                                Platform.runLater(() -> {
+                                    if (getCurrentMatch().equals(finalNext)) displayMatches(finalNext);
+                                });
+                                break;
+                            }
+
+                            if (shift == loadAhead.get()) blockUntilItemChanges();
                         }
                     }
                 }
@@ -398,12 +404,14 @@ public class FindOnlineScreen extends Screen {
             displayMatches(item);
 
             if (item.getStatus() == MatchGroup.Status.WAITING || item.getStatus() == MatchGroup.Status.PROCESSING) {
-                if (!matchesStackPane.getChildren().contains(loadingIndicator)) matchesStackPane.getChildren().add(loadingIndicator);
+                if (!matchesStackPane.getChildren().contains(loadingIndicator))
+                    matchesStackPane.getChildren().add(loadingIndicator);
             } else {
                 matchesStackPane.getChildren().remove(loadingIndicator);
             }
             if (item.getStatus() == MatchGroup.Status.FAILED) {
-                if (!matchesStackPane.getChildren().contains(failedVBox)) matchesStackPane.getChildren().add(failedVBox);
+                if (!matchesStackPane.getChildren().contains(failedVBox))
+                    matchesStackPane.getChildren().add(failedVBox);
             } else {
                 matchesStackPane.getChildren().remove(failedVBox);
             }
@@ -470,6 +478,10 @@ public class FindOnlineScreen extends Screen {
         synchronized (currentMatch) {
             currentMatch.set(match);
         }
+    }
+
+    public IntegerProperty loadAheadProperty() {
+        return loadAhead;
     }
 
 }
