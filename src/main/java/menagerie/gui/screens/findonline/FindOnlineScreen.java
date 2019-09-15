@@ -299,7 +299,7 @@ public class FindOnlineScreen extends Screen {
                                 next.retrieveMatches(finders);
                                 MatchGroup finalNext = next;
                                 Platform.runLater(() -> {
-                                    if (getCurrentMatch().equals(finalNext)) displayMatches(finalNext);
+                                    if (finalNext.equals(getCurrentMatch())) displayMatches(finalNext);
                                 });
                                 break;
                             }
@@ -360,6 +360,11 @@ public class FindOnlineScreen extends Screen {
         displayMatch(matches.get(0));
 
         manager.open(this);
+    }
+
+    @Override
+    protected void onClose() {
+        setCurrentMatch(null);
     }
 
     private void displayPrevious() {
