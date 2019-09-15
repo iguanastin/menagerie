@@ -44,7 +44,9 @@ import menagerie.gui.media.PanZoomImageView;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.AlertDialogScreen;
+import menagerie.gui.screens.dialogs.ProgressScreen;
 import menagerie.model.menagerie.MediaItem;
+import menagerie.util.CancellableThread;
 import menagerie.util.listeners.PokeListener;
 
 import java.awt.*;
@@ -174,36 +176,61 @@ public class CompareToOnlineScreen extends Screen {
         matchView.setImage(null);
 
         if (match.getImageURL() != null && !match.getImageURL().isEmpty()) {
-            try {
-                tempImageFile.set(File.createTempFile("menagerie", match.getImageURL().substring(match.getImageURL().lastIndexOf("."))));
+            ProgressScreen ps = new ProgressScreen();
+            CancellableThread ct = new CancellableThread() {
+                long lastUpdate = 0;
+                final long UPDATE_INTERVAL = 16;
 
-                // Download to temp file
-                HttpURLConnection conn = (HttpURLConnection) new URL(match.getImageURL()).openConnection();
-                conn.addRequestProperty("User-Agent", "Mozilla/4.0");
-                ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
-                try (FileOutputStream fos = new FileOutputStream(tempImageFile.get())) {
-                    final long size = conn.getContentLengthLong();
-                    final int chunkSize = 4096;
-                    for (int i = 0; i < size; i += chunkSize) {
-                        fos.getChannel().transferFrom(rbc, i, chunkSize);
+                @Override
+                public void run() {
+                    try {
+                        tempImageFile.set(File.createTempFile("menagerie", match.getImageURL().substring(match.getImageURL().lastIndexOf("."))));
+
+                        // Download to temp file
+                        HttpURLConnection conn = (HttpURLConnection) new URL(match.getImageURL()).openConnection();
+                        conn.addRequestProperty("User-Agent", "Mozilla/4.0");
+                        ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
+                        try (FileOutputStream fos = new FileOutputStream(tempImageFile.get())) {
+                            final long size = conn.getContentLengthLong();
+                            final int chunkSize = 4096;
+                            for (int i = 0; i < size; i += chunkSize) {
+                                if (!running) {
+                                    break;
+                                }
+                                fos.getChannel().transferFrom(rbc, i, chunkSize);
+
+                                final long time = System.currentTimeMillis();
+                                if (time > lastUpdate + UPDATE_INTERVAL) {
+                                    lastUpdate = time;
+                                    final double finalI = i;
+                                    Platform.runLater(() -> ps.setProgress(finalI / size));
+                                }
+                            }
+                        }
+                        rbc.close();
+                        conn.disconnect();
+
+                        tempImageFile.get().deleteOnExit();
+                        Platform.runLater(() -> {
+                            if (running) {
+                                matchView.setImage(new Image(tempImageFile.get().toURI().toString()));
+                                Platform.runLater(matchView::fitImageToView);
+                            }
+                            ps.close();
+                        });
+                    } catch (IOException e) {
+                        Main.log.log(Level.SEVERE, "Failed to download image", e);
                     }
-
                 }
-                rbc.close();
-                conn.disconnect();
-
-                tempImageFile.get().deleteOnExit();
-                matchView.setImage(new Image(tempImageFile.get().toURI().toString()));
-            } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "Failed to download image", e);
-            }
+            };
+            ct.setDaemon(true);
+            ct.start();
+            ps.setProgress(0);
+            ps.open(manager, "Loading image", "Getting: " + match.getImageURL(), ct::cancel);
         } else {
             matchView.setImage(new Image(match.getThumbnailURL()));
         }
-        Platform.runLater(() -> {
-            itemView.fitImageToView();
-            matchView.fitImageToView();
-        });
+        Platform.runLater(itemView::fitImageToView);
     }
 
     @Override

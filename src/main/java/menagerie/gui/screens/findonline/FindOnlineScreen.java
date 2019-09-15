@@ -432,7 +432,7 @@ public class FindOnlineScreen extends Screen {
             setFileInfoLabelDirect(item);
         } else {
             img.progressProperty().addListener((observable, oldValue, newValue) -> {
-                if (!img.isError() && newValue.doubleValue() == 1) {
+                if (!img.isError() && newValue.doubleValue() == 1 && currentMatch.get().getItem().equals(item)) {
                     setFileInfoLabelDirect(item);
                 }
             });
