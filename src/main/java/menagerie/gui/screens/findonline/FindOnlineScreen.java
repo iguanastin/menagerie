@@ -108,7 +108,7 @@ public class FindOnlineScreen extends Screen {
         root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(root);
 
-        VBox v = new VBox(5, initYourItemHBox(), new Separator(), new Label("Found online:"), initMatchesStackPane());
+        VBox v = new VBox(5, initYourItemHBox(), new Separator(), initMatchesStackPane());
         v.setPadding(ALL5);
 
         root.setTop(initHeader());
@@ -189,13 +189,11 @@ public class FindOnlineScreen extends Screen {
         matchGridView.setCellHeight(156);
         matchGridView.setHorizontalCellSpacing(3);
         matchGridView.setVerticalCellSpacing(3);
-        matchGridView.setMaxHeight(350);
-        matchGridView.setMinHeight(350);
         loadingIndicator.setMaxSize(100, 100);
         StackPane.setAlignment(loadingIndicator, Pos.CENTER);
-        StackPane.setAlignment(matchGridView, Pos.TOP_CENTER);
-        HBox.setHgrow(matchGridView, Priority.ALWAYS);
-        StackPane sp = new StackPane(new HBox(5, matchGridView, initTagListVBox()), loadingIndicator, initFailedVBox());
+        BorderPane matchesBorderPane = new BorderPane(matchGridView, new Label("Found matches online:"), null, null, null);
+        HBox.setHgrow(matchesBorderPane, Priority.ALWAYS);
+        StackPane sp = new StackPane(new HBox(5, matchesBorderPane, initTagListVBox()), loadingIndicator, initFailedVBox());
         VBox.setVgrow(sp, Priority.ALWAYS);
         return sp;
     }
