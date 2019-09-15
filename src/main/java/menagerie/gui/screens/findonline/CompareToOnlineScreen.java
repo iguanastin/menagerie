@@ -195,13 +195,14 @@ public class CompareToOnlineScreen extends Screen {
                 @Override
                 public void run() {
                     try {
-                        tempImageFile.set(File.createTempFile("menagerie", match.getImageURL().substring(match.getImageURL().lastIndexOf("."))));
+                        File tempFile = File.createTempFile("menagerie", match.getImageURL().substring(match.getImageURL().lastIndexOf(".")));
+                        tempImageFile.set(tempFile);
 
                         // Download to temp file
                         HttpURLConnection conn = (HttpURLConnection) new URL(match.getImageURL()).openConnection();
                         conn.addRequestProperty("User-Agent", "Mozilla/4.0");
                         try (ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream())) {
-                            try (FileOutputStream fos = new FileOutputStream(tempImageFile.get())) {
+                            try (FileOutputStream fos = new FileOutputStream(tempFile)) {
                                 final long size = conn.getContentLengthLong();
                                 final int chunkSize = 4096;
                                 for (int i = 0; i < size; i += chunkSize) {
@@ -221,10 +222,10 @@ public class CompareToOnlineScreen extends Screen {
                             conn.disconnect();
                         }
 
-                        tempImageFile.get().deleteOnExit();
+                        tempFile.deleteOnExit();
                         Platform.runLater(() -> {
-                            if (running) {
-                                matchView.setImage(new Image(tempImageFile.get().toURI().toString()));
+                            if (running && tempFile.equals(tempImageFile.get())) {
+                                matchView.setImage(new Image(tempFile.toURI().toString()));
                                 Platform.runLater(matchView::fitImageToView);
                             }
 
