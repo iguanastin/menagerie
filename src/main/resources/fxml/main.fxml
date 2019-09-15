@@ -34,8 +34,8 @@
 <?import menagerie.gui.screens.ScreenPane?>
 <StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="menagerie.gui.MainController">
-    <BorderPane fx:id="explorerRootPane" onKeyPressed="#explorerRootPaneOnKeyPressed"
-                onKeyReleased="#explorerRootPaneOnKeyReleased" prefHeight="576.0" prefWidth="994.0">
+    <BorderPane fx:id="explorerRootPane" onKeyPressed="#explorerRootPaneOnKeyPressed" prefHeight="576.0"
+                prefWidth="994.0">
         <center>
             <StackPane pickOnBounds="false" BorderPane.alignment="CENTER">
                 <DynamicMediaView fx:id="previewMediaView"/>

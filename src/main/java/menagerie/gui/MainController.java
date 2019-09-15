@@ -304,6 +304,8 @@ public class MainController {
             //Apply window props and listeners
             initWindowPropertiesAndListeners();
 
+            initAltTabbingFix();
+
             //Init closeRequest handling on window
             rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
 
@@ -334,6 +336,23 @@ public class MainController {
                     Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
                 }
             });
+        });
+    }
+
+    private void initAltTabbingFix() {
+        rootPane.getScene().addEventFilter(KeyEvent.KEY_RELEASED, event -> {
+            // Workaround for alt-tabbing correctly
+            if (event.getCode() == KeyCode.ALT) {
+                if (menuBar.isFocused()) {
+                    itemGridView.requestFocus();
+                } else {
+                    menuBar.requestFocus();
+                }
+                event.consume();
+            }
+        });
+        rootPane.getScene().addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ALT) event.consume();
         });
     }
 
@@ -1761,9 +1780,6 @@ public class MainController {
                     itemGridView.requestFocus();
                     event.consume();
                     break;
-                case ALT:
-                    event.consume(); // Workaround for alt-tabbing correctly
-                    break;
                 case ENTER:
                     if (itemGridView.getSelected().size() == 1) {
                         Item item = itemGridView.getSelected().get(0);
@@ -1785,18 +1801,6 @@ public class MainController {
                     event.consume();
                     break;
             }
-        }
-    }
-
-    public void explorerRootPaneOnKeyReleased(KeyEvent event) {
-        // Workaround for alt-tabbing correctly
-        if (event.getCode() == KeyCode.ALT) {
-            if (menuBar.isFocused()) {
-                itemGridView.requestFocus();
-            } else {
-                menuBar.requestFocus();
-            }
-            event.consume();
         }
     }
 
