@@ -94,7 +94,6 @@ public class DynamicMediaView extends StackPane {
         textView.setEditable(false);
         textView.setFocusTraversable(false);
         textView.setWrapText(true);
-        getChildren().addAll(imageView, textView, pdfControlsPane);
     }
 
     /**
@@ -167,16 +166,10 @@ public class DynamicMediaView extends StackPane {
      * Hides both the video and the image views, if they exist.
      */
     private void hideAllViews() {
-        imageView.setDisable(true);
-        imageView.setOpacity(0);
+        getChildren().removeAll(getImageView(), textView, pdfControlsPane);
         if (getVideoView() != null) {
-            getVideoView().setDisable(true);
-            getVideoView().setOpacity(0);
+            getChildren().remove(getVideoView());
         }
-        textView.setDisable(true);
-        textView.setOpacity(0);
-        pdfControlsPane.setDisable(true);
-        pdfControlsPane.setOpacity(0);
     }
 
     /**
@@ -184,8 +177,7 @@ public class DynamicMediaView extends StackPane {
      */
     private void showImageView() {
         hideAllViews();
-        imageView.setDisable(false);
-        imageView.setOpacity(1);
+        getChildren().add(getImageView());
     }
 
     /**
@@ -194,8 +186,7 @@ public class DynamicMediaView extends StackPane {
     private void showVideoView() {
         hideAllViews();
         if (getVideoView() != null) {
-            getVideoView().setDisable(false);
-            getVideoView().setOpacity(1);
+            getChildren().add(getVideoView());
         }
     }
 
@@ -204,16 +195,12 @@ public class DynamicMediaView extends StackPane {
      */
     private void showTextView() {
         hideAllViews();
-        textView.setOpacity(1);
-        textView.setDisable(false);
+        getChildren().add(textView);
     }
 
     private void showPDFView() {
         hideAllViews();
-        imageView.setDisable(false);
-        imageView.setOpacity(1);
-        pdfControlsPane.setDisable(false);
-        pdfControlsPane.setOpacity(1);
+        getChildren().addAll(getImageView(), pdfControlsPane);
     }
 
     /**
@@ -226,7 +213,6 @@ public class DynamicMediaView extends StackPane {
 
         if (videoView == null) {
             videoView = new DynamicVideoView();
-            getChildren().add(videoView);
         }
 
         return videoView;

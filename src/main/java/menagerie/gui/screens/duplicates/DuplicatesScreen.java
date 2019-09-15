@@ -233,16 +233,12 @@ public class DuplicatesScreen extends Screen {
         rbp.setPickOnBounds(false);
         SplitPane sp = new SplitPane(new StackPane(leftMediaView, lbp), new StackPane(rightMediaView, rbp));
         sp.setOnMouseEntered(event -> {
-            leftTagList.setDisable(false);
-            rightTagList.setDisable(false);
-            leftTagList.setOpacity(0.75);
-            rightTagList.setOpacity(0.75);
+            lbp.setRight(leftTagList);
+            rbp.setLeft(rightTagList);
         });
         sp.setOnMouseExited(event -> {
-            leftTagList.setDisable(true);
-            rightTagList.setDisable(true);
-            leftTagList.setOpacity(0);
-            rightTagList.setOpacity(0);
+            lbp.setRight(null);
+            rbp.setLeft(null);
         });
         setCenter(sp);
 

@@ -53,7 +53,10 @@ public class ScreenPane extends StackPane {
      * @param screen Screen to open.
      */
     public boolean open(Screen screen) {
-        if (!getChildren().contains(screen)) add(screen);
+        if (!getChildren().contains(screen)) {
+            screen.setManager(this);
+            getChildren().add(screen);
+        }
 
         if (current.get() != null) {
             lastFocusMap.put(current.get(), getScene().getFocusOwner());
@@ -63,23 +66,11 @@ public class ScreenPane extends StackPane {
 
         current.set(screen);
 
-        getChildren().remove(screen);
-        getChildren().add(screen);
         screen.setDisable(false);
-        screen.setOpacity(1);
         screen.focusDefaultNode();
 
         screen.onOpen();
         return true;
-    }
-
-    public void add(Screen screen) {
-        if (getChildren().contains(screen)) return;
-
-        getChildren().add(screen);
-        screen.setManager(this);
-        screen.setOpacity(0);
-        screen.setDisable(true);
     }
 
     /**
@@ -90,9 +81,6 @@ public class ScreenPane extends StackPane {
      */
     public boolean close(Screen screen) {
         if (getChildren().contains(screen)) {
-            screen.setOpacity(0);
-            screen.setDisable(true);
-
             if (screen.equals(current.get())) {
                 if (openStack.empty()) {
                     current.set(null);
@@ -107,6 +95,8 @@ public class ScreenPane extends StackPane {
             }
 
             screen.onClose();
+            getChildren().remove(screen);
+            screen.setManager(null);
             return true;
         } else {
             return false;

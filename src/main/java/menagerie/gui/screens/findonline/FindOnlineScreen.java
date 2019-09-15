@@ -208,7 +208,7 @@ public class FindOnlineScreen extends Screen {
         retryButton.setOnAction(event -> {
             getCurrentMatch().setStatus(MatchGroup.Status.WAITING);
             searcherThread.interrupt();
-            matchesStackPane.getChildren().add(loadingIndicator);
+            if (!matchesStackPane.getChildren().contains(loadingIndicator)) matchesStackPane.getChildren().add(loadingIndicator);
             matchesStackPane.getChildren().remove(failedVBox);
         });
         Button closeButton = new Button("Close");
@@ -398,12 +398,12 @@ public class FindOnlineScreen extends Screen {
             displayMatches(item);
 
             if (item.getStatus() == MatchGroup.Status.WAITING || item.getStatus() == MatchGroup.Status.PROCESSING) {
-                matchesStackPane.getChildren().add(loadingIndicator);
+                if (!matchesStackPane.getChildren().contains(loadingIndicator)) matchesStackPane.getChildren().add(loadingIndicator);
             } else {
                 matchesStackPane.getChildren().remove(loadingIndicator);
             }
             if (item.getStatus() == MatchGroup.Status.FAILED) {
-                matchesStackPane.getChildren().add(failedVBox);
+                if (!matchesStackPane.getChildren().contains(failedVBox)) matchesStackPane.getChildren().add(failedVBox);
             } else {
                 matchesStackPane.getChildren().remove(failedVBox);
             }
@@ -448,7 +448,7 @@ public class FindOnlineScreen extends Screen {
         tagListView.getItems().sort(String::compareTo);
 
         if (item.getStatus() == MatchGroup.Status.FAILED) {
-            matchesStackPane.getChildren().add(failedVBox);
+            if (!matchesStackPane.getChildren().contains(failedVBox)) matchesStackPane.getChildren().add(failedVBox);
         }
     }
 

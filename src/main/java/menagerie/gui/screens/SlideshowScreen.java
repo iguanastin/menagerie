@@ -280,7 +280,7 @@ public class SlideshowScreen extends Screen {
                 Item previous = items.get(i - 1);
                 if (previous instanceof MediaItem) preloadPrev = ((MediaItem) previous).getImage();
             }
-            if (i < items.size()) {
+            if (i + 1 < items.size()) {
                 Item next = items.get(i + 1);
                 if (next instanceof MediaItem) preloadNext = ((MediaItem) next).getImage();
             }

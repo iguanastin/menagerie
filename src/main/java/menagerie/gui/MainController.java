@@ -381,7 +381,6 @@ public class MainController {
 
     private void initFindOnlineScreen() {
         findOnlineScreen = new FindOnlineScreen();
-//        screenPane.add(findOnlineScreen.getCompareScreen());
     }
 
     private void initMoveFilesScreen() {
@@ -391,17 +390,14 @@ public class MainController {
     private void initGroupDialogScreen() {
         groupDialogScreen = new GroupDialogScreen();
         groupDialogScreen.tagTagmeProperty().bind(settings.tagTagme.valueProperty());
-        screenPane.add(groupDialogScreen);
     }
 
     private void initImportDialogScreen() {
         importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
-        screenPane.add(importDialogScreen);
     }
 
     private void initImportScreen() {
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), this::selectItemInGridView);
-        screenPane.add(importerScreen);
 
         final PseudoClass hasImportsPseudoClass = PseudoClass.getPseudoClass("has-imports");
         final BooleanProperty hasImports = new SimpleBooleanProperty();
@@ -423,8 +419,6 @@ public class MainController {
 
     private void initDuplicatesScreen() {
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
-        screenPane.add(duplicateOptionsScreen);
-        screenPane.add(duplicateOptionsScreen.getDuplicatesScreen());
         duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(this::selectItemInGridView);
         duplicateOptionsScreen.getDuplicatesScreen().preloadProperty().bind(settings.duplicatePreload.valueProperty());
         duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
@@ -433,7 +427,6 @@ public class MainController {
 
     private void initHelpScreen() {
         helpScreen = new HelpScreen();
-        screenPane.add(helpScreen);
     }
 
     private void initSlideshowScreen() {
@@ -444,7 +437,6 @@ public class MainController {
         slideshowScreen.getInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
         slideshowScreen.intervalProperty().bind(settings.slideshowInterval.valueProperty());
         slideshowScreen.preloadProperty().bind(settings.slideshowPreload.valueProperty());
-        screenPane.add(slideshowScreen);
     }
 
     /**
@@ -472,7 +464,6 @@ public class MainController {
      */
     private void initSettingsScreen() {
         settingsScreen = new SettingsScreen();
-        screenPane.add(settingsScreen);
     }
 
     /**
@@ -514,7 +505,6 @@ public class MainController {
      */
     private void initLogScreen() {
         logScreen = new LogScreen();
-        screenPane.add(logScreen);
         logScreen.getListView().setCellFactory(param -> new LogListCell());
         logButton.getStyleClass().addAll("log-button");
 

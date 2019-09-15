@@ -107,7 +107,7 @@ public class DynamicVideoView extends StackPane {
         bottomBarHBox.getStyleClass().addAll(CONTROLS_STYLE_CLASS);
         bottomBarHBox.setAlignment(Pos.CENTER);
         bottomBarHBox.setPadding(new Insets(3));
-        BorderPane bp = new BorderPane(null, null, null, bottomBarHBox, null);
+        BorderPane controlsBorderPane = new BorderPane(null, null, null, null, null);
         HBox.setHgrow(slider, Priority.ALWAYS);
         slider.setFocusTraversable(false);
         slider.valueChangingProperty().addListener((observable, oldValue, newValue) -> {
@@ -125,10 +125,9 @@ public class DynamicVideoView extends StackPane {
                 durationLabel.setText(String.format("%d:%02d/%d:%02d", minutes, seconds, totalMinutes, totalSeconds));
             }
         });
-        bp.setPadding(new Insets(5));
+        controlsBorderPane.setPadding(new Insets(5));
         BorderPane.setAlignment(muteImageView, Pos.BOTTOM_RIGHT);
-        getChildren().add(bp);
-        getChildren().add(pauseImageView);
+        getChildren().add(controlsBorderPane);
         StackPane.setAlignment(pauseImageView, Pos.CENTER);
         pixelWriter = canvas.getGraphicsContext2D().getPixelWriter();
 
@@ -147,8 +146,8 @@ public class DynamicVideoView extends StackPane {
             muteImageView.setImage(newValue ? muteImage : unmuteImage);
         });
 
-        addEventHandler(MouseEvent.MOUSE_ENTERED, event -> bottomBarHBox.setOpacity(0.75));
-        addEventHandler(MouseEvent.MOUSE_EXITED, event -> bottomBarHBox.setOpacity(0));
+        addEventHandler(MouseEvent.MOUSE_ENTERED, event -> controlsBorderPane.setBottom(bottomBarHBox));
+        addEventHandler(MouseEvent.MOUSE_EXITED, event -> controlsBorderPane.setBottom(null));
         addEventHandler(MouseEvent.MOUSE_CLICKED, event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 if (isPlaying()) {
@@ -260,7 +259,7 @@ public class DynamicVideoView extends StackPane {
         if (!released && getMediaPlayer() != null) {
             getMediaPlayer().controls().pause();
             timer.cancel();
-            pauseImageView.setOpacity(1);
+            if (!getChildren().contains(pauseImageView)) getChildren().add(pauseImageView);
         }
     }
 
@@ -276,7 +275,7 @@ public class DynamicVideoView extends StackPane {
                 };
             }
             timer.start();
-            pauseImageView.setOpacity(0);
+            getChildren().remove(pauseImageView);
         }
     }
 
@@ -284,7 +283,7 @@ public class DynamicVideoView extends StackPane {
         if (!released && getMediaPlayer() != null) {
             getMediaPlayer().controls().stop();
             timer.cancel();
-            pauseImageView.setOpacity(1);
+            if (!getChildren().contains(pauseImageView)) getChildren().add(pauseImageView);
         }
     }
 

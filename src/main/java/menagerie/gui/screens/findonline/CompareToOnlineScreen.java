@@ -70,6 +70,7 @@ public class CompareToOnlineScreen extends Screen {
 
     private final PanZoomImageView itemView = new PanZoomImageView(), matchView = new PanZoomImageView();
     private final ProgressIndicator loadingIndicator = new ProgressIndicator(-1);
+    private final StackPane rightStackPane;
 
     private MediaItem currentItem = null;
     private Match currentMatch = null;
@@ -107,7 +108,7 @@ public class CompareToOnlineScreen extends Screen {
         VBox.setVgrow(leftBorderPane, Priority.ALWAYS);
         VBox leftVBox = new VBox(5, new Label("Your image"), leftBorderPane);
         loadingIndicator.setMaxSize(50, 50);
-        StackPane rightStackPane = new StackPane(matchView, loadingIndicator);
+        rightStackPane = new StackPane(matchView, loadingIndicator);
         rightStackPane.setAlignment(Pos.CENTER);
         VBox.setVgrow(rightStackPane, Priority.ALWAYS);
         VBox rightVBox = new VBox(5, new Label("Online Match"), rightStackPane);
@@ -183,12 +184,10 @@ public class CompareToOnlineScreen extends Screen {
         itemView.setImage(item.getImage());
         matchView.setImage(null);
         loadingIndicator.setProgress(0);
-        loadingIndicator.setDisable(true);
-        loadingIndicator.setOpacity(0);
+        rightStackPane.getChildren().remove(loadingIndicator);
 
         if (match.getImageURL() != null && !match.getImageURL().isEmpty()) {
-            loadingIndicator.setDisable(false);
-            loadingIndicator.setOpacity(1);
+            rightStackPane.getChildren().add(loadingIndicator);
             CancellableThread ct = new CancellableThread() {
                 long lastUpdate = 0;
                 final long UPDATE_INTERVAL = 17;
@@ -229,8 +228,7 @@ public class CompareToOnlineScreen extends Screen {
                                 Platform.runLater(matchView::fitImageToView);
                             }
 
-                            loadingIndicator.setDisable(true);
-                            loadingIndicator.setOpacity(0);
+                            rightStackPane.getChildren().remove(loadingIndicator);
                         });
                     } catch (IOException e) {
                         Main.log.log(Level.SEVERE, "Failed to download image", e);
