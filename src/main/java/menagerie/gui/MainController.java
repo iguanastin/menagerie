@@ -1518,6 +1518,7 @@ public class MainController {
             }
         };
         ps.open(screenPane, "Pruning Items", "Finding and pruning items that have become detached from their file...", ct::cancel);
+        ct.setName("Fileless Pruner");
         ct.setDaemon(true);
         ct.start();
 
@@ -1563,6 +1564,7 @@ public class MainController {
         };
         ps.open(screenPane, "Building similarity cache", "Caching items that have no possible similar items", ct::cancel);
         ct.setDaemon(true);
+        ct.setName("Similarity Cache Builder");
         ct.start();
 
         event.consume();

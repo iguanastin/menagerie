@@ -237,6 +237,7 @@ public class CompareToOnlineScreen extends Screen {
                     }
                 }
             };
+            ct.setName("FindOnline Image Downloader");
             ct.setDaemon(true);
             ct.start();
         } else {

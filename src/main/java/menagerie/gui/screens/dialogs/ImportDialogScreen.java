@@ -343,6 +343,8 @@ public class ImportDialogScreen extends Screen {
             ct.cancel();
             close();
         });
+        ct.setName("Import File Finder");
+        ct.setDaemon(true);
         ct.start();
     }
 
