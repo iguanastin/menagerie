@@ -196,6 +196,7 @@ public class CompareToOnlineScreen extends Screen {
                 public void run() {
                     try {
                         File tempFile = File.createTempFile("menagerie", match.getImageURL().substring(match.getImageURL().lastIndexOf(".")));
+                        tempFile.deleteOnExit();
                         tempImageFile.set(tempFile);
 
                         // Download to temp file
@@ -222,7 +223,6 @@ public class CompareToOnlineScreen extends Screen {
                             conn.disconnect();
                         }
 
-                        tempFile.deleteOnExit();
                         Platform.runLater(() -> {
                             if (running && tempFile.equals(tempImageFile.get())) {
                                 matchView.setImage(new Image(tempFile.toURI().toString()));
