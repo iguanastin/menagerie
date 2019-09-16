@@ -1068,10 +1068,7 @@ public class MainController {
         List<MediaItem> items = new ArrayList<>();
         for (Item item : selected) {
             if (item instanceof MediaItem) {
-                final String name = ((MediaItem) item).getFile().getName().toLowerCase();
-                if (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".bmp")) {
-                    items.add((MediaItem) item);
-                }
+                items.add((MediaItem) item);
             } else if (item instanceof GroupItem) {
                 for (MediaItem element : ((GroupItem) item).getElements()) {
                     final String name = element.getFile().getName().toLowerCase();
