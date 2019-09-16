@@ -71,6 +71,7 @@ public class CompareToOnlineScreen extends Screen {
     private final PanZoomImageView itemView = new PanZoomImageView(), matchView = new PanZoomImageView();
     private final ProgressIndicator loadingIndicator = new ProgressIndicator(-1);
     private final StackPane rightStackPane;
+    private final Button replaceButton = new Button("Replace");
 
     private MediaItem currentItem = null;
     private Match currentMatch = null;
@@ -125,11 +126,9 @@ public class CompareToOnlineScreen extends Screen {
                 Main.log.log(Level.SEVERE, "Unable to open page url: " + currentMatch.getPageURL(), e);
             }
         });
-        Button replace = new Button("Replace local");
-        replace.setDisable(true);
-        replace.setOnAction(event -> replaceOnAction());
-        tempImageFile.addListener((observable, oldValue, newValue) -> replace.setDisable(newValue == null));
-        BorderPane bottom = new BorderPane(null, null, replace, null, openPage);
+        replaceButton.setDisable(true);
+        replaceButton.setOnAction(event -> replaceOnAction());
+        BorderPane bottom = new BorderPane(null, null, replaceButton, null, openPage);
         bottom.setPadding(ALL5);
         root.setBottom(bottom);
     }
@@ -185,6 +184,7 @@ public class CompareToOnlineScreen extends Screen {
         matchView.setImage(null);
         loadingIndicator.setProgress(0);
         rightStackPane.getChildren().remove(loadingIndicator);
+        replaceButton.setDisable(true);
 
         if (match.getImageURL() != null && !match.getImageURL().isEmpty()) {
             rightStackPane.getChildren().add(loadingIndicator);
@@ -226,6 +226,7 @@ public class CompareToOnlineScreen extends Screen {
                         Platform.runLater(() -> {
                             if (running && tempFile.equals(tempImageFile.get())) {
                                 matchView.setImage(new Image(tempFile.toURI().toString()));
+                                replaceButton.setDisable(false);
                                 Platform.runLater(matchView::fitImageToView);
                             }
 
