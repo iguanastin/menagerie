@@ -35,11 +35,9 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import menagerie.duplicates.Match;
+import menagerie.gui.ItemInfoBox;
 import menagerie.gui.Main;
 import menagerie.gui.media.PanZoomImageView;
 import menagerie.gui.screens.Screen;
@@ -72,6 +70,8 @@ public class CompareToOnlineScreen extends Screen {
     private final ProgressIndicator loadingIndicator = new ProgressIndicator(-1);
     private final StackPane rightStackPane;
     private final Button replaceButton = new Button("Replace");
+    private final Label fileSizeLabel = new Label("0x0\n0B");
+    private final ItemInfoBox itemInfoBox = new ItemInfoBox();
 
     private MediaItem currentItem = null;
     private Match currentMatch = null;
@@ -105,11 +105,20 @@ public class CompareToOnlineScreen extends Screen {
 
         header.setBottom(new Separator());
 
-        BorderPane leftBorderPane = new BorderPane(itemView);
-        VBox.setVgrow(leftBorderPane, Priority.ALWAYS);
-        VBox leftVBox = new VBox(5, new Label("Your image"), leftBorderPane);
+        itemInfoBox.setOpacity(0.75);
+        AnchorPane.setBottomAnchor(itemInfoBox, 5d);
+        AnchorPane.setLeftAnchor(itemInfoBox, 5d);
+        AnchorPane leftAnchorPane = new AnchorPane(itemInfoBox);
+        leftAnchorPane.setPickOnBounds(false);
+        StackPane leftStackPane = new StackPane(itemView, leftAnchorPane);
+        VBox.setVgrow(leftStackPane, Priority.ALWAYS);
+        VBox leftVBox = new VBox(5, new Label("Your image"), leftStackPane);
         loadingIndicator.setMaxSize(50, 50);
-        rightStackPane = new StackPane(matchView, loadingIndicator);
+        fileSizeLabel.setWrapText(true);
+        fileSizeLabel.setAlignment(Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(fileSizeLabel, ALL5);
+        StackPane.setAlignment(fileSizeLabel, Pos.BOTTOM_RIGHT);
+        rightStackPane = new StackPane(matchView, loadingIndicator, fileSizeLabel);
         rightStackPane.setAlignment(Pos.CENTER);
         VBox.setVgrow(rightStackPane, Priority.ALWAYS);
         VBox rightVBox = new VBox(5, new Label("Online Match"), rightStackPane);
@@ -181,10 +190,12 @@ public class CompareToOnlineScreen extends Screen {
         tempImageFile.set(null);
 
         itemView.setImage(item.getImage());
+        itemInfoBox.setItem(item);
         matchView.setImage(null);
         loadingIndicator.setProgress(0);
         rightStackPane.getChildren().remove(loadingIndicator);
         replaceButton.setDisable(true);
+        fileSizeLabel.setText("Loading...");
 
         if (match.getImageURL() != null && !match.getImageURL().isEmpty()) {
             rightStackPane.getChildren().add(loadingIndicator);
@@ -195,7 +206,9 @@ public class CompareToOnlineScreen extends Screen {
                 @Override
                 public void run() {
                     try {
-                        File tempFile = File.createTempFile("menagerie", match.getImageURL().substring(match.getImageURL().lastIndexOf(".")));
+                        String extension = match.getImageURL().substring(match.getImageURL().lastIndexOf("."));
+                        if (extension.contains("?")) extension = extension.substring(0, extension.indexOf("?"));
+                        File tempFile = File.createTempFile("menagerie", extension);
                         tempFile.deleteOnExit();
                         tempImageFile.set(tempFile);
 
@@ -225,7 +238,9 @@ public class CompareToOnlineScreen extends Screen {
 
                         Platform.runLater(() -> {
                             if (running && tempFile.equals(tempImageFile.get())) {
-                                matchView.setImage(new Image(tempFile.toURI().toString()));
+                                Image img = new Image(tempFile.toURI().toString());
+                                matchView.setImage(img);
+                                fileSizeLabel.setText((int) img.getWidth() + "x" + (int) img.getHeight() + "\n" + Util.bytesToPrettyString(tempFile.length()));
                                 replaceButton.setDisable(false);
                                 Platform.runLater(matchView::fitImageToView);
                             }
@@ -241,7 +256,9 @@ public class CompareToOnlineScreen extends Screen {
             ct.setDaemon(true);
             ct.start();
         } else {
-            matchView.setImage(new Image(match.getThumbnailURL()));
+            Image img = new Image(match.getThumbnailURL());
+            matchView.setImage(img);
+            fileSizeLabel.setText("Unknown stats");
         }
         Platform.runLater(itemView::fitImageToView);
     }
