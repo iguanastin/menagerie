@@ -34,6 +34,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.model.menagerie.GroupItem;
@@ -133,8 +134,6 @@ public class GroupDialogScreen extends Screen {
      * Confirms this dialog.
      */
     private void confirm() {
-        close();
-
         if (menagerie != null && toGroup != null && !toGroup.isEmpty()) {
             GroupItem group = menagerie.createGroup(toGroup, textField.getText());
             if (group != null) {
@@ -148,8 +147,14 @@ public class GroupDialogScreen extends Screen {
                 }
 
                 if (groupListener != null) groupListener.pass(group);
+            } else {
+                Main.log.severe("Failed to create group: " + textField.getText());
             }
+        } else {
+            Main.log.warning("Cannot create group: " + textField.getText());
         }
+
+        close();
     }
 
     public BooleanProperty tagTagmeProperty() {

@@ -263,13 +263,13 @@ public class DuplicateOptionsScreen extends Screen {
                 Platform.runLater(() -> ps.setProgress(progress));
             }
         }), results -> Platform.runLater(() -> {
-            ps.close();
-            close();
             if (results.isEmpty()) {
                 new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
             } else {
                 duplicateScreen.open(getManager(), menagerie, results);
             }
+            ps.close();
+            close();
         }));
 
         ps.open(getManager(), "Finding similar items", "Comparing items...", () -> {
