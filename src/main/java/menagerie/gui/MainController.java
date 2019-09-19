@@ -1532,17 +1532,18 @@ public class MainController {
         event.consume();
     }
 
-    public void buildSimilarityCacheMenuButtonOnAction(ActionEvent event) {
+    public void rebuildSimilarityCacheMenuButtonOnAction(ActionEvent event) {
         ProgressScreen ps = new ProgressScreen();
         CancellableThread ct = new CancellableThread() {
             @Override
             public void run() {
                 final int total = menagerie.getItems().size();
+                final double confidenceSquare = 1 - (1 - MediaItem.MIN_CONFIDENCE) * (1 - MediaItem.MIN_CONFIDENCE);
 
                 for (int i = 0; i < menagerie.getItems().size(); i++) {
                     if (!(menagerie.getItems().get(i) instanceof MediaItem)) continue;
                     MediaItem i1 = (MediaItem) menagerie.getItems().get(i);
-                    if (i1.getHistogram() == null || i1.hasNoSimilar()) continue;
+                    if (i1.getHistogram() == null) continue;
 
                     boolean hasSimilar = false;
                     for (int j = 0; j < menagerie.getItems().size(); j++) {
@@ -1552,13 +1553,13 @@ public class MainController {
                         if (i2.getHistogram() == null || i2.hasNoSimilar()) continue;
 
                         double similarity = i1.getSimilarityTo(i2);
-                        if (similarity >= MediaItem.MIN_CONFIDENCE) {
+                        if (similarity >= confidenceSquare || ((i1.getHistogram().isColorful() || i2.getHistogram().isColorful()) && similarity > MediaItem.MIN_CONFIDENCE)) {
                             hasSimilar = true;
                             break;
                         }
                     }
 
-                    if (!hasSimilar) i1.setHasNoSimilar(true);
+                    i1.setHasNoSimilar(!hasSimilar);
 
                     final int finalI = i;
                     Platform.runLater(() -> ps.setProgress(finalI, total));

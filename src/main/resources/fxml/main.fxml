@@ -140,8 +140,8 @@
                     <SeparatorMenuItem/>
                     <MenuItem mnemonicParsing="false" onAction="#pruneFileLessMenuButtonOnAction"
                               text="Prune file-less items"/>
-                    <MenuItem mnemonicParsing="false" onAction="#buildSimilarityCacheMenuButtonOnAction"
-                              text="Build similarity cache"/>
+                    <MenuItem mnemonicParsing="false" onAction="#rebuildSimilarityCacheMenuButtonOnAction"
+                              text="Rebuild similarity cache"/>
                 </Menu>
                 <Menu mnemonicParsing="false" text="View">
                     <Menu mnemonicParsing="false" text="Slideshow">

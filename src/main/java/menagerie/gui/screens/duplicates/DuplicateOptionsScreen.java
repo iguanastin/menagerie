@@ -251,8 +251,20 @@ public class DuplicateOptionsScreen extends Screen {
 
         ProgressScreen ps = new ProgressScreen();
 
-        List<Item> compare = getComparableItems(compareChoiceBox);
-        List<Item> to = getComparableItems(toChoiceBox);
+        List<Item> compare = all;
+        if (compareChoiceBox.getValue() == Scope.SELECTED) {
+            compare = selected;
+        } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
+            compare = searched;
+        }
+        compare = getComparableItems(compare, includeGroupElementsCheckBox.isSelected());
+        List<Item> to = all;
+        if (toChoiceBox.getValue() == Scope.SELECTED) {
+            to = selected;
+        } else if (toChoiceBox.getValue() == Scope.SEARCHED) {
+            to = searched;
+        }
+        to = getComparableItems(to, includeGroupElementsCheckBox.isSelected());
 
         Platform.runLater(() -> ps.setProgress(0));
 
@@ -280,18 +292,10 @@ public class DuplicateOptionsScreen extends Screen {
         finder.start();
     }
 
-    private List<Item> getComparableItems(ChoiceBox<Scope> compareChoiceBox) {
-        List<Item> compare = all;
-        if (compareChoiceBox.getValue() == Scope.SELECTED) {
-            compare = selected;
-        } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
-            compare = searched;
-        }
-        if (includeGroupElementsCheckBox.isSelected()) {
-            compare = expandGroups(compare);
-        } else {
-            compare = new ArrayList<>(compare);
-        }
+    private static List<Item> getComparableItems(List<Item> compare, boolean expandGroups) {
+        compare = new ArrayList<>(compare);
+        if (expandGroups) expandGroupsInline(compare);
+
         compare.removeIf(item -> !(item instanceof MediaItem) || ((MediaItem) item).hasNoSimilar());
         return compare;
     }
@@ -324,17 +328,14 @@ public class DuplicateOptionsScreen extends Screen {
      * Expands groups so that items are only of type MediaItem.
      *
      * @param items Items with potential group items to expand.
-     * @return Set of items containing all MediaItems and elements of expanded groups.
      */
-    private List<Item> expandGroups(List<Item> items) {
-        items = new ArrayList<>(items);
+    private static void expandGroupsInline(List<Item> items) {
         for (int i = 0; i < items.size(); i++) {
             if (items.get(i) instanceof GroupItem) {
                 GroupItem group = (GroupItem) items.remove(i);
                 items.addAll(i, group.getElements());
             }
         }
-        return items;
     }
 
     /**

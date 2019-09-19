@@ -296,7 +296,7 @@ public class ImportJob {
                 if (i instanceof MediaItem && !item.equals(i) && ((MediaItem) i).getHistogram() != null) {
                     double similarity = ((MediaItem) i).getSimilarityTo(item);
 
-                    if (!anyMinimallySimilar && similarity > MediaItem.MIN_CONFIDENCE) {
+                    if (similarity > MediaItem.MIN_CONFIDENCE) {
                         anyMinimallySimilar = true;
                         if (((MediaItem) i).hasNoSimilar()) ((MediaItem) i).setHasNoSimilar(false);
                     }
