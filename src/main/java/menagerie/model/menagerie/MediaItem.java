@@ -26,6 +26,7 @@ package menagerie.model.menagerie;
 
 import com.sun.jna.platform.FileUtils;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
+import javafx.beans.property.*;
 import javafx.scene.image.Image;
 import menagerie.gui.Main;
 import menagerie.gui.Thumbnail;
@@ -52,16 +53,16 @@ public class MediaItem extends Item {
 
     // -------------------------------- Variables ------------------------------------
 
-    private File file;
-    private String md5;
-    private ImageHistogram histogram;
+    private final ObjectProperty<File> file = new SimpleObjectProperty<>();
+    private final StringProperty md5 = new SimpleStringProperty();
+    private final ObjectProperty<ImageHistogram> histogram = new SimpleObjectProperty<>();
 
     private SoftReference<Thumbnail> thumbnail;
     private WeakReference<Image> image;
 
-    private GroupItem group;
-    private int pageIndex;
-    private boolean noSimilar;
+    private final ObjectProperty<GroupItem> group = new SimpleObjectProperty<>();
+    private final IntegerProperty pageIndex = new SimpleIntegerProperty();
+    private final BooleanProperty noSimilar = new SimpleBooleanProperty();
 
 
     /**
@@ -77,12 +78,12 @@ public class MediaItem extends Item {
      */
     public MediaItem(Menagerie menagerie, int id, long dateAdded, int pageIndex, boolean hasNoSimilar, GroupItem group, File file, String md5, ImageHistogram histogram) {
         super(menagerie, id, dateAdded);
-        this.file = file;
-        this.md5 = md5;
-        this.histogram = histogram;
-        this.group = group;
-        this.pageIndex = pageIndex;
-        this.noSimilar = hasNoSimilar;
+        this.file.set(file);
+        this.md5.set(md5);
+        this.histogram.set(histogram);
+        this.group.set(group);
+        this.pageIndex.set(pageIndex);
+        this.noSimilar.set(hasNoSimilar);
     }
 
     /**
@@ -101,6 +102,10 @@ public class MediaItem extends Item {
      * @return The file of this item.
      */
     public File getFile() {
+        return file.get();
+    }
+
+    public ObjectProperty<File> fileProperty() {
         return file;
     }
 
@@ -113,8 +118,8 @@ public class MediaItem extends Item {
     public Thumbnail getThumbnail() {
         Thumbnail thumb = null;
         if (thumbnail != null) thumb = thumbnail.get();
-        if (thumb == null && file != null) {
-            thumb = new Thumbnail(this, file);
+        if (thumb == null && file.get() != null) {
+            thumb = new Thumbnail(this, file.get());
             thumbnail = new SoftReference<>(thumb);
         }
 
@@ -137,7 +142,7 @@ public class MediaItem extends Item {
         Image img = null;
         if (image != null) img = image.get();
         if (img == null) {
-            img = new Image(file.toURI().toString(), true);
+            img = new Image(file.get().toURI().toString(), true);
             image = new WeakReference<>(img);
         }
         return img;
@@ -150,7 +155,7 @@ public class MediaItem extends Item {
         Image img = null;
         if (image != null) img = image.get();
         if (img == null) {
-            img = new Image(file.toURI().toString());
+            img = new Image(file.get().toURI().toString());
             image = new WeakReference<>(img);
         } else if (img.isBackgroundLoading() && img.getProgress() != 1 && !img.isError()) {
             CountDownLatch latch = new CountDownLatch(1);
@@ -166,7 +171,7 @@ public class MediaItem extends Item {
             }
 
             if (img.isError()) {
-                img = new Image(file.toURI().toString());
+                img = new Image(file.get().toURI().toString());
             } else {
                 return img;
             }
@@ -178,6 +183,10 @@ public class MediaItem extends Item {
      * @return The MD5 hash string of the file.
      */
     public String getMD5() {
+        return md5.get();
+    }
+
+    public StringProperty md5Property() {
         return md5;
     }
 
@@ -186,8 +195,8 @@ public class MediaItem extends Item {
      */
     public void initializeMD5() {
         try {
-            md5 = HexBin.encode(MD5Hasher.hash(getFile()));
-            if (hasDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5);
+            md5.set(HexBin.encode(MD5Hasher.hash(getFile())));
+            if (hasDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5.get());
         } catch (IOException e) {
             Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
         }
@@ -197,6 +206,10 @@ public class MediaItem extends Item {
      * @return The color histogram of the image. Null if this file is not an image.
      */
     public ImageHistogram getHistogram() {
+        return histogram.get();
+    }
+
+    public ObjectProperty<ImageHistogram> histogramProperty() {
         return histogram;
     }
 
@@ -206,8 +219,8 @@ public class MediaItem extends Item {
     public void initializeHistogram() {
         if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
             try {
-                histogram = new ImageHistogram(getImageSynchronously());
-                if (hasDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram);
+                histogram.set(new ImageHistogram(getImageSynchronously()));
+                if (hasDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram.get());
             } catch (HistogramReadException e) {
                 Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
             }
@@ -218,6 +231,10 @@ public class MediaItem extends Item {
      * @return The parent group of this item. Null if none.
      */
     public GroupItem getGroup() {
+        return group.get();
+    }
+
+    public ObjectProperty<GroupItem> groupProperty() {
         return group;
     }
 
@@ -225,6 +242,10 @@ public class MediaItem extends Item {
      * @return The index this item is in within the parent group.
      */
     public int getPageIndex() {
+        return pageIndex.get();
+    }
+
+    public IntegerProperty pageIndexProperty() {
         return pageIndex;
     }
 
@@ -233,7 +254,7 @@ public class MediaItem extends Item {
      * @see Filters
      */
     public boolean isImage() {
-        return Filters.IMAGE_NAME_FILTER.accept(file);
+        return Filters.IMAGE_NAME_FILTER.accept(file.get());
     }
 
     /**
@@ -241,13 +262,17 @@ public class MediaItem extends Item {
      * @see Filters
      */
     public boolean isVideo() {
-        return Filters.VIDEO_NAME_FILTER.accept(file);
+        return Filters.VIDEO_NAME_FILTER.accept(file.get());
     }
 
     /**
      * @return True if this item has no similar items with the weakest confidence.
      */
     public boolean hasNoSimilar() {
+        return noSimilar.get();
+    }
+
+    public BooleanProperty noSimilarProperty() {
         return noSimilar;
     }
 
@@ -255,7 +280,7 @@ public class MediaItem extends Item {
      * @return True if this item has a parent group.
      */
     public boolean isInGroup() {
-        return group != null;
+        return group.get() != null;
     }
 
     /**
@@ -266,16 +291,16 @@ public class MediaItem extends Item {
      */
     public boolean moveFile(File dest) {
         if (getFile() == null || dest == null) return false;
-        if (file.equals(dest)) return true;
+        if (file.get().equals(dest)) return true;
 
-        boolean succeeded = file.renameTo(dest);
+        boolean succeeded = file.get().renameTo(dest);
 
         if (succeeded) {
-            file = dest;
+            file.set(dest);
 
             if (hasDatabase()) {
                 try {
-                    menagerie.getDatabaseManager().setPath(getId(), file.getAbsolutePath());
+                    menagerie.getDatabaseManager().setPath(getId(), file.get().getAbsolutePath());
                 } catch (SQLException e) {
                     Main.log.log(Level.SEVERE, "Failed to update new path to file", e);
                 }
@@ -290,10 +315,10 @@ public class MediaItem extends Item {
      * @return Similarity to another image. 1 if MD5 hashes match, [0.0-1.0] if histograms exist, 0 otherwise.
      */
     public double getSimilarityTo(MediaItem other) {
-        if (md5 != null && md5.equals(other.getMD5())) {
+        if (md5.get() != null && md5.get().equals(other.getMD5())) {
             return 1.0;
-        } else if (histogram != null && other.getHistogram() != null) {
-            return histogram.getSimilarity(other.getHistogram());
+        } else if (histogram.get() != null && other.getHistogram() != null) {
+            return histogram.get().getSimilarity(other.getHistogram());
         }
 
         return 0;
@@ -303,7 +328,7 @@ public class MediaItem extends Item {
      * @param group The new parent group of this item.
      */
     void setGroup(GroupItem group) {
-        this.group = group;
+        this.group.set(group);
 
         Integer gid = null;
         if (group != null) gid = group.getId();
@@ -319,9 +344,9 @@ public class MediaItem extends Item {
      * @param pageIndex Index to set to.
      */
     void setPageIndex(int pageIndex) {
-        if (this.pageIndex == pageIndex) return;
+        if (this.pageIndex.get() == pageIndex) return;
 
-        this.pageIndex = pageIndex;
+        this.pageIndex.set(pageIndex);
 
         if (hasDatabase()) menagerie.getDatabaseManager().setMediaPageAsync(getId(), pageIndex);
     }
@@ -332,9 +357,9 @@ public class MediaItem extends Item {
      * @param b Has no similar items.
      */
     public void setHasNoSimilar(boolean b) {
-        if (noSimilar != b && hasDatabase()) getDatabase().setMediaNoSimilarAsync(getId(), b);
+        if (noSimilar.get() != b && hasDatabase()) getDatabase().setMediaNoSimilarAsync(getId(), b);
 
-        noSimilar = b;
+        noSimilar.set(b);
     }
 
     /**

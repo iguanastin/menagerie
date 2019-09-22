@@ -60,6 +60,13 @@ public class ItemGridCell extends GridCell<Item> {
     private final Label bottomRightLabel = new Label();
 
     private final ObjectListener<Image> imageReadyListener;
+    private final InvalidationListener groupTitleListener = observable -> {
+        centerLabel.setText(((GroupItem) getItem()).getTitle());
+        Tooltip tt = new Tooltip(((GroupItem) getItem()).getTitle());
+        tt.setWrapText(true);
+        setTooltip(tt);
+    };
+    private final InvalidationListener groupListListener = observable -> bottomRightLabel.setText(((GroupItem) getItem()).getElements().size() + "");
     private final InvalidationListener selectedListener = observable -> updateSelected(((BooleanProperty) getItem().getMetadata().get("selected")).get());
 
 
@@ -123,6 +130,10 @@ public class ItemGridCell extends GridCell<Item> {
             if (obj instanceof BooleanProperty) {
                 ((BooleanProperty) obj).removeListener(selectedListener);
             }
+            if (getItem() instanceof GroupItem) {
+                ((GroupItem) getItem()).titleProperty().removeListener(groupTitleListener);
+                ((GroupItem) getItem()).getElements().removeListener(groupListListener);
+            }
         }
     }
 
@@ -163,11 +174,15 @@ public class ItemGridCell extends GridCell<Item> {
 
     private void initGroupItem(GroupItem item) {
         centerLabel.setText(item.getTitle());
-        tagView.setImage(groupTagImage);
-        bottomRightLabel.setText(item.getElements().size() + "");
         Tooltip tt = new Tooltip(item.getTitle());
         tt.setWrapText(true);
         setTooltip(tt);
+        item.titleProperty().addListener(groupTitleListener);
+
+        tagView.setImage(groupTagImage);
+
+        bottomRightLabel.setText(item.getElements().size() + "");
+        item.getElements().addListener(groupListListener);
     }
 
     private void initThumbnail(Item item) {

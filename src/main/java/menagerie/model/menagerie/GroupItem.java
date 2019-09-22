@@ -24,6 +24,10 @@
 
 package menagerie.model.menagerie;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import menagerie.gui.Thumbnail;
 
 import java.util.ArrayList;
@@ -35,8 +39,8 @@ import java.util.List;
  */
 public class GroupItem extends Item {
 
-    private final List<MediaItem> elements = new ArrayList<>();
-    private String title;
+    private final ObservableList<MediaItem> elements = FXCollections.observableArrayList();
+    private final StringProperty title = new SimpleStringProperty();
 
 
     /**
@@ -49,7 +53,7 @@ public class GroupItem extends Item {
      */
     public GroupItem(Menagerie menagerie, int id, long dateAdded, String title) {
         super(menagerie, id, dateAdded);
-        this.title = title;
+        this.title.set(title);
     }
 
     /**
@@ -163,6 +167,10 @@ public class GroupItem extends Item {
      * @return The title of this group.
      */
     public synchronized String getTitle() {
+        return title.get();
+    }
+
+    public StringProperty titleProperty() {
         return title;
     }
 
@@ -172,10 +180,10 @@ public class GroupItem extends Item {
      * @param str New title.
      */
     public void setTitle(String str) {
-        title = str;
+        title.set(str);
 
         if (!isInvalidated()) {
-            if (hasDatabase()) menagerie.getDatabaseManager().setGroupTitleAsync(getId(), title);
+            if (hasDatabase()) menagerie.getDatabaseManager().setGroupTitleAsync(getId(), title.get());
             if (menagerie != null) menagerie.refreshInSearches(this);
         }
     }
@@ -183,7 +191,7 @@ public class GroupItem extends Item {
     /**
      * @return The elements of this group.
      */
-    public List<MediaItem> getElements() {
+    public ObservableList<MediaItem> getElements() {
         return elements;
     }
 
