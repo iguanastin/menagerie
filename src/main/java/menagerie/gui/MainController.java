@@ -952,12 +952,7 @@ public class MainController {
             reverse.setOnAction(event -> ((GroupItem) selected.get(0)).reverseElements());
             cm.getItems().add(reverse);
             MenuItem rename = new MenuItem("Rename group");
-            rename.setOnAction(event -> {
-                String title = ((GroupItem) selected.get(0)).getTitle();
-                new TextDialogScreen().open(screenPane, "Rename group", "Current: " + title, title, newTitle -> {
-                    ((GroupItem) selected.get(0)).setTitle(newTitle);
-                }, null);
-            });
+            rename.setOnAction(event -> openGroupRenameDialog((GroupItem) selected.get(0)));
             cm.getItems().add(rename);
             cm.getItems().add(new SeparatorMenuItem());
         }
@@ -1041,6 +1036,10 @@ public class MainController {
         }
 
         return cm;
+    }
+
+    private void openGroupRenameDialog(GroupItem group) {
+        new TextDialogScreen().open(screenPane, "Rename group", "Current: " + group.getTitle(), group.getTitle(), group::setTitle, null);
     }
 
     /**
@@ -1768,6 +1767,12 @@ public class MainController {
                     break;
                 case M:
                     moveFilesScreen.open(screenPane, itemGridView.getSelected());
+                    event.consume();
+                    break;
+                case R:
+                    if (itemGridView.getSelected().size() == 1 && itemGridView.getSelected().get(0) instanceof GroupItem) {
+                        openGroupRenameDialog((GroupItem) itemGridView.getSelected().get(0));
+                    }
                     event.consume();
                     break;
                 default:
