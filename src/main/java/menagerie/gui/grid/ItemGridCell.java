@@ -60,13 +60,13 @@ public class ItemGridCell extends GridCell<Item> {
     private final Label bottomRightLabel = new Label();
 
     private final ObjectListener<Image> imageReadyListener;
-    private final InvalidationListener groupTitleListener = observable -> {
+    private final InvalidationListener groupTitleListener = observable -> Platform.runLater(() -> {
         centerLabel.setText(((GroupItem) getItem()).getTitle());
         Tooltip tt = new Tooltip(((GroupItem) getItem()).getTitle());
         tt.setWrapText(true);
         setTooltip(tt);
-    };
-    private final InvalidationListener groupListListener = observable -> bottomRightLabel.setText(((GroupItem) getItem()).getElements().size() + "");
+    });
+    private final InvalidationListener groupListListener = observable -> Platform.runLater(() -> bottomRightLabel.setText(((GroupItem) getItem()).getElements().size() + ""));
     private final InvalidationListener selectedListener = observable -> updateSelected(((BooleanProperty) getItem().getMetadata().get("selected")).get());
 
 
