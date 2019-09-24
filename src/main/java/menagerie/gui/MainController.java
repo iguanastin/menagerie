@@ -1421,6 +1421,11 @@ public class MainController {
     private void cleanExit(boolean revertDatabase) {
         Main.log.info("Attempting clean exit");
 
+        Platform.runLater(() -> {
+            rootPane.getChildren().clear();
+            Platform.exit();
+        });
+
         previewMediaView.releaseVLCJ();
         slideshowScreen.releaseVLCJ();
         duplicateOptionsScreen.releaseVLCJ();
@@ -1437,7 +1442,7 @@ public class MainController {
             Main.log.log(Level.WARNING, "Failed to save settings to file", e1);
         }
 
-        Thread t = new Thread(() -> {
+        new Thread(() -> {
             try {
                 Main.log.info("Attempting to shut down Menagerie database and defragment the file");
                 menagerie.getDatabaseManager().shutdownDefrag();
@@ -1458,17 +1463,9 @@ public class MainController {
             } catch (SQLException e) {
                 Main.log.log(Level.SEVERE, "SQL exception when shutting down with defrag", e);
             }
-        }, "Shutdown Menagerie");
-        t.start();
 
-        Platform.exit();
-
-        try {
-            t.join();
-        } catch (InterruptedException ignore) {
-        }
-
-        System.exit(0);
+            System.exit(0);
+        }, "Shutdown Menagerie").start();
     }
 
     // ---------------------------------- Action Event Handlers --------------------------
