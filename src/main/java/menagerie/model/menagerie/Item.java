@@ -1,21 +1,49 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model.menagerie;
 
-import menagerie.gui.thumbnail.Thumbnail;
-import menagerie.util.listeners.PokeListener;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import menagerie.gui.Thumbnail;
+import menagerie.model.menagerie.db.DatabaseManager;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Menagerie Item
  */
 public abstract class Item implements Comparable<Item> {
 
+    private boolean invalidated = false;
+
     protected final Menagerie menagerie;
     protected final int id;
     private final long dateAdded;
-    private final List<Tag> tags = new ArrayList<>();
-    private PokeListener tagListener = null;
+    private final ObservableList<Tag> tags = FXCollections.observableArrayList();
+    private final Map<String, Object> metadata = new HashMap<>();
 
 
     /**
@@ -50,10 +78,12 @@ public abstract class Item implements Comparable<Item> {
      */
     public abstract Thumbnail getThumbnail();
 
+    public abstract void purgeThumbnail();
+
     /**
      * @return The tags this item is tagged with.
      */
-    public List<Tag> getTags() {
+    public ObservableList<Tag> getTags() {
         return tags;
     }
 
@@ -76,11 +106,11 @@ public abstract class Item implements Comparable<Item> {
         if (t == null || hasTag(t)) return false;
 
         tags.add(t);
-        t.incrementFrequency();
+        if (!isInvalidated()) {
+            t.incrementFrequency();
 
-        if (connectedToDatabase()) menagerie.getDatabaseManager().tagItemAsync(id, t.getId());
-
-        if (tagListener != null) tagListener.poke();
+            if (hasDatabase()) menagerie.getDatabaseManager().tagItemAsync(id, t.getId());
+        }
 
         return true;
     }
@@ -95,27 +125,78 @@ public abstract class Item implements Comparable<Item> {
         if (t == null || !hasTag(t)) return false;
 
         tags.remove(t);
-        t.decrementFrequency();
+        if (!isInvalidated()) {
+            t.decrementFrequency();
 
-        if (connectedToDatabase()) menagerie.getDatabaseManager().untagItemAsync(id, t.getId());
-
-        if (tagListener != null) tagListener.poke();
+            if (hasDatabase()) menagerie.getDatabaseManager().untagItemAsync(id, t.getId());
+        }
 
         return true;
     }
 
     /**
-     * @param tagListener Listener that is notified when tags are added or removed.
+     * @return True if this item is connected to a Menagerie with a database.
      */
-    public void setTagListener(PokeListener tagListener) {
-        this.tagListener = tagListener;
+    protected boolean hasDatabase() {
+        return menagerie != null && menagerie.getDatabaseManager() != null;
     }
 
     /**
-     * @return True if this item is connected to a Menagerie with a database.
+     * @return The database backing this item's Menagerie.
      */
-    protected boolean connectedToDatabase() {
-        return menagerie != null && menagerie.getDatabaseManager() != null;
+    protected DatabaseManager getDatabase() {
+        if (hasDatabase()) {
+            return menagerie.getDatabaseManager();
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Forgets this item from the menagerie. No effect if not in a menagerie, or invalid.
+     *
+     * @return True if successful.
+     */
+    protected boolean forget() {
+        if (isInvalidated() || menagerie == null || !menagerie.getItems().remove(this)) return false;
+
+        menagerie.itemRemoved(this);
+        if (hasDatabase()) getDatabase().removeItemAsync(getId());
+        getTags().forEach(Tag::decrementFrequency);
+        invalidate();
+
+        return true;
+    }
+
+    /**
+     * Forgets this item.
+     *
+     * @return True if successful.
+     */
+    protected boolean delete() {
+        return forget();
+    }
+
+    /**
+     * Marks this item as invalid. It should not be used in any Menagerie.
+     */
+    private void invalidate() {
+        invalidated = true;
+    }
+
+    /**
+     * @return True if this item is invalid and should not be used in any Menagerie.
+     */
+    public boolean isInvalidated() {
+        return invalidated;
+    }
+
+    public Menagerie getMenagerie() {
+        return menagerie;
+    }
+
+    public Map<String, Object> getMetadata() {
+        return metadata;
     }
 
     @Override

@@ -1,9 +1,34 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.gui.media;
 
 import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Cursor;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -97,6 +122,9 @@ public class PanZoomImageView extends DynamicImageView {
             event.consume();
         });
 
+        addEventHandler(MouseEvent.MOUSE_ENTERED, event -> getScene().setCursor(Cursor.MOVE));
+        addEventHandler(MouseEvent.MOUSE_EXITED, event -> getScene().setCursor(Cursor.DEFAULT));
+
         imageProperty().addListener((observable, oldValue, image) -> {
             if (image != null) {
                 if (image.isBackgroundLoading() && image.getProgress() != 1.0) {
@@ -112,6 +140,8 @@ public class PanZoomImageView extends DynamicImageView {
                 }
 
                 updateViewPort();
+            } else {
+                fitImageToView();
             }
         });
     }
@@ -119,7 +149,7 @@ public class PanZoomImageView extends DynamicImageView {
     /**
      * Fits the image to the view at 100% scale if possible. If image is larger than view, scales down to fit whole image in view.
      */
-    private void fitImageToView() {
+    public void fitImageToView() {
         deltaX = deltaY = 0;
         scale.set(1);
 

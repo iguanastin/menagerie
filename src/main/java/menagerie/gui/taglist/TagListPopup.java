@@ -1,15 +1,38 @@
-package menagerie.gui;
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
+package menagerie.gui.taglist;
 
 import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
+import menagerie.gui.Main;
 import menagerie.model.menagerie.Tag;
-import menagerie.util.listeners.ObjectListener;
 
 import java.awt.*;
 import java.io.IOException;
@@ -19,23 +42,20 @@ import java.util.logging.Level;
 
 public class TagListPopup extends Popup {
 
+    private static final String DEFAULT_STYLE_CLASS = "tag-list-popup";
+
     private final Label nameLabel = new Label();
     private final SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker(new String[]{"#609dff", "cyan", "#22e538", "yellow", "orange", "red", "#ff7ae6", "#bf51ff"}, null);
 
     private final ListView<String> noteListView = new ListView<>();
 
-    private ObjectListener<String> colorListener;
-
     private Tag tag = null;
 
 
-    public TagListPopup(ObjectListener<String> colorListener) {
-        this.colorListener = colorListener;
-
+    public TagListPopup() {
         VBox v = new VBox(5, nameLabel, new Separator(), colorPicker, new Separator(), noteListView);
-        v.setStyle("-fx-background-color: -fx-base;");
+        v.getStyleClass().addAll(DEFAULT_STYLE_CLASS);
         v.setPadding(new Insets(5));
-        v.setEffect(new DropShadow());
         getContent().add(v);
 
         noteListView.setCellFactory(param -> {
@@ -66,14 +86,12 @@ public class TagListPopup extends Popup {
         });
     }
 
-    void setTag(Tag tag) {
+    public void setTag(Tag tag) {
         this.tag = tag;
 
         colorPicker.setColorPickedListener(color -> {
-            if (tag.setColor(color)) {
-                setNameLabelColor(color);
-                if (colorListener != null) colorListener.pass(color);
-            }
+            tag.setColor(color);
+            setNameLabelColor(color);
         });
 
         noteListView.getItems().clear();

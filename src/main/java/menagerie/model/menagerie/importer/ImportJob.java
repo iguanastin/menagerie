@@ -1,15 +1,38 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model.menagerie.importer;
 
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import menagerie.gui.Main;
 import menagerie.gui.MainController;
-import menagerie.model.Settings;
 import menagerie.model.SimilarPair;
-import menagerie.model.menagerie.Item;
-import menagerie.model.menagerie.MediaItem;
-import menagerie.model.menagerie.Menagerie;
-import menagerie.util.listeners.ObjectListener;
+import menagerie.model.menagerie.*;
+import menagerie.settings.MenagerieSettings;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -20,7 +43,8 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 
 /**
@@ -29,7 +53,7 @@ import java.util.logging.Level;
 public class ImportJob {
 
     public enum Status {
-        WAITING, IMPORTING, SUCCEEDED, SUCCEEDED_SIMILAR, FAILED_DUPLICATE, FAILED_IMPORT,
+        WAITING, IMPORTING, SUCCEEDED, FAILED_DUPLICATE, FAILED_IMPORT,
 
     }
 
@@ -40,6 +64,7 @@ public class ImportJob {
     private File file = null;
     private MediaItem item = null;
     private MediaItem duplicateOf = null;
+    private GroupItem addToGroup = null;
     private List<SimilarPair<MediaItem>> similarTo = null;
 
     private volatile boolean needsDownload = false;
@@ -50,8 +75,7 @@ public class ImportJob {
     private volatile boolean needsCheckSimilar = true;
 
     private final DoubleProperty progressProperty = new SimpleDoubleProperty(-1);
-    private volatile Status status = Status.WAITING;
-    private final Set<ObjectListener<Status>> statusListeners = new HashSet<>();
+    private final ObjectProperty<Status> status = new SimpleObjectProperty<>(Status.WAITING);
 
 
     /**
@@ -59,9 +83,10 @@ public class ImportJob {
      *
      * @param url URL of file to download.
      */
-    public ImportJob(URL url) {
+    public ImportJob(URL url, GroupItem addToGroup) {
         this.url = url;
         needsDownload = true;
+        this.addToGroup = addToGroup;
     }
 
     /**
@@ -70,8 +95,8 @@ public class ImportJob {
      * @param url        URL of file to download.
      * @param downloadTo File to download URL into.
      */
-    public ImportJob(URL url, File downloadTo) {
-        this(url);
+    public ImportJob(URL url, File downloadTo, GroupItem addToGroup) {
+        this(url, addToGroup);
         this.downloadTo = downloadTo;
     }
 
@@ -80,8 +105,9 @@ public class ImportJob {
      *
      * @param file File to import.
      */
-    public ImportJob(File file) {
+    public ImportJob(File file, GroupItem addToGroup) {
         this.file = file;
+        this.addToGroup = addToGroup;
     }
 
     /**
@@ -90,7 +116,7 @@ public class ImportJob {
      * @param menagerie Menagerie to import into.
      * @param settings  Application settings to import with.
      */
-    void runJob(Menagerie menagerie, Settings settings) {
+    void runJob(Menagerie menagerie, MenagerieSettings settings) {
         setStatus(Status.IMPORTING);
 
         if (tryDownload(settings)) {
@@ -106,10 +132,11 @@ public class ImportJob {
             setStatus(Status.FAILED_DUPLICATE);
             return;
         }
-        if (trySimilar(menagerie, settings)) {
-            setStatus(Status.SUCCEEDED_SIMILAR);
-            return;
+        if (addToGroup != null) {
+            tryAddToGroup(addToGroup);
         }
+
+        trySimilar(menagerie, settings);
 
         setStatus(Status.SUCCEEDED);
     }
@@ -120,11 +147,11 @@ public class ImportJob {
      * @param settings Application settings to use.
      * @return True if the download fails.
      */
-    private boolean tryDownload(Settings settings) {
+    private boolean tryDownload(MenagerieSettings settings) {
         if (needsDownload) {
             try {
                 if (downloadTo == null) {
-                    String folder = settings.getString(Settings.Key.DEFAULT_FOLDER);
+                    String folder = settings.defaultFolder.getValue();
                     if (folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
                         Main.log.warning(String.format("Default folder '%s' doesn't exist or isn't a folder", folder));
                         return true;
@@ -176,16 +203,33 @@ public class ImportJob {
      * @param menagerie Menagerie to import into.
      * @return True if the import failed.
      */
-    private boolean tryImport(Menagerie menagerie, Settings settings) {
+    private boolean tryImport(Menagerie menagerie, MenagerieSettings settings) {
         if (needsImport) {
             synchronized (this) {
-                item = menagerie.importFile(file, settings.getBoolean(Settings.Key.TAG_TAGME), settings.getBoolean(Settings.Key.TAG_VIDEO), settings.getBoolean(Settings.Key.TAG_IMAGE));
+                item = menagerie.importFile(file);
             }
 
             if (item == null) {
                 return true;
             } else {
                 needsImport = false;
+
+                // Add tags
+                if (settings.tagTagme.getValue()) {
+                    Tag tagme = menagerie.getTagByName("tagme");
+                    if (tagme == null) tagme = menagerie.createTag("tagme");
+                    item.addTag(tagme);
+                }
+                if (settings.tagImages.getValue() && item.isImage()) {
+                    Tag image = menagerie.getTagByName("image");
+                    if (image == null) image = menagerie.createTag("image");
+                    item.addTag(image);
+                }
+                if (settings.tagVideos.getValue() && item.isVideo()) {
+                    Tag video = menagerie.getTagByName("video");
+                    if (video == null) video = menagerie.createTag("video");
+                    item.addTag(video);
+                }
             }
         }
         return false;
@@ -218,7 +262,7 @@ public class ImportJob {
                     synchronized (this) {
                         duplicateOf = (MediaItem) i;
                     }
-                    menagerie.removeItems(Collections.singletonList(item), true);
+                    menagerie.deleteItem(item);
                     needsCheckDuplicate = false;
                     needsCheckSimilar = false;
                     return true;
@@ -230,22 +274,34 @@ public class ImportJob {
         return false;
     }
 
+    private void tryAddToGroup(GroupItem group) {
+        group.addItem(item);
+    }
+
     /**
      * Tries to find similar items already imported and stores similar pairs in {@link #similarTo}
      *
      * @param menagerie Menagerie to find similar items in.
      * @param settings  Application settings to use.
-     * @return True if similar items were found.
      */
-    private boolean trySimilar(Menagerie menagerie, Settings settings) {
+    private void trySimilar(Menagerie menagerie, MenagerieSettings settings) {
         if (needsCheckSimilar && item.getHistogram() != null) {
             synchronized (this) {
                 similarTo = new ArrayList<>();
             }
+            final double confidence = settings.duplicatesConfidence.getValue();
+            final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
+            boolean anyMinimallySimilar = false;
             for (Item i : menagerie.getItems()) {
                 if (i instanceof MediaItem && !item.equals(i) && ((MediaItem) i).getHistogram() != null) {
-                    double similarity = ((MediaItem) i).getSimilarityTo(item, settings.getBoolean(Settings.Key.COMPARE_GREYSCALE));
-                    if (similarity > settings.getDouble(Settings.Key.CONFIDENCE)) {
+                    double similarity = ((MediaItem) i).getSimilarityTo(item);
+
+                    if (similarity > MediaItem.MIN_CONFIDENCE) {
+                        anyMinimallySimilar = true;
+                        if (((MediaItem) i).hasNoSimilar()) ((MediaItem) i).setHasNoSimilar(false);
+                    }
+
+                    if (similarity >= confidenceSquare || (similarity >= confidence && item.getHistogram().isColorful() && ((MediaItem) i).getHistogram().isColorful())) {
                         synchronized (this) {
                             similarTo.add(new SimilarPair<>(item, (MediaItem) i, similarity));
                         }
@@ -253,12 +309,10 @@ public class ImportJob {
                 }
             }
 
+            if (!anyMinimallySimilar) item.setHasNoSimilar(true);
+
             needsCheckSimilar = false;
-            synchronized (this) {
-                return !similarTo.isEmpty();
-            }
         }
-        return false;
     }
 
     /**
@@ -299,7 +353,7 @@ public class ImportJob {
     /**
      * @return The progress JavaFX Property.
      */
-    public DoubleProperty getProgressProperty() {
+    public DoubleProperty progressProperty() {
         return progressProperty;
     }
 
@@ -314,38 +368,18 @@ public class ImportJob {
      * @return The status of this job.
      */
     public Status getStatus() {
-        synchronized (statusListeners) {
-            return status;
-        }
+        return status.get();
     }
 
     /**
      * @param status The new status to set this job as.
      */
     public void setStatus(Status status) {
-        synchronized (statusListeners) {
-            this.status = status;
-
-            statusListeners.forEach(listener -> listener.pass(status));
-        }
+        this.status.set(status);
     }
 
-    /**
-     * @param listener Listens for status changes.
-     */
-    public void addStatusListener(ObjectListener<Status> listener) {
-        synchronized (statusListeners) {
-            statusListeners.add(listener);
-        }
-    }
-
-    /**
-     * @param listener Listener
-     */
-    public void removeStatusListener(ObjectListener<Status> listener) {
-        synchronized (statusListeners) {
-            statusListeners.remove(listener);
-        }
+    public ObjectProperty<Status> statusProperty() {
+        return status;
     }
 
     /**

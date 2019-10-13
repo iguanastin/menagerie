@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model.menagerie;
 
 import menagerie.util.Filters;
@@ -24,14 +48,16 @@ class MediaItemTests {
         assertEquals(file, m1.getFile());
 
         final int pageIndex = 5;
+        final boolean noSimilar = true;
         final GroupItem group = new GroupItem(null, 2, 1, "group");
         final String md5 = "f9e2cb7b1b1436182d16b29d81b6bf78";
-        MediaItem m2 = new MediaItem(null, 1, 1, pageIndex, group, file, md5, null);
+        MediaItem m2 = new MediaItem(null, 1, 1, pageIndex, noSimilar, group, file, md5, null);
 
         assertEquals(pageIndex, m2.getPageIndex());
         assertEquals(group, m2.getGroup());
         assertEquals(file, m2.getFile());
         assertEquals(md5, m2.getMD5());
+        assertEquals(noSimilar, m2.hasNoSimilar());
     }
 
     @Test
@@ -82,12 +108,12 @@ class MediaItemTests {
     @Test
     void renameTo() {
         MediaItem m1 = new MediaItem(null, 1, 1, null);
-        assertFalse(m1.renameTo(null));
-        assertFalse(m1.renameTo(NONEXISTENT_FILE));
+        assertFalse(m1.moveFile(null));
+        assertFalse(m1.moveFile(NONEXISTENT_FILE));
 
         MediaItem m2 = new MediaItem(null, 1, 1, NONEXISTENT_FILE);
-        assertTrue(m2.renameTo(NONEXISTENT_FILE));
-        assertFalse(m2.renameTo(new File("randomfilethatdoesntexist.zapp")));
+        assertTrue(m2.moveFile(NONEXISTENT_FILE));
+        assertFalse(m2.moveFile(new File("randomfilethatdoesntexist.zapp")));
 
         File file = new File("target/test-classes/renametest.bmp");
         File dest = new File("target/test-classes/renametest-dest.bmp");
@@ -95,8 +121,8 @@ class MediaItemTests {
             dest.delete();
             file.createNewFile();
             MediaItem m3 = new MediaItem(null, 1, 1, file);
-            assertTrue(m3.renameTo(dest));
-            assertTrue(m3.renameTo(file));
+            assertTrue(m3.moveFile(dest));
+            assertTrue(m3.moveFile(file));
         } catch (IOException ignored) {
         }
     }
@@ -107,18 +133,18 @@ class MediaItemTests {
         MediaItem m2 = new MediaItem(null, 2, 1, WHITE_IMAGE_FILE);
         MediaItem m3 = new MediaItem(null, 3, 1, BLACK_IMAGE_FILE);
 
-        assertEquals(0, m1.getSimilarityTo(m2, false));
-        assertEquals(0, m1.getSimilarityTo(m3, false));
+        assertEquals(0, m1.getSimilarityTo(m2));
+        assertEquals(0, m1.getSimilarityTo(m3));
 
         m1.initializeMD5();
-        assertEquals(0, m1.getSimilarityTo(m2, false));
+        assertEquals(0, m1.getSimilarityTo(m2));
 
         m2.initializeMD5();
-        assertEquals(1, m1.getSimilarityTo(m2, false));
-        assertEquals(1, m2.getSimilarityTo(m1, false));
+        assertEquals(1, m1.getSimilarityTo(m2));
+        assertEquals(1, m2.getSimilarityTo(m1));
 
         m3.initializeMD5();
-        assertEquals(0, m1.getSimilarityTo(m3, false));
+        assertEquals(0, m1.getSimilarityTo(m3));
     }
 
     @Test

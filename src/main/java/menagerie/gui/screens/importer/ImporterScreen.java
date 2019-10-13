@@ -1,13 +1,39 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.gui.screens.importer;
 
 import javafx.application.Platform;
-import javafx.collections.ListChangeListener;
+import javafx.beans.InvalidationListener;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.scene.effect.DropShadow;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -23,16 +49,18 @@ import java.util.List;
 
 public class ImporterScreen extends Screen {
 
-    private final Label countLabel;
-    private final ListView<ImportJob> listView;
+    private static final String PAIRS_STYLE_CLASS = "pairs-button";
+
+    private final PseudoClass pairsPseudoClass = PseudoClass.getPseudoClass("has-pairs");
+
+    private final ListView<ImportJob> listView = new ListView<>();
 
     private final List<ImportJob> jobs = new ArrayList<>();
 
-    private final ObjectListener<Integer> countListener;
+    private final ObservableList<SimilarPair<MediaItem>> similar = FXCollections.observableArrayList();
 
 
-    public ImporterScreen(ImporterThread importerThread, ObjectListener<List<SimilarPair<MediaItem>>> duplicateResolverListener, ObjectListener<MediaItem> selectItemListener, ObjectListener<Integer> countListener) {
-        this.countListener = countListener;
+    public ImporterScreen(ImporterThread importerThread, ObjectListener<List<SimilarPair<MediaItem>>> duplicateResolverListener, ObjectListener<MediaItem> selectItemListener) {
 
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
@@ -47,12 +75,11 @@ public class ImporterScreen extends Screen {
 
         Button exit = new Button("X");
         exit.setOnAction(event -> close());
-        Label title = new Label("Imports");
+        Label title = new Label("Imports: 0");
         setAlignment(title, Pos.CENTER_LEFT);
         BorderPane top = new BorderPane(null, null, exit, null, title);
         top.setPadding(new Insets(0, 0, 0, 5));
 
-        listView = new ListView<>();
         listView.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();
@@ -72,30 +99,31 @@ public class ImporterScreen extends Screen {
                 playPauseButton.setText("Pause");
             }
         });
-        countLabel = new Label("0");
         Button cancelAllButton = new Button("Cancel All");
-        cancelAllButton.setOnAction(event -> {
-            jobs.forEach(job -> {
-                if (job.getStatus() == ImportJob.Status.WAITING) {
-                    job.cancel();
-                    listView.getItems().remove(job);
-                }
-            });
-
-            if (countListener != null) countListener.pass(jobs.size());
+        cancelAllButton.setOnAction(event -> jobs.forEach(job -> {
+            if (job.getStatus() == ImportJob.Status.WAITING) {
+                job.cancel();
+                listView.getItems().remove(job);
+            }
+        }));
+        Button pairsButton = new Button("Similar: 0");
+        pairsButton.getStyleClass().addAll(PAIRS_STYLE_CLASS);
+        similar.addListener((InvalidationListener) c -> {
+            Platform.runLater(() -> pairsButton.setText("Similar: " + similar.size()));
+            pairsButton.pseudoClassStateChanged(pairsPseudoClass, !similar.isEmpty());
         });
-        BorderPane bottom = new BorderPane(countLabel, null, playPauseButton, null, cancelAllButton);
+        pairsButton.setOnAction(event -> {
+            duplicateResolverListener.pass(new ArrayList<>(similar));
+            similar.clear();
+        });
+        BorderPane bottom = new BorderPane(pairsButton, null, playPauseButton, null, cancelAllButton);
         bottom.setPadding(new Insets(5));
-        setAlignment(countLabel, Pos.CENTER);
 
-        listView.getItems().addListener((ListChangeListener<? super ImportJob>) c -> countLabel.setText("" + c.getList().size()));
+        listView.getItems().addListener((InvalidationListener) c -> Platform.runLater(() -> title.setText("Imports: " + listView.getItems().size())));
 
         BorderPane root = new BorderPane(listView, top, null, bottom, null);
         root.setPrefWidth(400);
-        root.setStyle("-fx-background-color: -fx-base;");
-        DropShadow effect = new DropShadow();
-        effect.setSpread(0.5);
-        root.setEffect(effect);
+        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
         root.setMaxWidth(USE_PREF_SIZE);
         setRight(root);
         setPadding(new Insets(25));
@@ -104,24 +132,21 @@ public class ImporterScreen extends Screen {
 
 
         // ImporterThread setup
-        listView.setCellFactory(param -> new ImportListCell(this, duplicateResolverListener, selectItemListener));
-        importerThread.addImporterListener(job -> {
+        listView.setCellFactory(param -> new ImportListCell(this, selectItemListener));
+        importerThread.addImporterListener(job -> Platform.runLater(() -> {
             jobs.add(job);
             listView.getItems().add(job);
-            job.addStatusListener(status -> {
-                if (status == ImportJob.Status.SUCCEEDED) {
+            job.statusProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue == ImportJob.Status.SUCCEEDED) {
+                    if (job.getSimilarTo() != null) {
+                        job.getSimilarTo().forEach(pair -> {
+                            if (!similar.contains(pair)) similar.add(pair);
+                        });
+                    }
                     removeJob(job);
-                    countListener.pass(jobs.size());
-                } else {
-                    listView.getChildrenUnmodifiable().forEach(node -> {
-                        if (node instanceof ImportListCell) {
-                            ((ImportListCell) node).updateItem(((ImportListCell) node).getItem(), ((ImportListCell) node).isEmpty());
-                        }
-                    });
                 }
             });
-            if (countListener != null) countListener.pass(jobs.size());
-        });
+        }));
     }
 
     /**
@@ -132,7 +157,20 @@ public class ImporterScreen extends Screen {
     void removeJob(ImportJob job) {
         jobs.remove(job);
         Platform.runLater(() -> listView.getItems().remove(job));
-        if (countListener != null) countListener.pass(jobs.size());
+    }
+
+    /**
+     * @return The list view of this import screen.
+     */
+    public ListView<ImportJob> getListView() {
+        return listView;
+    }
+
+    /**
+     * @return List of similar pairs of imports.
+     */
+    public ObservableList<SimilarPair<MediaItem>> getSimilar() {
+        return similar;
     }
 
 }

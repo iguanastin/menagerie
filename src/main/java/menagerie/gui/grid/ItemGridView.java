@@ -1,13 +1,39 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.gui.grid;
 
 import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
-import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.Item;
 import menagerie.util.listeners.ObjectListener;
 import org.controlsfx.control.GridView;
@@ -33,20 +59,35 @@ public class ItemGridView extends GridView<Item> {
         setCellHeight(Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2);
 
         getItems().addListener((ListChangeListener<? super Item>) c -> {
-            boolean changed = false;
             while (c.next()) {
                 selected.removeAll(c.getRemoved());
-
-                changed = true;
             }
+        });
 
-            if (changed) updateCellSelectionCSS();
+        selected.addListener((ListChangeListener<? super Item>) c -> {
+            while (c.next()) {
+                for (Item item : c.getRemoved()) {
+                    Object obj = item.getMetadata().get("selected");
+                    if (obj instanceof BooleanProperty) {
+                        ((BooleanProperty) obj).set(false);
+                    } else {
+                        item.getMetadata().put("selected", new SimpleBooleanProperty(false));
+                    }
+                }
+                for (Item item : c.getAddedSubList()) {
+                    Object obj = item.getMetadata().get("selected");
+                    if (obj instanceof BooleanProperty) {
+                        ((BooleanProperty) obj).set(true);
+                    } else {
+                        item.getMetadata().put("selected", new SimpleBooleanProperty(true));
+                    }
+                }
+            }
         });
 
         setOnMouseReleased(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 selected.clear();
-                updateCellSelectionCSS();
                 event.consume();
             }
         });
@@ -98,7 +139,6 @@ public class ItemGridView extends GridView<Item> {
                         } else {
                             clearSelection();
                             selected.addAll(getItems());
-                            updateCellSelectionCSS();
                         }
                     }
                     event.consume();
@@ -161,7 +201,6 @@ public class ItemGridView extends GridView<Item> {
             } else {
                 selected.add(item);
             }
-            updateCellSelectionCSS();
         } else if (shiftDown) {
             Item first = getFirstSelected();
             if (first == null) {
@@ -169,7 +208,6 @@ public class ItemGridView extends GridView<Item> {
             } else {
                 selectRange(first, item);
             }
-            updateCellSelectionCSS();
         } else {
             if (isSelected(item) && selected.size() == 1) {
                 selected.clear();
@@ -177,7 +215,6 @@ public class ItemGridView extends GridView<Item> {
                 selected.clear();
                 selected.add(item);
             }
-            updateCellSelectionCSS();
         }
         lastSelected = item;
 
@@ -246,7 +283,6 @@ public class ItemGridView extends GridView<Item> {
      */
     public void clearSelection() {
         selected.clear();
-        updateCellSelectionCSS();
     }
 
     /**
@@ -271,25 +307,6 @@ public class ItemGridView extends GridView<Item> {
      */
     public boolean removeSelectionListener(ObjectListener<Item> listener) {
         return selectionListeners.remove(listener);
-    }
-
-    /**
-     * Updates the CSS of all cells. Shouldn't have to do this, but the library doesn't follow the JavaFX standard.
-     */
-    private void updateCellSelectionCSS() {
-        for (Node n : getChildren()) {
-            if (n instanceof VirtualFlow) {
-                ((VirtualFlow) n).rebuildCells();
-                break;
-            }
-        }
-    }
-
-    /**
-     * @param item Sets the last selected variable.
-     */
-    public void setLastSelected(Item item) {
-        lastSelected = item;
     }
 
 }

@@ -1,9 +1,31 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model.menagerie;
 
-import menagerie.gui.thumbnail.Thumbnail;
+import menagerie.gui.Thumbnail;
 import org.junit.jupiter.api.Test;
-
-import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,6 +41,11 @@ class ItemTests {
             public Thumbnail getThumbnail() {
                 return null;
             }
+
+            @Override
+            public void purgeThumbnail() {
+
+            }
         };
 
         assertEquals(id, item.getId());
@@ -32,6 +59,11 @@ class ItemTests {
             @Override
             public Thumbnail getThumbnail() {
                 return null;
+            }
+
+            @Override
+            public void purgeThumbnail() {
+
             }
         };
 
@@ -64,45 +96,27 @@ class ItemTests {
     }
 
     @Test
-    void tagListener() {
-        Item item = new Item(null, 1, 1) {
-            @Override
-            public Thumbnail getThumbnail() {
-                return null;
-            }
-        };
-
-        CountDownLatch cdl = new CountDownLatch(3);
-        item.setTagListener(cdl::countDown);
-
-        Tag t1 = new Tag(null, 1, "tag1", null);
-        Tag t2 = new Tag(null, 2, "tag2", null);
-
-        item.addTag(t1);
-        assertEquals(2, cdl.getCount());
-
-        item.addTag(t1);
-        assertEquals(2, cdl.getCount());
-
-        item.addTag(t2);
-        assertEquals(1, cdl.getCount());
-
-        item.removeTag(t2);
-        assertEquals(0, cdl.getCount());
-    }
-
-    @Test
     void hash() {
         Item item1 = new Item(null, 31, 1) {
             @Override
             public Thumbnail getThumbnail() {
                 return null;
             }
+
+            @Override
+            public void purgeThumbnail() {
+
+            }
         };
         Item item2 = new Item(null, 31, 12312) {
             @Override
             public Thumbnail getThumbnail() {
                 return null;
+            }
+
+            @Override
+            public void purgeThumbnail() {
+
             }
         };
 
@@ -116,17 +130,32 @@ class ItemTests {
             public Thumbnail getThumbnail() {
                 return null;
             }
+
+            @Override
+            public void purgeThumbnail() {
+
+            }
         };
         Item item2 = new Item(null, 31, 12312) {
             @Override
             public Thumbnail getThumbnail() {
                 return null;
             }
+
+            @Override
+            public void purgeThumbnail() {
+
+            }
         };
         Item item3 = new Item(null, 35, 12312) {
             @Override
             public Thumbnail getThumbnail() {
                 return null;
+            }
+
+            @Override
+            public void purgeThumbnail() {
+
             }
         };
 

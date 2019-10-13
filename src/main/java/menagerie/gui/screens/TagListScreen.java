@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.gui.screens;
 
 import javafx.collections.FXCollections;
@@ -6,7 +30,8 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -14,17 +39,20 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.util.Callback;
-import menagerie.gui.TagListCell;
+import menagerie.gui.taglist.TagListCell;
 import menagerie.model.menagerie.Tag;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.PatternSyntaxException;
 
 public class TagListScreen extends Screen {
 
-    private final ListView<Tag> listView;
-    private final TextField searchField;
-    private final ChoiceBox<String> orderBox;
+    private final ListView<Tag> listView = new ListView<>();
+    private final TextField searchField = new TextField();
+    private final ChoiceBox<String> orderBox = new ChoiceBox<>();
+    private final ToggleButton descendingButton = new ToggleButton();
+    private final CheckBox regexCheckBox = new CheckBox("Regex");
 
     private final ObservableList<Tag> tags = FXCollections.observableArrayList();
 
@@ -38,13 +66,10 @@ public class TagListScreen extends Screen {
 
         //Init "Window"
         VBox v = new VBox(5);
-        v.setPrefWidth(300);
+        v.setPrefWidth(400);
         v.setMaxWidth(USE_PREF_SIZE);
-        v.setStyle("-fx-background-color: -fx-base;");
         v.setPadding(new Insets(5));
-        DropShadow dropShadow = new DropShadow();
-        dropShadow.setSpread(0.5);
-        v.setEffect(dropShadow);
+        v.getStyleClass().addAll(ROOT_STYLE_CLASS);
         setCenter(v);
         setMargin(v, new Insets(25));
 
@@ -53,15 +78,16 @@ public class TagListScreen extends Screen {
         exitButton.setOnAction(event -> close());
         BorderPane header = new BorderPane(null, null, exitButton, null, new Label("Tags"));
 
-        orderBox = new ChoiceBox<>();
-        orderBox.getItems().addAll("Name", "ID", "Frequency");
+        orderBox.getItems().addAll("Frequency", "Name", "ID", "Color");
         orderBox.getSelectionModel().clearAndSelect(0);
         orderBox.setOnAction(event -> updateListOrder());
-        HBox h = new HBox(5, new Label("Order by:"), orderBox);
-        h.setAlignment(Pos.CENTER_LEFT);
+        descendingButton.setGraphic(new ImageView(new Image(getClass().getResource("/misc/descending.png").toString())));
+        descendingButton.setTooltip(new Tooltip("Descending order"));
+        descendingButton.selectedProperty().addListener((observable, oldValue, newValue) -> updateListOrder());
+        HBox orderHBox = new HBox(5, new Label("Order by:"), orderBox, descendingButton);
+        orderHBox.setAlignment(Pos.CENTER_LEFT);
 
         //Init listView
-        listView = new ListView<>();
         VBox.setVgrow(listView, Priority.ALWAYS);
         setCellFactory(param -> new TagListCell());
         listView.setOnKeyPressed(event -> {
@@ -71,20 +97,15 @@ public class TagListScreen extends Screen {
         });
 
         //Init textfield
-        searchField = new TextField();
         searchField.setPromptText("Search tags by name");
-        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
-            listView.getItems().clear();
-            for (Tag t : tags) {
-                if (t.getName().toLowerCase().startsWith(newValue.toLowerCase())) {
-                    listView.getItems().add(t);
-                }
-            }
-            updateListOrder();
-        });
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> updateSearchResults());
+        regexCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> updateSearchResults());
+        HBox searchHBox = new HBox(5, regexCheckBox, searchField);
+        searchHBox.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(searchField, Priority.ALWAYS);
 
         //Add children
-        v.getChildren().addAll(header, new Separator(), h, searchField, listView);
+        v.getChildren().addAll(header, new Separator(), orderHBox, searchHBox, listView);
 
 
         tags.addListener((ListChangeListener<? super Tag>) c -> {
@@ -102,6 +123,28 @@ public class TagListScreen extends Screen {
         setDefaultFocusNode(searchField);
     }
 
+    private void updateSearchResults() {
+        listView.getItems().clear();
+        for (Tag t : tags) {
+            String name = t.getName().toLowerCase();
+            String val = searchField.getText();
+            if (val == null) {
+                val = "";
+            } else {
+                val = val.trim().toLowerCase();
+            }
+            if (regexCheckBox.isSelected()) {
+                try {
+                    if (name.matches(val)) listView.getItems().add(t);
+                } catch (PatternSyntaxException ignore) {
+                }
+            } else {
+                if (name.contains(val)) listView.getItems().add(t);
+            }
+        }
+        updateListOrder();
+    }
+
     /**
      * Opens the screen in a manager with a set of tags.
      *
@@ -113,23 +156,41 @@ public class TagListScreen extends Screen {
 
         this.tags.clear();
         this.tags.addAll(tags);
+
+        updateSearchResults();
     }
 
     private void updateListOrder() {
+        Comparator<Tag> comparator = Comparator.comparing(Tag::getName);
+
         switch (orderBox.getValue()) {
             case "ID":
-                listView.getItems().sort(Comparator.comparingInt(Tag::getId));
+                comparator = Comparator.comparingInt(Tag::getId);
                 break;
             case "Frequency":
-                listView.getItems().sort(Comparator.comparingInt(Tag::getFrequency).reversed());
+                comparator = Comparator.comparingInt(Tag::getFrequency);
                 break;
-            case "Name":
-                listView.getItems().sort(Comparator.comparing(Tag::getName));
-                break;
-            default:
-                listView.getItems().sort(Comparator.comparing(Tag::getName));
+            case "Color":
+                comparator = (o1, o2) -> {
+                    if (o1.getColor() == null) {
+                        if (o2.getColor() == null) {
+                            return 0;
+                        } else {
+                            return 1;
+                        }
+                    } else {
+                        if (o2.getColor() == null) {
+                            return -1;
+                        } else {
+                            return o1.getColor().compareTo(o2.getColor());
+                        }
+                    }
+                };
                 break;
         }
+
+        if (descendingButton.isSelected()) comparator = comparator.reversed();
+        listView.getItems().sort(comparator);
     }
 
     /**

@@ -1,12 +1,39 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model.search;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import menagerie.gui.Main;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.search.rules.*;
-import menagerie.util.listeners.ObjectListener;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Data class that contains results of a search filtered and sorted by the given rules.
@@ -16,32 +43,32 @@ public class Search {
     private final List<SearchRule> rules = new ArrayList<>();
     private final boolean showGrouped;
     private final boolean descending;
+    private final boolean shuffled;
     private final String searchString;
 
-    private final List<Item> results = new ArrayList<>();
+    private final ObservableList<Item> results = FXCollections.observableArrayList();
 
     protected Comparator<Item> comparator;
-
-    protected Set<ObjectListener<List<Item>>> itemsAddedListeners = new HashSet<>();
-    protected Set<ObjectListener<List<Item>>> itemsRemovedListeners = new HashSet<>();
 
 
     /**
      * Constructs a search with given rules.
      *
-     * @param search         User input string to parse.
+     * @param search      User input string to parse.
      * @param descending  Sort the results descending.
      * @param showGrouped Show items that are part of a group.
      */
-    public Search(String search, boolean descending, boolean showGrouped) {
+    public Search(String search, boolean descending, boolean showGrouped, boolean shuffled) {
         this.descending = descending;
         this.showGrouped = showGrouped;
+        this.shuffled = shuffled;
         this.searchString = search;
 
         if (search != null && !search.isEmpty()) parseRules(search);
         rules.sort(null);
 
         comparator = (o1, o2) -> {
+            if (shuffled) return 0;
             if (descending) {
                 return o2.getId() - o1.getId();
             } else {
@@ -115,6 +142,10 @@ public class Search {
                     rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
                 } else if (type.equalsIgnoreCase("media")) {
                     rules.add(new TypeRule(TypeRule.Type.MEDIA, inverted));
+                } else if (type.equalsIgnoreCase("image")) {
+                    rules.add(new TypeRule(TypeRule.Type.IMAGE, inverted));
+                } else if (type.equalsIgnoreCase("video")) {
+                    rules.add(new TypeRule(TypeRule.Type.VIDEO, inverted));
                 }
             } else if (arg.startsWith("tags:")) {
                 String temp = arg.substring(arg.indexOf(':') + 1);
@@ -138,49 +169,9 @@ public class Search {
     }
 
     /**
-     * Adds a listener that listens for items being added.
-     *
-     * @param listener Listener to add.
-     * @return True if successful.
-     */
-    public boolean addItemsAddedListener(ObjectListener<List<Item>> listener) {
-        return itemsAddedListeners.add(listener);
-    }
-
-    /**
-     * Adds a listener that listens for items being removed.
-     *
-     * @param listener Listener to add.
-     * @return True if successful.
-     */
-    public boolean addItemsRemovedListener(ObjectListener<List<Item>> listener) {
-        return itemsRemovedListeners.add(listener);
-    }
-
-    /**
-     * Removes a listener that listens for items being added.
-     *
-     * @param listener Listener to remove.
-     * @return True if successful.
-     */
-    public boolean removeItemsAddedListener(ObjectListener<List<Item>> listener) {
-        return itemsAddedListeners.remove(listener);
-    }
-
-    /**
-     * Removes a listener that listens for items being removed.
-     *
-     * @param listener Listener to remove.
-     * @return True if successful.
-     */
-    public boolean removeItemsRemovedListener(ObjectListener<List<Item>> listener) {
-        return itemsRemovedListeners.remove(listener);
-    }
-
-    /**
      * @return List of all results currently in the search. Is a direct reference to the backing list.
      */
-    public List<Item> getResults() {
+    public ObservableList<Item> getResults() {
         return results;
     }
 
@@ -194,6 +185,10 @@ public class Search {
 
     public boolean isShowGrouped() {
         return showGrouped;
+    }
+
+    public boolean isShuffled() {
+        return shuffled;
     }
 
     /**
@@ -223,11 +218,17 @@ public class Search {
 
         sort();
 
-        if (results.removeAll(toRemove)) itemsRemovedListeners.forEach(listener -> listener.pass(toRemove));
-        if (results.addAll(toAdd)) itemsAddedListeners.forEach(listener -> listener.pass(toAdd));
+        results.removeAll(toRemove);
+        if (isShuffled()) {
+            toAdd.forEach(item -> results.add((int) Math.floor(Math.random() * results.size()), item));
+        } else {
+            results.addAll(toAdd);
+        }
     }
 
     protected boolean isItemValid(Item item) {
+        if (item.isInvalidated()) return false;
+
         if (item instanceof MediaItem && ((MediaItem) item).getGroup() != null && !showGrouped) {
             return false;
         } else {
@@ -239,15 +240,6 @@ public class Search {
         }
 
         return true;
-    }
-
-    /**
-     * Removes items from this search.
-     *
-     * @param items Items to remove.
-     */
-    public void remove(List<Item> items) {
-        if (results.removeAll(items)) itemsRemovedListeners.forEach(listener -> listener.pass(items));
     }
 
     public void sort() {

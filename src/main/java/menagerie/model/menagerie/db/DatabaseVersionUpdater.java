@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model.menagerie.db;
 
 
@@ -29,63 +53,62 @@ public class DatabaseVersionUpdater {
 
 
     /**
-     * Currently accepted version of the database. If version is not this, database should upgrade.
-     */
-    private static final int TARGET_VERSION = 5;
-
-
-    /**
-     * @param db Database
-     * @return True if database is not target version.
-     * @throws SQLException If database query fails.
-     */
-    private static boolean outOfDate(Connection db) throws SQLException {
-        return getVersion(db) < TARGET_VERSION;
-    }
-
-    /**
      * Attempts to upgrade the database if it is out of date.
      *
      * @param db Database
      * @throws SQLException If the upgrade fails.
-     * @see #outOfDate(Connection)
      */
     public static void updateDatabase(Connection db) throws SQLException {
-        while (outOfDate(db)) {
-            int version = getVersion(db);
+        int version = getVersion(db);
 
-            Main.log.info("Found database version: " + version);
+        Main.log.info("Found database version: " + version);
 
-            switch (version) {
-                case -1:
-                    cleanDatabase(db);
-                    initializeTables(db);
-                    break;
-                case 0:
-                    Main.log.warning("!!! Database needs to update from v0 to v1 !!!");
-                    updateFromV0ToV1(db);
-                    break;
-                case 1:
-                    Main.log.warning("!!! Database needs to update from v1 to v2 !!!");
-                    updateFromV1ToV2(db);
-                    break;
-                case 2:
-                    Main.log.warning("!!! Database needs to update from v2 to v3 !!!");
-                    updateFromV2ToV3(db);
-                    break;
-                case 3:
-                    Main.log.warning("!!! Database needs to update from v3 to v4 !!!");
-                    updateFromV3ToV4(db);
-                case 4:
-                    Main.log.warning("!!! Database needs to update from v4 to v5 !!!");
-                    updateFromV4ToV5(db);
-                case 5:
-                    Main.log.info("Database is up to date");
-                    break;
-                default:
-                    Main.log.severe("Database is of unexpected version: " + version);
-                    break;
-            }
+        if (version == -1) {
+            cleanDatabase(db);
+            version = initializeTables(db);
+        }
+        if (version == 0) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV0ToV1(db);
+            version++;
+        }
+        if (version == 1) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV1ToV2(db);
+            version++;
+        }
+        if (version == 2) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV2ToV3(db);
+            version++;
+        }
+        if (version == 3) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV3ToV4(db);
+            version++;
+        }
+        if (version == 4) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV4ToV5(db);
+            version++;
+        }
+        if (version == 5) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV5ToV6(db);
+            version++;
+        }
+        if (version == 6) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV6ToV7(db);
+            version++;
+        }
+        if (version == 7) {
+            Main.log.warning("!!! Database needs to update from v" + version + " to v" + (version + 1) + " !!!");
+            updateFromV7ToV8(db);
+            version++;
+        }
+        if (version == 8) {
+            Main.log.info("Database is up to date");
         }
     }
 
@@ -128,8 +151,9 @@ public class DatabaseVersionUpdater {
      * @param db Database
      * @throws SQLException If database initialization fails.
      */
-    private static void initializeTables(Connection db) throws SQLException {
+    private static int initializeTables(Connection db) throws SQLException {
         initializeV3Tables(db);
+        return 3;
     }
 
     /**
@@ -374,6 +398,48 @@ public class DatabaseVersionUpdater {
         }
     }
 
+    private static void updateFromV5ToV6(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v5 to v6...");
+        long t = System.currentTimeMillis();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Adding 'no_similar' column to 'media'");
+            s.executeUpdate("ALTER TABLE media ADD COLUMN no_similar BOOL NOT NULL DEFAULT FALSE;");
+
+            Main.log.info("Setting database version");
+            s.executeUpdate("INSERT INTO version(version) VALUES (6);");
+
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
+    }
+
+    private static void updateFromV6ToV7(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v6 to v7...");
+        long t = System.currentTimeMillis();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Dropping thumbnail column from media");
+            s.executeUpdate("ALTER TABLE media DROP COLUMN thumbnail;");
+
+            Main.log.info("Setting database version");
+            s.executeUpdate("INSERT INTO version(version) VALUES (7);");
+
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
+    }
+
+    private static void updateFromV7ToV8(Connection db) throws SQLException {
+        Main.log.warning("Database updating from v7 to v8...");
+        long t = System.currentTimeMillis();
+        try (Statement s = db.createStatement()) {
+            Main.log.info("Creating 'non_dupes' table");
+            s.executeUpdate("CREATE TABLE non_dupes(item_1 INT, item_2 INT, FOREIGN KEY (item_1) REFERENCES items(id) ON DELETE CASCADE, FOREIGN KEY (item_2) REFERENCES items(id) ON DELETE CASCADE);");
+
+            Main.log.info("Setting database version");
+            s.executeUpdate("INSERT INTO version(version) VALUES (8);");
+
+            Main.log.info("Finished updating database in: " + (System.currentTimeMillis() - t) / 1000.0 + "s");
+        }
+    }
+
     /**
      * @param tags List of available tags to get from.
      * @param name Name of tag to get.
@@ -404,6 +470,86 @@ public class DatabaseVersionUpdater {
 
             Main.log.info("Finished cleaning database");
         }
+    }
+
+
+    public static void main(String[] args) throws SQLException {
+        // Copies all data into new database
+
+        Connection db1 = DriverManager.getConnection("jdbc:h2:~/test-purge", "sa", "");
+        Connection db2 = DriverManager.getConnection("jdbc:h2:~/test-purge-new", "sa", "");
+
+        Statement s1 = db1.createStatement();
+        Statement s2 = db2.createStatement();
+
+        updateDatabase(db2);
+
+        ResultSet rs = s1.executeQuery("SELECT * FROM tags;");
+        PreparedStatement ps = db2.prepareStatement("INSERT INTO tags VALUES (?, ?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setNString(2, rs.getNString(2));
+            ps.setNString(3, rs.getNString(3));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM tag_notes;");
+        ps = db2.prepareStatement("INSERT INTO tag_notes VALUES (?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setNString(2, rs.getNString(2));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM items;");
+        ps = db2.prepareStatement("INSERT INTO items VALUES (?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setLong(2, rs.getLong(2));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM groups;");
+        ps = db2.prepareStatement("INSERT INTO groups VALUES (?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setNString(2, rs.getNString(2));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM media;");
+        ps = db2.prepareStatement("INSERT INTO media VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt("id"));
+            ps.setObject(2, rs.getObject("gid"));
+            ps.setNString(3, rs.getNString("path"));
+            ps.setNString(4, rs.getNString("md5"));
+            ps.setBinaryStream(5, rs.getBinaryStream("thumbnail"));
+            ps.setBinaryStream(6, rs.getBinaryStream("hist_a"));
+            ps.setBinaryStream(7, rs.getBinaryStream("hist_r"));
+            ps.setBinaryStream(8, rs.getBinaryStream("hist_g"));
+            ps.setBinaryStream(9, rs.getBinaryStream("hist_b"));
+            //            ps.setBinaryStream(5, null);
+            //            ps.setBinaryStream(6, null);
+            //            ps.setBinaryStream(7, null);
+            //            ps.setBinaryStream(8, null);
+            //            ps.setBinaryStream(9, null);
+            ps.setInt(10, rs.getInt("page"));
+            ps.setBoolean(11, rs.getBoolean("no_similar"));
+            ps.executeUpdate();
+        }
+
+        rs = s1.executeQuery("SELECT * FROM tagged;");
+        ps = db2.prepareStatement("INSERT INTO tagged VALUES (?, ?);");
+        while (rs.next()) {
+            ps.setInt(1, rs.getInt(1));
+            ps.setInt(2, rs.getInt(2));
+            ps.executeUpdate();
+        }
+
+
+        s1.executeUpdate("SHUTDOWN DEFRAG;");
+        s2.executeUpdate("SHUTDOWN DEFRAG;");
     }
 
 }

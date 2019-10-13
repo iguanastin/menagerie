@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.gui;
 
 import com.sun.jna.NativeLibrary;
@@ -10,8 +34,10 @@ import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import uk.co.caprica.vlcj.discovery.windows.DefaultWindowsNativeDiscoveryStrategy;
-import uk.co.caprica.vlcj.version.LibVlcVersion;
+import uk.co.caprica.vlcj.factory.discovery.strategy.LinuxNativeDiscoveryStrategy;
+import uk.co.caprica.vlcj.factory.discovery.strategy.OsxNativeDiscoveryStrategy;
+import uk.co.caprica.vlcj.factory.discovery.strategy.WindowsNativeDiscoveryStrategy;
+import uk.co.caprica.vlcj.support.version.LibVlcVersion;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +60,13 @@ public class Main extends Application {
     public static final Logger log = Logger.getGlobal();
     private static final String logFilePath = "menagerie.log";
 
+    private static final String SPLASH_FXML = "/fxml/splash.fxml";
+    private static final String SPLASH_BACKGROUND = "/misc/splash.jpg";
+    static final String MAIN_FXML = "/fxml/main.fxml";
+    static final String CSS = "/fxml/dark.css";
+    static final String MAIN_TITLE = "Menagerie";
+    public static final String SETTINGS_PATH = "menagerie.settings";
+
 
     /**
      * Creates and shows a JFX alert.
@@ -42,7 +75,7 @@ public class Main extends Application {
      * @param header  Header of the alert
      * @param content Content of the alert
      */
-    public static void showErrorMessage(String title, String header, String content) {
+    static void showErrorMessage(String title, String header, String content) {
         Alert a = new Alert(Alert.AlertType.ERROR);
         a.setTitle(title);
         a.setHeaderText(header);
@@ -144,59 +177,55 @@ public class Main extends Application {
      * @param stage State supplied by JFX
      */
     public void start(Stage stage) {
-        try {
-            NativeLibrary.addSearchPath("libvlc", new DefaultWindowsNativeDiscoveryStrategy().discover());
-            log.config("Loaded LibVLC Version: " + LibVlcVersion.getVersion());
-
-            VLCJ_LOADED = true;
-        } catch (Throwable e) {
-            log.log(Level.WARNING, "Error loading vlcj", e);
-
-            VLCJ_LOADED = false;
-        }
-
-        final String splash = "/fxml/splash.fxml";
-        final String fxml = "/fxml/main.fxml";
-        final String css = "/fxml/dark.css";
-        final String title = "Menagerie";
-
-        final List<Image> icons = getIcons();
+        log.config("Splash FXML: " + SPLASH_FXML);
+        log.config("Main FXML: " + MAIN_FXML);
+        log.config("Main Title: " + MAIN_TITLE);
+        log.config("CSS: " + CSS);
+        log.config("Settings path: " + SETTINGS_PATH);
 
         try {
-            log.info(String.format("Loading FXML: %s", splash));
-            Parent root = FXMLLoader.load(getClass().getResource(splash));
+            final List<Image> icons = getIcons();
+
+            log.info("Loading FXML: " + SPLASH_FXML);
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(SPLASH_FXML));
+            loader.setControllerFactory(param -> new SplashController(icons, new Image(SPLASH_BACKGROUND)));
+            Parent root = loader.load();
             Scene scene = new Scene(root);
-            scene.getStylesheets().add(css);
+            scene.getStylesheets().add(CSS);
 
             stage.initStyle(StageStyle.UNDECORATED);
             stage.setScene(scene);
             stage.getIcons().addAll(icons);
             stage.show();
         } catch (IOException e) {
-            log.log(Level.SEVERE, "Error loading FXML: " + splash, e);
-            showErrorMessage("Error", "Unable to load FXML: " + splash, e.getLocalizedMessage());
+            log.log(Level.SEVERE, "Error loading FXML: " + SPLASH_FXML, e);
+            showErrorMessage("Error", "Unable to load FXML: " + SPLASH_FXML + ", see log for more details", e.getLocalizedMessage());
+            Platform.exit();
+            System.exit(1);
         }
+    }
 
-        Platform.runLater(() -> {
+    static void loadVLCJ(String path) {
+        List<String> paths = new ArrayList<>();
+        if (path != null) paths.add(path);
+        path = new WindowsNativeDiscoveryStrategy().discover();
+        if (path != null) paths.add(path);
+        path = new LinuxNativeDiscoveryStrategy().discover();
+        if (path != null) paths.add(path);
+        path = new OsxNativeDiscoveryStrategy().discover();
+        if (path != null) paths.add(path);
+
+        for (String p : paths) {
+            NativeLibrary.addSearchPath("libvlc", p);
             try {
-                log.info(String.format("Loading FXML: %s", fxml));
-                FXMLLoader loader = new FXMLLoader(getClass().getResource(fxml));
-                Parent root = loader.load();
-                Scene scene = new Scene(root);
-                scene.getStylesheets().add(css);
-
-                Stage newStage = new Stage();
-                newStage.setScene(scene);
-                newStage.setTitle(title);
-                newStage.getIcons().addAll(icons);
-                newStage.show();
-                stage.close();
-            } catch (IOException e) {
-                log.log(Level.SEVERE, "Failed to load FXML: " + fxml, e);
-                System.exit(1);
+                NativeLibrary.getInstance("libvlc");
+                log.config("Loaded LibVLC Version: " + new LibVlcVersion().getVersion());
+                VLCJ_LOADED = true;
+                break;
+            } catch (Throwable t) {
+                log.log(Level.WARNING, "Failed to load libvlc with path: " + p, t);
             }
-        });
-
+        }
     }
 
     private List<Image> getIcons() {

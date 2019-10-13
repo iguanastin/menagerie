@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.gui.predictive;
 
 import javafx.geometry.Bounds;
@@ -14,8 +38,7 @@ import java.util.List;
 
 public class PredictiveTextField extends TextField {
 
-    private static final String SELECTED_CSS = "-fx-background-color: derive(-fx-accent, 50%);";
-    private static final String SELECTED_UNFOCUSED_CSS = "-fx-background-color: -fx-accent;";
+    private static final String POPUP_STYLE_CLASS = "predictive-popup";
 
     private PredictiveTextFieldOptionsListener optionsListener;
 
@@ -30,7 +53,7 @@ public class PredictiveTextField extends TextField {
     public PredictiveTextField() {
         popup.getContent().add(vBox);
 
-        vBox.setStyle("-fx-background-color: -fx-base;");
+        vBox.getStyleClass().addAll(POPUP_STYLE_CLASS);
         vBox.setPadding(new Insets(5));
 
         textProperty().addListener((observable, oldValue, newValue) -> textChanged());
@@ -64,9 +87,9 @@ public class PredictiveTextField extends TextField {
 
         vBox.getChildren().clear();
         options.forEach(str -> {
-            Label label = new Label(str);
-            label.setOnMouseClicked(event -> acceptOption(str));
-            vBox.getChildren().add(label);
+            PredictivePopupCell cell = new PredictivePopupCell(str);
+            cell.setOnMouseClicked(event -> acceptOption(str));
+            vBox.getChildren().add(cell);
         });
         updateOptionCSSStyles();
 
@@ -91,47 +114,59 @@ public class PredictiveTextField extends TextField {
         if (popup.isShowing()) {
             switch (event.getCode()) {
                 case UP:
-                    if (selectedIndex < 0) {
-                        selectedIndex = vBox.getChildren().size() - 1;
-                    } else if (selectedIndex > 0) {
-                        selectedIndex--;
-                    } else {
-                        selectedIndex = vBox.getChildren().size() - 1;
-                    }
-                    updateOptionCSSStyles();
-                    event.consume();
+                    eventFilterKeyUpPressed(event);
                     break;
                 case DOWN:
-                    if (selectedIndex < 0) {
-                        selectedIndex = 0;
-                    } else if (selectedIndex < vBox.getChildren().size() - 1) {
-                        selectedIndex++;
-                    } else {
-                        selectedIndex = 0;
-                    }
-                    updateOptionCSSStyles();
-                    event.consume();
+                    eventFilterKeyDownPressed(event);
                     break;
                 case SPACE:
                 case ENTER:
                 case TAB:
-                    if (selectedIndex < 0) {
-                        if (event.isControlDown() || event.getCode() == KeyCode.TAB) {
-                            if (top) selectedIndex = vBox.getChildren().size() - 1;
-                            else selectedIndex = 0;
-                        }
-                    }
-
-                    if (selectedIndex >= 0) {
-                        acceptOption(((Label) vBox.getChildren().get(selectedIndex)).getText());
-
-                        if (event.getCode() == KeyCode.TAB) event.consume();
-                    }
+                    eventFilterKeyTabPressed(event);
                     break;
                 default:
                     break;
             }
         }
+    }
+
+    private void eventFilterKeyTabPressed(KeyEvent event) {
+        if (selectedIndex < 0) {
+            if (event.isControlDown() || event.getCode() == KeyCode.TAB) {
+                if (top) selectedIndex = vBox.getChildren().size() - 1;
+                else selectedIndex = 0;
+            }
+        }
+
+        if (selectedIndex >= 0) {
+            acceptOption(((Label) vBox.getChildren().get(selectedIndex)).getText());
+
+            if (event.getCode() == KeyCode.TAB) event.consume();
+        }
+    }
+
+    private void eventFilterKeyDownPressed(KeyEvent event) {
+        if (selectedIndex < 0) {
+            selectedIndex = 0;
+        } else if (selectedIndex < vBox.getChildren().size() - 1) {
+            selectedIndex++;
+        } else {
+            selectedIndex = 0;
+        }
+        updateOptionCSSStyles();
+        event.consume();
+    }
+
+    private void eventFilterKeyUpPressed(KeyEvent event) {
+        if (selectedIndex < 0) {
+            selectedIndex = vBox.getChildren().size() - 1;
+        } else if (selectedIndex > 0) {
+            selectedIndex--;
+        } else {
+            selectedIndex = vBox.getChildren().size() - 1;
+        }
+        updateOptionCSSStyles();
+        event.consume();
     }
 
     private void acceptOption(String option) {
@@ -152,12 +187,13 @@ public class PredictiveTextField extends TextField {
      */
     private void updateOptionCSSStyles() {
         for (int i = 0; i < vBox.getChildren().size(); i++) {
+            ((PredictivePopupCell) vBox.getChildren().get(i)).setSelected(false);
+            ((PredictivePopupCell) vBox.getChildren().get(i)).setSelectedUnfocused(false);
+
             if (i == selectedIndex) {
-                vBox.getChildren().get(i).setStyle(SELECTED_CSS);
+                ((PredictivePopupCell) vBox.getChildren().get(i)).setSelected(true);
             } else if (selectedIndex < 0 && ((i == 0 && !top) || (i == vBox.getChildren().size() - 1 && top))) {
-                vBox.getChildren().get(i).setStyle(SELECTED_UNFOCUSED_CSS);
-            } else {
-                vBox.getChildren().get(i).setStyle(null);
+                ((PredictivePopupCell) vBox.getChildren().get(i)).setSelectedUnfocused(true);
             }
         }
     }

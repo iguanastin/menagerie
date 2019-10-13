@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.gui.screens.importer;
 
 import javafx.application.Platform;
@@ -8,17 +32,12 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.util.listeners.ObjectListener;
 
-import java.util.List;
-
 
 public class ImportListCell extends ListCell<ImportJob> {
-
-    private final ImporterScreen screen;
 
     private final ChangeListener<Number> progressChangeListener;
 
@@ -29,20 +48,23 @@ public class ImportListCell extends ListCell<ImportJob> {
     private final ProgressBar importingProgressBar;
     private final BorderPane importingView;
 
-    private final Label hasSimilarLabel;
-    private final Button hasSimilarResolveButton;
-    private final BorderPane hasSimilarView;
-
     private final Label duplicateLabel;
     private final BorderPane duplicateView;
 
     private final Label failedLabel;
     private final BorderPane failedView;
 
+    private final ChangeListener<ImportJob.Status> statusListener = (observable, oldValue, newValue) -> Platform.runLater(() -> {
+        if (getItem() != null) {
+            updateView(getItem().getStatus());
+        } else {
+            setGraphic(null);
+        }
+    });
 
-    ImportListCell(ImporterScreen screen, ObjectListener<List<SimilarPair<MediaItem>>> duplicateResolverListener, ObjectListener<MediaItem> selectItemListener) {
+
+    ImportListCell(ImporterScreen screen, ObjectListener<MediaItem> selectItemListener) {
         super();
-        this.screen = screen;
 
         Button cancelButton = new Button("Cancel");
         cancelButton.setOnAction(event -> {
@@ -61,31 +83,18 @@ public class ImportListCell extends ListCell<ImportJob> {
         importingView = new BorderPane(new Label("Importing..."), importingLabel, null, importingProgressBar, null);
         importingLabel.maxWidthProperty().bind(importingView.widthProperty().subtract(10));
 
-        hasSimilarLabel = new Label("N/A");
-        hasSimilarLabel.setTextOverrun(OverrunStyle.CENTER_WORD_ELLIPSIS);
-        hasSimilarResolveButton = new Button("Resolve");
-        hasSimilarResolveButton.setOnAction(event -> {
-            duplicateResolverListener.pass(getItem().getSimilarTo());
-            screen.removeJob(getItem());
-        });
-        Button dismissButton = new Button("Dismiss");
-        EventHandler<ActionEvent> dismissEventHandler = event -> screen.removeJob(getItem());
-        dismissButton.setOnAction(dismissEventHandler);
-        HBox h = new HBox(5, hasSimilarResolveButton, dismissButton);
-        h.setAlignment(Pos.CENTER_RIGHT);
-        hasSimilarView = new BorderPane(new Label("Successfully imported - Has potential duplicates"), hasSimilarLabel, null, h, null);
-        hasSimilarLabel.maxWidthProperty().bind(hasSimilarView.widthProperty().subtract(10));
 
         duplicateLabel = new Label("N/A");
         duplicateLabel.setTextOverrun(OverrunStyle.CENTER_WORD_ELLIPSIS);
-        dismissButton = new Button("Dismiss");
+        Button dismissButton = new Button("Dismiss");
+        EventHandler<ActionEvent> dismissEventHandler = event -> screen.removeJob(getItem());
         dismissButton.setOnAction(dismissEventHandler);
         Button showDuplicateButton = new Button("View");
         showDuplicateButton.setOnAction(event -> {
             selectItemListener.pass(getItem().getDuplicateOf());
             screen.removeJob(getItem());
         });
-        h = new HBox(5, showDuplicateButton, dismissButton);
+        HBox h = new HBox(5, showDuplicateButton, dismissButton);
         h.setAlignment(Pos.CENTER_RIGHT);
         duplicateView = new BorderPane(new Label("Failed - Exact duplicate already present"), duplicateLabel, null, h, null);
         duplicateLabel.maxWidthProperty().bind(duplicateView.widthProperty().subtract(10));
@@ -105,39 +114,42 @@ public class ImportListCell extends ListCell<ImportJob> {
     @Override
     protected void updateItem(ImportJob item, boolean empty) {
         if (getItem() != null) {
-            getItem().getProgressProperty().removeListener(progressChangeListener);
+            getItem().progressProperty().removeListener(progressChangeListener);
+            getItem().statusProperty().removeListener(statusListener);
         }
 
         super.updateItem(item, empty);
 
         if (item != null) {
-            item.getProgressProperty().addListener(progressChangeListener);
+            item.progressProperty().addListener(progressChangeListener);
+            item.statusProperty().addListener(statusListener);
 
             if (item.getUrl() != null) setTooltip(new Tooltip(item.getUrl().toString()));
             else setTooltip(new Tooltip(item.getFile().toString()));
 
-            switch (item.getStatus()) {
-                case WAITING:
-                    showWaitingView();
-                    break;
-                case IMPORTING:
-                    showImportingView();
-                    break;
-                case SUCCEEDED:
-                    screen.removeJob(getItem());
-                    break;
-                case SUCCEEDED_SIMILAR:
-                    showHasSimilarView();
-                    break;
-                case FAILED_DUPLICATE:
-                    showDuplicateView();
-                    break;
-                case FAILED_IMPORT:
-                    showFailedView();
-                    break;
-            }
+            updateView(item.getStatus());
         } else {
             setGraphic(null);
+        }
+    }
+
+    private void updateView(ImportJob.Status status) {
+        switch (status) {
+            case WAITING:
+                showWaitingView();
+                break;
+            case IMPORTING:
+                showImportingView();
+                break;
+            case FAILED_DUPLICATE:
+                showDuplicateView();
+                break;
+            case FAILED_IMPORT:
+                showFailedView();
+                break;
+            default:
+                setGraphic(null);
+                break;
         }
     }
 
@@ -161,18 +173,6 @@ public class ImportListCell extends ListCell<ImportJob> {
         if (getItem() != null) {
             if (getItem().getUrl() != null) waitingLabel.setText(getItem().getUrl().toString());
             else waitingLabel.setText(getItem().getFile().toString());
-        }
-    }
-
-    /**
-     * Makes this cell show a hasSimilar view.
-     */
-    private void showHasSimilarView() {
-        setGraphic(hasSimilarView);
-        if (getItem() != null) {
-            hasSimilarResolveButton.setText("Resolve: " + getItem().getSimilarTo().size());
-            if (getItem().getUrl() != null) hasSimilarLabel.setText(getItem().getUrl().toString());
-            else hasSimilarLabel.setText(getItem().getFile().toString());
         }
     }
 

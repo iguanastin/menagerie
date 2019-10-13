@@ -1,4 +1,28 @@
-package menagerie.model;
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
+package menagerie.settings;
 
 import javafx.beans.property.*;
 import menagerie.gui.Main;
@@ -18,12 +42,12 @@ import java.util.logging.Level;
  * <p>
  * Property events are handled on the FX thread.
  */
-public class Settings {
+public class OldSettings {
 
     /**
      * Settings keys
      */
-    public enum Key {USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, COMPARE_GREYSCALE, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE, SHOW_HELP_ON_START, TAG_TAGME, TAG_VIDEO, TAG_IMAGE}
+    public enum Key {VLCJ_PATH, LICENSES_AGREED, USER_FILETYPES, USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE, SHOW_HELP_ON_START, TAG_TAGME, TAG_VIDEO, TAG_IMAGE, EXPAND_ITEM_INFO}
 
     private final Map<Key, Property> vars = new HashMap<>();
     private File file;
@@ -34,7 +58,7 @@ public class Settings {
      *
      * @param file File to read from
      */
-    public Settings(File file) {
+    public OldSettings(File file) {
         this();
 
         if (file != null) {
@@ -85,7 +109,7 @@ public class Settings {
     /**
      * Constructs a settings object using default settings.
      */
-    public Settings() {
+    public OldSettings() {
         setBoolean(Key.USE_FILENAME_FROM_URL, true);
         setBoolean(Key.BACKUP_DATABASE, true);
         setBoolean(Key.WINDOW_MAXIMIZED, true);
@@ -93,22 +117,25 @@ public class Settings {
         setBoolean(Key.AUTO_IMPORT_MOVE_TO_DEFAULT, true);
         setBoolean(Key.MUTE_VIDEO, true);
         setBoolean(Key.REPEAT_VIDEO, true);
-        setBoolean(Key.COMPARE_GREYSCALE, false);
+        setBoolean(Key.SHOW_HELP_ON_START, true);
+        setBoolean(Key.TAG_TAGME, true);
+        setBoolean(Key.TAG_IMAGE, false);
+        setBoolean(Key.TAG_VIDEO, true);
+        setBoolean(Key.EXPAND_ITEM_INFO, false);
         setInt(Key.GRID_WIDTH, 2);
         setInt(Key.WINDOW_WIDTH, Integer.MIN_VALUE);
         setInt(Key.WINDOW_HEIGHT, Integer.MIN_VALUE);
         setInt(Key.WINDOW_X, Integer.MIN_VALUE);
         setInt(Key.WINDOW_Y, Integer.MIN_VALUE);
+        setInt(Key.LICENSES_AGREED, 0);
         setString(Key.DEFAULT_FOLDER, null);
         setString(Key.DATABASE_URL, "~/menagerie");
         setString(Key.DATABASE_USER, "sa");
         setString(Key.DATABASE_PASSWORD, "");
         setString(Key.AUTO_IMPORT_FOLDER, null);
+        setString(Key.USER_FILETYPES, null);
+        setString(Key.VLCJ_PATH, null);
         setDouble(Key.CONFIDENCE, 0.95);
-        setBoolean(Key.SHOW_HELP_ON_START, true);
-        setBoolean(Key.TAG_TAGME, true);
-        setBoolean(Key.TAG_IMAGE, false);
-        setBoolean(Key.TAG_VIDEO, true);
     }
 
     /**

@@ -1,4 +1,28 @@
 /*
+    Copyright (c) 2016 Joffrey Bion
+
+    MIT License
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+*/
+
+/*
  * This is an adjustment of the original modena.css for a consistent dark theme.
  * Original modena.css here: https://gist.github.com/maxd/63691840fc372f22f470.
  */
@@ -55,6 +79,19 @@
     -fx-background-color: -fx-mark-highlight-color, rgb(255, 255, 255);
 }
 
+.progress-indicator {
+    -fx-progress-color: derive(-fx-accent, +75%);
+}
+
+.screen-root {
+    -fx-background-color: -fx-base;
+    -fx-effect: dropshadow(three-pass-box, black, 10, 0.5, 0, 0);
+}
+
+.image-view:disabled {
+    -fx-opacity: 50%;
+}
+
 .list-view {
     -fx-background-color: derive(-fx-control-inner-background, +25%);
 }
@@ -64,9 +101,71 @@
 .list-cell:odd {
     -fx-background-color: derive(-fx-control-inner-background, +20%);
 }
+.online-tag-cell:shares_tag {
+    -fx-background-color: derive(-fx-accent, +20%);
+}
+.online-tag-cell:shares_tag:odd {
+    -fx-background-color: -fx-accent;
+}
 
-.image-grid-cell {
-    -grid-cell-selected-color: derive(-fx-accent, 100%);
-    -grid-cell-unselected-color: derive(-fx-color, 50%);
-    -fx-background-color: -grid-cell-unselected-color;
+.item-grid-cell {
+    -fx-background-color: derive(-fx-color, +25%);
+}
+.item-grid-cell:selected {
+    -fx-background-color: derive(-fx-accent, +75%);
+}
+.item-grid-cell:hover {
+    -fx-border-style: solid;
+    -fx-border-width: 2px;
+    -fx-border-color: derive(-fx-accent, +50%);
+}
+
+.tag-list-cell:other-missing {
+    -fx-background-color: blue;
+}
+
+.predictive-popup {
+    -fx-background-color: -fx-base;
+}
+.predictive-cell:selected {
+    -fx-background-color: derive(-fx-accent, 50%);
+}
+.predictive-cell:selected-unfocused {
+    -fx-background-color: -fx-accent;
+}
+
+.tag-list-popup {
+    -fx-background-color: -fx-base;
+    -fx-effect: dropshadow(three-pass-box, black, 10, 0.25, 0, 0);
+}
+
+.item-info-box {
+    -fx-background-color: -fx-base;
+}
+
+.dynamic-video-controls {
+    -fx-background-color: -fx-base;
+    -fx-opacity: 0.75;
+}
+
+.log-button:warning {
+    -fx-base: yellow;
+}
+.log-button:error {
+    -fx-base: red;
+}
+
+.log-list-cell:warning {
+    -fx-text-background-color: yellow;
+}
+.log-list-cell:error {
+    -fx-text-background-color: red;
+}
+
+.pairs-button:has-pairs {
+    -fx-base: blue;
+}
+
+.imports-button:has-imports {
+    -fx-base: blue;
 }

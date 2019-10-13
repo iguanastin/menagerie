@@ -1,15 +1,38 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model.menagerie.importer;
 
 import menagerie.gui.Main;
-import menagerie.model.Settings;
 import menagerie.model.menagerie.Menagerie;
+import menagerie.settings.MenagerieSettings;
 import menagerie.util.listeners.ObjectListener;
 
 import java.util.HashSet;
+import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * A thread that cleanly serializes Menagerie imports as jobs with additional features.
@@ -20,13 +43,15 @@ public class ImporterThread extends Thread {
     private volatile boolean paused = false;
 
     private final Menagerie menagerie;
-    private final Settings settings;
-    private final BlockingQueue<ImportJob> jobs = new LinkedBlockingQueue<>();
+    private final MenagerieSettings settings;
+    private final Queue<ImportJob> queue = new ConcurrentLinkedQueue<>();
 
     private final Set<ObjectListener<ImportJob>> importerListeners = new HashSet<>();
 
 
-    public ImporterThread(Menagerie menagerie, Settings settings) {
+    public ImporterThread(Menagerie menagerie, MenagerieSettings settings) {
+        super("Menagerie Importer Thread");
+
         this.menagerie = menagerie;
         this.settings = settings;
     }
@@ -35,30 +60,34 @@ public class ImporterThread extends Thread {
     public void run() {
         running = true;
         while (running) {
-            try {
-                ImportJob job = jobs.take();
-
-                while (paused) {
-                    synchronized (this) {
-                        try {
-                            wait(10000);
-                        } catch (InterruptedException ignore) {
-                        }
+            while (paused) {
+                if (!running) return;
+                synchronized (this) {
+                    try {
+                        wait();
+                    } catch (InterruptedException ignore) {
                     }
-                    if (!running) break;
                 }
-
-                if (running) {
-                    String source;
-                    if (job.getUrl() != null) source = job.getUrl().toString();
-                    else source = job.getFile().toString();
-                    Main.log.info(String.format("Importing: %s", source));
-
-                    job.runJob(menagerie, settings);
-                }
-            } catch (InterruptedException e) {
-                Main.log.log(Level.WARNING, "Interrupted while importer thread taking job", e);
             }
+
+            if (queue.isEmpty()) {
+                synchronized (this) {
+                    try {
+                        wait();
+                    } catch (InterruptedException ignore) {
+                    }
+                }
+                continue;
+            }
+
+            ImportJob job = queue.remove();
+
+            String source;
+            if (job.getUrl() != null) source = job.getUrl().toString();
+            else source = job.getFile().toString();
+            Main.log.info(String.format("Importing: %s", source));
+
+            job.runJob(menagerie, settings);
         }
     }
 
@@ -67,9 +96,10 @@ public class ImporterThread extends Thread {
      *
      * @param job Job to add.
      */
-    public void addJob(ImportJob job) {
-        jobs.add(job);
+    public synchronized void addJob(ImportJob job) {
         job.setImporter(this);
+        queue.add(job);
+        notify();
         synchronized (importerListeners) {
             importerListeners.forEach(listener -> listener.pass(job));
         }
@@ -80,6 +110,7 @@ public class ImporterThread extends Thread {
      */
     public synchronized void stopRunning() {
         this.running = false;
+        notify();
     }
 
     /**
@@ -89,7 +120,7 @@ public class ImporterThread extends Thread {
      */
     public synchronized void setPaused(boolean paused) {
         this.paused = paused;
-        notifyAll();
+        notify();
     }
 
     /**
@@ -130,7 +161,7 @@ public class ImporterThread extends Thread {
      * @param job Job to remove.
      */
     public void cancel(ImportJob job) {
-        jobs.remove(job);
+        queue.remove(job);
     }
 
 }

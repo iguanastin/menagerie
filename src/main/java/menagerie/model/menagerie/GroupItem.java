@@ -1,10 +1,37 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model.menagerie;
 
-import menagerie.gui.thumbnail.Thumbnail;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import menagerie.gui.Thumbnail;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -12,8 +39,8 @@ import java.util.List;
  */
 public class GroupItem extends Item {
 
-    private final List<MediaItem> elements = new ArrayList<>();
-    private String title;
+    private final ObservableList<MediaItem> elements = FXCollections.observableArrayList();
+    private final StringProperty title = new SimpleStringProperty();
 
 
     /**
@@ -26,7 +53,7 @@ public class GroupItem extends Item {
      */
     public GroupItem(Menagerie menagerie, int id, long dateAdded, String title) {
         super(menagerie, id, dateAdded);
-        this.title = title;
+        this.title.set(title);
     }
 
     /**
@@ -38,13 +65,13 @@ public class GroupItem extends Item {
     public boolean addItem(MediaItem item) {
         if (elements.contains(item)) return false;
 
-        if (item.inGroup()) item.getGroup().removeItem(item);
+        if (item.isInGroup()) item.getGroup().removeItem(item);
 
         elements.add(item);
         item.setGroup(this);
 
-        updateIndices();
-        if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(item));
+        if (!isInvalidated()) updateIndices();
+        if (menagerie != null) menagerie.refreshInSearches(item);
         return true;
     }
 
@@ -56,8 +83,8 @@ public class GroupItem extends Item {
     public boolean removeItem(MediaItem item) {
         if (elements.remove(item)) {
             item.setGroup(null);
-            updateIndices();
-            if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(item));
+            if (!isInvalidated()) updateIndices();
+            if (menagerie != null) menagerie.refreshInSearches(item);
             return true;
         }
 
@@ -68,13 +95,10 @@ public class GroupItem extends Item {
      * Removes all items from this group.
      */
     public void removeAll() {
-        Iterator<MediaItem> iter = elements.iterator();
-        while (iter.hasNext()) {
-            MediaItem item = iter.next();
-            iter.remove();
-            item.setGroup(null);
-            if (menagerie != null) menagerie.refreshInSearches(Collections.singletonList(item));
-        }
+        List<Item> temp = new ArrayList<>(elements);
+        elements.forEach(mediaItem -> mediaItem.setGroup(null));
+        elements.clear();
+        if (menagerie != null) menagerie.refreshInSearches(temp);
     }
 
     /**
@@ -96,7 +120,7 @@ public class GroupItem extends Item {
             elements.add(anchorIndex + i, list.get(i));
         }
 
-        updateIndices();
+        if (!isInvalidated()) updateIndices();
         return true;
     }
 
@@ -106,7 +130,7 @@ public class GroupItem extends Item {
     public void reverseElements() {
         Collections.reverse(elements);
 
-        updateIndices();
+        if (!isInvalidated()) updateIndices();
     }
 
     /**
@@ -132,18 +156,90 @@ public class GroupItem extends Item {
         }
     }
 
+    @Override
+    public void purgeThumbnail() {
+        if (!elements.isEmpty()) {
+            elements.get(0).purgeThumbnail();
+        }
+    }
+
     /**
      * @return The title of this group.
      */
     public synchronized String getTitle() {
+        return title.get();
+    }
+
+    public StringProperty titleProperty() {
         return title;
+    }
+
+    /**
+     * Sets the title of this group.
+     *
+     * @param str New title.
+     */
+    public void setTitle(String str) {
+        title.set(str);
+
+        if (!isInvalidated()) {
+            if (hasDatabase()) menagerie.getDatabaseManager().setGroupTitleAsync(getId(), title.get());
+            if (menagerie != null) menagerie.refreshInSearches(this);
+        }
     }
 
     /**
      * @return The elements of this group.
      */
-    public List<MediaItem> getElements() {
+    public ObservableList<MediaItem> getElements() {
         return elements;
+    }
+
+    /**
+     * Forgets this group and all its elements from the Menagerie.
+     *
+     * @return True if successfully forgotten.
+     */
+    @Override
+    protected boolean forget() {
+        if (!super.forget()) return false;
+
+        for (MediaItem item : elements) {
+            item.forget();
+        }
+
+        return true;
+    }
+
+    /**
+     * Forgets and deletes this group and all its elements. Element files are deleted.
+     *
+     * @return True if successfully deleted.
+     */
+    @Override
+    protected boolean delete() {
+        if (!super.forget()) return false;
+
+        for (MediaItem item : elements) {
+            item.delete();
+        }
+
+        return true;
+    }
+
+    /**
+     * Removes all elements and forgets this group.
+     *
+     * @return True if successfully ungrouped.
+     */
+    public boolean ungroup() {
+        if (isInvalidated()) return false;
+
+        removeAll();
+        boolean result = super.forget();
+        if (result) menagerie.refreshInSearches(this);
+
+        return result;
     }
 
     @Override

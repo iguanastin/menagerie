@@ -1,9 +1,40 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.gui.screens;
 
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -18,19 +49,25 @@ import menagerie.model.menagerie.Menagerie;
 import menagerie.util.listeners.ObjectListener;
 import menagerie.util.listeners.PokeListener;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class SlideshowScreen extends Screen {
 
     private final DynamicMediaView mediaView = new DynamicMediaView();
     private final ItemInfoBox infoBox = new ItemInfoBox();
-    private final Label countLabel = new Label("0/0");
+    private final Label totalLabel = new Label("0");
+    private final TextField indexTextField = new TextField("/0");
+    private final Button playPauseButton = new Button("Play");
 
     private final List<Item> items = new ArrayList<>();
     private Item showing = null;
     private Menagerie menagerie;
+
+    private final Timer timer = new Timer(true);
+    private TimerTask currentTimerTask = null;
+    private final DoubleProperty interval = new SimpleDoubleProperty(10);
+    private final BooleanProperty preload = new SimpleBooleanProperty(true);
+    private Image preloadPrev = null, preloadNext = null;
 
 
     public SlideshowScreen(ObjectListener<Item> selectListener) {
@@ -62,7 +99,8 @@ public class SlideshowScreen extends Screen {
             }
         });
 
-        setStyle("-fx-background-color: -fx-base;");
+        getStyleClass().addAll(ROOT_STYLE_CLASS);
+
         mediaView.setRepeat(true);
         mediaView.setMute(false);
         infoBox.setMaxWidth(USE_PREF_SIZE);
@@ -83,6 +121,20 @@ public class SlideshowScreen extends Screen {
             if (showing != null && selectListener != null) selectListener.pass(showing);
         });
 
+        Button right = new Button("->");
+        right.setOnAction(event -> previewNext());
+
+        playPauseButton.setOnAction(event -> {
+            if (currentTimerTask == null) {
+                startSlideShow();
+                playPauseButton.setText("Pause");
+            } else {
+                currentTimerTask.cancel();
+                currentTimerTask = null;
+                playPauseButton.setText("Play");
+            }
+        });
+
         Button close = new Button("Close");
         close.setOnAction(event -> close());
 
@@ -92,10 +144,23 @@ public class SlideshowScreen extends Screen {
         Button reverse = new Button("Reverse");
         reverse.setOnAction(event -> reverse());
 
-        Button right = new Button("->");
-        right.setOnAction(event -> previewNext());
+        indexTextField.setOnAction(event -> {
+            int i = items.indexOf(showing);
+            try {
+                int temp = Integer.parseInt(indexTextField.getText()) - 1;
+                i = Math.max(0, Math.min(temp, items.size() - 1)); // Clamp to valid indices
+            } catch (NumberFormatException e) {
+                // Nothing
+            }
 
-        HBox h = new HBox(5, left, select, right, countLabel);
+            preview(items.get(i));
+            requestFocus();
+        });
+        indexTextField.setPrefWidth(50);
+        indexTextField.setAlignment(Pos.CENTER_RIGHT);
+        HBox countHBox = new HBox(indexTextField, totalLabel);
+        countHBox.setAlignment(Pos.CENTER);
+        HBox h = new HBox(5, left, select, playPauseButton, right, countHBox);
         h.setAlignment(Pos.CENTER);
         bp = new BorderPane(h, null, close, null, new HBox(5, shuffle, reverse));
         bp.setPadding(new Insets(5));
@@ -147,6 +212,10 @@ public class SlideshowScreen extends Screen {
     @Override
     protected void onClose() {
         items.clear();
+        if (currentTimerTask != null) {
+            currentTimerTask.cancel();
+        }
+
         preview(null);
     }
 
@@ -157,14 +226,22 @@ public class SlideshowScreen extends Screen {
         return showing;
     }
 
+    public ItemInfoBox getInfoBox() {
+        return infoBox;
+    }
+
     /**
      * Attempts to delete or remove the currently displayed item.
      *
      * @param deleteFile Delete the file after removing from the Menagerie.
      */
-    public void tryDeleteCurrent(boolean deleteFile) {
+    private void tryDeleteCurrent(boolean deleteFile) {
         PokeListener onFinish = () -> {
-            menagerie.removeItems(Collections.singletonList(getShowing()), deleteFile);
+            if (deleteFile) {
+                menagerie.deleteItem(getShowing());
+            } else {
+                menagerie.forgetItem(getShowing());
+            }
 
             if (items.isEmpty() || showing == null) return;
 
@@ -195,11 +272,25 @@ public class SlideshowScreen extends Screen {
     private void preview(Item item) {
         showing = item;
 
+        preloadPrev = null;
+        preloadNext = null;
+        int i = items.indexOf(showing);
+        if (isPreload() && i >= 0) {
+            if (i > 0) {
+                Item previous = items.get(i - 1);
+                if (previous instanceof MediaItem) preloadPrev = ((MediaItem) previous).getImage();
+            }
+            if (i + 1 < items.size()) {
+                Item next = items.get(i + 1);
+                if (next instanceof MediaItem) preloadNext = ((MediaItem) next).getImage();
+            }
+        }
+
         updateCountLabel();
 
         if (item instanceof MediaItem) {
-            mediaView.preview((MediaItem) item);
-            infoBox.setItem((MediaItem) item);
+            mediaView.preview(item);
+            infoBox.setItem(item);
         } else {
             mediaView.preview(null);
         }
@@ -210,9 +301,11 @@ public class SlideshowScreen extends Screen {
      */
     private void updateCountLabel() {
         if (showing != null) {
-            countLabel.setText(String.format("%d/%d", items.indexOf(showing) + 1, items.size()));
+            indexTextField.setText("" + (items.indexOf(showing) + 1));
+            totalLabel.setText("/" + items.size());
         } else {
-            countLabel.setText("" + items.size());
+            indexTextField.setText(null);
+            totalLabel.setText("" + items.size());
         }
     }
 
@@ -252,6 +345,63 @@ public class SlideshowScreen extends Screen {
                 preview(items.get(index - 1));
             }
         }
+    }
+
+    public void startSlideShow() {
+        if (currentTimerTask != null) currentTimerTask.cancel();
+
+        currentTimerTask = new TimerTask() {
+            @Override
+            public void run() {
+                if (showing == null) {
+                    cancel();
+                    return;
+                }
+
+                int i = items.indexOf(showing);
+                if (i < 0) {
+                    cancel();
+                } else if (i >= items.size() - 1) {
+                    Platform.runLater(() -> preview(items.get(0)));
+                } else {
+                    Platform.runLater(() -> preview(items.get(i + 1)));
+                }
+            }
+
+            @Override
+            public boolean cancel() {
+                currentTimerTask = null;
+                Platform.runLater(() -> playPauseButton.setText("Play"));
+                return super.cancel();
+            }
+        };
+
+        final long interval = (long) (getInterval() * 1000);
+        timer.schedule(currentTimerTask, interval, interval);
+    }
+
+    public DoubleProperty intervalProperty() {
+        return interval;
+    }
+
+    public double getInterval() {
+        return interval.get();
+    }
+
+    public void setInterval(double d) {
+        interval.set(d);
+    }
+
+    public boolean isPreload() {
+        return preload.get();
+    }
+
+    public BooleanProperty preloadProperty() {
+        return preload;
+    }
+
+    public void setPreload(boolean b) {
+        preload.set(b);
     }
 
     /**

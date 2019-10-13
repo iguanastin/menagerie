@@ -1,3 +1,27 @@
+/*
+ MIT License
+
+ Copyright (c) 2019. Austin Thompson
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
+
 package menagerie.model.menagerie;
 
 import org.junit.jupiter.api.Test;
@@ -214,6 +238,46 @@ class GroupItemTests {
         assertFalse(g.moveElements(Collections.singletonList(m1), m3, true));
         assertEquals(m1, g.getElements().get(0));
         assertEquals(m2, g.getElements().get(1));
+    }
+
+    @Test
+    void setTitle() {
+        GroupItem g = new GroupItem(null, 1, 1, "Group name 1");
+
+        final String expected = "New group name";
+        g.setTitle(expected);
+        assertEquals(expected, g.getTitle());
+
+        g.setTitle(null);
+        assertNull(g.getTitle());
+    }
+
+    @Test
+    void reverse() {
+        GroupItem g = new GroupItem(null, 1, 1, "group");
+
+        MediaItem m1 = new MediaItem(null, 2, 1, null);
+        MediaItem m2 = new MediaItem(null, 3, 1, null);
+        MediaItem m3 = new MediaItem(null, 4, 1, null);
+        g.addItem(m1);
+        g.addItem(m2);
+        g.addItem(m3);
+
+        assertEquals(m1, g.getElements().get(0));
+        assertEquals(m2, g.getElements().get(1));
+        assertEquals(m3, g.getElements().get(2));
+        assertEquals(0, m1.getPageIndex());
+        assertEquals(1, m2.getPageIndex());
+        assertEquals(2, m3.getPageIndex());
+
+        g.reverseElements();
+
+        assertEquals(m3, g.getElements().get(0));
+        assertEquals(m2, g.getElements().get(1));
+        assertEquals(m1, g.getElements().get(2));
+        assertEquals(0, m3.getPageIndex());
+        assertEquals(1, m2.getPageIndex());
+        assertEquals(2, m1.getPageIndex());
     }
 
     @Test
