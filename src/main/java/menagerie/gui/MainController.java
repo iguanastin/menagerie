@@ -290,7 +290,6 @@ public class MainController {
      */
     @FXML
     public void initialize() {
-
         // Initialize the menagerie
         initImporterThread();
 
@@ -322,10 +321,12 @@ public class MainController {
                 settings.helpOnStart.setValue(false);
             }
 
+            // Show license screen if not agreed, yet
             if (settings.licensesAgreed.getValue() < TARGET_LICENSE_VERSION) {
                 screenPane.open(new LicensesScreen(settings, licensesFolder, TARGET_LICENSE_VERSION));
             }
 
+            // Init user-accepted filetypes in filters
             if (settings.userFileTypes.getValue() != null && !settings.userFileTypes.getValue().trim().isEmpty()) {
                 Filters.USER_EXTS.addAll(Arrays.asList(settings.userFileTypes.getValue().trim().split(" ")));
             }
@@ -382,38 +383,73 @@ public class MainController {
     private void initScreens() {
         Main.log.info("Initializing screens");
 
+        // Explorer. Base screen.
         initExplorer();
-        initSettingsScreen();
-        initTagListScreen();
+
+        // SettingsScreen
+        settingsScreen = new SettingsScreen();
+
+        // TagListScreen
+        tagListScreen = new TagListScreen();
+        tagListScreen.setCellFactory(param -> {
+            TagListCell c = new TagListCell();
+            c.setOnContextMenuRequested(event -> {
+                MenuItem i0 = new MenuItem("Add note");
+                i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
+                MenuItem i1 = new MenuItem("Search this tag");
+                i1.setOnAction(event1 -> {
+                    searchTextField.setText(c.getItem().getName());
+                    searchTextField.positionCaret(searchTextField.getText().length());
+                    tagListScreen.close();
+                    GroupItem scope = null;
+                    if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
+                    applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
+                });
+                ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1);
+                m.show(c, event.getScreenX(), event.getScreenY());
+            });
+            final TagListPopup popup = new TagListPopup();
+            popup.setAutoHide(true);
+            c.setOnMouseClicked(event -> {
+                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
+                    popup.setTag(c.getItem());
+                    popup.show(c, event.getScreenX(), event.getScreenY());
+                }
+            });
+            return c;
+        });
+
+        // SlideshowScreen
         initSlideshowScreen();
-        initHelpScreen();
+
+        // HelpScreen
+        helpScreen = new HelpScreen();
+
+        // DuplicatesScreen
         initDuplicatesScreen();
+
+        // ImportScreen
         initImportScreen();
+
+        // LogScreen
         initLogScreen();
-        initImportDialogScreen();
-        initGroupDialogScreen();
-        initMoveFilesScreen();
-        initFindOnlineScreen();
 
-        screenPane.currentProperty().addListener((observable, oldValue, newValue) -> explorerRootPane.setDisable(newValue != null));
-    }
+        // ImportDialogScreen
+        importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
 
-    private void initFindOnlineScreen() {
-        findOnlineScreen = new FindOnlineScreen();
-        findOnlineScreen.loadAheadProperty().bind(settings.onlineLoadAhead.valueProperty());
-    }
-
-    private void initMoveFilesScreen() {
-        moveFilesScreen = new MoveFilesScreen();
-    }
-
-    private void initGroupDialogScreen() {
+        // GroupDialogScreen
         groupDialogScreen = new GroupDialogScreen();
         groupDialogScreen.tagTagmeProperty().bind(settings.tagTagme.valueProperty());
-    }
 
-    private void initImportDialogScreen() {
-        importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
+        // MoveFilesScreen
+        moveFilesScreen = new MoveFilesScreen();
+
+        // FindOnlineScreen
+        findOnlineScreen = new FindOnlineScreen();
+        findOnlineScreen.loadAheadProperty().bind(settings.onlineLoadAhead.valueProperty());
+
+        // Init disabling explorer when screen is open
+        screenPane.currentProperty().addListener((observable, oldValue, newValue) -> explorerRootPane.setDisable(newValue != null));
     }
 
     private void initImportScreen() {
@@ -445,10 +481,6 @@ public class MainController {
         duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
     }
 
-    private void initHelpScreen() {
-        helpScreen = new HelpScreen();
-    }
-
     private void initSlideshowScreen() {
         slideshowScreen = new SlideshowScreen(item -> {
             slideshowScreen.close();
@@ -477,47 +509,6 @@ public class MainController {
             if (newValue)
                 startWatchingFolderForImages(settings.autoImportFolder.getValue(), settings.autoImportMove.getValue());
         }));
-    }
-
-    /**
-     * Initializes the settings screen
-     */
-    private void initSettingsScreen() {
-        settingsScreen = new SettingsScreen();
-    }
-
-    /**
-     * Initializes the tag list screen
-     */
-    private void initTagListScreen() {
-        tagListScreen = new TagListScreen();
-        tagListScreen.setCellFactory(param -> {
-            TagListCell c = new TagListCell();
-            c.setOnContextMenuRequested(event -> {
-                MenuItem i0 = new MenuItem("Add note");
-                i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
-                MenuItem i1 = new MenuItem("Search this tag");
-                i1.setOnAction(event1 -> {
-                    searchTextField.setText(c.getItem().getName());
-                    searchTextField.positionCaret(searchTextField.getText().length());
-                    tagListScreen.close();
-                    GroupItem scope = null;
-                    if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                    applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
-                });
-                ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1);
-                m.show(c, event.getScreenX(), event.getScreenY());
-            });
-            final TagListPopup popup = new TagListPopup();
-            popup.setAutoHide(true);
-            c.setOnMouseClicked(event -> {
-                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-                    popup.setTag(c.getItem());
-                    popup.show(c, event.getScreenX(), event.getScreenY());
-                }
-            });
-            return c;
-        });
     }
 
     /**
@@ -607,6 +598,7 @@ public class MainController {
         // Init scope label binding
         scopeLabel.maxWidthProperty().bind(scopeHBox.widthProperty().subtract(backButton.widthProperty()).subtract(scopeHBox.getSpacing()));
 
+        // Init search button icons/tooltips
         listDescendingToggleButton.setGraphic(new ImageView(new Image(getClass().getResource("/misc/descending.png").toString())));
         listDescendingToggleButton.setTooltip(new Tooltip("Descending order"));
         showGroupedToggleButton.setGraphic(new ImageView(new Image(getClass().getResource("/misc/opengroups.png").toString())));
@@ -614,6 +606,7 @@ public class MainController {
         shuffledSearchButton.setGraphic(new ImageView(new Image(getClass().getResource("/misc/shuffle.png").toString())));
         shuffledSearchButton.setTooltip(new Tooltip("Shuffle results"));
 
+        // Init settings listeners
         settings.gridWidth.valueProperty().addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
         settings.muteVideo.valueProperty().addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
         settings.repeatVideo.valueProperty().addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
@@ -1292,7 +1285,7 @@ public class MainController {
         if (itemGridView.getSelected().size() < 100) {
             editTagsUtility(input);
         } else {
-            new ConfirmationScreen().open(screenPane, "Editting large number of items", "You are attempting to edit " + itemGridView.getSelected().size() + " items. Continue?", () -> editTagsUtility(input), null);
+            new ConfirmationScreen().open(screenPane, "Editing large number of items", "You are attempting to edit " + itemGridView.getSelected().size() + " items. Continue?", () -> editTagsUtility(input), null);
         }
     }
 
