@@ -164,7 +164,7 @@ public class Menagerie {
         }
 
         for (Item item : elements) {
-            if (item instanceof MediaItem && ((MediaItem) item).getGroup() == null) {
+            if (item instanceof MediaItem) {
                 group.addItem((MediaItem) item);
             } else if (item instanceof ArchiveItem) {
                 // Don't touch it
