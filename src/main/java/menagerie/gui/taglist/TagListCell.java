@@ -34,7 +34,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import menagerie.model.menagerie.Tag;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class TagListCell extends ListCell<Tag> {
+
+    private static final Logger LOGGER = Logger.getLogger(TagListCell.class.getName());
 
     private static final String DEFAULT_STYLE_CLASS = "tag-list-cell";
 
@@ -100,8 +105,13 @@ public class TagListCell extends ListCell<Tag> {
             nameLabel.setTextFill(Color.WHITE);
             countLabel.setTextFill(Color.WHITE);
         } else {
-            nameLabel.setTextFill(Paint.valueOf(color));
-            countLabel.setTextFill(Paint.valueOf(color));
+            try {
+                nameLabel.setTextFill(Paint.valueOf(color));
+                countLabel.setTextFill(Paint.valueOf(color));
+            } catch (IllegalArgumentException e) {
+                LOGGER.log(Level.WARNING, "Invalid color string: " + color, e);
+                setTextColor(null);
+            }
         }
     }
 

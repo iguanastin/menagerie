@@ -32,8 +32,19 @@ import menagerie.util.listeners.ObjectListener;
 
 public class SimpleCSSColorPicker extends HBox {
 
-    private ObjectListener<String> colorPickedListener = null;
+    public static final String[] DEFAULT_COLORS = {"#609dff", "cyan", "#22e538", "yellow", "orange", "red", "#ff7ae6", "#bf51ff"};
 
+    private ObjectListener<String> colorPickedListener = null;
+    private final TextField textfield = new TextField();
+
+
+    public SimpleCSSColorPicker() {
+        this(DEFAULT_COLORS);
+    }
+
+    public SimpleCSSColorPicker(ObjectListener<String> colorPickedListener) {
+        this(DEFAULT_COLORS, colorPickedListener);
+    }
 
     public SimpleCSSColorPicker(String[] colors) {
         setSpacing(5);
@@ -50,10 +61,9 @@ public class SimpleCSSColorPicker extends HBox {
         b.setOnAction(event -> confirmedColor(null));
         getChildren().add(b);
 
-        TextField textField = new TextField();
-        textField.setPromptText("Custom");
-        textField.setOnAction(event -> confirmedColor(textField.getText()));
-        getChildren().add(textField);
+        textfield.setPromptText("Custom");
+        textfield.setOnAction(event -> confirmedColor(textfield.getText()));
+        getChildren().add(textfield);
     }
 
     public SimpleCSSColorPicker(String[] colors, ObjectListener<String> colorPickedListener) {
@@ -67,6 +77,10 @@ public class SimpleCSSColorPicker extends HBox {
 
     private void confirmedColor(String css) {
         if (colorPickedListener != null) colorPickedListener.pass(css);
+    }
+
+    public TextField getTextfield() {
+        return textfield;
     }
 
 }

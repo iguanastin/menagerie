@@ -28,6 +28,7 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.scene.paint.Paint;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -139,7 +140,17 @@ public class Tag implements Comparable<Tag> {
      * @param colorCSS A string that can be interpreted as a JavaFX color.
      */
     public void setColor(String colorCSS) {
-        if (colorCSS != null && colorCSS.isEmpty()) colorCSS = null;
+        if (colorCSS != null) {
+            if (colorCSS.isEmpty()) {
+                colorCSS = null;
+            } else {
+                try {
+                    Paint.valueOf(colorCSS);
+                } catch (IllegalArgumentException e) {
+                    colorCSS = null;
+                }
+            }
+        }
 
         this.color.set(colorCSS);
     }

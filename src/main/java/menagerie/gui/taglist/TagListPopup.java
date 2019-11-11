@@ -48,7 +48,7 @@ public class TagListPopup extends Popup {
     private static final String DEFAULT_STYLE_CLASS = "tag-list-popup";
 
     private final Label nameLabel = new Label();
-    private final SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker(new String[]{"#609dff", "cyan", "#22e538", "yellow", "orange", "red", "#ff7ae6", "#bf51ff"}, null);
+    private final SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker();
 
     private final ListView<String> noteListView = new ListView<>();
 

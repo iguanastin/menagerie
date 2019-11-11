@@ -63,6 +63,7 @@ import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.screens.move.MoveFilesScreen;
 import menagerie.gui.screens.settings.SettingsScreen;
+import menagerie.gui.taglist.SimpleCSSColorPicker;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListPopup;
 import menagerie.model.PluginLoader;
@@ -83,6 +84,8 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -680,12 +683,13 @@ public class MainController {
     private void initExplorerTagListCellFactory() {
         tagListView.setCellFactory(param -> {
             TagListCell c = new TagListCell();
+            // TODO: Make a custom popup that encompasses all the tag controls?
             c.setOnContextMenuRequested(event -> {
                 if (c.getItem() != null) {
-                    MenuItem i0 = new MenuItem("Add note");
-                    i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
-                    MenuItem i1 = new MenuItem("Add to search");
-                    i1.setOnAction(event1 -> {
+                    MenuItem addNote = new MenuItem("Add note");
+                    addNote.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
+                    MenuItem addToSearch = new MenuItem("Add to search");
+                    addToSearch.setOnAction(event1 -> {
                         if (searchTextField.getText() == null) {
                             searchTextField.setText(c.getItem().getName());
                         } else {
@@ -695,8 +699,8 @@ public class MainController {
                         if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
                         applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
                     });
-                    MenuItem i2 = new MenuItem("Exclude from search");
-                    i2.setOnAction(event1 -> {
+                    MenuItem excludeFromSearch = new MenuItem("Exclude from search");
+                    excludeFromSearch.setOnAction(event1 -> {
                         if (searchTextField.getText() == null || searchTextField.getText().isEmpty()) {
                             searchTextField.setText("-" + c.getItem().getName());
                         } else {
@@ -706,8 +710,8 @@ public class MainController {
                         if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
                         applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
                     });
-                    MenuItem i3 = new MenuItem("Remove from selected");
-                    i3.setOnAction(event1 -> {
+                    MenuItem removeFromSelected = new MenuItem("Remove from selected");
+                    removeFromSelected.setOnAction(event1 -> {
                         Map<Item, List<Tag>> removed = new HashMap<>();
                         itemGridView.getSelected().forEach(item -> {
                             if (item.removeTag(c.getItem())) {
@@ -717,17 +721,52 @@ public class MainController {
 
                         tagEditHistory.push(new TagEditEvent(null, removed));
                     });
-                    ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1, i2, new SeparatorMenuItem(), i3);
+                    SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker(color -> c.getItem().setColor(color));
+                    colorPicker.getTextfield().setText(c.getItem().getColor());
+                    CustomMenuItem tagColorPicker = new CustomMenuItem(colorPicker, false);
+
+                    ContextMenu m = new ContextMenu(addNote, new SeparatorMenuItem(), addToSearch, excludeFromSearch, new SeparatorMenuItem(), removeFromSelected, tagColorPicker);
+
+                    // TODO: Do this better, jfc
+                    for (String note : c.getItem().getNotes()) {
+                        MenuItem item = new MenuItem(note);
+                        item.setOnAction(event1 -> {
+                            try {
+                                Desktop.getDesktop().browse(new URI(note));
+                            } catch (IOException | URISyntaxException e) {
+                                try {
+                                    Desktop.getDesktop().browse(new URI("https://" + c.getItem()));
+                                } catch (IOException | URISyntaxException ignore) {
+                                }
+                            }
+                        });
+                        m.getItems().add(item);
+                    }
+
                     m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
                 }
             });
 
-            final TagListPopup popup = new TagListPopup();
-            popup.setAutoHide(true);
+//            final TagListPopup popup = new TagListPopup();
+//            popup.setAutoHide(true);
+//            c.setOnMouseClicked(event -> {
+//                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
+//                    popup.setTag(c.getItem());
+//                    popup.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+//                }
+//            });
+
+            // TODO: Improve this, it's duplicated code
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-                    popup.setTag(c.getItem());
-                    popup.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+                    if (searchTextField.getText() == null) {
+                        searchTextField.setText(c.getItem().getName());
+                    } else {
+                        searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
+                    }
+                    GroupItem scope = null;
+                    if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
+                    applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
                 }
             });
 
