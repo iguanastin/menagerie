@@ -25,7 +25,6 @@
 package menagerie.model;
 
 import menagerie.MenageriePlugin;
-import menagerie.gui.Main;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,13 +36,17 @@ import java.util.Objects;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public abstract class PluginLoader {
+
+    private static final Logger LOGGER = Logger.getLogger(PluginLoader.class.getName());
+
 
     public static List<MenageriePlugin> loadPlugins(File folder) {
         if (!folder.exists() || !folder.isDirectory()) {
             if (!folder.mkdirs()) {
-                Main.log.severe("Unable to find/create plugin directory: " + folder.getAbsolutePath());
+                LOGGER.severe("Unable to find/create plugin directory: " + folder.getAbsolutePath());
                 return new ArrayList<>();
             }
         }
@@ -56,12 +59,12 @@ public abstract class PluginLoader {
                 JarFile jar = new JarFile(file);
                 String mainClass = jar.getManifest().getMainAttributes().getValue(Attributes.Name.MAIN_CLASS);
                 if (mainClass != null) {
-                    Main.log.info("Found plugin JAR: " + file);
+                    LOGGER.info("Found plugin JAR: " + file);
                     classes.add(mainClass);
                     urls.add(new URL("jar:file:" + folder + "/" + file.getName() + "!/"));
                 }
             } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "Error reading plugin jarfile", e);
+                LOGGER.log(Level.SEVERE, "Error reading plugin jarfile", e);
             }
         }
 
@@ -75,12 +78,12 @@ public abstract class PluginLoader {
                     if (anInterface == MenageriePlugin.class) {
                         MenageriePlugin plugin = (MenageriePlugin) c.newInstance();
                         plugins.add(plugin);
-                        Main.log.info("Loaded plugin: " + plugin.getPluginName());
+                        LOGGER.info("Loaded plugin: " + plugin.getPluginName());
                         break;
                     }
                 }
             } catch (IllegalAccessException | InstantiationException | ClassNotFoundException | NoClassDefFoundError e) {
-                Main.log.log(Level.SEVERE, "Failed to load plugin class: " + className, e);
+                LOGGER.log(Level.SEVERE, "Failed to load plugin class: " + className, e);
             }
         });
 

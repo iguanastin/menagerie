@@ -26,15 +26,17 @@ package menagerie.gui.screens.findonline;
 
 import menagerie.duplicates.DuplicateFinder;
 import menagerie.duplicates.Match;
-import menagerie.gui.Main;
 import menagerie.model.menagerie.MediaItem;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class MatchGroup {
+
+    private static final Logger LOGGER = Logger.getLogger(MatchGroup.class.getName());
 
     enum Status {
         WAITING, PROCESSING, FAILED, SUCCEEDED
@@ -61,7 +63,7 @@ public class MatchGroup {
             try {
                 matches.addAll(finder.getMatchesFor(item.getFile()));
             } catch (IOException | NullPointerException | ArrayIndexOutOfBoundsException e) {
-                Main.log.log(Level.INFO, "Failed to get matches for: " + item.getFile(), e);
+                LOGGER.log(Level.INFO, "Failed to get matches for: " + item.getFile(), e);
                 setStatus(Status.FAILED);
             }
         }

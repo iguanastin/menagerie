@@ -53,12 +53,15 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.zip.ZipFile;
 
 /**
  * Dynamically sized view that can display images or videos.
  */
 public class DynamicMediaView extends StackPane {
+
+    private static final Logger LOGGER = Logger.getLogger(DynamicMediaView.class.getName());
 
     private DynamicVideoView videoView;
     private final PanZoomImageView imageView = new PanZoomImageView();
@@ -126,7 +129,7 @@ public class DynamicMediaView extends StackPane {
                             }
                         }
                     } catch (RarException | IOException | NullPointerException e) {
-                        Main.log.log(Level.INFO, "Failed to preview RAR: " + ((MediaItem) item).getFile());
+                        LOGGER.log(Level.INFO, "Failed to preview RAR: " + ((MediaItem) item).getFile());
                     }
                     showImageView();
                 } else if (Filters.ZIP_NAME_FILTER.accept(((MediaItem) item).getFile())) {
@@ -137,7 +140,7 @@ public class DynamicMediaView extends StackPane {
                             }
                         }
                     } catch (IOException e) {
-                        Main.log.log(Level.INFO, "Failed to preview ZIP: " + ((MediaItem) item).getFile());
+                        LOGGER.log(Level.INFO, "Failed to preview ZIP: " + ((MediaItem) item).getFile());
                     }
                 } else if (Filters.PDF_NAME_FILTER.accept(((MediaItem) item).getFile())) {
                     if (currentPDF != null) currentPDF.close();
@@ -151,7 +154,7 @@ public class DynamicMediaView extends StackPane {
                     return false; // Unknown file type, can't preview it
                 }
             } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "Error previewing media: " + item, e);
+                LOGGER.log(Level.SEVERE, "Error previewing media: " + item, e);
             }
         } else if (item instanceof GroupItem) {
             if (!((GroupItem) item).getElements().isEmpty()) {
@@ -231,7 +234,7 @@ public class DynamicMediaView extends StackPane {
             BufferedImage img = new PDFRenderer(currentPDF).renderImageWithDPI(page, 300);
             imageView.setImage(SwingFXUtils.toFXImage(img, null));
         } catch (IOException e) {
-            Main.log.log(Level.WARNING, "Failed to render PDF page: " + page, e);
+            LOGGER.log(Level.WARNING, "Failed to render PDF page: " + page, e);
         }
 
         pdfPageLabel.setText((page + 1) + "/" + currentPDF.getNumberOfPages());

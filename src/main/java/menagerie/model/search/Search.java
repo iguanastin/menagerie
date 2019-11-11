@@ -26,7 +26,6 @@ package menagerie.model.search;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import menagerie.gui.Main;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.search.rules.*;
@@ -34,11 +33,14 @@ import menagerie.model.search.rules.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Data class that contains results of a search filtered and sorted by the given rules.
  */
 public class Search {
+
+    private static final Logger LOGGER = Logger.getLogger(Search.class.getName());
 
     private final List<SearchRule> rules = new ArrayList<>();
     private final boolean showGrouped;
@@ -100,7 +102,7 @@ public class Search {
                 try {
                     rules.add(new IDRule(type, Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to integer: " + temp);
+                    LOGGER.warning("Failed to convert parameter to integer: " + temp);
                 }
             } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
                 String temp = arg.substring(arg.indexOf(':') + 1);
@@ -115,7 +117,7 @@ public class Search {
                 try {
                     rules.add(new DateAddedRule(type, Long.parseLong(temp), inverted));
                 } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to long: " + temp);
+                    LOGGER.warning("Failed to convert parameter to long: " + temp);
                 }
             } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
                 rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1), inverted));
@@ -133,7 +135,7 @@ public class Search {
                         rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
                         break;
                     default:
-                        Main.log.warning("Unknown type for missing type: " + type);
+                        LOGGER.warning("Unknown type for missing type: " + type);
                         break;
                 }
             } else if (arg.startsWith("type:") || arg.startsWith("is:")) {
@@ -160,7 +162,7 @@ public class Search {
                 try {
                     rules.add(new TagCountRule(type, Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to integer: " + temp);
+                    LOGGER.warning("Failed to convert parameter to integer: " + temp);
                 }
             } else {
                 rules.add(new TagRule(arg, inverted));

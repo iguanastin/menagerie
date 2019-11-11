@@ -31,15 +31,18 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import menagerie.gui.Main;
 import menagerie.settings.MenagerieSettings;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class LicensesScreen extends Screen {
+
+    private static final Logger LOGGER = Logger.getLogger(LicensesScreen.class.getName());
+
 
     private static final Insets ALL5 = new Insets(5);
 
@@ -67,7 +70,7 @@ public class LicensesScreen extends Screen {
                 titleField.setText(licenses[0].getName());
                 textArea.setText(String.join("\n", Files.readAllLines(licenses[0].toPath())));
             } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "Unable to read license file: " + licenses[0], e);
+                LOGGER.log(Level.SEVERE, "Unable to read license file: " + licenses[0], e);
                 System.exit(1);
             }
         }
@@ -80,7 +83,7 @@ public class LicensesScreen extends Screen {
                     titleField.setText(licenses[index].getName());
                     textArea.setText(String.join("\n", Files.readAllLines(licenses[index].toPath())));
                 } catch (IOException e) {
-                    Main.log.log(Level.SEVERE, "Unable to read license file: " + licenses[index], e);
+                    LOGGER.log(Level.SEVERE, "Unable to read license file: " + licenses[index], e);
                     System.exit(1);
                 }
             } else {

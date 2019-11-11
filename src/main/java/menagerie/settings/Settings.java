@@ -24,7 +24,6 @@
 
 package menagerie.settings;
 
-import menagerie.gui.Main;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -35,8 +34,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class Settings {
+
+    private static final Logger LOGGER = Logger.getLogger(Settings.class.getName());
+
 
     private static final String VERSION_KEY = "version";
     private static final String SETTINGS_KEY = "settings";
@@ -61,7 +64,7 @@ public class Settings {
                 if (setting != null) {
                     setting.initFromJSON(j);
                 } else {
-                    Main.log.warning("Unexpected setting: " + j);
+                    LOGGER.warning("Unexpected setting: " + j);
                 }
             }
         }

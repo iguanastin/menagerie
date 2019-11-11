@@ -26,17 +26,19 @@ package menagerie.model.menagerie;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import menagerie.gui.Main;
 import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.db.DatabaseManager;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Menagerie Item
  */
 public abstract class Item implements Comparable<Item> {
+
+    private static final Logger LOGGER = Logger.getLogger(Item.class.getName());
 
     private boolean invalidated = false;
 
@@ -159,7 +161,7 @@ public abstract class Item implements Comparable<Item> {
      * @return True if successful.
      */
     protected boolean forget() {
-        Main.log.info("Dropping item from Menagerie: " + getId());
+        LOGGER.info("Dropping item from Menagerie: " + getId());
 
         if (isInvalidated() || menagerie == null || !menagerie.getItems().remove(this)) return false;
 

@@ -28,7 +28,6 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import menagerie.gui.Main;
 import menagerie.gui.MainController;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
@@ -46,11 +45,14 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A runnable job that will import a file.
  */
 public class ImportJob {
+
+    private static final Logger LOGGER = Logger.getLogger(ImportJob.class.getName());
 
     public enum Status {
         WAITING, IMPORTING, SUCCEEDED, FAILED_DUPLICATE, FAILED_IMPORT,
@@ -153,7 +155,7 @@ public class ImportJob {
                 if (downloadTo == null) {
                     String folder = settings.defaultFolder.getValue();
                     if (folder == null || folder.isEmpty() || !Files.isDirectory(Paths.get(folder))) {
-                        Main.log.warning(String.format("Default folder '%s' doesn't exist or isn't a folder", folder));
+                        LOGGER.warning(String.format("Default folder '%s' doesn't exist or isn't a folder", folder));
                         return true;
                     }
                     String filename = url.getPath().replaceAll("^.*/", "");
@@ -161,11 +163,11 @@ public class ImportJob {
                     downloadTo = MainController.resolveDuplicateFilename(new File(folder, filename));
                 }
                 if (downloadTo.exists()) {
-                    Main.log.warning(String.format("Attempted to download '%s' into pre-existing file '%s'", url.toString(), downloadTo.toString()));
+                    LOGGER.warning(String.format("Attempted to download '%s' into pre-existing file '%s'", url.toString(), downloadTo.toString()));
                     return true;
                 }
 
-                Main.log.info("Downloading: " + getUrl() + "\nTo local: " + downloadTo);
+                LOGGER.info("Downloading: " + getUrl() + "\nTo local: " + downloadTo);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.addRequestProperty("User-Agent", "Mozilla/4.0");
                 ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
@@ -180,17 +182,17 @@ public class ImportJob {
                 }
                 rbc.close();
                 conn.disconnect();
-                Main.log.info("Successfully downloaded: " + getUrl() + "\nTo local: " + downloadTo);
+                LOGGER.info("Successfully downloaded: " + getUrl() + "\nTo local: " + downloadTo);
 
                 synchronized (this) {
                     file = downloadTo;
                 }
                 needsDownload = false;
             } catch (RuntimeException e) {
-                Main.log.log(Level.WARNING, "Unexpected exception while downloading from url: %s" + url.toString(), e);
+                LOGGER.log(Level.WARNING, "Unexpected exception while downloading from url: %s" + url.toString(), e);
                 return true;
             } catch (IOException e) {
-                Main.log.log(Level.WARNING, "IOException while downloading file from url: %s" + url.toString(), e);
+                LOGGER.log(Level.WARNING, "IOException while downloading file from url: %s" + url.toString(), e);
                 return true;
             }
         }
@@ -206,19 +208,19 @@ public class ImportJob {
      */
     private boolean tryImport(Menagerie menagerie, MenagerieSettings settings) {
         if (needsImport) {
-            Main.log.info("Importing file: " + file);
+            LOGGER.info("Importing file: " + file);
             synchronized (this) {
                 item = menagerie.importFile(file);
             }
 
             if (item == null) {
-                Main.log.info("File failed to import: " + file);
+                LOGGER.info("File failed to import: " + file);
                 return true;
             } else {
-                Main.log.info("Successfully imported file: " + file + "\nWith ID: " + item.getId());
+                LOGGER.info("Successfully imported file: " + file + "\nWith ID: " + item.getId());
                 needsImport = false;
 
-                Main.log.info("Applying auto-tags to imported item: " + item.getId());
+                LOGGER.info("Applying auto-tags to imported item: " + item.getId());
                 // Add tags
                 if (settings.tagTagme.getValue()) {
                     Tag tagme = menagerie.getTagByName("tagme");
@@ -245,12 +247,12 @@ public class ImportJob {
      */
     private void tryHashHist() {
         if (needsHash) {
-            Main.log.info("Hashing file (ID: " + item.getId() + "): " + file);
+            LOGGER.info("Hashing file (ID: " + item.getId() + "): " + file);
             item.initializeMD5();
             needsHash = false;
         }
         if (needsHist) {
-            if (item.initializeHistogram()) Main.log.info("Generated image histogram from file (ID: " + item.getId() + "): " + file);
+            if (item.initializeHistogram()) LOGGER.info("Generated image histogram from file (ID: " + item.getId() + "): " + file);
             needsHist = false;
         }
     }
@@ -263,13 +265,13 @@ public class ImportJob {
      */
     private boolean tryDuplicate(Menagerie menagerie) {
         if (needsCheckDuplicate && item.getMD5() != null) {
-            Main.log.info("Checking for hash duplicates: " + item.getId());
+            LOGGER.info("Checking for hash duplicates: " + item.getId());
             for (Item i : menagerie.getItems()) {
                 if (i instanceof MediaItem && !i.equals(item) && ((MediaItem) i).getMD5() != null && ((MediaItem) i).getMD5().equalsIgnoreCase(item.getMD5())) {
                     synchronized (this) {
                         duplicateOf = (MediaItem) i;
                     }
-                    Main.log.info("Found hash duplicate, cancelling import: " + item.getId());
+                    LOGGER.info("Found hash duplicate, cancelling import: " + item.getId());
                     menagerie.deleteItem(item);
                     needsCheckDuplicate = false;
                     needsCheckSimilar = false;
@@ -294,7 +296,7 @@ public class ImportJob {
      */
     private void trySimilar(Menagerie menagerie, MenagerieSettings settings) {
         if (needsCheckSimilar && item.getHistogram() != null) {
-            Main.log.info("Finding similar, existing items: " + item.getId());
+            LOGGER.info("Finding similar, existing items: " + item.getId());
             synchronized (this) {
                 similarTo = new ArrayList<>();
             }
@@ -312,7 +314,7 @@ public class ImportJob {
 
                     if (similarity >= confidenceSquare || (similarity >= confidence && item.getHistogram().isColorful() && ((MediaItem) i).getHistogram().isColorful())) {
                         synchronized (this) {
-                            Main.log.info("Found similar item (To ID: " + item.getId() + "): " + i.getId());
+                            LOGGER.info("Found similar item (To ID: " + item.getId() + "): " + i.getId());
                             similarTo.add(new SimilarPair<>(item, (MediaItem) i, similarity));
                         }
                     }
@@ -320,7 +322,7 @@ public class ImportJob {
             }
 
             if (!anyMinimallySimilar) {
-                Main.log.info("None minimally similar to item: " + item.getId());
+                LOGGER.info("None minimally similar to item: " + item.getId());
                 item.setHasNoSimilar(true);
             }
 
@@ -414,8 +416,8 @@ public class ImportJob {
      */
     public void cancel() {
         if (getStatus() == Status.WAITING) {
-            if (url != null) Main.log.info("Cancelling web import: " + url);
-            else Main.log.info("Cancelling local import: " + file);
+            if (url != null) LOGGER.info("Cancelling web import: " + url);
+            else LOGGER.info("Cancelling local import: " + file);
 
             getImporter().cancel(this);
         }

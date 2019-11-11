@@ -25,19 +25,21 @@
 package menagerie.util;
 
 
-import menagerie.gui.Main;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Utility class that contains functions for hashing files with the MD5 algorithm.
  */
 public abstract class MD5Hasher {
+
+    private static final Logger LOGGER = Logger.getLogger(MD5Hasher.class.getName());
+
 
     private static MessageDigest digest;
 
@@ -59,7 +61,7 @@ public abstract class MD5Hasher {
                 digest = MessageDigest.getInstance("md5");
                 return digest;
             } catch (NoSuchAlgorithmException e) {
-                Main.log.log(Level.SEVERE, "Unable to initialize MD5 digest", e);
+                LOGGER.log(Level.SEVERE, "Unable to initialize MD5 digest", e);
                 return null;
             }
         } else {

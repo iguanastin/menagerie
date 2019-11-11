@@ -34,6 +34,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import menagerie.util.Util;
 import uk.co.caprica.vlcj.factory.discovery.strategy.LinuxNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.factory.discovery.strategy.OsxNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.factory.discovery.strategy.WindowsNativeDiscoveryStrategy;
@@ -57,7 +58,7 @@ public class Main extends Application {
 
     private static boolean VLCJ_LOADED = false;
 
-    public static final Logger log = Logger.getGlobal();
+    public static final Logger MENAGERIE_LOGGER = Logger.getLogger("menagerie");
     private static final String logFilePath = "menagerie.log";
 
     private static final String SPLASH_FXML = "/fxml/splash.fxml";
@@ -84,29 +85,22 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
-        log.setLevel(Level.ALL); // Default log level
-
-        // Set log level to severe only with arg
-        for (String arg : args) {
-            if (arg.equalsIgnoreCase("-quiet")) {
-                log.setLevel(Level.SEVERE);
-            }
-        }
+        MENAGERIE_LOGGER.setLevel(Level.ALL); // Default log level
 
         // Clear log file
         if (!new File(logFilePath).delete())
-            Main.log.warning(String.format("Could not clear log file: %s", logFilePath));
+            MENAGERIE_LOGGER.warning(String.format("Could not clear log file: %s", logFilePath));
         try {
             if (!new File(logFilePath).createNewFile())
-                Main.log.warning(String.format("Could not create new log file: %s", logFilePath));
+                MENAGERIE_LOGGER.warning(String.format("Could not create new log file: %s", logFilePath));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         // Init logger handler
-        Thread.setDefaultUncaughtExceptionHandler((t, e) -> Main.log.log(Level.SEVERE, "Uncaught exception in thread: " + t, e));
-        log.setUseParentHandlers(false);
-        log.addHandler(new Handler() {
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> MENAGERIE_LOGGER.log(Level.SEVERE, "Uncaught exception in thread: " + t, e));
+        MENAGERIE_LOGGER.setUseParentHandlers(false);
+        MENAGERIE_LOGGER.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {
                 StringBuilder str = new StringBuilder(new Date(record.getMillis()).toString());
@@ -144,21 +138,21 @@ public class Main extends Application {
 
         // Log some simple system info
         if (Runtime.getRuntime().maxMemory() == Long.MAX_VALUE) {
-            log.info("Max Memory: No limit");
+            MENAGERIE_LOGGER.info("Max Memory: No limit");
         } else {
-            log.info(String.format("Max Memory: %.2fGB", Runtime.getRuntime().maxMemory() / 1024.0 / 1024.0 / 1024.0));
+            MENAGERIE_LOGGER.info("Max Memory: " + Util.bytesToPrettyString(Runtime.getRuntime().maxMemory()));
         }
-        log.info(String.format("Processors: %d", Runtime.getRuntime().availableProcessors()));
-        log.info(String.format("Operating System: %s", System.getProperty("os.name")));
-        log.info(String.format("OS Version: %s", System.getProperty("os.version")));
-        log.info(String.format("OS Architecture: %s", System.getProperty("os.arch")));
-        log.info(String.format("Java version: %s", System.getProperty("java.version")));
-        log.info(String.format("Java runtime version: %s", System.getProperty("java.runtime.version")));
-        log.info(String.format("JavaFX version: %s", System.getProperty("javafx.version")));
-        log.info(String.format("JavaFX runtime version: %s", System.getProperty("javafx.runtime.version")));
+        MENAGERIE_LOGGER.info(String.format("Processors: %d", Runtime.getRuntime().availableProcessors()));
+        MENAGERIE_LOGGER.info(String.format("Operating System: %s", System.getProperty("os.name")));
+        MENAGERIE_LOGGER.info(String.format("OS Version: %s", System.getProperty("os.version")));
+        MENAGERIE_LOGGER.info(String.format("OS Architecture: %s", System.getProperty("os.arch")));
+        MENAGERIE_LOGGER.info(String.format("Java version: %s", System.getProperty("java.version")));
+        MENAGERIE_LOGGER.info(String.format("Java runtime version: %s", System.getProperty("java.runtime.version")));
+        MENAGERIE_LOGGER.info(String.format("JavaFX version: %s", System.getProperty("javafx.version")));
+        MENAGERIE_LOGGER.info(String.format("JavaFX runtime version: %s", System.getProperty("javafx.runtime.version")));
 
         // Launch application
-        log.info("Starting JFX Application...");
+        MENAGERIE_LOGGER.info("Starting JFX Application...");
         launch(args);
     }
 
@@ -177,16 +171,16 @@ public class Main extends Application {
      * @param stage State supplied by JFX
      */
     public void start(Stage stage) {
-        log.config("Splash FXML: " + SPLASH_FXML);
-        log.config("Main FXML: " + MAIN_FXML);
-        log.config("Main Title: " + MAIN_TITLE);
-        log.config("CSS: " + CSS);
-        log.config("Settings path: " + SETTINGS_PATH);
+        MENAGERIE_LOGGER.config("Splash FXML: " + SPLASH_FXML);
+        MENAGERIE_LOGGER.config("Main FXML: " + MAIN_FXML);
+        MENAGERIE_LOGGER.config("Main Title: " + MAIN_TITLE);
+        MENAGERIE_LOGGER.config("CSS: " + CSS);
+        MENAGERIE_LOGGER.config("Settings path: " + SETTINGS_PATH);
 
         try {
             final List<Image> icons = getIcons();
 
-            log.info("Loading FXML: " + SPLASH_FXML);
+            MENAGERIE_LOGGER.info("Loading FXML: " + SPLASH_FXML);
             FXMLLoader loader = new FXMLLoader(getClass().getResource(SPLASH_FXML));
             loader.setControllerFactory(param -> new SplashController(icons, new Image(SPLASH_BACKGROUND)));
             Parent root = loader.load();
@@ -198,7 +192,7 @@ public class Main extends Application {
             stage.getIcons().addAll(icons);
             stage.show();
         } catch (IOException e) {
-            log.log(Level.SEVERE, "Error loading FXML: " + SPLASH_FXML, e);
+            MENAGERIE_LOGGER.log(Level.SEVERE, "Error loading FXML: " + SPLASH_FXML, e);
             showErrorMessage("Error", "Unable to load FXML: " + SPLASH_FXML + ", see log for more details", e.getLocalizedMessage());
             Platform.exit();
             System.exit(1);
@@ -219,11 +213,11 @@ public class Main extends Application {
             NativeLibrary.addSearchPath("libvlc", p);
             try {
                 NativeLibrary.getInstance("libvlc");
-                log.config("Loaded LibVLC Version: " + new LibVlcVersion().getVersion());
+                MENAGERIE_LOGGER.config("Loaded LibVLC Version: " + new LibVlcVersion().getVersion());
                 VLCJ_LOADED = true;
                 break;
             } catch (Throwable t) {
-                log.log(Level.WARNING, "Failed to load libvlc with path: " + p, t);
+                MENAGERIE_LOGGER.log(Level.WARNING, "Failed to load libvlc with path: " + p, t);
             }
         }
     }

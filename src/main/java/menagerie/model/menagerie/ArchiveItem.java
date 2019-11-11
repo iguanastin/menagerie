@@ -25,13 +25,16 @@
 package menagerie.model.menagerie;
 
 import com.sun.jna.platform.FileUtils;
-import menagerie.gui.Main;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ArchiveItem extends GroupItem {
+
+    private static final Logger LOGGER = Logger.getLogger(ArchiveItem.class.getName());
+
 
     private final File file;
 
@@ -78,7 +81,7 @@ public class ArchiveItem extends GroupItem {
                 fu.moveToTrash(new File[]{getFile()});
                 return true;
             } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "Unable to send file to recycle bin: " + getFile(), e);
+                LOGGER.log(Level.SEVERE, "Unable to send file to recycle bin: " + getFile(), e);
                 return false;
             }
         } else {

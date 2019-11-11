@@ -31,7 +31,6 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
-import menagerie.gui.Main;
 import menagerie.model.menagerie.Tag;
 
 import java.awt.*;
@@ -39,8 +38,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TagListPopup extends Popup {
+
+    private static final Logger LOGGER = Logger.getLogger(TagListPopup.class.getName());
+
 
     private static final String DEFAULT_STYLE_CLASS = "tag-list-popup";
 
@@ -68,7 +71,7 @@ public class TagListPopup extends Popup {
                         try {
                             Desktop.getDesktop().browse(new URI("https://" + c.getItem()));
                         } catch (IOException | URISyntaxException e2) {
-                            Main.log.log(Level.SEVERE, String.format("Exception when opening \"%s\" in browser", c.getItem()), e2);
+                            LOGGER.log(Level.SEVERE, String.format("Exception when opening \"%s\" in browser", c.getItem()), e2);
                         }
                     }
                 }

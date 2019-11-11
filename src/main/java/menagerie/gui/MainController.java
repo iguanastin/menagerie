@@ -93,8 +93,11 @@ import java.util.*;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 public class MainController {
+
+    private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
     // ------------------------------- JFX -------------------------------------------
     public StackPane rootPane;
@@ -341,7 +344,7 @@ public class MainController {
     }
 
     private void initAltTabbingFix() {
-        Main.log.info("Initializing alt-tab fix");
+        LOGGER.info("Initializing alt-tab fix");
         rootPane.getScene().addEventFilter(KeyEvent.KEY_RELEASED, event -> {
             // Workaround for alt-tabbing correctly
             if (event.getCode() == KeyCode.ALT) {
@@ -359,29 +362,29 @@ public class MainController {
     }
 
     private void initPlugins() {
-        Main.log.info("Loading plugins from: " + pluginsFolder.getAbsolutePath());
+        LOGGER.info("Loading plugins from: " + pluginsFolder.getAbsolutePath());
         plugins = PluginLoader.loadPlugins(pluginsFolder);
         plugins.forEach(plugin -> {
             plugin.addErrorListener(new ErrorListener() {
                 @Override
                 public void postMessage(String s) {
-                    Main.log.info(s);
+                    LOGGER.info(s);
                 }
 
                 @Override
                 public void postException(String s, Exception e) {
-                    Main.log.log(Level.SEVERE, s, e);
+                    LOGGER.log(Level.SEVERE, s, e);
                 }
             });
         });
-        Main.log.info("Loaded " + plugins.size() + " plugins");
+        LOGGER.info("Loaded " + plugins.size() + " plugins");
     }
 
     /**
      * Initializes JFX screen objects for the ScreenPane
      */
     private void initScreens() {
-        Main.log.info("Initializing screens");
+        LOGGER.info("Initializing screens");
 
         // Explorer. Base screen.
         initExplorer();
@@ -495,7 +498,7 @@ public class MainController {
      * Initializes menagerie importer thread.
      */
     private void initImporterThread() {
-        Main.log.info("Starting importer thread");
+        LOGGER.info("Starting importer thread");
         importer = new ImporterThread(menagerie, settings);
         importer.setDaemon(true);
         importer.start();
@@ -519,7 +522,7 @@ public class MainController {
         logScreen.getListView().setCellFactory(param -> new LogListCell());
         logButton.getStyleClass().addAll("log-button");
 
-        Main.log.addHandler(new Handler() {
+        Main.MENAGERIE_LOGGER.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {
                 StringBuilder work = new StringBuilder(new Date(record.getMillis()).toString());
@@ -819,7 +822,7 @@ public class MainController {
                         try {
                             Desktop.getDesktop().open(((MediaItem) c.getItem()).getFile());
                         } catch (IOException e) {
-                            Main.log.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) c.getItem()).getFile(), e);
+                            LOGGER.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) c.getItem()).getFile(), e);
                         }
                     }
                 }
@@ -855,7 +858,7 @@ public class MainController {
      * Applies window properties to the window and starts listeners for changes to update the settings object.
      */
     private void initWindowPropertiesAndListeners() {
-        Main.log.info("Initializing window properties and listeners");
+        LOGGER.info("Initializing window properties and listeners");
 
         Stage stage = ((Stage) explorerRootPane.getScene().getWindow());
         stage.setMaximized(settings.windowMaximized.getValue());
@@ -994,7 +997,7 @@ public class MainController {
                     try {
                         Desktop.getDesktop().open(((MediaItem) last).getFile());
                     } catch (IOException e) {
-                        Main.log.log(Level.WARNING, "Error opening file with system default program", e);
+                        LOGGER.log(Level.WARNING, "Error opening file with system default program", e);
                     }
                 }
             });
@@ -1005,7 +1008,7 @@ public class MainController {
                     try {
                         Runtime.getRuntime().exec("explorer.exe /select, " + ((MediaItem) last).getFile().getAbsolutePath());
                     } catch (IOException e) {
-                        Main.log.log(Level.SEVERE, "Error opening file in explorer", e);
+                        LOGGER.log(Level.SEVERE, "Error opening file in explorer", e);
                     }
                 }
             });
@@ -1138,7 +1141,7 @@ public class MainController {
             }
         }
         groupDialogScreen.open(screenPane, menagerie, title, toGroup, group -> {
-            Main.log.info("Created group: " + group);
+            LOGGER.info("Created group: " + group);
             Platform.runLater(() -> {
                 if (currentSearch.getResults().contains(group)) itemGridView.select(group, false, false);
             });
@@ -1216,7 +1219,7 @@ public class MainController {
      * @param showGrouped Show MediaItems that are in a group.
      */
     private void applySearch(String search, GroupItem groupScope, boolean descending, boolean showGrouped, boolean shuffled) {
-        Main.log.info("Searching: \"" + search + "\", group:" + groupScope + ", descending:" + descending + ", showGrouped:" + showGrouped + ", shuffled:" + shuffled);
+        LOGGER.info("Searching: \"" + search + "\", group:" + groupScope + ", descending:" + descending + ", showGrouped:" + showGrouped + ", shuffled:" + shuffled);
 
         // Clean up previous search
         if (currentSearch != null) {
@@ -1379,10 +1382,10 @@ public class MainController {
     private void startWatchingFolderForImages(String folder, boolean moveToDefault) {
         File watchFolder = new File(folder);
         if (watchFolder.exists() && watchFolder.isDirectory()) {
-            Main.log.info("Starting folder watcher in folder: " + watchFolder);
+            LOGGER.info("Starting folder watcher in folder: " + watchFolder);
             folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.FILE_NAME_FILTER, 30000, files -> {
                 for (File file : files) {
-                    Main.log.info("Folder watcher got file to import: " + file);
+                    LOGGER.info("Folder watcher got file to import: " + file);
                     if (moveToDefault) {
                         String work = settings.defaultFolder.getValue();
                         if (!work.endsWith("/") && !work.endsWith("\\")) work += "/";
@@ -1412,7 +1415,7 @@ public class MainController {
      * @param revertDatabase Revert database to last backup.
      */
     private void cleanExit(boolean revertDatabase) {
-        Main.log.info("Attempting clean exit");
+        LOGGER.info("Attempting clean exit");
 
         Platform.runLater(() -> {
             rootPane.getChildren().clear();
@@ -1425,36 +1428,36 @@ public class MainController {
         Thumbnail.releaseVLCJResources();
 
         plugins.forEach(plugin -> {
-            Main.log.info("Attempting to close plugin: " + plugin.getPluginName());
+            LOGGER.info("Attempting to close plugin: " + plugin.getPluginName());
             plugin.close();
         });
 
         try {
             settings.save(new File(Main.SETTINGS_PATH));
         } catch (IOException e1) {
-            Main.log.log(Level.WARNING, "Failed to save settings to file", e1);
+            LOGGER.log(Level.WARNING, "Failed to save settings to file", e1);
         }
 
         new Thread(() -> {
             try {
-                Main.log.info("Attempting to shut down Menagerie database and defragment the file");
+                LOGGER.info("Attempting to shut down Menagerie database and defragment the file");
                 menagerie.getDatabaseManager().shutdownDefrag();
-                Main.log.info("Done defragging database file");
+                LOGGER.info("Done defragging database file");
 
                 if (revertDatabase) {
                     File database = DatabaseManager.resolveDatabaseFile(settings.dbUrl.getValue());
                     File backup = new File(database + ".bak");
-                    Main.log.warning(String.format("Reverting to last backup database: %s", backup.toString()));
+                    LOGGER.warning(String.format("Reverting to last backup database: %s", backup.toString()));
                     try {
                         Files.move(backup.toPath(), database.toPath(), StandardCopyOption.REPLACE_EXISTING);
                     } catch (IOException e) {
-                        Main.log.log(Level.SEVERE, "Failed to revert the database: " + database, e);
+                        LOGGER.log(Level.SEVERE, "Failed to revert the database: " + database, e);
                     }
                 }
 
-                Main.log.info("Finished shutting down...");
+                LOGGER.info("Finished shutting down...");
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "SQL exception when shutting down with defrag", e);
+                LOGGER.log(Level.SEVERE, "SQL exception when shutting down with defrag", e);
             }
 
             System.exit(0);
@@ -1659,7 +1662,7 @@ public class MainController {
                 }
                 if (Filters.FILE_NAME_FILTER.accept(target)) importer.addJob(new ImportJob(new URL(url), target, null));
             } catch (MalformedURLException e) {
-                Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
+                LOGGER.log(Level.WARNING, "File dragged from web has bad URL", e);
             }
         }
         event.consume();
@@ -1784,7 +1787,7 @@ public class MainController {
                             try {
                                 Desktop.getDesktop().open(((MediaItem) item).getFile());
                             } catch (IOException e) {
-                                Main.log.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) item).getFile(), e);
+                                LOGGER.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) item).getFile(), e);
                             }
                             event.consume();
                         }
