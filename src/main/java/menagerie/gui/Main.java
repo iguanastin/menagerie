@@ -40,26 +40,20 @@ import uk.co.caprica.vlcj.factory.discovery.strategy.OsxNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.factory.discovery.strategy.WindowsNativeDiscoveryStrategy;
 import uk.co.caprica.vlcj.support.version.LibVlcVersion;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
+import java.util.logging.*;
 
 public class Main extends Application {
 
     private static boolean VLCJ_LOADED = false;
 
-    public static final Logger MENAGERIE_LOGGER = Logger.getLogger("menagerie");
-    private static final String logFilePath = "menagerie.log";
+    static final Logger MENAGERIE_LOGGER = Logger.getLogger("menagerie");
+    private static final String LOG_FILE_PATH = "menagerie.log";
+    private static final int LOG_FILE_SIZE_LIMIT = 1048576; // 1 MB
 
     private static final String SPLASH_FXML = "/fxml/splash.fxml";
     private static final String SPLASH_BACKGROUND = "/misc/splash.jpg";
@@ -85,56 +79,12 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
-        MENAGERIE_LOGGER.setLevel(Level.ALL); // Default log level
+        initMenagerieLogger();
 
-        // Clear log file
-        if (!new File(logFilePath).delete())
-            MENAGERIE_LOGGER.warning(String.format("Could not clear log file: %s", logFilePath));
-        try {
-            if (!new File(logFilePath).createNewFile())
-                MENAGERIE_LOGGER.warning(String.format("Could not create new log file: %s", logFilePath));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        // Init logger handler
-        Thread.setDefaultUncaughtExceptionHandler((t, e) -> MENAGERIE_LOGGER.log(Level.SEVERE, "Uncaught exception in thread: " + t, e));
-        MENAGERIE_LOGGER.setUseParentHandlers(false);
-        MENAGERIE_LOGGER.addHandler(new Handler() {
-            @Override
-            public void publish(LogRecord record) {
-                StringBuilder str = new StringBuilder(new Date(record.getMillis()).toString());
-                str.append(" [").append(record.getLevel()).append("]: ").append(record.getMessage());
-
-                // Print to sout/serr
-                PrintStream s = System.out;
-                if (record.getLevel() == Level.SEVERE) s = System.err;
-                s.println(str.toString());
-                if (record.getThrown() != null) record.getThrown().printStackTrace();
-
-                // Print to file
-                if (record.getThrown() != null) {
-                    str.append("\n").append(record.getThrown().toString());
-                    for (StackTraceElement element : record.getThrown().getStackTrace()) {
-                        str.append("\n    at ").append(element.toString());
-                    }
-                }
-                str.append("\n");
-                try {
-                    Files.write(Paths.get(logFilePath), str.toString().getBytes(), StandardOpenOption.APPEND);
-                } catch (IOException e) {
-                    System.err.println(String.format("Failed to write log to file: %s", logFilePath));
-                }
-            }
-
-            @Override
-            public void flush() {
-            }
-
-            @Override
-            public void close() throws SecurityException {
-            }
-        });
+        MENAGERIE_LOGGER.info("\n" +
+                "===============================================================================================================\n" +
+                "========================================== Starting Menagerie =================================================\n" +
+                "===============================================================================================================");
 
         // Log some simple system info
         if (Runtime.getRuntime().maxMemory() == Long.MAX_VALUE) {
@@ -154,6 +104,61 @@ public class Main extends Application {
         // Launch application
         MENAGERIE_LOGGER.info("Starting JFX Application...");
         launch(args);
+    }
+
+    private static void initMenagerieLogger() {
+        MENAGERIE_LOGGER.setLevel(Level.ALL); // Default log level
+
+        // Init logger handler
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> MENAGERIE_LOGGER.log(Level.SEVERE, "Uncaught exception in thread: " + t, e));
+        MENAGERIE_LOGGER.setUseParentHandlers(false);
+        Formatter formatter = new Formatter() {
+            final DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM);
+
+            @Override
+            public String format(LogRecord record) {
+                StringBuilder str = new StringBuilder("(");
+                str.append(dateFormat.format(record.getMillis())).append(") ");
+                str.append(record.getSourceClassName()).append("#").append(record.getSourceMethodName());
+                str.append(" [").append(record.getLevel()).append("]: ").append(record.getMessage());
+
+                if (record.getThrown() != null) {
+                    str.append("\n").append(record.getThrown().toString());
+                    for (StackTraceElement element : record.getThrown().getStackTrace()) {
+                        str.append("\n    at ").append(element.toString());
+                    }
+                }
+                return str.toString();
+            }
+        };
+        MENAGERIE_LOGGER.addHandler(new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                PrintStream s = System.out;
+                if (record.getLevel() == Level.SEVERE) s = System.err;
+                s.println(formatter.format(record));
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() throws SecurityException {
+            }
+        });
+        try {
+            FileHandler fileHandler = new FileHandler(LOG_FILE_PATH, LOG_FILE_SIZE_LIMIT, 1, true);
+            fileHandler.setFormatter(new Formatter() {
+                @Override
+                public String format(LogRecord record) {
+                    return formatter.format(record) + System.lineSeparator();
+                }
+            });
+            MENAGERIE_LOGGER.addHandler(fileHandler);
+        } catch (IOException e) {
+            MENAGERIE_LOGGER.log(Level.SEVERE, "Failed to create log file handler: " + LOG_FILE_PATH, e);
+        }
     }
 
     /**
