@@ -189,7 +189,7 @@ public class FindOnlineScreen extends Screen {
                 });
 
                 ContextMenu cm = new ContextMenu(open);
-                cm.show(c, event.getScreenX(), event.getScreenY());
+                cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
             });
             return c;
         });

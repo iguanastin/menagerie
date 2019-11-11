@@ -93,7 +93,7 @@ public class PredictiveTextField extends TextField {
         });
         updateOptionCSSStyles();
 
-        popup.show(this, 0, 0);
+        popup.show(getScene().getWindow(), 0, 0);
         updatePopupPosition();
     }
 

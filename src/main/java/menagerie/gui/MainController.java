@@ -409,14 +409,14 @@ public class MainController {
                     applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
                 });
                 ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1);
-                m.show(c, event.getScreenX(), event.getScreenY());
+                m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
             });
             final TagListPopup popup = new TagListPopup();
             popup.setAutoHide(true);
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
                     popup.setTag(c.getItem());
-                    popup.show(c, event.getScreenX(), event.getScreenY());
+                    popup.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
                 }
             });
             return c;
@@ -718,7 +718,7 @@ public class MainController {
                         tagEditHistory.push(new TagEditEvent(null, removed));
                     });
                     ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1, i2, new SeparatorMenuItem(), i3);
-                    m.show(c, event.getScreenX(), event.getScreenY());
+                    m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
                 }
             });
 
@@ -727,7 +727,7 @@ public class MainController {
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
                     popup.setTag(c.getItem());
-                    popup.show(c, event.getScreenX(), event.getScreenY());
+                    popup.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
                 }
             });
 
@@ -811,7 +811,7 @@ public class MainController {
                 if (!itemGridView.isSelected(c.getItem())) {
                     itemGridView.select(c.getItem(), false, false);
                 }
-                constructGridCellContextMenu(itemGridView.getSelected()).show(c, event.getScreenX(), event.getScreenY());
+                constructGridCellContextMenu(itemGridView.getSelected()).show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
                 event.consume();
             });
             c.setOnMouseClicked(event -> {

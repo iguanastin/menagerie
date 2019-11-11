@@ -126,7 +126,7 @@ public class DuplicatesScreen extends Screen {
                 currentPair.getObject1().getTags().forEach(tag -> currentPair.getObject2().addTag(tag));
                 cm.hide();
             });
-            cm.show(leftMediaView, event.getScreenX(), event.getScreenY());
+            cm.show(leftMediaView.getScene().getWindow(), event.getScreenX(), event.getScreenY());
         });
         rightMediaView.setOnContextMenuRequested(event -> {
             MenuItem select = new MenuItem("Select in explorer");
@@ -141,7 +141,7 @@ public class DuplicatesScreen extends Screen {
                 currentPair.getObject2().getTags().forEach(tag -> currentPair.getObject1().addTag(tag));
                 cm.hide();
             });
-            cm.show(rightMediaView, event.getScreenX(), event.getScreenY());
+            cm.show(rightMediaView.getScene().getWindow(), event.getScreenX(), event.getScreenY());
         });
         leftTagList.setCellFactory(param -> {
             TagListCell c = new TagListCell() {
@@ -177,7 +177,7 @@ public class DuplicatesScreen extends Screen {
             MenuItem removeTag = new MenuItem("Remove tag");
             removeTag.setOnAction(event -> currentPair.getObject1().removeTag(c.getItem()));
             ContextMenu cm = new ContextMenu(addToOther, new SeparatorMenuItem(), removeTag);
-            c.setOnContextMenuRequested(event -> cm.show(c, event.getScreenX(), event.getScreenY()));
+            c.setOnContextMenuRequested(event -> cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY()));
             return c;
         });
         leftTagList.setPrefWidth(200);
@@ -215,7 +215,7 @@ public class DuplicatesScreen extends Screen {
             MenuItem removeTag = new MenuItem("Remove tag");
             removeTag.setOnAction(event -> currentPair.getObject2().removeTag(c.getItem()));
             ContextMenu cm = new ContextMenu(addToOther, new SeparatorMenuItem(), removeTag);
-            c.setOnContextMenuRequested(event -> cm.show(c, event.getScreenX(), event.getScreenY()));
+            c.setOnContextMenuRequested(event -> cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY()));
             return c;
         });
         rightTagList.setPrefWidth(200);

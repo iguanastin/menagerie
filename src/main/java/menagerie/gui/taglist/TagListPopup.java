@@ -83,7 +83,7 @@ public class TagListPopup extends Popup {
                 }
             });
             ContextMenu cm = new ContextMenu(delete);
-            c.setOnContextMenuRequested(event -> cm.show(c, event.getScreenX(), event.getScreenY()));
+            c.setOnContextMenuRequested(event -> cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY()));
             c.maxWidthProperty().bind(noteListView.widthProperty().subtract(20));
             return c;
         });
