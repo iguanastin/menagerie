@@ -56,10 +56,10 @@ public abstract class PluginLoader {
                 JarFile jar = new JarFile(file);
                 String mainClass = jar.getManifest().getMainAttributes().getValue(Attributes.Name.MAIN_CLASS);
                 if (mainClass != null) {
+                    Main.log.info("Found plugin JAR: " + file);
                     classes.add(mainClass);
                     urls.add(new URL("jar:file:" + folder + "/" + file.getName() + "!/"));
                 }
-                //                jar.stream().filter(jarEntry -> jarEntry.getName().endsWith(".class")).forEach(jarEntry -> classes.add(jarEntry.getName().replaceAll("/", ".").replace(".class", "")));
             } catch (IOException e) {
                 Main.log.log(Level.SEVERE, "Error reading plugin jarfile", e);
             }
@@ -73,7 +73,9 @@ public abstract class PluginLoader {
                 Class c = classLoader.loadClass(className);
                 for (Class anInterface : c.getInterfaces()) {
                     if (anInterface == MenageriePlugin.class) {
-                        plugins.add((MenageriePlugin) c.newInstance());
+                        MenageriePlugin plugin = (MenageriePlugin) c.newInstance();
+                        plugins.add(plugin);
+                        Main.log.info("Loaded plugin: " + plugin.getPluginName());
                         break;
                     }
                 }

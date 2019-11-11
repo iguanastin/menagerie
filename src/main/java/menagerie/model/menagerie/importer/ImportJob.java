@@ -165,6 +165,7 @@ public class ImportJob {
                     return true;
                 }
 
+                Main.log.info("Downloading: " + getUrl() + "\nTo local: " + downloadTo);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.addRequestProperty("User-Agent", "Mozilla/4.0");
                 ReadableByteChannel rbc = Channels.newChannel(conn.getInputStream());
@@ -176,20 +177,20 @@ public class ImportJob {
 
                         progressProperty.set((double) i / size);
                     }
-
                 }
                 rbc.close();
                 conn.disconnect();
+                Main.log.info("Successfully downloaded: " + getUrl() + "\nTo local: " + downloadTo);
 
                 synchronized (this) {
                     file = downloadTo;
                 }
                 needsDownload = false;
             } catch (RuntimeException e) {
-                Main.log.log(Level.WARNING, String.format("Unexpected exception while downloading from url: %s", url.toString()), e);
+                Main.log.log(Level.WARNING, "Unexpected exception while downloading from url: %s" + url.toString(), e);
                 return true;
             } catch (IOException e) {
-                Main.log.log(Level.WARNING, String.format("Failed to download file from url: %s", url.toString()), e);
+                Main.log.log(Level.WARNING, "IOException while downloading file from url: %s" + url.toString(), e);
                 return true;
             }
         }
@@ -205,15 +206,19 @@ public class ImportJob {
      */
     private boolean tryImport(Menagerie menagerie, MenagerieSettings settings) {
         if (needsImport) {
+            Main.log.info("Importing file: " + file);
             synchronized (this) {
                 item = menagerie.importFile(file);
             }
 
             if (item == null) {
+                Main.log.info("File failed to import: " + file);
                 return true;
             } else {
+                Main.log.info("Successfully imported file: " + file + "\nWith ID: " + item.getId());
                 needsImport = false;
 
+                Main.log.info("Applying auto-tags to imported item: " + item.getId());
                 // Add tags
                 if (settings.tagTagme.getValue()) {
                     Tag tagme = menagerie.getTagByName("tagme");
@@ -240,11 +245,12 @@ public class ImportJob {
      */
     private void tryHashHist() {
         if (needsHash) {
+            Main.log.info("Hashing file (ID: " + item.getId() + "): " + file);
             item.initializeMD5();
             needsHash = false;
         }
         if (needsHist) {
-            item.initializeHistogram();
+            if (item.initializeHistogram()) Main.log.info("Generated image histogram from file (ID: " + item.getId() + "): " + file);
             needsHist = false;
         }
     }
@@ -257,11 +263,13 @@ public class ImportJob {
      */
     private boolean tryDuplicate(Menagerie menagerie) {
         if (needsCheckDuplicate && item.getMD5() != null) {
+            Main.log.info("Checking for hash duplicates: " + item.getId());
             for (Item i : menagerie.getItems()) {
                 if (i instanceof MediaItem && !i.equals(item) && ((MediaItem) i).getMD5() != null && ((MediaItem) i).getMD5().equalsIgnoreCase(item.getMD5())) {
                     synchronized (this) {
                         duplicateOf = (MediaItem) i;
                     }
+                    Main.log.info("Found hash duplicate, cancelling import: " + item.getId());
                     menagerie.deleteItem(item);
                     needsCheckDuplicate = false;
                     needsCheckSimilar = false;
@@ -286,6 +294,7 @@ public class ImportJob {
      */
     private void trySimilar(Menagerie menagerie, MenagerieSettings settings) {
         if (needsCheckSimilar && item.getHistogram() != null) {
+            Main.log.info("Finding similar, existing items: " + item.getId());
             synchronized (this) {
                 similarTo = new ArrayList<>();
             }
@@ -303,13 +312,17 @@ public class ImportJob {
 
                     if (similarity >= confidenceSquare || (similarity >= confidence && item.getHistogram().isColorful() && ((MediaItem) i).getHistogram().isColorful())) {
                         synchronized (this) {
+                            Main.log.info("Found similar item (To ID: " + item.getId() + "): " + i.getId());
                             similarTo.add(new SimilarPair<>(item, (MediaItem) i, similarity));
                         }
                     }
                 }
             }
 
-            if (!anyMinimallySimilar) item.setHasNoSimilar(true);
+            if (!anyMinimallySimilar) {
+                Main.log.info("None minimally similar to item: " + item.getId());
+                item.setHasNoSimilar(true);
+            }
 
             needsCheckSimilar = false;
         }
@@ -400,7 +413,12 @@ public class ImportJob {
      * Cancels this job if it has not already been started.
      */
     public void cancel() {
-        if (getStatus() == Status.WAITING) getImporter().cancel(this);
+        if (getStatus() == Status.WAITING) {
+            if (url != null) Main.log.info("Cancelling web import: " + url);
+            else Main.log.info("Cancelling local import: " + file);
+
+            getImporter().cancel(this);
+        }
     }
 
 }

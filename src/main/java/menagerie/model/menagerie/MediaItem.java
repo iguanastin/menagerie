@@ -216,15 +216,18 @@ public class MediaItem extends Item {
     /**
      * Computes the color histogram of the image. No operation if file is not an image, or is a GIF image.
      */
-    public void initializeHistogram() {
+    public boolean initializeHistogram() {
         if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
             try {
                 histogram.set(new ImageHistogram(getImageSynchronously()));
                 if (hasDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram.get());
+                return true;
             } catch (HistogramReadException e) {
                 Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
             }
         }
+
+        return false;
     }
 
     /**
@@ -292,6 +295,8 @@ public class MediaItem extends Item {
     public boolean moveFile(File dest) {
         if (getFile() == null || dest == null) return false;
         if (file.get().equals(dest)) return true;
+
+        Main.log.info("Moving file: " + getFile() + "\nTo: " + dest);
 
         boolean succeeded = file.get().renameTo(dest);
 
@@ -374,13 +379,16 @@ public class MediaItem extends Item {
         FileUtils fu = FileUtils.getInstance();
         if (fu.hasTrash()) {
             try {
+                Main.log.info("Sending file to recycle bin: " + getFile());
                 fu.moveToTrash(new File[]{getFile()});
                 return true;
             } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "Unable to send file to recycle bin: " + getFile(), e);
-                return false;
+                Main.log.log(Level.WARNING, "Unable to send file to recycle bin: " + getFile(), e);
+                Main.log.info("Deleting file: " + getFile());
+                return getFile().delete();
             }
         } else {
+            Main.log.info("Deleting file: " + getFile());
             return getFile().delete();
         }
     }

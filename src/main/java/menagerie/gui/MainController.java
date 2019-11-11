@@ -341,6 +341,7 @@ public class MainController {
     }
 
     private void initAltTabbingFix() {
+        Main.log.info("Initializing alt-tab fix");
         rootPane.getScene().addEventFilter(KeyEvent.KEY_RELEASED, event -> {
             // Workaround for alt-tabbing correctly
             if (event.getCode() == KeyCode.ALT) {
@@ -361,7 +362,6 @@ public class MainController {
         Main.log.info("Loading plugins from: " + pluginsFolder.getAbsolutePath());
         plugins = PluginLoader.loadPlugins(pluginsFolder);
         plugins.forEach(plugin -> {
-            Main.log.info("Loaded plugin: " + plugin.getPluginName());
             plugin.addErrorListener(new ErrorListener() {
                 @Override
                 public void postMessage(String s) {

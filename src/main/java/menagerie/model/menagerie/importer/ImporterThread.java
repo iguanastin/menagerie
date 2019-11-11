@@ -80,14 +80,13 @@ public class ImporterThread extends Thread {
                 continue;
             }
 
+            Main.log.info("Import queue size: " + queue.size());
             ImportJob job = queue.remove();
 
-            String source;
-            if (job.getUrl() != null) source = job.getUrl().toString();
-            else source = job.getFile().toString();
-            Main.log.info(String.format("Importing: %s", source));
-
+            if (job.getUrl() != null) Main.log.info("Starting web import: " + job.getUrl());
+            else Main.log.info("Starting local import: " + job.getFile());
             job.runJob(menagerie, settings);
+            Main.log.info("Finished import: " + job.getItem().getId());
         }
     }
 

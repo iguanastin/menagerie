@@ -65,6 +65,7 @@ public class Menagerie {
         this.databaseManager = databaseManager;
 
         // Load data from database
+        Main.log.info("Loading Menagerie data from database...");
         databaseManager.loadIntoMenagerie(this);
 
         clearUnusedTags();
@@ -85,6 +86,7 @@ public class Menagerie {
      * @throws SQLException If any error occurs in database.
      */
     private void clearUnusedTags() throws SQLException {
+        Main.log.info("Removing unused tags...");
         Set<Integer> usedTags = new HashSet<>();
         for (Item img : items) {
             for (Tag t : img.getTags()) {
@@ -93,7 +95,7 @@ public class Menagerie {
         }
         for (Tag t : new ArrayList<>(tags)) {
             if (!usedTags.contains(t.getId())) {
-                Main.log.info("Deleting unused tag: " + t);
+                Main.log.info("Removing tag: " + t);
                 tags.remove(t);
                 getDatabaseManager().deleteTag(t.getId());
             }
@@ -108,6 +110,8 @@ public class Menagerie {
      */
     public MediaItem importFile(File file) {
         if (isFilePresent(file)) return null;
+
+        Main.log.info("Importing file to Menagerie: " + file);
 
         MediaItem media = new MediaItem(this, nextItemID, System.currentTimeMillis(), file);
 
@@ -137,6 +141,8 @@ public class Menagerie {
      */
     public GroupItem createGroup(List<Item> elements, String title) {
         if (title == null || title.isEmpty()) return null;
+
+        Main.log.info("Creating group in Menagerie: \"" + title + "\"");
 
         if (elements == null) elements = new ArrayList<>();
 
@@ -192,6 +198,8 @@ public class Menagerie {
      * @return The newly created tag, or null if name is not unique or name is invalid.
      */
     public Tag createTag(String name) {
+        Main.log.info("Creating tag in Menagerie: " + name);
+
         Tag t;
         try {
             t = new Tag(this, nextTagID, name, null);
@@ -213,6 +221,7 @@ public class Menagerie {
      * @param items Items
      */
     public void forgetItems(List<Item> items) {
+        Main.log.info("Forgetting " + items.size() + " items from Menagerie");
         items.forEach(Item::forget);
 
         refreshInSearches(items);
@@ -235,6 +244,7 @@ public class Menagerie {
      * @param items Items
      */
     public void deleteItems(List<Item> items) {
+        Main.log.info("Deleting " + items.size() + " items from Menagerie");
         items.forEach(Item::delete);
 
         refreshInSearches(items);
@@ -365,6 +375,7 @@ public class Menagerie {
      * @param search Search to unregister.
      */
     public void unregisterSearch(Search search) {
+        Main.log.info("Unregistering search from Menagerie: " + search.getSearchString());
         activeSearches.remove(search);
     }
 
@@ -374,6 +385,7 @@ public class Menagerie {
      * @param search Search to register.
      */
     public void registerSearch(Search search) {
+        Main.log.info("Registering search with Menagerie: " + search.getSearchString());
         activeSearches.add(search);
     }
 
