@@ -58,6 +58,8 @@ public class PanZoomImageView extends DynamicImageView {
     private boolean applyScaleAsync = false;
     private boolean scaleApplied = false;
 
+    private ImageScalerThread scalerThread = null;
+
 
     /**
      * Empty image view with panning and zooming functionality.
@@ -166,7 +168,38 @@ public class PanZoomImageView extends DynamicImageView {
                 deltaY *= newValue.doubleValue();
                 setImage(getTrueImage());
             }
+
+            if (applyScaleAsync && scale.get() >= 3) {
+                scalerThread.enqueue(getTrueImage(), newValue.doubleValue(), image -> {
+                    if (scale.get() == newValue.doubleValue()) Platform.runLater(() -> setAppliedScaleImage(image));
+                });
+            }
         });
+
+        setApplyScaleAsync(true);
+    }
+
+    private void startScalerThread() {
+        if (scalerThread == null || !scalerThread.isRunning()) {
+            scalerThread = new ImageScalerThread();
+            scalerThread.setDaemon(true);
+            scalerThread.start();
+        }
+    }
+
+    public void setApplyScaleAsync(boolean applyScaleAsync) {
+        this.applyScaleAsync = applyScaleAsync;
+
+        if (applyScaleAsync) {
+            startScalerThread();
+        } else if (scalerThread != null) {
+            scalerThread.cancel();
+            scalerThread = null;
+        }
+    }
+
+    public boolean isApplyScaleAsync() {
+        return applyScaleAsync;
     }
 
     /**

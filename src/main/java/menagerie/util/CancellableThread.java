@@ -44,4 +44,8 @@ public abstract class CancellableThread extends Thread {
         running = false;
     }
 
+    public synchronized boolean isRunning() {
+        return running;
+    }
+
 }
