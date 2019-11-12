@@ -69,7 +69,6 @@ import menagerie.gui.screens.move.MoveFilesScreen;
 import menagerie.gui.screens.settings.SettingsScreen;
 import menagerie.gui.taglist.SimpleCSSColorPicker;
 import menagerie.gui.taglist.TagListCell;
-import menagerie.gui.taglist.TagListPopup;
 import menagerie.model.PluginLoader;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
@@ -403,28 +402,43 @@ public class MainController {
         // TagListScreen
         tagListScreen = new TagListScreen();
         tagListScreen.setCellFactory(param -> {
-            TagListCell c = new TagListCell();
+            TagListCell c = new TagListCell(thing -> {
+                String text = searchTextField.getText();
+                if (text == null) text = "";
+                text = text.trim();
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)-" + thing.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
+                    if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
+                    text += thing.getName() + " ";
+                }
+                searchTextField.setText(text.trim());
+                searchTextField.requestFocus();
+                searchTextField.positionCaret(text.length());
+            }, thing -> {
+                String text = searchTextField.getText();
+                if (text == null) text = "";
+                text = text.trim();
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)" + thing.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
+                    if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
+                    text += "-" + thing.getName() + " ";
+                }
+                searchTextField.setText(text.trim());
+                searchTextField.requestFocus();
+                searchTextField.positionCaret(text.length());
+            });
             c.setOnContextMenuRequested(event -> {
                 MenuItem i0 = new MenuItem("Add note");
                 i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
-                MenuItem i1 = new MenuItem("Search this tag");
-                i1.setOnAction(event1 -> {
-                    searchTextField.setText(c.getItem().getName());
-                    searchTextField.positionCaret(searchTextField.getText().length());
-                    tagListScreen.close();
-                    GroupItem scope = null;
-                    if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                    applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
-                });
-                ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1);
+                ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem());
                 m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
             });
-            final TagListPopup popup = new TagListPopup();
-            popup.setAutoHide(true);
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-                    popup.setTag(c.getItem());
-                    popup.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+                    searchTextField.setText(c.getItem().getName() + " ");
+                    searchTextField.positionCaret(searchTextField.getText().length());
                 }
             });
             return c;
@@ -687,36 +701,52 @@ public class MainController {
 
     private void initExplorerTagListCellFactory() {
         tagListView.setCellFactory(param -> {
-            TagListCell c = new TagListCell();
+            TagListCell c = new TagListCell(thing -> {
+                String text = searchTextField.getText();
+                if (text == null) text = "";
+                text = text.trim();
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)-" + thing.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
+                    if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
+                    text += thing.getName() + " ";
+                }
+                searchTextField.setText(text.trim());
+                searchTextField.requestFocus();
+                searchTextField.positionCaret(text.length());
+            }, thing -> {
+                String text = searchTextField.getText();
+                if (text == null) text = "";
+                text = text.trim();
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)" + thing.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
+                    if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
+                    text += "-" + thing.getName() + " ";
+                }
+                searchTextField.setText(text.trim());
+                searchTextField.requestFocus();
+                searchTextField.positionCaret(text.length());
+            });
             // TODO: Make a custom popup that encompasses all the tag controls?
             c.setOnContextMenuRequested(event -> {
                 if (c.getItem() != null) {
+                    // TODO Transfer all of this to TagListCell class and use listeners/callbacks
                     MenuItem addNote = new MenuItem("Add note");
                     addNote.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
-                    MenuItem addToSearch = new MenuItem("Add to search");
-                    addToSearch.setOnAction(event1 -> {
-                        if (searchTextField.getText() == null) {
-                            searchTextField.setText(c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
-                        }
-                        GroupItem scope = null;
-                        if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
+                    MenuItem tagSelected = new MenuItem("Tag selected");
+                    tagSelected.setOnAction(event1 -> {
+                        Map<Item, List<Tag>> added = new HashMap<>();
+                        itemGridView.getSelected().forEach(item -> {
+                            if (item.addTag(c.getItem())) {
+                                added.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
+                            }
+                        });
+
+                        tagEditHistory.push(new TagEditEvent(added, null));
                     });
-                    MenuItem excludeFromSearch = new MenuItem("Exclude from search");
-                    excludeFromSearch.setOnAction(event1 -> {
-                        if (searchTextField.getText() == null || searchTextField.getText().isEmpty()) {
-                            searchTextField.setText("-" + c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
-                        }
-                        GroupItem scope = null;
-                        if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
-                    });
-                    MenuItem removeFromSelected = new MenuItem("Remove from selected");
-                    removeFromSelected.setOnAction(event1 -> {
+                    MenuItem untagSelected = new MenuItem("Untag selected");
+                    untagSelected.setOnAction(event1 -> {
                         Map<Item, List<Tag>> removed = new HashMap<>();
                         itemGridView.getSelected().forEach(item -> {
                             if (item.removeTag(c.getItem())) {
@@ -730,7 +760,7 @@ public class MainController {
                     colorPicker.getTextfield().setText(c.getItem().getColor());
                     CustomMenuItem tagColorPicker = new CustomMenuItem(colorPicker, false);
 
-                    ContextMenu m = new ContextMenu(addNote, new SeparatorMenuItem(), addToSearch, excludeFromSearch, new SeparatorMenuItem(), removeFromSelected, tagColorPicker);
+                    ContextMenu m = new ContextMenu(addNote, new SeparatorMenuItem(), tagSelected, untagSelected, new SeparatorMenuItem(), tagColorPicker, new SeparatorMenuItem());
 
                     // TODO: Do this better, jfc
                     for (String note : c.getItem().getNotes()) {
@@ -752,26 +782,11 @@ public class MainController {
                 }
             });
 
-            //            final TagListPopup popup = new TagListPopup();
-            //            popup.setAutoHide(true);
-            //            c.setOnMouseClicked(event -> {
-            //                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-            //                    popup.setTag(c.getItem());
-            //                    popup.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-            //                }
-            //            });
-
-            // TODO: Improve this, it's duplicated code
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-                    if (searchTextField.getText() == null) {
-                        searchTextField.setText(c.getItem().getName());
-                    } else {
-                        searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
-                    }
-                    GroupItem scope = null;
-                    if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                    applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
+                    searchTextField.setText(c.getItem().getName() + " ");
+                    searchTextField.positionCaret(searchTextField.getText().length());
+                    event.consume();
                 }
             });
 

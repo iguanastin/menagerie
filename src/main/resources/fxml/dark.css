@@ -123,6 +123,9 @@
 .tag-list-cell:other-missing {
     -fx-background-color: blue;
 }
+.tag-list-cell-button {
+    -fx-background-color: derive(-fx-accent, 50%);
+}
 
 .predictive-popup {
     -fx-background-color: -fx-base;

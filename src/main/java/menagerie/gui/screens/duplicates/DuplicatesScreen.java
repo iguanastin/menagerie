@@ -144,7 +144,8 @@ public class DuplicatesScreen extends Screen {
             cm.show(rightMediaView.getScene().getWindow(), event.getScreenX(), event.getScreenY());
         });
         leftTagList.setCellFactory(param -> {
-            TagListCell c = new TagListCell() {
+            // TODO
+            TagListCell c = new TagListCell(null, null) {
                 private final PseudoClass otherHasPseudoClass = PseudoClass.getPseudoClass("other-missing");
 
                 private final BooleanProperty otherMissing = new BooleanPropertyBase() {
@@ -182,7 +183,8 @@ public class DuplicatesScreen extends Screen {
         });
         leftTagList.setPrefWidth(200);
         rightTagList.setCellFactory(param -> {
-            TagListCell c = new TagListCell() {
+            // TODO
+            TagListCell c = new TagListCell(null, null) {
                 private final PseudoClass otherHasPseudoClass = PseudoClass.getPseudoClass("other-missing");
 
                 private final BooleanProperty otherMissing = new BooleanPropertyBase() {
