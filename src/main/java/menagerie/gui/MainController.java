@@ -24,6 +24,7 @@
 
 package menagerie.gui;
 
+import com.mortennobel.imagescaling.AdvancedResizeOp;
 import com.mortennobel.imagescaling.ResampleFilters;
 import com.mortennobel.imagescaling.ResampleOp;
 import javafx.application.Platform;
@@ -1822,7 +1823,8 @@ public class MainController {
                     if (scale > 2 && !previewMediaView.getImageView().isScaleApplied()) {
                         BufferedImage bimg = SwingFXUtils.fromFXImage(previewMediaView.getImageView().getTrueImage(), null);
 
-                        ResampleOp resizeOp = new ResampleOp((int) (bimg.getWidth() / scale + 0.25), (int) (bimg.getHeight() / scale + 0.25));
+                        ResampleOp resizeOp = new ResampleOp((int) (bimg.getWidth() / scale), (int) (bimg.getHeight() / scale));
+                        resizeOp.setUnsharpenMask(AdvancedResizeOp.UnsharpenMask.Normal);
                         resizeOp.setFilter(ResampleFilters.getLanczos3Filter());
                         BufferedImage scaledImage = resizeOp.filter(bimg, bimg);
 
