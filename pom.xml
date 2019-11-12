@@ -127,6 +127,12 @@
             <artifactId>json</artifactId>
             <version>20180813</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.mortennobel/java-image-scaling -->
+        <dependency>
+            <groupId>com.mortennobel</groupId>
+            <artifactId>java-image-scaling</artifactId>
+            <version>0.8.6</version>
+        </dependency>
         <dependency>
             <groupId>men.age.rie</groupId>
             <artifactId>plugin-interface</artifactId>

@@ -24,6 +24,8 @@
 
 package menagerie.gui;
 
+import com.mortennobel.imagescaling.ResampleFilters;
+import com.mortennobel.imagescaling.ResampleOp;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
@@ -1819,12 +1821,12 @@ public class MainController {
 
                     if (scale > 2 && !previewMediaView.getImageView().isScaleApplied()) {
                         BufferedImage bimg = SwingFXUtils.fromFXImage(previewMediaView.getImageView().getTrueImage(), null);
-                        java.awt.Image temp = bimg.getScaledInstance((int) (bimg.getWidth() / scale + 0.25), (int) (bimg.getHeight() / scale + 0.25), java.awt.Image.SCALE_SMOOTH);
-                        bimg = new BufferedImage(temp.getWidth(null), temp.getHeight(null), bimg.getType());
-                        Graphics2D g = bimg.createGraphics();
-                        g.drawImage(temp, 0, 0, null);
-                        g.dispose();
-                        previewMediaView.getImageView().setAppliedScaleImage(SwingFXUtils.toFXImage(bimg, null));
+
+                        ResampleOp resizeOp = new ResampleOp((int) (bimg.getWidth() / scale + 0.25), (int) (bimg.getHeight() / scale + 0.25));
+                        resizeOp.setFilter(ResampleFilters.getLanczos3Filter());
+                        BufferedImage scaledImage = resizeOp.filter(bimg, bimg);
+
+                        previewMediaView.getImageView().setAppliedScaleImage(SwingFXUtils.toFXImage(scaledImage, null));
                     }
                 case ESCAPE:
                     itemGridView.requestFocus();
