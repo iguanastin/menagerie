@@ -107,17 +107,17 @@ public class DynamicMediaView extends StackPane {
      */
     public boolean preview(Item item) {
         if (getVideoView() != null) getVideoView().stop();
-        imageView.setImage(null);
+        imageView.setTrueImage(null);
         hideAllViews();
 
         if (item instanceof MediaItem) {
             try {
                 if (((MediaItem) item).isImage()) {
                     if (getVideoView() != null) getVideoView().stop();
-                    imageView.setImage(((MediaItem) item).getImage());
+                    imageView.setTrueImage(((MediaItem) item).getImage());
                     showImageView();
                 } else if (((MediaItem) item).isVideo() && getVideoView() != null) {
-                    imageView.setImage(null);
+                    imageView.setTrueImage(null);
                     getVideoView().startMedia(((MediaItem) item).getFile().getAbsolutePath());
                     showVideoView();
                 } else if (Filters.RAR_NAME_FILTER.accept(((MediaItem) item).getFile())) {
@@ -125,7 +125,7 @@ public class DynamicMediaView extends StackPane {
                         List<FileHeader> fileHeaders = a.getFileHeaders();
                         if (!fileHeaders.isEmpty()) {
                             try (InputStream is = a.getInputStream(fileHeaders.get(0))) {
-                                imageView.setImage(new Image(is));
+                                imageView.setTrueImage(new Image(is));
                             }
                         }
                     } catch (RarException | IOException | NullPointerException e) {
@@ -136,7 +136,7 @@ public class DynamicMediaView extends StackPane {
                     try (ZipFile zip = new ZipFile(((MediaItem) item).getFile())) {
                         if (zip.entries().hasMoreElements()) {
                             try (InputStream is = zip.getInputStream(zip.entries().nextElement())) {
-                                imageView.setImage(new Image(is));
+                                imageView.setTrueImage(new Image(is));
                             }
                         }
                     } catch (IOException e) {
@@ -232,7 +232,7 @@ public class DynamicMediaView extends StackPane {
 
         try {
             BufferedImage img = new PDFRenderer(currentPDF).renderImageWithDPI(page, 300);
-            imageView.setImage(SwingFXUtils.toFXImage(img, null));
+            imageView.setTrueImage(SwingFXUtils.toFXImage(img, null));
         } catch (IOException e) {
             LOGGER.log(Level.WARNING, "Failed to render PDF page: " + page, e);
         }

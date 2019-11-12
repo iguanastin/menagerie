@@ -30,6 +30,7 @@ import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -81,6 +82,7 @@ import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
 
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -747,14 +749,14 @@ public class MainController {
                 }
             });
 
-//            final TagListPopup popup = new TagListPopup();
-//            popup.setAutoHide(true);
-//            c.setOnMouseClicked(event -> {
-//                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-//                    popup.setTag(c.getItem());
-//                    popup.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-//                }
-//            });
+            //            final TagListPopup popup = new TagListPopup();
+            //            popup.setAutoHide(true);
+            //            c.setOnMouseClicked(event -> {
+            //                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
+            //                    popup.setTag(c.getItem());
+            //                    popup.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+            //                }
+            //            });
 
             // TODO: Improve this, it's duplicated code
             c.setOnMouseClicked(event -> {
@@ -1812,6 +1814,18 @@ public class MainController {
             }
         } else {
             switch (event.getCode()) {
+                case S:
+                    double scale = previewMediaView.getImageView().getScale().get();
+
+                    if (scale > 2 && !previewMediaView.getImageView().isScaleApplied()) {
+                        BufferedImage bimg = SwingFXUtils.fromFXImage(previewMediaView.getImageView().getTrueImage(), null);
+                        java.awt.Image temp = bimg.getScaledInstance((int) (bimg.getWidth() / scale + 0.25), (int) (bimg.getHeight() / scale + 0.25), java.awt.Image.SCALE_SMOOTH);
+                        bimg = new BufferedImage(temp.getWidth(null), temp.getHeight(null), bimg.getType());
+                        Graphics2D g = bimg.createGraphics();
+                        g.drawImage(temp, 0, 0, null);
+                        g.dispose();
+                        previewMediaView.getImageView().setAppliedScaleImage(SwingFXUtils.toFXImage(bimg, null));
+                    }
                 case ESCAPE:
                     itemGridView.requestFocus();
                     event.consume();
