@@ -170,8 +170,9 @@ public class PanZoomImageView extends DynamicImageView {
             }
 
             if (applyScaleAsync && scale.get() >= 3) {
-                scalerThread.enqueue(getTrueImage(), newValue.doubleValue(), image -> {
-                    if (scale.get() == newValue.doubleValue()) Platform.runLater(() -> setAppliedScaleImage(image));
+                Image img = getTrueImage();
+                scalerThread.enqueue(img, newValue.doubleValue(), image -> {
+                    if (scale.get() == newValue.doubleValue() && img.equals(getTrueImage())) Platform.runLater(() -> setAppliedScaleImage(image));
                 });
             }
         });
