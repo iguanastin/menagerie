@@ -1293,24 +1293,21 @@ public class MainController {
         previewItem(null);
 
         // Create new search
-        if (groupScope == null) {
-            showGroupedToggleButton.setDisable(false);
-            showGroupedToggleButton.setSelected(showGrouped);
-            shuffledSearchButton.setDisable(false);
-            shuffledSearchButton.setSelected(shuffled);
-            currentSearch = new Search(search, descending, showGrouped, shuffled);
-            scopeLabel.setText("Scope: All");
-            scopeLabel.setTooltip(null);
-        } else {
-            showGroupedToggleButton.setSelected(true);
-            showGroupedToggleButton.setDisable(true);
-            shuffledSearchButton.setSelected(false);
-            shuffledSearchButton.setDisable(true);
+        boolean inGroup = groupScope != null;
+        shuffledSearchButton.setDisable(inGroup);
+        shuffledSearchButton.setSelected(shuffled && !inGroup);
+        showGroupedToggleButton.setDisable(inGroup);
+        showGroupedToggleButton.setSelected(showGrouped || inGroup);
+        if (inGroup) {
             currentSearch = new GroupSearch(search, groupScope, descending, shuffled);
             scopeLabel.setText("Scope: " + groupScope.getTitle());
             Tooltip tt = new Tooltip(groupScope.getTitle());
             tt.setWrapText(true);
             scopeLabel.setTooltip(tt);
+        } else {
+            currentSearch = new Search(search, descending, showGrouped, shuffled);
+            scopeLabel.setText("Scope: All");
+            scopeLabel.setTooltip(null);
         }
         menagerie.registerSearch(currentSearch);
         currentSearch.refreshSearch(menagerie.getItems());
