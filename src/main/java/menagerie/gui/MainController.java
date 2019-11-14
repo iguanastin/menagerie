@@ -57,7 +57,10 @@ import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.predictive.PredictiveTextField;
-import menagerie.gui.screens.*;
+import menagerie.gui.screens.HelpScreen;
+import menagerie.gui.screens.ScreenPane;
+import menagerie.gui.screens.SlideshowScreen;
+import menagerie.gui.screens.TagListScreen;
 import menagerie.gui.screens.dialogs.*;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.findonline.FindOnlineScreen;
@@ -271,8 +274,6 @@ public class MainController {
      */
     private final MenagerieSettings settings;
 
-    private static final int TARGET_LICENSE_VERSION = 1;
-    private static final File licensesFolder = new File("./licenses");
     private static final File pluginsFolder = new File("./plugins");
 
     // ------------------------------ Video preview status ---------------------------
@@ -329,11 +330,6 @@ public class MainController {
             if (settings.helpOnStart.getValue()) {
                 screenPane.open(helpScreen);
                 settings.helpOnStart.setValue(false);
-            }
-
-            // Show license screen if not agreed, yet
-            if (settings.licensesAgreed.getValue() < TARGET_LICENSE_VERSION) {
-                screenPane.open(new LicensesScreen(settings, licensesFolder, TARGET_LICENSE_VERSION));
             }
 
             // Init user-accepted filetypes in filters

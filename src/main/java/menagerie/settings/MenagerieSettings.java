@@ -33,7 +33,7 @@ public class MenagerieSettings extends Settings {
     public StringSetting userFileTypes, dbUrl, dbUser, dbPass, tagWithOnImport, importItemsIntoGroupName, importOrder;
     public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesIncludeGroups, slideshowPreload, duplicatePreload, explorerGroupAscending;
     public DoubleSetting duplicatesConfidence, slideshowInterval;
-    public IntSetting gridWidth, licensesAgreed, windowX, windowY, windowWidth, windowHeight, onlineLoadAhead;
+    public IntSetting gridWidth, windowX, windowY, windowWidth, windowHeight, onlineLoadAhead;
 
 
     public MenagerieSettings() {
@@ -93,12 +93,11 @@ public class MenagerieSettings extends Settings {
         helpOnStart = new BooleanSetting("help-on-start", true).hide();
         windowMaximized = new BooleanSetting("window-maximized", false).hide();
         expandItemInfo = new BooleanSetting("expand-item-info", false).hide();
-        licensesAgreed = new IntSetting("licenses-agreed", -1).hide();
         windowX = new IntSetting("window-x").hide();
         windowY = new IntSetting("window-y").hide();
         windowWidth = new IntSetting("window-width", 800).min(0).hide();
         windowHeight = new IntSetting("window-height", 600).min(0).hide();
-        Collections.addAll(getSettings(), helpOnStart, windowMaximized, expandItemInfo, licensesAgreed, windowX, windowY, windowWidth, windowHeight);
+        Collections.addAll(getSettings(), helpOnStart, windowMaximized, expandItemInfo, windowX, windowY, windowWidth, windowHeight);
 
         importOrder = new StringSetting("import-order").hide();
         lastImportFolder = new FolderSetting("last-import-folder").hide();
@@ -139,7 +138,6 @@ public class MenagerieSettings extends Settings {
         helpOnStart.setValue(old.getBoolean(OldSettings.Key.SHOW_HELP_ON_START));
         windowMaximized.setValue(old.getBoolean(OldSettings.Key.WINDOW_MAXIMIZED));
         expandItemInfo.setValue(old.getBoolean(OldSettings.Key.EXPAND_ITEM_INFO));
-        licensesAgreed.setValue(old.getInt(OldSettings.Key.LICENSES_AGREED));
         windowX.setValue(old.getInt(OldSettings.Key.WINDOW_X));
         windowY.setValue(old.getInt(OldSettings.Key.WINDOW_Y));
         windowWidth.setValue(old.getInt(OldSettings.Key.WINDOW_WIDTH));
