@@ -785,6 +785,7 @@ public class MainController {
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
                     searchTextField.setText(c.getItem().getName() + " ");
+                    searchTextField.requestFocus();
                     searchTextField.positionCaret(searchTextField.getText().length());
                     event.consume();
                 }
