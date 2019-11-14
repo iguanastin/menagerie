@@ -28,7 +28,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
 /**
- * A dynamically sized image view that conforms to the parent node.
+ * A dynamically sized image view that conforms to the parent node. Does not display image larger than one-to-one size.
  */
 public class DynamicImageView extends ImageView {
 

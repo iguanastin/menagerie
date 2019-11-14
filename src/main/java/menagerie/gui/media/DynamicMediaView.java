@@ -57,19 +57,43 @@ import java.util.logging.Logger;
 import java.util.zip.ZipFile;
 
 /**
- * Dynamically sized view that can display images or videos.
+ * Dynamically sized view that can display images or videos. Does not display content larger than one-to-one size.
  */
 public class DynamicMediaView extends StackPane {
 
+    /**
+     * Logger for this class
+     */
     private static final Logger LOGGER = Logger.getLogger(DynamicMediaView.class.getName());
 
+    /**
+     * The video view used to display videos
+     */
     private DynamicVideoView videoView;
+    /**
+     * The image view used to display images
+     */
     private final PanZoomImageView imageView = new PanZoomImageView();
+    /**
+     * The text view used to display text
+     */
     private final TextArea textView = new TextArea();
 
+    /**
+     * Pane containing PDF controls
+     */
     private final BorderPane pdfControlsPane;
+    /**
+     * Page counter for PDF view
+     */
     private final Label pdfPageLabel = new Label("0/0");
+    /**
+     * The currently active PDF, if present
+     */
     private PDDocument currentPDF = null;
+    /**
+     * Current PDF page index
+     */
     private int currentPDFPageIndex = 0;
 
 
@@ -201,6 +225,9 @@ public class DynamicMediaView extends StackPane {
         getChildren().add(textView);
     }
 
+    /**
+     * Shows the PDF view with controls
+     */
     private void showPDFView() {
         hideAllViews();
         getChildren().addAll(getImageView(), pdfControlsPane);
@@ -221,10 +248,20 @@ public class DynamicMediaView extends StackPane {
         return videoView;
     }
 
+    /**
+     * Gets the active image view
+     *
+     * @return Image view owned by this media view
+     */
     public PanZoomImageView getImageView() {
         return imageView;
     }
 
+    /**
+     * Sets the current PDF page
+     *
+     * @param page Index to go to
+     */
     private void setPDFPage(int page) {
         if (currentPDF == null || page < 0 || page >= currentPDF.getNumberOfPages()) return;
 
@@ -286,6 +323,9 @@ public class DynamicMediaView extends StackPane {
         }
     }
 
+    /**
+     * Stop the video playback, if present and playing
+     */
     public void stop() {
         if (getVideoView() != null) getVideoView().stop();
     }

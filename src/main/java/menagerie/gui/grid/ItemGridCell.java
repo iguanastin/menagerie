@@ -51,7 +51,13 @@ public class ItemGridCell extends GridCell<Item> {
     private static final Font SMALL_FONT = Font.font(Font.getDefault().getName(), FontWeight.BOLD, 12);
     public static final String DEFAULT_STYLE_CLASS = "item-grid-cell";
 
+    /**
+     * Shared group tag image.
+     */
     private static Image groupTagImage = null;
+    /**
+     * Shared video tag image.
+     */
     private static Image videoTagImage = null;
 
     private final ImageView thumbnailView = new ImageView();
@@ -59,14 +65,26 @@ public class ItemGridCell extends GridCell<Item> {
     private final Label centerLabel = new Label();
     private final Label bottomRightLabel = new Label();
 
+    /**
+     * Listens for an image to be ready
+     */
     private final ObjectListener<Image> imageReadyListener;
+    /**
+     * Listens for changes to the current group item's title
+     */
     private final InvalidationListener groupTitleListener = observable -> Platform.runLater(() -> {
         centerLabel.setText(((GroupItem) getItem()).getTitle());
         Tooltip tt = new Tooltip(((GroupItem) getItem()).getTitle());
         tt.setWrapText(true);
         setTooltip(tt);
     });
+    /**
+     * Listens for changes to the current group item's contents
+     */
     private final InvalidationListener groupListListener = observable -> Platform.runLater(() -> bottomRightLabel.setText(((GroupItem) getItem()).getElements().size() + ""));
+    /**
+     * Listens for changes to the current item's selected state
+     */
     private final InvalidationListener selectedListener = observable -> updateSelected(((BooleanProperty) getItem().getMetadata().get("selected")).get());
 
 
@@ -119,6 +137,9 @@ public class ItemGridCell extends GridCell<Item> {
         }
     }
 
+    /**
+     * Cleans up listeners and connections to the previous item. Called while updating the item
+     */
     private void cleanUpOldItem() {
         if (getItem() != null) {
             if (getItem().getThumbnail() != null) {
@@ -137,6 +158,9 @@ public class ItemGridCell extends GridCell<Item> {
         }
     }
 
+    /**
+     * Initializes this cell to be empty
+     */
     private void initEmpty() {
         thumbnailView.setImage(null);
         centerLabel.setText(null);
@@ -144,6 +168,11 @@ public class ItemGridCell extends GridCell<Item> {
         tagView.setImage(null);
     }
 
+    /**
+     * Initializes/displays a media item in this cell
+     *
+     * @param item Item to init/display
+     */
     private void initMediaItem(MediaItem item) {
         if (item.isVideo()) {
             tagView.setImage(videoTagImage);
@@ -172,6 +201,11 @@ public class ItemGridCell extends GridCell<Item> {
         setTooltip(tt);
     }
 
+    /**
+     * Initializes/displays a group item in this cell
+     *
+     * @param item Group to display
+     */
     private void initGroupItem(GroupItem item) {
         centerLabel.setText(item.getTitle());
         Tooltip tt = new Tooltip(item.getTitle());
@@ -185,6 +219,11 @@ public class ItemGridCell extends GridCell<Item> {
         item.getElements().addListener(groupListListener);
     }
 
+    /**
+     * Initializes/displays the thumbnail of an item
+     *
+     * @param item Item to display thumbnail of
+     */
     private void initThumbnail(Item item) {
         if (item.getThumbnail() != null) {
             item.getThumbnail().want();
@@ -198,6 +237,11 @@ public class ItemGridCell extends GridCell<Item> {
         }
     }
 
+    /**
+     * Initializes/listens to the selected state of an item
+     *
+     * @param item Item to initialize and listen to selected state of
+     */
     private void initSelected(Item item) {
         Object obj = item.getMetadata().get("selected");
         if (obj instanceof BooleanProperty) {

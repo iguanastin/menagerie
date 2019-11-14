@@ -45,19 +45,49 @@ import java.util.List;
  */
 public class PanZoomImageView extends DynamicImageView {
 
+    /**
+     * Array of possible zoom values
+     */
     private static final double[] SCALES = {0.1, 0.13, 0.18, 0.24, 0.32, 0.42, 0.56, 0.75, 1, 1.25, 1.56, 1.95, 2.44, 3.05, 3.81, 4.76, 5.95, 7.44, 9.3};
 
+    /**
+     * Property containing the true, unscaled image being displayed.
+     */
     private ObjectProperty<Image> trueImage = new SimpleObjectProperty<>();
+    /**
+     * Delta offset (pan) from the center of the image
+     */
     private double deltaX = 0, deltaY = 0;
+    /**
+     * Zoom scale property
+     */
     private DoubleProperty scale = new SimpleDoubleProperty(1);
 
+    /**
+     * Location of the mouse click
+     */
     private double clickX, clickY;
+    /**
+     * Location of the mouse click in the context of image coordinates
+     */
     private double clickImageX, clickImageY;
 
+    /**
+     * Flag if the mouse was dragged before being released
+     */
     private boolean draggedThisClick = false;
-    private boolean applyScaleAsync = false;
-    private boolean scaleApplied = false;
 
+    /**
+     * Flag if this view applies a smoother scale to the image asynchronously
+     */
+    private boolean applyScaleAsync = false;
+    /**
+     * Flag if the current image being displayed is a smooth-scaled view
+     */
+    private boolean scaleApplied = false;
+    /**
+     * Scaler thread for async smooth scaling
+     */
     private ImageScalerThread scalerThread = null;
 
 
@@ -180,6 +210,9 @@ public class PanZoomImageView extends DynamicImageView {
         setApplyScaleAsync(true);
     }
 
+    /**
+     * Starts a scaler thread if one does not already exist
+     */
     private void startScalerThread() {
         if (scalerThread == null || !scalerThread.isRunning()) {
             scalerThread = new ImageScalerThread();
@@ -188,6 +221,10 @@ public class PanZoomImageView extends DynamicImageView {
         }
     }
 
+    /**
+     *
+     * @param applyScaleAsync If true, this view asynchronously computes smoothly scaled copies to be displayed.
+     */
     public void setApplyScaleAsync(boolean applyScaleAsync) {
         this.applyScaleAsync = applyScaleAsync;
 
@@ -199,6 +236,10 @@ public class PanZoomImageView extends DynamicImageView {
         }
     }
 
+    /**
+     *
+     * @return True if this view computes smoothly scaled copies asynchronously.
+     */
     public boolean isApplyScaleAsync() {
         return applyScaleAsync;
     }
@@ -219,6 +260,12 @@ public class PanZoomImageView extends DynamicImageView {
         }
     }
 
+    /**
+     * Computes the scale an image needs to be zoomed by in order to fit inside the bounds of this node
+     *
+     * @param img Image to find scale for
+     * @return Scale to zoom image by to fit in this node
+     */
     private double getFitScale(Image img) {
         double s = img.getWidth() / getFitWidth();
         if (img.getHeight() / getFitHeight() > s) s = img.getHeight() / getFitHeight();
@@ -226,23 +273,46 @@ public class PanZoomImageView extends DynamicImageView {
         return s;
     }
 
+    /**
+     *
+     * @return Current zoom scale
+     */
     public DoubleProperty getScale() {
         return scale;
     }
 
+    /**
+     * Sets the image this view displays. This method should ALWAYS be used instead of setImage(img)
+     *
+     * @param trueImage Image to display
+     */
     public void setTrueImage(Image trueImage) {
         this.trueImage.set(trueImage);
         setImage(trueImage);
     }
 
+    /**
+     *
+     * @return True image property
+     */
     public ObjectProperty<Image> trueImageProperty() {
         return trueImage;
     }
 
+    /**
+     * The true source image being displayed, even if this node is displaying a smoothly scaled copy.
+     *
+     * @return The true source image being displayed
+     */
     public Image getTrueImage() {
         return trueImage.get();
     }
 
+    /**
+     * Displays a smoothly scaled copy of the true image at one-to-one zoom.
+     *
+     * @param image Smoothly scaled copy to display
+     */
     public void setAppliedScaleImage(Image image) {
         setImage(image);
 
@@ -253,6 +323,10 @@ public class PanZoomImageView extends DynamicImageView {
         updateViewPort();
     }
 
+    /**
+     *
+     * @return True if a smoothly scaled copy is being displayed in place of the true image
+     */
     public boolean isScaleApplied() {
         return scaleApplied;
     }

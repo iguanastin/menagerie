@@ -56,6 +56,7 @@ import menagerie.duplicates.DuplicateFinder;
 import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
+import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
 import menagerie.gui.screens.HelpScreen;
 import menagerie.gui.screens.ScreenPane;
@@ -107,32 +108,37 @@ import java.util.logging.Logger;
 
 public class MainController {
 
+    /**
+     * Logger for this class
+     */
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
     // ------------------------------- JFX -------------------------------------------
     public StackPane rootPane;
-
     public BorderPane explorerRootPane;
-    public BorderPane gridPane;
+    public ScreenPane screenPane;
     public MenuBar menuBar;
+
+    // Right side
+    public BorderPane gridPane;
     public PredictiveTextField searchTextField;
-    public PredictiveTextField editTagsTextField;
     public ToggleButton listDescendingToggleButton;
     public ToggleButton showGroupedToggleButton;
     public ToggleButton shuffledSearchButton;
     public ItemGridView itemGridView;
-    public DynamicMediaView previewMediaView;
-    public ItemInfoBox itemInfoBox;
-    public ListView<Tag> tagListView;
     public Label resultCountLabel;
-    public Label explorerZoomLabel;
     public Label scopeLabel;
+    public HBox scopeHBox;
     public Button importsButton;
     public Button logButton;
     public Button backButton;
 
-    public ScreenPane screenPane;
-    public HBox scopeHBox;
+    // Left side
+    public PredictiveTextField editTagsTextField;
+    public DynamicMediaView previewMediaView;
+    public ItemInfoBox itemInfoBox;
+    public ListView<Tag> tagListView;
+    public Label explorerZoomLabel;
 
     // ----------------------------------- Screens -----------------------------------
     private TagListScreen tagListScreen;
@@ -149,14 +155,16 @@ public class MainController {
 
     // --------------------------------- Menagerie vars ------------------------------
     /**
-     * The menagerie this application is using.
+     * The Menagerie environment this application is using.
      */
     private Menagerie menagerie;
     /**
      * History of tag edit events.
      */
     private final Stack<TagEditEvent> tagEditHistory = new Stack<>();
-
+    /**
+     * List of loaded plugins. Populated during initialization
+     */
     private List<MenageriePlugin> plugins = null;
 
     // ------------------------------- Explorer screen vars --------------------------
@@ -184,6 +192,9 @@ public class MainController {
      * Search history stack
      */
     private final Stack<SearchHistory> searchHistory = new Stack<>();
+    /**
+     * Tag listener used to update tag list for currently previewed item
+     */
     private final ListChangeListener<Tag> previewTagListener = c -> {
         while (c.next()) {
             tagListView.getItems().addAll(c.getAddedSubList());
@@ -191,6 +202,9 @@ public class MainController {
             tagListView.getItems().sort(Comparator.comparing(Tag::getName));
         }
     };
+    /**
+     * Search listener listening for items being added or removed from the current search
+     */
     private final ListChangeListener<Item> searchChangeListener = c -> {
         while (c.next()) {
             // Added
@@ -223,8 +237,17 @@ public class MainController {
         }
     };
 
+    /**
+     * Log button pseudoclass for unread error state
+     */
     private final PseudoClass logErrorPseudoClass = PseudoClass.getPseudoClass("error");
+    /**
+     * Log button pseudoclass for unread warning state
+     */
     private final PseudoClass logWarningPseudoClass = PseudoClass.getPseudoClass("warning");
+    /**
+     * Flag set when an unread error log is present
+     */
     private final BooleanProperty logError = new BooleanPropertyBase() {
         @Override
         protected void invalidated() {
@@ -241,6 +264,9 @@ public class MainController {
             return "error";
         }
     };
+    /**
+     * Flag set when an unread warning log is present
+     */
     private final BooleanProperty logWarning = new BooleanPropertyBase() {
         @Override
         protected void invalidated() {
@@ -273,7 +299,9 @@ public class MainController {
      * Settings object used by this application.
      */
     private final MenagerieSettings settings;
-
+    /**
+     * Folder containing plugins to be loaded on startup
+     */
     private static final File pluginsFolder = new File("./plugins");
 
     // ------------------------------ Video preview status ---------------------------
@@ -289,6 +317,12 @@ public class MainController {
 
     // --------------------------------- Constructor ---------------------------------
 
+    /**
+     * Constructs this controller with a given environment
+     *
+     * @param menagerie Menagerie of the environment
+     * @param settings  Settings for the controller and environment
+     */
     MainController(Menagerie menagerie, MenagerieSettings settings) {
         this.menagerie = menagerie;
         this.settings = settings;
@@ -346,6 +380,9 @@ public class MainController {
         });
     }
 
+    /**
+     * Initializes a workaround for the garbage implementation of alt tabbing with toolbar menus in JavaFX
+     */
     private void initAltTabbingFix() {
         LOGGER.info("Initializing alt-tab fix");
         rootPane.getScene().addEventFilter(KeyEvent.KEY_RELEASED, event -> {
@@ -364,6 +401,9 @@ public class MainController {
         });
     }
 
+    /**
+     * Attempts to load plugins in the plugins folder and initialize them
+     */
     private void initPlugins() {
         LOGGER.info("Loading plugins from: " + pluginsFolder.getAbsolutePath());
         plugins = PluginLoader.loadPlugins(pluginsFolder);
@@ -384,7 +424,7 @@ public class MainController {
     }
 
     /**
-     * Initializes JFX screen objects for the ScreenPane
+     * Initializes screen objects for the ScreenPane
      */
     private void initScreens() {
         LOGGER.info("Initializing screens");
@@ -473,6 +513,9 @@ public class MainController {
         screenPane.currentProperty().addListener((observable, oldValue, newValue) -> explorerRootPane.setDisable(newValue != null));
     }
 
+    /**
+     * Initializes the import screen, which displays queued/in-progress/failed imports
+     */
     private void initImportScreen() {
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), this::selectItemInGridView);
 
@@ -494,6 +537,9 @@ public class MainController {
         }));
     }
 
+    /**
+     * Initializes the general purpose duplicates screen
+     */
     private void initDuplicatesScreen() {
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
         duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(this::selectItemInGridView);
@@ -502,6 +548,9 @@ public class MainController {
         duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
     }
 
+    /**
+     * Initializes the slideshow screen
+     */
     private void initSlideshowScreen() {
         slideshowScreen = new SlideshowScreen(item -> {
             slideshowScreen.close();
@@ -576,14 +625,14 @@ public class MainController {
     }
 
     /**
-     * Initializes the explorer
+     * Initializes the core explorer interface
      */
     private void initExplorer() {
         // Set image grid width from settings
         setGridWidth(settings.gridWidth.getValue());
 
         // Init image grid
-        initItemGridView();
+        initExplorerItemGridView();
 
         // Init drag/drop handlers
         explorerRootPane.disabledProperty().addListener((observable1, oldValue1, newValue1) -> explorerRootPaneDisabledChanged(newValue1));
@@ -633,6 +682,9 @@ public class MainController {
         settings.repeatVideo.valueProperty().addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
     }
 
+    /**
+     * Initializes the predictive text fields with option listeners
+     */
     private void initPredictiveTextFields() {
         editTagsTextField.setOptionsListener(prefix -> {
             prefix = prefix.toLowerCase();
@@ -695,6 +747,9 @@ public class MainController {
         });
     }
 
+    /**
+     * Initializes the cell factory for the explorer tag list
+     */
     private void initExplorerTagListCellFactory() {
         tagListView.setCellFactory(param -> {
             TagListCell c = new TagListCell(thing -> {
@@ -794,7 +849,7 @@ public class MainController {
     /**
      * Initializes listeners and etc. of the itemGridView
      */
-    private void initItemGridView() {
+    private void initExplorerItemGridView() {
         itemGridView.addSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
         itemGridView.setCellFactory(param -> {
             ItemGridCell c = new ItemGridCell();
@@ -911,7 +966,7 @@ public class MainController {
     }
 
     /**
-     * Applies window properties to the window and starts listeners for changes to update the settings object.
+     * Applies window properties to the window and starts listeners for changes to update the settings objects
      */
     private void initWindowPropertiesAndListeners() {
         LOGGER.info("Initializing window properties and listeners");
@@ -1090,6 +1145,11 @@ public class MainController {
         return cm;
     }
 
+    /**
+     * Opens a dialog to allow the user to rename a group
+     *
+     * @param group Group to rename
+     */
     private void openGroupRenameDialog(GroupItem group) {
         new TextDialogScreen().open(screenPane, "Rename group", "Current: " + group.getTitle(), group.getTitle(), group::setTitle, null);
     }
@@ -1115,6 +1175,11 @@ public class MainController {
         if (item != null) item.getTags().addListener(previewTagListener);
     }
 
+    /**
+     * Opens the "find online" dialog. Uses existing plugins to reverse image search and find duplicates online.
+     *
+     * @param selected Items to search online for
+     */
     private void findOnlineDialog(List<Item> selected) {
         List<MediaItem> items = new ArrayList<>();
         for (Item item : selected) {
@@ -1204,6 +1269,9 @@ public class MainController {
         });
     }
 
+    /**
+     * Opens the log screen and clears error/warning flags
+     */
     private void openLog() {
         logError.set(false);
         logWarning.set(false);
@@ -1387,6 +1455,11 @@ public class MainController {
         }
     }
 
+    /**
+     * Selects an item in the grid view. If the item is hidden in a group, selects the group instead.
+     *
+     * @param item Item to select
+     */
     private void selectItemInGridView(Item item) {
         if (itemGridView.getItems().contains(item)) {
             itemGridView.select(item, false, false);
@@ -1475,9 +1548,7 @@ public class MainController {
             Platform.exit();
         });
 
-        previewMediaView.releaseVLCJ();
-        slideshowScreen.releaseVLCJ();
-        duplicateOptionsScreen.releaseVLCJ();
+        DynamicVideoView.releaseAllVLCJ();
         Thumbnail.releaseVLCJResources();
 
         plugins.forEach(plugin -> {

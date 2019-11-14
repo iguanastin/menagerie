@@ -38,10 +38,22 @@ import java.util.logging.Logger;
 
 public class ImageScalerThread extends CancellableThread {
 
+    /**
+     * Logger for this class
+     */
     private static final Logger LOGGER = Logger.getLogger(ImageScalerThread.class.getName());
 
+    /**
+     * Queued source image to scale
+     */
     private Image source = null;
+    /**
+     * Queued target scale
+     */
     private double scale = 1;
+    /**
+     * Queued callback to call once scaling is complete for this image
+     */
     private ObjectListener<Image> callback = null;
 
 
@@ -52,19 +64,23 @@ public class ImageScalerThread extends CancellableThread {
             double scale;
             ObjectListener<Image> callback;
 
+            // Loop until job is received
             while (true) {
                 synchronized (this) {
+                    // Pop queue
                     source = this.source;
                     scale = this.scale;
                     callback = this.callback;
                     clear();
 
                     if (source == null || scale < 0 || callback == null) {
+                        // Nothing in queue
                         try {
                             wait();
                         } catch (InterruptedException ignore) {
                         }
                     } else {
+                        // Something in queue
                         break;
                     }
                 }
@@ -85,12 +101,22 @@ public class ImageScalerThread extends CancellableThread {
         }
     }
 
+    /**
+     * Clears the queue
+     */
     public synchronized void clear() {
         source = null;
         scale = 1;
         callback = null;
     }
 
+    /**
+     * Puts image scale job in queue
+     *
+     * @param source   Source image to scale
+     * @param scale    Amount to scale by
+     * @param callback Callback once complete
+     */
     public synchronized void enqueue(Image source, double scale, ObjectListener<Image> callback) {
         this.source = source;
         this.scale = scale;
