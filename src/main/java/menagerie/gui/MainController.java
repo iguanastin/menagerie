@@ -816,6 +816,7 @@ public class MainController {
                     // TODO: Do this better, jfc
                     for (String note : c.getItem().getNotes()) {
                         MenuItem item = new MenuItem(note);
+                        item.setMnemonicParsing(false);
                         item.setOnAction(event1 -> {
                             try {
                                 Desktop.getDesktop().browse(new URI(note));
