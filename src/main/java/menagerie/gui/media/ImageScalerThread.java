@@ -89,7 +89,7 @@ public class ImageScalerThread extends CancellableThread {
             try {
                 BufferedImage bimg = SwingFXUtils.fromFXImage(source, null);
 
-                ResampleOp resizeOp = new ResampleOp((int) (bimg.getWidth() / scale), (int) (bimg.getHeight() / scale));
+                ResampleOp resizeOp = new ResampleOp((int) (bimg.getWidth() / scale + 0.5), (int) (bimg.getHeight() / scale + 0.5));
                 resizeOp.setUnsharpenMask(AdvancedResizeOp.UnsharpenMask.Normal);
                 resizeOp.setFilter(ResampleFilters.getLanczos3Filter());
                 BufferedImage scaledImage = resizeOp.filter(bimg, bimg);

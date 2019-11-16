@@ -90,8 +90,8 @@ public class DynamicImageView extends ImageView {
             if (scale * getImage().getWidth() > width) scale = width / getImage().getWidth();
             if (scale * getImage().getHeight() > height) scale = height / getImage().getHeight();
 
-            setFitWidth(getImage().getWidth() * scale);
-            setFitHeight(getImage().getHeight() * scale);
+            setFitWidth((int) (getImage().getWidth() * scale));
+            setFitHeight((int) (getImage().getHeight() * scale));
         }
     }
 
