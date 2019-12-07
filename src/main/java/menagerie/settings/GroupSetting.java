@@ -32,14 +32,17 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
-import menagerie.gui.Main;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class GroupSetting extends Setting {
+
+    private static final Logger LOGGER = Logger.getLogger(GroupSetting.class.getName());
+
 
     private static final String TOGGLEABLE_KEY = "toggleable";
     private static final String ENABLED_KEY = "enabled";
@@ -197,7 +200,7 @@ public class GroupSetting extends Setting {
                 if (setting != null) {
                     setting.initFromJSON(j);
                 } else {
-                    Main.log.warning("Unexpected setting found: " + j);
+                    LOGGER.warning("Unexpected setting found: " + j);
                 }
             }
         }

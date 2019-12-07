@@ -24,7 +24,6 @@
 
 package menagerie.model.menagerie.importer;
 
-import menagerie.gui.Main;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.settings.MenagerieSettings;
 import menagerie.util.listeners.ObjectListener;
@@ -33,11 +32,14 @@ import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Logger;
 
 /**
  * A thread that cleanly serializes Menagerie imports as jobs with additional features.
  */
 public class ImporterThread extends Thread {
+
+    private static final Logger LOGGER = Logger.getLogger(ImporterThread.class.getName());
 
     private volatile boolean running = false;
     private volatile boolean paused = false;
@@ -80,14 +82,13 @@ public class ImporterThread extends Thread {
                 continue;
             }
 
+            LOGGER.info("Import queue size: " + queue.size());
             ImportJob job = queue.remove();
 
-            String source;
-            if (job.getUrl() != null) source = job.getUrl().toString();
-            else source = job.getFile().toString();
-            Main.log.info(String.format("Importing: %s", source));
-
+            if (job.getUrl() != null) LOGGER.info("Starting web import: " + job.getUrl());
+            else LOGGER.info("Starting local import: " + job.getFile());
             job.runJob(menagerie, settings);
+            LOGGER.info("Finished import: " + job.getItem().getId());
         }
     }
 

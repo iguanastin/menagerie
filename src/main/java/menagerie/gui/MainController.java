@@ -24,12 +24,16 @@
 
 package menagerie.gui;
 
+import com.mortennobel.imagescaling.AdvancedResizeOp;
+import com.mortennobel.imagescaling.ResampleFilters;
+import com.mortennobel.imagescaling.ResampleOp;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -52,8 +56,12 @@ import menagerie.duplicates.DuplicateFinder;
 import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.grid.ItemGridView;
 import menagerie.gui.media.DynamicMediaView;
+import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
-import menagerie.gui.screens.*;
+import menagerie.gui.screens.HelpScreen;
+import menagerie.gui.screens.ScreenPane;
+import menagerie.gui.screens.SlideshowScreen;
+import menagerie.gui.screens.TagListScreen;
 import menagerie.gui.screens.dialogs.*;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.findonline.FindOnlineScreen;
@@ -63,8 +71,8 @@ import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.screens.move.MoveFilesScreen;
 import menagerie.gui.screens.settings.SettingsScreen;
+import menagerie.gui.taglist.SimpleCSSColorPicker;
 import menagerie.gui.taglist.TagListCell;
-import menagerie.gui.taglist.TagListPopup;
 import menagerie.model.PluginLoader;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
@@ -80,9 +88,12 @@ import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
 
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -93,33 +104,41 @@ import java.util.*;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 public class MainController {
 
+    /**
+     * Logger for this class
+     */
+    private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
+
     // ------------------------------- JFX -------------------------------------------
     public StackPane rootPane;
-
     public BorderPane explorerRootPane;
-    public BorderPane gridPane;
+    public ScreenPane screenPane;
     public MenuBar menuBar;
+
+    // Right side
+    public BorderPane gridPane;
     public PredictiveTextField searchTextField;
-    public PredictiveTextField editTagsTextField;
     public ToggleButton listDescendingToggleButton;
     public ToggleButton showGroupedToggleButton;
     public ToggleButton shuffledSearchButton;
     public ItemGridView itemGridView;
-    public DynamicMediaView previewMediaView;
-    public ItemInfoBox itemInfoBox;
-    public ListView<Tag> tagListView;
     public Label resultCountLabel;
-    public Label explorerZoomLabel;
     public Label scopeLabel;
+    public HBox scopeHBox;
     public Button importsButton;
     public Button logButton;
     public Button backButton;
 
-    public ScreenPane screenPane;
-    public HBox scopeHBox;
+    // Left side
+    public PredictiveTextField editTagsTextField;
+    public DynamicMediaView previewMediaView;
+    public ItemInfoBox itemInfoBox;
+    public ListView<Tag> tagListView;
+    public Label explorerZoomLabel;
 
     // ----------------------------------- Screens -----------------------------------
     private TagListScreen tagListScreen;
@@ -136,14 +155,16 @@ public class MainController {
 
     // --------------------------------- Menagerie vars ------------------------------
     /**
-     * The menagerie this application is using.
+     * The Menagerie environment this application is using.
      */
     private Menagerie menagerie;
     /**
      * History of tag edit events.
      */
     private final Stack<TagEditEvent> tagEditHistory = new Stack<>();
-
+    /**
+     * List of loaded plugins. Populated during initialization
+     */
     private List<MenageriePlugin> plugins = null;
 
     // ------------------------------- Explorer screen vars --------------------------
@@ -171,6 +192,9 @@ public class MainController {
      * Search history stack
      */
     private final Stack<SearchHistory> searchHistory = new Stack<>();
+    /**
+     * Tag listener used to update tag list for currently previewed item
+     */
     private final ListChangeListener<Tag> previewTagListener = c -> {
         while (c.next()) {
             tagListView.getItems().addAll(c.getAddedSubList());
@@ -178,6 +202,9 @@ public class MainController {
             tagListView.getItems().sort(Comparator.comparing(Tag::getName));
         }
     };
+    /**
+     * Search listener listening for items being added or removed from the current search
+     */
     private final ListChangeListener<Item> searchChangeListener = c -> {
         while (c.next()) {
             // Added
@@ -210,8 +237,17 @@ public class MainController {
         }
     };
 
+    /**
+     * Log button pseudoclass for unread error state
+     */
     private final PseudoClass logErrorPseudoClass = PseudoClass.getPseudoClass("error");
+    /**
+     * Log button pseudoclass for unread warning state
+     */
     private final PseudoClass logWarningPseudoClass = PseudoClass.getPseudoClass("warning");
+    /**
+     * Flag set when an unread error log is present
+     */
     private final BooleanProperty logError = new BooleanPropertyBase() {
         @Override
         protected void invalidated() {
@@ -228,6 +264,9 @@ public class MainController {
             return "error";
         }
     };
+    /**
+     * Flag set when an unread warning log is present
+     */
     private final BooleanProperty logWarning = new BooleanPropertyBase() {
         @Override
         protected void invalidated() {
@@ -260,9 +299,9 @@ public class MainController {
      * Settings object used by this application.
      */
     private final MenagerieSettings settings;
-
-    private static final int TARGET_LICENSE_VERSION = 1;
-    private static final File licensesFolder = new File("./licenses");
+    /**
+     * Folder containing plugins to be loaded on startup
+     */
     private static final File pluginsFolder = new File("./plugins");
 
     // ------------------------------ Video preview status ---------------------------
@@ -278,6 +317,12 @@ public class MainController {
 
     // --------------------------------- Constructor ---------------------------------
 
+    /**
+     * Constructs this controller with a given environment
+     *
+     * @param menagerie Menagerie of the environment
+     * @param settings  Settings for the controller and environment
+     */
     MainController(Menagerie menagerie, MenagerieSettings settings) {
         this.menagerie = menagerie;
         this.settings = settings;
@@ -290,7 +335,6 @@ public class MainController {
      */
     @FXML
     public void initialize() {
-
         // Initialize the menagerie
         initImporterThread();
 
@@ -322,10 +366,7 @@ public class MainController {
                 settings.helpOnStart.setValue(false);
             }
 
-            if (settings.licensesAgreed.getValue() < TARGET_LICENSE_VERSION) {
-                screenPane.open(new LicensesScreen(settings, licensesFolder, TARGET_LICENSE_VERSION));
-            }
-
+            // Init user-accepted filetypes in filters
             if (settings.userFileTypes.getValue() != null && !settings.userFileTypes.getValue().trim().isEmpty()) {
                 Filters.USER_EXTS.addAll(Arrays.asList(settings.userFileTypes.getValue().trim().split(" ")));
             }
@@ -339,7 +380,11 @@ public class MainController {
         });
     }
 
+    /**
+     * Initializes a workaround for the garbage implementation of alt tabbing with toolbar menus in JavaFX
+     */
     private void initAltTabbingFix() {
+        LOGGER.info("Initializing alt-tab fix");
         rootPane.getScene().addEventFilter(KeyEvent.KEY_RELEASED, event -> {
             // Workaround for alt-tabbing correctly
             if (event.getCode() == KeyCode.ALT) {
@@ -356,66 +401,121 @@ public class MainController {
         });
     }
 
+    /**
+     * Attempts to load plugins in the plugins folder and initialize them
+     */
     private void initPlugins() {
-        Main.log.info("Loading plugins from: " + pluginsFolder.getAbsolutePath());
+        LOGGER.info("Loading plugins from: " + pluginsFolder.getAbsolutePath());
         plugins = PluginLoader.loadPlugins(pluginsFolder);
         plugins.forEach(plugin -> {
-            Main.log.info("Loaded plugin: " + plugin.getPluginName());
             plugin.addErrorListener(new ErrorListener() {
                 @Override
                 public void postMessage(String s) {
-                    Main.log.info(s);
+                    LOGGER.info(s);
                 }
 
                 @Override
                 public void postException(String s, Exception e) {
-                    Main.log.log(Level.SEVERE, s, e);
+                    LOGGER.log(Level.SEVERE, s, e);
                 }
             });
         });
-        Main.log.info("Loaded " + plugins.size() + " plugins");
+        LOGGER.info("Loaded " + plugins.size() + " plugins");
     }
 
     /**
-     * Initializes JFX screen objects for the ScreenPane
+     * Initializes screen objects for the ScreenPane
      */
     private void initScreens() {
-        Main.log.info("Initializing screens");
+        LOGGER.info("Initializing screens");
 
+        // Explorer. Base screen.
         initExplorer();
-        initSettingsScreen();
-        initTagListScreen();
-        initSlideshowScreen();
-        initHelpScreen();
-        initDuplicatesScreen();
-        initImportScreen();
-        initLogScreen();
-        initImportDialogScreen();
-        initGroupDialogScreen();
-        initMoveFilesScreen();
-        initFindOnlineScreen();
 
+        // SettingsScreen
+        settingsScreen = new SettingsScreen();
+
+        // TagListScreen
+        tagListScreen = new TagListScreen();
+        tagListScreen.setCellFactory(param -> {
+            TagListCell c = new TagListCell(thing -> {
+                String text = searchTextField.getText();
+                if (text == null) text = "";
+                text = text.trim();
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)-" + thing.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
+                    if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
+                    text += thing.getName() + " ";
+                }
+                searchTextField.setText(text.trim());
+                searchTextField.requestFocus();
+                searchTextField.positionCaret(text.length());
+            }, thing -> {
+                String text = searchTextField.getText();
+                if (text == null) text = "";
+                text = text.trim();
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)" + thing.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
+                    if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
+                    text += "-" + thing.getName() + " ";
+                }
+                searchTextField.setText(text.trim());
+                searchTextField.requestFocus();
+                searchTextField.positionCaret(text.length());
+            });
+            c.setOnContextMenuRequested(event -> {
+                MenuItem i0 = new MenuItem("Add note");
+                i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
+                ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem());
+                m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+            });
+            c.setOnMouseClicked(event -> {
+                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
+                    searchTextField.setText(c.getItem().getName() + " ");
+                    searchTextField.positionCaret(searchTextField.getText().length());
+                }
+            });
+            return c;
+        });
+
+        // SlideshowScreen
+        initSlideshowScreen();
+
+        // HelpScreen
+        helpScreen = new HelpScreen();
+
+        // DuplicatesScreen
+        initDuplicatesScreen();
+
+        // ImportScreen
+        initImportScreen();
+
+        // LogScreen
+        initLogScreen();
+
+        // ImportDialogScreen
+        importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
+
+        // GroupDialogScreen
+        groupDialogScreen = new GroupDialogScreen();
+        groupDialogScreen.tagTagmeProperty().bind(settings.tagTagme.valueProperty());
+
+        // MoveFilesScreen
+        moveFilesScreen = new MoveFilesScreen();
+
+        // FindOnlineScreen
+        findOnlineScreen = new FindOnlineScreen();
+        findOnlineScreen.loadAheadProperty().bind(settings.onlineLoadAhead.valueProperty());
+
+        // Init disabling explorer when screen is open
         screenPane.currentProperty().addListener((observable, oldValue, newValue) -> explorerRootPane.setDisable(newValue != null));
     }
 
-    private void initFindOnlineScreen() {
-        findOnlineScreen = new FindOnlineScreen();
-        findOnlineScreen.loadAheadProperty().bind(settings.onlineLoadAhead.valueProperty());
-    }
-
-    private void initMoveFilesScreen() {
-        moveFilesScreen = new MoveFilesScreen();
-    }
-
-    private void initGroupDialogScreen() {
-        groupDialogScreen = new GroupDialogScreen();
-        groupDialogScreen.tagTagmeProperty().bind(settings.tagTagme.valueProperty());
-    }
-
-    private void initImportDialogScreen() {
-        importDialogScreen = new ImportDialogScreen(settings, menagerie, importer);
-    }
-
+    /**
+     * Initializes the import screen, which displays queued/in-progress/failed imports
+     */
     private void initImportScreen() {
         importerScreen = new ImporterScreen(importer, pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs), this::selectItemInGridView);
 
@@ -437,6 +537,9 @@ public class MainController {
         }));
     }
 
+    /**
+     * Initializes the general purpose duplicates screen
+     */
     private void initDuplicatesScreen() {
         duplicateOptionsScreen = new DuplicateOptionsScreen(settings);
         duplicateOptionsScreen.getDuplicatesScreen().setSelectListener(this::selectItemInGridView);
@@ -445,10 +548,9 @@ public class MainController {
         duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().extendedProperty().addListener((observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
     }
 
-    private void initHelpScreen() {
-        helpScreen = new HelpScreen();
-    }
-
+    /**
+     * Initializes the slideshow screen
+     */
     private void initSlideshowScreen() {
         slideshowScreen = new SlideshowScreen(item -> {
             slideshowScreen.close();
@@ -463,7 +565,7 @@ public class MainController {
      * Initializes menagerie importer thread.
      */
     private void initImporterThread() {
-        Main.log.info("Starting importer thread");
+        LOGGER.info("Starting importer thread");
         importer = new ImporterThread(menagerie, settings);
         importer.setDaemon(true);
         importer.start();
@@ -480,47 +582,6 @@ public class MainController {
     }
 
     /**
-     * Initializes the settings screen
-     */
-    private void initSettingsScreen() {
-        settingsScreen = new SettingsScreen();
-    }
-
-    /**
-     * Initializes the tag list screen
-     */
-    private void initTagListScreen() {
-        tagListScreen = new TagListScreen();
-        tagListScreen.setCellFactory(param -> {
-            TagListCell c = new TagListCell();
-            c.setOnContextMenuRequested(event -> {
-                MenuItem i0 = new MenuItem("Add note");
-                i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
-                MenuItem i1 = new MenuItem("Search this tag");
-                i1.setOnAction(event1 -> {
-                    searchTextField.setText(c.getItem().getName());
-                    searchTextField.positionCaret(searchTextField.getText().length());
-                    tagListScreen.close();
-                    GroupItem scope = null;
-                    if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                    applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
-                });
-                ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1);
-                m.show(c, event.getScreenX(), event.getScreenY());
-            });
-            final TagListPopup popup = new TagListPopup();
-            popup.setAutoHide(true);
-            c.setOnMouseClicked(event -> {
-                if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-                    popup.setTag(c.getItem());
-                    popup.show(c, event.getScreenX(), event.getScreenY());
-                }
-            });
-            return c;
-        });
-    }
-
-    /**
      * Initializes the log screen
      */
     private void initLogScreen() {
@@ -528,7 +589,7 @@ public class MainController {
         logScreen.getListView().setCellFactory(param -> new LogListCell());
         logButton.getStyleClass().addAll("log-button");
 
-        Main.log.addHandler(new Handler() {
+        Main.MENAGERIE_LOGGER.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {
                 StringBuilder work = new StringBuilder(new Date(record.getMillis()).toString());
@@ -564,14 +625,14 @@ public class MainController {
     }
 
     /**
-     * Initializes the explorer
+     * Initializes the core explorer interface
      */
     private void initExplorer() {
         // Set image grid width from settings
         setGridWidth(settings.gridWidth.getValue());
 
         // Init image grid
-        initItemGridView();
+        initExplorerItemGridView();
 
         // Init drag/drop handlers
         explorerRootPane.disabledProperty().addListener((observable1, oldValue1, newValue1) -> explorerRootPaneDisabledChanged(newValue1));
@@ -607,6 +668,7 @@ public class MainController {
         // Init scope label binding
         scopeLabel.maxWidthProperty().bind(scopeHBox.widthProperty().subtract(backButton.widthProperty()).subtract(scopeHBox.getSpacing()));
 
+        // Init search button icons/tooltips
         listDescendingToggleButton.setGraphic(new ImageView(new Image(getClass().getResource("/misc/descending.png").toString())));
         listDescendingToggleButton.setTooltip(new Tooltip("Descending order"));
         showGroupedToggleButton.setGraphic(new ImageView(new Image(getClass().getResource("/misc/opengroups.png").toString())));
@@ -614,11 +676,15 @@ public class MainController {
         shuffledSearchButton.setGraphic(new ImageView(new Image(getClass().getResource("/misc/shuffle.png").toString())));
         shuffledSearchButton.setTooltip(new Tooltip("Shuffle results"));
 
+        // Init settings listeners
         settings.gridWidth.valueProperty().addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
         settings.muteVideo.valueProperty().addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
         settings.repeatVideo.valueProperty().addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
     }
 
+    /**
+     * Initializes the predictive text fields with option listeners
+     */
     private void initPredictiveTextFields() {
         editTagsTextField.setOptionsListener(prefix -> {
             prefix = prefix.toLowerCase();
@@ -681,37 +747,57 @@ public class MainController {
         });
     }
 
+    /**
+     * Initializes the cell factory for the explorer tag list
+     */
     private void initExplorerTagListCellFactory() {
         tagListView.setCellFactory(param -> {
-            TagListCell c = new TagListCell();
+            TagListCell c = new TagListCell(thing -> {
+                String text = searchTextField.getText();
+                if (text == null) text = "";
+                text = text.trim();
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)-" + thing.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
+                    if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
+                    text += thing.getName() + " ";
+                }
+                searchTextField.setText(text.trim());
+                searchTextField.requestFocus();
+                searchTextField.positionCaret(text.length());
+            }, thing -> {
+                String text = searchTextField.getText();
+                if (text == null) text = "";
+                text = text.trim();
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)" + thing.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
+                    if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
+                    text += "-" + thing.getName() + " ";
+                }
+                searchTextField.setText(text.trim());
+                searchTextField.requestFocus();
+                searchTextField.positionCaret(text.length());
+            });
+            // TODO: Make a custom popup that encompasses all the tag controls?
             c.setOnContextMenuRequested(event -> {
                 if (c.getItem() != null) {
-                    MenuItem i0 = new MenuItem("Add note");
-                    i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
-                    MenuItem i1 = new MenuItem("Add to search");
-                    i1.setOnAction(event1 -> {
-                        if (searchTextField.getText() == null) {
-                            searchTextField.setText(c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " " + c.getItem().getName());
-                        }
-                        GroupItem scope = null;
-                        if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
+                    // TODO Transfer all of this to TagListCell class and use listeners/callbacks
+                    MenuItem addNote = new MenuItem("Add note");
+                    addNote.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
+                    MenuItem tagSelected = new MenuItem("Tag selected");
+                    tagSelected.setOnAction(event1 -> {
+                        Map<Item, List<Tag>> added = new HashMap<>();
+                        itemGridView.getSelected().forEach(item -> {
+                            if (item.addTag(c.getItem())) {
+                                added.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
+                            }
+                        });
+
+                        tagEditHistory.push(new TagEditEvent(added, null));
                     });
-                    MenuItem i2 = new MenuItem("Exclude from search");
-                    i2.setOnAction(event1 -> {
-                        if (searchTextField.getText() == null || searchTextField.getText().isEmpty()) {
-                            searchTextField.setText("-" + c.getItem().getName());
-                        } else {
-                            searchTextField.setText(searchTextField.getText().trim() + " -" + c.getItem().getName());
-                        }
-                        GroupItem scope = null;
-                        if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-                        applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(), showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
-                    });
-                    MenuItem i3 = new MenuItem("Remove from selected");
-                    i3.setOnAction(event1 -> {
+                    MenuItem untagSelected = new MenuItem("Untag selected");
+                    untagSelected.setOnAction(event1 -> {
                         Map<Item, List<Tag>> removed = new HashMap<>();
                         itemGridView.getSelected().forEach(item -> {
                             if (item.removeTag(c.getItem())) {
@@ -721,17 +807,39 @@ public class MainController {
 
                         tagEditHistory.push(new TagEditEvent(null, removed));
                     });
-                    ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem(), i1, i2, new SeparatorMenuItem(), i3);
-                    m.show(c, event.getScreenX(), event.getScreenY());
+                    SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker(color -> c.getItem().setColor(color));
+                    colorPicker.getTextfield().setText(c.getItem().getColor());
+                    CustomMenuItem tagColorPicker = new CustomMenuItem(colorPicker, false);
+
+                    ContextMenu m = new ContextMenu(addNote, new SeparatorMenuItem(), tagSelected, untagSelected, new SeparatorMenuItem(), tagColorPicker, new SeparatorMenuItem());
+
+                    // TODO: Do this better, jfc
+                    for (String note : c.getItem().getNotes()) {
+                        MenuItem item = new MenuItem(note);
+                        item.setMnemonicParsing(false);
+                        item.setOnAction(event1 -> {
+                            try {
+                                Desktop.getDesktop().browse(new URI(note));
+                            } catch (IOException | URISyntaxException e) {
+                                try {
+                                    Desktop.getDesktop().browse(new URI("https://" + c.getItem()));
+                                } catch (IOException | URISyntaxException ignore) {
+                                }
+                            }
+                        });
+                        m.getItems().add(item);
+                    }
+
+                    m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
                 }
             });
 
-            final TagListPopup popup = new TagListPopup();
-            popup.setAutoHide(true);
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-                    popup.setTag(c.getItem());
-                    popup.show(c, event.getScreenX(), event.getScreenY());
+                    searchTextField.setText(c.getItem().getName() + " ");
+                    searchTextField.requestFocus();
+                    searchTextField.positionCaret(searchTextField.getText().length());
+                    event.consume();
                 }
             });
 
@@ -742,7 +850,7 @@ public class MainController {
     /**
      * Initializes listeners and etc. of the itemGridView
      */
-    private void initItemGridView() {
+    private void initExplorerItemGridView() {
         itemGridView.addSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
         itemGridView.setCellFactory(param -> {
             ItemGridCell c = new ItemGridCell();
@@ -815,7 +923,7 @@ public class MainController {
                 if (!itemGridView.isSelected(c.getItem())) {
                     itemGridView.select(c.getItem(), false, false);
                 }
-                constructGridCellContextMenu(itemGridView.getSelected()).show(c, event.getScreenX(), event.getScreenY());
+                constructGridCellContextMenu(itemGridView.getSelected()).show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
                 event.consume();
             });
             c.setOnMouseClicked(event -> {
@@ -826,7 +934,7 @@ public class MainController {
                         try {
                             Desktop.getDesktop().open(((MediaItem) c.getItem()).getFile());
                         } catch (IOException e) {
-                            Main.log.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) c.getItem()).getFile(), e);
+                            LOGGER.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) c.getItem()).getFile(), e);
                         }
                     }
                 }
@@ -859,10 +967,10 @@ public class MainController {
     }
 
     /**
-     * Applies window properties to the window and starts listeners for changes to update the settings object.
+     * Applies window properties to the window and starts listeners for changes to update the settings objects
      */
     private void initWindowPropertiesAndListeners() {
-        Main.log.info("Initializing window properties and listeners");
+        LOGGER.info("Initializing window properties and listeners");
 
         Stage stage = ((Stage) explorerRootPane.getScene().getWindow());
         stage.setMaximized(settings.windowMaximized.getValue());
@@ -1001,7 +1109,7 @@ public class MainController {
                     try {
                         Desktop.getDesktop().open(((MediaItem) last).getFile());
                     } catch (IOException e) {
-                        Main.log.log(Level.WARNING, "Error opening file with system default program", e);
+                        LOGGER.log(Level.WARNING, "Error opening file with system default program", e);
                     }
                 }
             });
@@ -1012,7 +1120,7 @@ public class MainController {
                     try {
                         Runtime.getRuntime().exec("explorer.exe /select, " + ((MediaItem) last).getFile().getAbsolutePath());
                     } catch (IOException e) {
-                        Main.log.log(Level.SEVERE, "Error opening file in explorer", e);
+                        LOGGER.log(Level.SEVERE, "Error opening file in explorer", e);
                     }
                 }
             });
@@ -1038,6 +1146,11 @@ public class MainController {
         return cm;
     }
 
+    /**
+     * Opens a dialog to allow the user to rename a group
+     *
+     * @param group Group to rename
+     */
     private void openGroupRenameDialog(GroupItem group) {
         new TextDialogScreen().open(screenPane, "Rename group", "Current: " + group.getTitle(), group.getTitle(), group::setTitle, null);
     }
@@ -1063,6 +1176,11 @@ public class MainController {
         if (item != null) item.getTags().addListener(previewTagListener);
     }
 
+    /**
+     * Opens the "find online" dialog. Uses existing plugins to reverse image search and find duplicates online.
+     *
+     * @param selected Items to search online for
+     */
     private void findOnlineDialog(List<Item> selected) {
         List<MediaItem> items = new ArrayList<>();
         for (Item item : selected) {
@@ -1145,13 +1263,16 @@ public class MainController {
             }
         }
         groupDialogScreen.open(screenPane, menagerie, title, toGroup, group -> {
-            Main.log.info("Created group: " + group);
+            LOGGER.info("Created group: " + group);
             Platform.runLater(() -> {
                 if (currentSearch.getResults().contains(group)) itemGridView.select(group, false, false);
             });
         });
     }
 
+    /**
+     * Opens the log screen and clears error/warning flags
+     */
     private void openLog() {
         logError.set(false);
         logWarning.set(false);
@@ -1223,7 +1344,7 @@ public class MainController {
      * @param showGrouped Show MediaItems that are in a group.
      */
     private void applySearch(String search, GroupItem groupScope, boolean descending, boolean showGrouped, boolean shuffled) {
-        Main.log.info("Searching: \"" + search + "\", group:" + groupScope + ", descending:" + descending + ", showGrouped:" + showGrouped + ", shuffled:" + shuffled);
+        LOGGER.info("Searching: \"" + search + "\", group:" + groupScope + ", descending:" + descending + ", showGrouped:" + showGrouped + ", shuffled:" + shuffled);
 
         // Clean up previous search
         if (currentSearch != null) {
@@ -1238,24 +1359,21 @@ public class MainController {
         previewItem(null);
 
         // Create new search
-        if (groupScope == null) {
-            showGroupedToggleButton.setDisable(false);
-            showGroupedToggleButton.setSelected(showGrouped);
-            shuffledSearchButton.setDisable(false);
-            shuffledSearchButton.setSelected(shuffled);
-            currentSearch = new Search(search, descending, showGrouped, shuffled);
-            scopeLabel.setText("Scope: All");
-            scopeLabel.setTooltip(null);
-        } else {
-            showGroupedToggleButton.setSelected(true);
-            showGroupedToggleButton.setDisable(true);
-            shuffledSearchButton.setSelected(false);
-            shuffledSearchButton.setDisable(true);
+        boolean inGroup = groupScope != null;
+        shuffledSearchButton.setDisable(inGroup);
+        shuffledSearchButton.setSelected(shuffled && !inGroup);
+        showGroupedToggleButton.setDisable(inGroup);
+        showGroupedToggleButton.setSelected(showGrouped || inGroup);
+        if (inGroup) {
             currentSearch = new GroupSearch(search, groupScope, descending, shuffled);
             scopeLabel.setText("Scope: " + groupScope.getTitle());
             Tooltip tt = new Tooltip(groupScope.getTitle());
             tt.setWrapText(true);
             scopeLabel.setTooltip(tt);
+        } else {
+            currentSearch = new Search(search, descending, showGrouped, shuffled);
+            scopeLabel.setText("Scope: All");
+            scopeLabel.setTooltip(null);
         }
         menagerie.registerSearch(currentSearch);
         currentSearch.refreshSearch(menagerie.getItems());
@@ -1292,7 +1410,7 @@ public class MainController {
         if (itemGridView.getSelected().size() < 100) {
             editTagsUtility(input);
         } else {
-            new ConfirmationScreen().open(screenPane, "Editting large number of items", "You are attempting to edit " + itemGridView.getSelected().size() + " items. Continue?", () -> editTagsUtility(input), null);
+            new ConfirmationScreen().open(screenPane, "Editing large number of items", "You are attempting to edit " + itemGridView.getSelected().size() + " items. Continue?", () -> editTagsUtility(input), null);
         }
     }
 
@@ -1338,6 +1456,11 @@ public class MainController {
         }
     }
 
+    /**
+     * Selects an item in the grid view. If the item is hidden in a group, selects the group instead.
+     *
+     * @param item Item to select
+     */
     private void selectItemInGridView(Item item) {
         if (itemGridView.getItems().contains(item)) {
             itemGridView.select(item, false, false);
@@ -1386,10 +1509,10 @@ public class MainController {
     private void startWatchingFolderForImages(String folder, boolean moveToDefault) {
         File watchFolder = new File(folder);
         if (watchFolder.exists() && watchFolder.isDirectory()) {
-            Main.log.info("Starting folder watcher in folder: " + watchFolder);
+            LOGGER.info("Starting folder watcher in folder: " + watchFolder);
             folderWatcherThread = new FolderWatcherThread(watchFolder, Filters.FILE_NAME_FILTER, 30000, files -> {
                 for (File file : files) {
-                    Main.log.info("Folder watcher got file to import: " + file);
+                    LOGGER.info("Folder watcher got file to import: " + file);
                     if (moveToDefault) {
                         String work = settings.defaultFolder.getValue();
                         if (!work.endsWith("/") && !work.endsWith("\\")) work += "/";
@@ -1419,49 +1542,47 @@ public class MainController {
      * @param revertDatabase Revert database to last backup.
      */
     private void cleanExit(boolean revertDatabase) {
-        Main.log.info("Attempting clean exit");
+        LOGGER.info("Attempting clean exit");
 
         Platform.runLater(() -> {
             rootPane.getChildren().clear();
             Platform.exit();
         });
 
-        previewMediaView.releaseVLCJ();
-        slideshowScreen.releaseVLCJ();
-        duplicateOptionsScreen.releaseVLCJ();
+        DynamicVideoView.releaseAllVLCJ();
         Thumbnail.releaseVLCJResources();
 
         plugins.forEach(plugin -> {
-            Main.log.info("Attempting to close plugin: " + plugin.getPluginName());
+            LOGGER.info("Attempting to close plugin: " + plugin.getPluginName());
             plugin.close();
         });
 
         try {
             settings.save(new File(Main.SETTINGS_PATH));
         } catch (IOException e1) {
-            Main.log.log(Level.WARNING, "Failed to save settings to file", e1);
+            LOGGER.log(Level.WARNING, "Failed to save settings to file", e1);
         }
 
         new Thread(() -> {
             try {
-                Main.log.info("Attempting to shut down Menagerie database and defragment the file");
+                LOGGER.info("Attempting to shut down Menagerie database and defragment the file");
                 menagerie.getDatabaseManager().shutdownDefrag();
-                Main.log.info("Done defragging database file");
+                LOGGER.info("Done defragging database file");
 
                 if (revertDatabase) {
                     File database = DatabaseManager.resolveDatabaseFile(settings.dbUrl.getValue());
                     File backup = new File(database + ".bak");
-                    Main.log.warning(String.format("Reverting to last backup database: %s", backup.toString()));
+                    LOGGER.warning(String.format("Reverting to last backup database: %s", backup.toString()));
                     try {
                         Files.move(backup.toPath(), database.toPath(), StandardCopyOption.REPLACE_EXISTING);
                     } catch (IOException e) {
-                        Main.log.log(Level.SEVERE, "Failed to revert the database: " + database, e);
+                        LOGGER.log(Level.SEVERE, "Failed to revert the database: " + database, e);
                     }
                 }
 
-                Main.log.info("Finished shutting down...");
+                LOGGER.info("Finished shutting down...");
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "SQL exception when shutting down with defrag", e);
+                LOGGER.log(Level.SEVERE, "SQL exception when shutting down with defrag", e);
             }
 
             System.exit(0);
@@ -1666,7 +1787,7 @@ public class MainController {
                 }
                 if (Filters.FILE_NAME_FILTER.accept(target)) importer.addJob(new ImportJob(new URL(url), target, null));
             } catch (MalformedURLException e) {
-                Main.log.log(Level.WARNING, "File dragged from web has bad URL", e);
+                LOGGER.log(Level.WARNING, "File dragged from web has bad URL", e);
             }
         }
         event.consume();
@@ -1777,6 +1898,19 @@ public class MainController {
             }
         } else {
             switch (event.getCode()) {
+                case S:
+                    double scale = previewMediaView.getImageView().getScale().get();
+
+                    if (scale > 2 && !previewMediaView.getImageView().isScaleApplied()) {
+                        BufferedImage bimg = SwingFXUtils.fromFXImage(previewMediaView.getImageView().getTrueImage(), null);
+
+                        ResampleOp resizeOp = new ResampleOp((int) (bimg.getWidth() / scale), (int) (bimg.getHeight() / scale));
+                        resizeOp.setUnsharpenMask(AdvancedResizeOp.UnsharpenMask.Normal);
+                        resizeOp.setFilter(ResampleFilters.getLanczos3Filter());
+                        BufferedImage scaledImage = resizeOp.filter(bimg, bimg);
+
+                        previewMediaView.getImageView().setAppliedScaleImage(SwingFXUtils.toFXImage(scaledImage, null));
+                    }
                 case ESCAPE:
                     itemGridView.requestFocus();
                     event.consume();
@@ -1791,7 +1925,7 @@ public class MainController {
                             try {
                                 Desktop.getDesktop().open(((MediaItem) item).getFile());
                             } catch (IOException e) {
-                                Main.log.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) item).getFile(), e);
+                                LOGGER.log(Level.SEVERE, "Failed to open file with system default: " + ((MediaItem) item).getFile(), e);
                             }
                             event.consume();
                         }

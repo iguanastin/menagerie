@@ -56,7 +56,7 @@ public class PredictiveTextField extends TextField {
         vBox.getStyleClass().addAll(POPUP_STYLE_CLASS);
         vBox.setPadding(new Insets(5));
 
-        textProperty().addListener((observable, oldValue, newValue) -> textChanged());
+        caretPositionProperty().addListener((observable, oldValue, newValue) -> caretChanged());
         focusedProperty().addListener((observable, oldValue, newValue) -> {
             if (!newValue) popup.hide();
         });
@@ -67,7 +67,7 @@ public class PredictiveTextField extends TextField {
     /**
      * Called when the text has changed.
      */
-    private void textChanged() {
+    private void caretChanged() {
         selectedIndex = -1;
         popup.hide();
 
@@ -77,7 +77,10 @@ public class PredictiveTextField extends TextField {
         if (word == null || word.isEmpty()) {
             return;
         }
-        if (word.contains(" ")) word = word.substring(word.lastIndexOf(' ') + 1);
+        if (word.contains(" ")) {
+            word = word.substring(0, Math.min(word.length(), getCaretPosition()));
+            word = word.substring(word.lastIndexOf(' ') + 1);
+        }
 
         List<String> options = optionsListener.getOptionsFor(word);
         if (options == null || options.isEmpty()) {
@@ -93,7 +96,7 @@ public class PredictiveTextField extends TextField {
         });
         updateOptionCSSStyles();
 
-        popup.show(this, 0, 0);
+        popup.show(getScene().getWindow(), 0, 0);
         updatePopupPosition();
     }
 
@@ -170,14 +173,13 @@ public class PredictiveTextField extends TextField {
     }
 
     private void acceptOption(String option) {
-        if (getText() == null || getText().isEmpty() || !getText().contains(" ")) {
-            setText(option + " ");
-        } else {
-            String temp = getText().substring(0, getText().lastIndexOf(' ') + 1);
-            setText(temp + option + " ");
-        }
+        if (getText() == null) setText("");
 
-        positionCaret(getText().length() + 1);
+        String text = getText();
+        int i = text.substring(0, getCaretPosition()).lastIndexOf(" ") + 1; // Always 0 or above
+        setText(text.substring(0, i) + option + " " + text.substring(getCaretPosition()));
+
+        positionCaret(i + option.length() + 1);
 
         popup.hide();
     }

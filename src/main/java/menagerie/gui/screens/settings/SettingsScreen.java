@@ -47,8 +47,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SettingsScreen extends Screen {
+
+    private static final Logger LOGGER = Logger.getLogger(SettingsScreen.class.getName());
 
     private static final Insets ALL5 = new Insets(5);
 
@@ -99,7 +102,7 @@ public class SettingsScreen extends Screen {
         try {
             settings.save(new File("C:\\temp\\menagerie.json"));
         } catch (IOException e) {
-            Main.log.log(Level.WARNING, "Failed to save settings file: " + Main.SETTINGS_PATH, e);
+            LOGGER.log(Level.WARNING, "Failed to save settings file: " + Main.SETTINGS_PATH, e);
         }
         close();
     }

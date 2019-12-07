@@ -26,7 +26,9 @@ package menagerie.gui.grid;
 
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -48,12 +50,24 @@ public class ItemGridView extends GridView<Item> {
      */
     public static final int CELL_BORDER = 4;
 
+    /**
+     * List of selected items
+     */
     private final ObservableList<Item> selected = FXCollections.observableArrayList();
-    private Item lastSelected = null;
+    /**
+     * The the most recent item to be added to the selection
+     */
+    private final ObjectProperty<Item> lastSelected = new SimpleObjectProperty<>();
 
+    /**
+     * Notifies these listeners when the selection set changes
+     */
     private final Set<ObjectListener<Item>> selectionListeners = new HashSet<>();
 
 
+    /**
+     * Constructs an item grid that can display Menagerie items.
+     */
     public ItemGridView() {
         setCellWidth(Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2);
         setCellHeight(Thumbnail.THUMBNAIL_SIZE + CELL_BORDER * 2);
@@ -216,7 +230,7 @@ public class ItemGridView extends GridView<Item> {
                 selected.add(item);
             }
         }
-        lastSelected = item;
+        lastSelected.set(item);
 
         // Ensure last selected cell is visible
         if (getLastSelected() != null) {
@@ -268,6 +282,15 @@ public class ItemGridView extends GridView<Item> {
      * @return The most recently selected item.
      */
     public Item getLastSelected() {
+        return lastSelected.get();
+    }
+
+    /**
+     * Observable item that was most recently selected
+     *
+     * @return Last selected item
+     */
+    public ObjectProperty<Item> lastSelectedProperty() {
         return lastSelected;
     }
 

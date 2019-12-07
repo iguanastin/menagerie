@@ -25,7 +25,6 @@
 package menagerie.settings;
 
 import javafx.beans.property.*;
-import menagerie.gui.Main;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -36,6 +35,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A JavaFX Application settings object supporting 4 types, file storing, and settings listeners via Property objects.
@@ -43,6 +43,8 @@ import java.util.logging.Level;
  * Property events are handled on the FX thread.
  */
 public class OldSettings {
+
+    private static final Logger LOGGER = Logger.getLogger(OldSettings.class.getName());
 
     /**
      * Settings keys
@@ -69,7 +71,7 @@ public class OldSettings {
                 while (scan.hasNextLine()) {
                     String line = scan.nextLine();
                     if (line.startsWith("#") || line.isEmpty()) continue;
-                    Main.log.config("Settings read line: " + line);
+                    LOGGER.config("Settings read line: " + line);
 
                     try {
                         final int firstColonIndex = line.indexOf(':');
@@ -79,7 +81,7 @@ public class OldSettings {
                         final String valueString = line.substring(secondColonIndex + 1);
 
                         if (key == null) {
-                            Main.log.warning("Settings tried to load unknown key in line: " + line);
+                            LOGGER.warning("Settings tried to load unknown key in line: " + line);
                             continue;
                         }
 
@@ -92,16 +94,16 @@ public class OldSettings {
                         } else if (typeName.equalsIgnoreCase("INTEGER")) {
                             setInt(key, Integer.parseInt(valueString));
                         } else {
-                            Main.log.warning("Settings tried to load unknown type from line: " + line);
+                            LOGGER.warning("Settings tried to load unknown type from line: " + line);
                         }
                     } catch (Exception e) {
-                        Main.log.log(Level.WARNING, "Error trying to read settings line: " + line);
+                        LOGGER.log(Level.WARNING, "Error trying to read settings line: " + line);
                     }
                 }
 
                 scan.close();
             } catch (IOException e) {
-                Main.log.log(Level.WARNING, "Error trying to read settings file: " + file, e);
+                LOGGER.log(Level.WARNING, "Error trying to read settings file: " + file, e);
             }
         }
     }

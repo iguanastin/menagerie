@@ -44,7 +44,6 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.layout.*;
 import menagerie.duplicates.DuplicateFinder;
 import menagerie.duplicates.Match;
-import menagerie.gui.Main;
 import menagerie.gui.Thumbnail;
 import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.media.DynamicImageView;
@@ -65,8 +64,12 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class FindOnlineScreen extends Screen {
+
+    private static final Logger LOGGER = Logger.getLogger(FindOnlineScreen.class.getName());
+
 
     private final static Insets ALL5 = new Insets(5);
 
@@ -181,12 +184,12 @@ public class FindOnlineScreen extends Screen {
                     try {
                         Desktop.getDesktop().browse(new URI(c.getItem().getPageURL()));
                     } catch (IOException | URISyntaxException e) {
-                        Main.log.log(Level.SEVERE, "Failed trying to open url in default browser: " + c.getItem().getPageURL(), e);
+                        LOGGER.log(Level.SEVERE, "Failed trying to open url in default browser: " + c.getItem().getPageURL(), e);
                     }
                 });
 
                 ContextMenu cm = new ContextMenu(open);
-                cm.show(c, event.getScreenX(), event.getScreenY());
+                cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
             });
             return c;
         });

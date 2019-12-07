@@ -49,8 +49,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DuplicateOptionsScreen extends Screen {
+
+    private static final Logger LOGGER = Logger.getLogger(DuplicateOptionsScreen.class.getName());
 
     private static final double DEFAULT_CONFIDENCE = 0.95;
     private static final long PROGRESS_UPDATE_INTERVAL = 16;
@@ -236,13 +239,13 @@ public class DuplicateOptionsScreen extends Screen {
             settings.duplicatesConfidence.setValue(Double.parseDouble(confidenceTextField.getText()));
             settings.duplicatesIncludeGroups.setValue(includeGroupElementsCheckBox.isSelected());
         } catch (NumberFormatException e) {
-            Main.log.log(Level.WARNING, "Failed to convert DuplicateOptionsScreen confidenceTextField to double for saving settings", e);
+            LOGGER.log(Level.WARNING, "Failed to convert DuplicateOptionsScreen confidenceTextField to double for saving settings", e);
         }
 
         try {
             settings.save(new File(Main.SETTINGS_PATH));
         } catch (IOException e) {
-            Main.log.log(Level.SEVERE, "Failed to save settings file", e);
+            LOGGER.log(Level.SEVERE, "Failed to save settings file", e);
         }
     }
 

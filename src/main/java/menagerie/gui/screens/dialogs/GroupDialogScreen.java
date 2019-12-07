@@ -34,7 +34,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.model.menagerie.GroupItem;
@@ -45,8 +44,12 @@ import menagerie.util.listeners.ObjectListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class GroupDialogScreen extends Screen {
+
+    private static final Logger LOGGER = Logger.getLogger(GroupDialogScreen.class.getName());
+
 
     private final TextField textField = new TextField();
     private final Label messageLabel = new Label("N/A");
@@ -148,10 +151,10 @@ public class GroupDialogScreen extends Screen {
 
                 if (groupListener != null) groupListener.pass(group);
             } else {
-                Main.log.severe("Failed to create group: " + textField.getText());
+                LOGGER.severe("Failed to create group: " + textField.getText());
             }
         } else {
-            Main.log.warning("Cannot create group: " + textField.getText());
+            LOGGER.warning("Cannot create group: " + textField.getText());
         }
 
         close();

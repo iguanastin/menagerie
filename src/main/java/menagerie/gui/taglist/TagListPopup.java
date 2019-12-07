@@ -31,7 +31,6 @@ import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
 import javafx.stage.Popup;
-import menagerie.gui.Main;
 import menagerie.model.menagerie.Tag;
 
 import java.awt.*;
@@ -39,13 +38,17 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TagListPopup extends Popup {
+
+    private static final Logger LOGGER = Logger.getLogger(TagListPopup.class.getName());
+
 
     private static final String DEFAULT_STYLE_CLASS = "tag-list-popup";
 
     private final Label nameLabel = new Label();
-    private final SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker(new String[]{"#609dff", "cyan", "#22e538", "yellow", "orange", "red", "#ff7ae6", "#bf51ff"}, null);
+    private final SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker();
 
     private final ListView<String> noteListView = new ListView<>();
 
@@ -68,7 +71,7 @@ public class TagListPopup extends Popup {
                         try {
                             Desktop.getDesktop().browse(new URI("https://" + c.getItem()));
                         } catch (IOException | URISyntaxException e2) {
-                            Main.log.log(Level.SEVERE, String.format("Exception when opening \"%s\" in browser", c.getItem()), e2);
+                            LOGGER.log(Level.SEVERE, String.format("Exception when opening \"%s\" in browser", c.getItem()), e2);
                         }
                     }
                 }
@@ -80,7 +83,7 @@ public class TagListPopup extends Popup {
                 }
             });
             ContextMenu cm = new ContextMenu(delete);
-            c.setOnContextMenuRequested(event -> cm.show(c, event.getScreenX(), event.getScreenY()));
+            c.setOnContextMenuRequested(event -> cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY()));
             c.maxWidthProperty().bind(noteListView.widthProperty().subtract(20));
             return c;
         });

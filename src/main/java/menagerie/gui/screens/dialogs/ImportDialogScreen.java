@@ -52,8 +52,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ImportDialogScreen extends Screen {
+
+    private static final Logger LOGGER = Logger.getLogger(ImportDialogScreen.class.getName());
+
 
     private enum Order {
         As_Selected, Alphabetical, Date_Modified
@@ -229,7 +233,7 @@ public class ImportDialogScreen extends Screen {
         try {
             settings.save(new File(Main.SETTINGS_PATH));
         } catch (IOException e) {
-            Main.log.log(Level.WARNING, "Unable to save settings file", e);
+            LOGGER.log(Level.WARNING, "Unable to save settings file", e);
         }
     }
 
@@ -319,9 +323,9 @@ public class ImportDialogScreen extends Screen {
                                     if (renameToHash && job.getItem().getMD5() != null) {
                                         File dest = new File(job.getFile().getParentFile(), job.getItem().getMD5() + job.getFile().getName().substring(job.getFile().getName().lastIndexOf('.')));
                                         if (job.getItem().moveFile(dest)) {
-                                            Main.log.info(String.format("Renamed file \"%s\" to \"%s\"", job.getFile().getName(), dest.getName()));
+                                            LOGGER.info(String.format("Renamed file \"%s\" to \"%s\"", job.getFile().getName(), dest.getName()));
                                         } else {
-                                            Main.log.warning(String.format("Failed to rename file \"%s\" to \"%s\"", job.getFile(), dest));
+                                            LOGGER.warning(String.format("Failed to rename file \"%s\" to \"%s\"", job.getFile(), dest));
                                         }
                                     }
                                 }

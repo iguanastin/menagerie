@@ -93,7 +93,7 @@ public class LogListCell extends ListCell<LogItem> {
                     cc.putString(label.getText());
                     Clipboard.getSystemClipboard().setContent(cc);
                 });
-                new ContextMenu(copy).show(this, event.getScreenX(), event.getScreenY());
+                new ContextMenu(copy).show(getScene().getWindow(), event.getScreenX(), event.getScreenY());
             }
         });
     }

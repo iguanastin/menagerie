@@ -38,7 +38,6 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import menagerie.duplicates.Match;
 import menagerie.gui.ItemInfoBox;
-import menagerie.gui.Main;
 import menagerie.gui.media.PanZoomImageView;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
@@ -61,8 +60,11 @@ import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class CompareToOnlineScreen extends Screen {
+
+    private static final Logger LOGGER = Logger.getLogger(CompareToOnlineScreen.class.getName());
 
     private final static Insets ALL5 = new Insets(5);
 
@@ -132,7 +134,7 @@ public class CompareToOnlineScreen extends Screen {
             try {
                 Desktop.getDesktop().browse(URI.create(currentMatch.getPageURL()));
             } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "Unable to open page url: " + currentMatch.getPageURL(), e);
+                LOGGER.log(Level.SEVERE, "Unable to open page url: " + currentMatch.getPageURL(), e);
             }
         });
         replaceButton.setDisable(true);
@@ -150,18 +152,18 @@ public class CompareToOnlineScreen extends Screen {
                 close();
             } else {
                 File temp = Paths.get(System.getProperty("java.io.tmpdir")).resolve("menagerie-compare-temp").toFile();
-                if (temp.delete()) Main.log.info("Deleted existing temp file: " + temp);
+                if (temp.delete()) LOGGER.info("Deleted existing temp file: " + temp);
 
                 File target = new File(currentItem.getFile().getAbsolutePath());
 
                 if (currentItem.getFile().renameTo(temp)) {
                     if (tempImageFile.get().renameTo(target)) {
-                        if (!temp.delete()) Main.log.warning("Failed to delete temp file: " + temp);
+                        if (!temp.delete()) LOGGER.warning("Failed to delete temp file: " + temp);
                         reInitCurrentItem();
                         pokeSuccessListeners();
                         close();
                     } else {
-                        if (!currentItem.getFile().renameTo(target)) Main.log.severe("Failed to put original file (" + currentItem.getFile() + ") back in place: " + target);
+                        if (!currentItem.getFile().renameTo(target)) LOGGER.severe("Failed to put original file (" + currentItem.getFile() + ") back in place: " + target);
                         new AlertDialogScreen().open(getManager(), "Unable to replace", "Failed to replace file. System does not allow file replace", null);
                     }
                 } else {
@@ -248,7 +250,7 @@ public class CompareToOnlineScreen extends Screen {
                             rightStackPane.getChildren().remove(loadingIndicator);
                         });
                     } catch (IOException e) {
-                        Main.log.log(Level.SEVERE, "Failed to download image", e);
+                        LOGGER.log(Level.SEVERE, "Failed to download image", e);
                     }
                 }
             };
@@ -267,7 +269,7 @@ public class CompareToOnlineScreen extends Screen {
     protected void onClose() {
         File f = tempImageFile.get();
         if (f != null) {
-            if (f.exists() && !f.delete()) Main.log.warning("Failed to delete image temp file: " + f);
+            if (f.exists() && !f.delete()) LOGGER.warning("Failed to delete image temp file: " + f);
             tempImageFile.set(null);
         }
     }

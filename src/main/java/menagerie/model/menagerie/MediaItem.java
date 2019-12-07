@@ -28,7 +28,6 @@ import com.sun.jna.platform.FileUtils;
 import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
 import javafx.beans.property.*;
 import javafx.scene.image.Image;
-import menagerie.gui.Main;
 import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.histogram.HistogramReadException;
 import menagerie.model.menagerie.histogram.ImageHistogram;
@@ -42,11 +41,14 @@ import java.lang.ref.WeakReference;
 import java.sql.SQLException;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A Menagerie item representing a media file of some form. Image and video.
  */
 public class MediaItem extends Item {
+
+    private static final Logger LOGGER = Logger.getLogger(MediaItem.class.getName());
 
     public static final double MIN_CONFIDENCE = 0.9;
     public static final double MAX_CONFIDENCE = 1.0;
@@ -198,7 +200,7 @@ public class MediaItem extends Item {
             md5.set(HexBin.encode(MD5Hasher.hash(getFile())));
             if (hasDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5.get());
         } catch (IOException e) {
-            Main.log.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
+            LOGGER.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
         }
     }
 
@@ -216,15 +218,18 @@ public class MediaItem extends Item {
     /**
      * Computes the color histogram of the image. No operation if file is not an image, or is a GIF image.
      */
-    public void initializeHistogram() {
+    public boolean initializeHistogram() {
         if (!getFile().getName().toLowerCase().endsWith(".gif") && Filters.IMAGE_NAME_FILTER.accept(getFile())) {
             try {
                 histogram.set(new ImageHistogram(getImageSynchronously()));
                 if (hasDatabase()) menagerie.getDatabaseManager().setHistAsync(getId(), histogram.get());
+                return true;
             } catch (HistogramReadException e) {
-                Main.log.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
+                LOGGER.log(Level.WARNING, "Failed to create histogram for: " + getId(), e);
             }
         }
+
+        return false;
     }
 
     /**
@@ -293,6 +298,8 @@ public class MediaItem extends Item {
         if (getFile() == null || dest == null) return false;
         if (file.get().equals(dest)) return true;
 
+        LOGGER.info("Moving file: " + getFile() + "\nTo: " + dest);
+
         boolean succeeded = file.get().renameTo(dest);
 
         if (succeeded) {
@@ -302,7 +309,7 @@ public class MediaItem extends Item {
                 try {
                     menagerie.getDatabaseManager().setPath(getId(), file.get().getAbsolutePath());
                 } catch (SQLException e) {
-                    Main.log.log(Level.SEVERE, "Failed to update new path to file", e);
+                    LOGGER.log(Level.SEVERE, "Failed to update new path to file", e);
                 }
             }
         }
@@ -374,13 +381,16 @@ public class MediaItem extends Item {
         FileUtils fu = FileUtils.getInstance();
         if (fu.hasTrash()) {
             try {
+                LOGGER.info("Sending file to recycle bin: " + getFile());
                 fu.moveToTrash(new File[]{getFile()});
                 return true;
             } catch (IOException e) {
-                Main.log.log(Level.SEVERE, "Unable to send file to recycle bin: " + getFile(), e);
-                return false;
+                LOGGER.log(Level.WARNING, "Unable to send file to recycle bin: " + getFile(), e);
+                LOGGER.info("Deleting file: " + getFile());
+                return getFile().delete();
             }
         } else {
+            LOGGER.info("Deleting file: " + getFile());
             return getFile().delete();
         }
     }

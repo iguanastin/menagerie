@@ -24,7 +24,6 @@
 
 package menagerie.model.menagerie.db;
 
-import menagerie.gui.Main;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.histogram.HistogramReadException;
@@ -41,11 +40,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Menagerie database updater thread. Provides methods for synchronous database updates as well as asynchronous updates.
  */
 public class DatabaseManager extends Thread {
+
+    private static final Logger LOGGER = Logger.getLogger(DatabaseManager.class.getName());
 
     // Media
     private final PreparedStatement PS_GET_MEDIA;
@@ -162,10 +164,10 @@ public class DatabaseManager extends Thread {
                 try {
                     job.run();
                 } catch (Exception e) {
-                    Main.log.log(Level.SEVERE, "Exception while running database updater job", e);
+                    LOGGER.log(Level.SEVERE, "Exception while running database updater job", e);
                 }
             } catch (InterruptedException e) {
-                Main.log.log(Level.WARNING, "Database updater interrupted while waiting for queue", e);
+                LOGGER.log(Level.WARNING, "Database updater interrupted while waiting for queue", e);
             }
         }
     }
@@ -180,7 +182,7 @@ public class DatabaseManager extends Thread {
                 try {
                     loggingLock.lock();
                     if (databaseUpdates > 0) {
-                        Main.log.info(String.format("DatabaseManager updated %d times in the last %.2fm", databaseUpdates, (System.currentTimeMillis() - lastLog) / 1000.0 / 60.0));
+                        LOGGER.info(String.format("DatabaseManager updated %d times in the last %.2fm", databaseUpdates, (System.currentTimeMillis() - lastLog) / 1000.0 / 60.0));
                         lastLog = System.currentTimeMillis();
                         databaseUpdates = 0;
                     }
@@ -230,7 +232,7 @@ public class DatabaseManager extends Thread {
             try {
                 setMD5(id, md5);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to set md5 async: " + id + " - md5: " + md5, e);
+                LOGGER.log(Level.SEVERE, "Failed to set md5 async: " + id + " - md5: " + md5, e);
             }
         });
     }
@@ -264,7 +266,7 @@ public class DatabaseManager extends Thread {
             try {
                 setHist(id, hist);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to set histogram async: " + id, e);
+                LOGGER.log(Level.SEVERE, "Failed to set histogram async: " + id, e);
             }
         });
     }
@@ -295,7 +297,7 @@ public class DatabaseManager extends Thread {
             try {
                 setPath(id, path);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to set new path: " + id + " - \"" + path + "\"", e);
+                LOGGER.log(Level.SEVERE, "Failed to set new path: " + id + " - \"" + path + "\"", e);
             }
         });
     }
@@ -326,7 +328,7 @@ public class DatabaseManager extends Thread {
             try {
                 tagItem(item, tag);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to tag item: " + item + " with tag: " + tag, e);
+                LOGGER.log(Level.SEVERE, "Failed to tag item: " + item + " with tag: " + tag, e);
             }
         });
     }
@@ -357,7 +359,7 @@ public class DatabaseManager extends Thread {
             try {
                 untagItem(item, tag);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to untag item: " + item + " from tag: " + tag, e);
+                LOGGER.log(Level.SEVERE, "Failed to untag item: " + item + " from tag: " + tag, e);
             }
         });
     }
@@ -385,7 +387,7 @@ public class DatabaseManager extends Thread {
             try {
                 removeItem(id);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to remove item: " + id, e);
+                LOGGER.log(Level.SEVERE, "Failed to remove item: " + id, e);
             }
         });
     }
@@ -416,7 +418,7 @@ public class DatabaseManager extends Thread {
             try {
                 createTag(id, name);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to create tag: " + id + " - \"" + name + "\"", e);
+                LOGGER.log(Level.SEVERE, "Failed to create tag: " + id + " - \"" + name + "\"", e);
             }
         });
     }
@@ -444,7 +446,7 @@ public class DatabaseManager extends Thread {
             try {
                 deleteTag(id);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to delete tag: " + id, e);
+                LOGGER.log(Level.SEVERE, "Failed to delete tag: " + id, e);
             }
         });
     }
@@ -489,7 +491,7 @@ public class DatabaseManager extends Thread {
             try {
                 createMedia(media);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to create media async: " + media, e);
+                LOGGER.log(Level.SEVERE, "Failed to create media async: " + media, e);
             }
         });
     }
@@ -523,7 +525,7 @@ public class DatabaseManager extends Thread {
             try {
                 createGroup(group);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to create group async: " + group, e);
+                LOGGER.log(Level.SEVERE, "Failed to create group async: " + group, e);
             }
         });
     }
@@ -558,7 +560,7 @@ public class DatabaseManager extends Thread {
             try {
                 setMediaGID(id, gid);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, String.format("Failed to set media GID async. ID: %d, GID: %d", id, gid), e);
+                LOGGER.log(Level.SEVERE, String.format("Failed to set media GID async. ID: %d, GID: %d", id, gid), e);
             }
         });
     }
@@ -589,7 +591,7 @@ public class DatabaseManager extends Thread {
             try {
                 setMediaPage(id, page);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, String.format("Failed to set media page index. ID: %d, Page: %d", id, page), e);
+                LOGGER.log(Level.SEVERE, String.format("Failed to set media page index. ID: %d, Page: %d", id, page), e);
             }
         });
     }
@@ -619,7 +621,7 @@ public class DatabaseManager extends Thread {
             try {
                 setGroupTitle(id, title);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to set group title. ID: " + id + ", Title: " + title, e);
+                LOGGER.log(Level.SEVERE, "Failed to set group title. ID: " + id + ", Title: " + title, e);
             }
         });
     }
@@ -650,7 +652,7 @@ public class DatabaseManager extends Thread {
             try {
                 addTagNote(id, note);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, String.format("Failed to insert tag note. Tag ID: %d, Note: \"%s\"", id, note), e);
+                LOGGER.log(Level.SEVERE, String.format("Failed to insert tag note. Tag ID: %d, Note: \"%s\"", id, note), e);
             }
         });
     }
@@ -681,7 +683,7 @@ public class DatabaseManager extends Thread {
             try {
                 removeTagNote(id, note);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, String.format("Failed to remove tag note. Tag ID: %d, Note: \"%s\"", id, note), e);
+                LOGGER.log(Level.SEVERE, String.format("Failed to remove tag note. Tag ID: %d, Note: \"%s\"", id, note), e);
             }
         });
     }
@@ -712,7 +714,7 @@ public class DatabaseManager extends Thread {
             try {
                 setTagColor(id, color);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, String.format("Failed to set tag color: ID: %d, Color: %s", id, color), e);
+                LOGGER.log(Level.SEVERE, String.format("Failed to set tag color: ID: %d, Color: %s", id, color), e);
             }
         });
     }
@@ -743,7 +745,7 @@ public class DatabaseManager extends Thread {
             try {
                 setMediaNoSimilar(id, b);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to set media no_similar. ID: " + id + ", no_similar: " + b, e);
+                LOGGER.log(Level.SEVERE, "Failed to set media no_similar. ID: " + id + ", no_similar: " + b, e);
             }
         });
     }
@@ -761,7 +763,7 @@ public class DatabaseManager extends Thread {
             try {
                 addNonDuplicate(id1, id2);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to add to non_dupes: " + id1 + ", " + id2, e);
+                LOGGER.log(Level.SEVERE, "Failed to add to non_dupes: " + id1 + ", " + id2, e);
             }
         });
     }
@@ -781,7 +783,7 @@ public class DatabaseManager extends Thread {
             try {
                 removeNonDuplicate(id1, id2);
             } catch (SQLException e) {
-                Main.log.log(Level.SEVERE, "Failed to remove from non_dupes: " + id1 + ", " + id2, e);
+                LOGGER.log(Level.SEVERE, "Failed to remove from non_dupes: " + id1 + ", " + id2, e);
             }
         });
     }
@@ -831,16 +833,16 @@ public class DatabaseManager extends Thread {
      */
     public void loadIntoMenagerie(Menagerie menagerie) throws SQLException {
         loadTags(menagerie);
-        Main.log.info("Finished loading " + menagerie.getTags().size() + " tags from database");
+        LOGGER.info("Finished loading " + menagerie.getTags().size() + " tags from database");
         loadTagNotes(menagerie);
-        Main.log.info("Finished loading all tag notes into tags from database");
+        LOGGER.info("Finished loading all tag notes into tags from database");
         loadItems(menagerie);
         sortGroupElements(menagerie);
-        Main.log.info("Finished loading " + menagerie.getItems().size() + " items from database");
+        LOGGER.info("Finished loading " + menagerie.getItems().size() + " items from database");
         loadTagsForItems(menagerie);
-        Main.log.info("Finished loading tags for " + menagerie.getItems().size() + " items from database");
+        LOGGER.info("Finished loading tags for " + menagerie.getItems().size() + " items from database");
         loadNonDupes(menagerie);
-        Main.log.info("Finished loading " + menagerie.getNonDuplicates().size() + " non-duplicates from database");
+        LOGGER.info("Finished loading " + menagerie.getNonDuplicates().size() + " non-duplicates from database");
     }
 
     /**
@@ -871,7 +873,7 @@ public class DatabaseManager extends Thread {
                     if (tag != null) {
                         tag.getNotes().add(rs.getNString("note"));
                     } else {
-                        Main.log.severe(String.format("Tag with id %d does not exist, but exists in tag_notes", rs.getInt("tag_id")));
+                        LOGGER.severe(String.format("Tag with id %d does not exist, but exists in tag_notes", rs.getInt("tag_id")));
                     }
                 }
             }
@@ -977,7 +979,7 @@ public class DatabaseManager extends Thread {
                         try {
                             histogram = new ImageHistogram(histAlpha, rs.getBinaryStream("media.hist_r"), rs.getBinaryStream("media.hist_g"), rs.getBinaryStream("media.hist_b"));
                         } catch (HistogramReadException e) {
-                            Main.log.log(Level.SEVERE, "Histogram failed to load from database", e);
+                            LOGGER.log(Level.SEVERE, "Histogram failed to load from database", e);
                         }
                     }
 
@@ -1020,7 +1022,7 @@ public class DatabaseManager extends Thread {
                             tag.incrementFrequency();
                             item.getTags().add(tag);
                         } else {
-                            Main.log.warning("Major issue, tag wasn't loaded in but somehow still exists in the database: " + rs.getInt("tag_id"));
+                            LOGGER.warning("Major issue, tag wasn't loaded in but somehow still exists in the database: " + rs.getInt("tag_id"));
                         }
                     }
                 }

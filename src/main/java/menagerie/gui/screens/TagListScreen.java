@@ -89,7 +89,7 @@ public class TagListScreen extends Screen {
 
         //Init listView
         VBox.setVgrow(listView, Priority.ALWAYS);
-        setCellFactory(param -> new TagListCell());
+        setCellFactory(param -> new TagListCell(null, null)); // TODO
         listView.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ESCAPE) {
                 close();

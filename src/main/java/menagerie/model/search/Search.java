@@ -26,7 +26,6 @@ package menagerie.model.search;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import menagerie.gui.Main;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.search.rules.*;
@@ -34,11 +33,14 @@ import menagerie.model.search.rules.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Data class that contains results of a search filtered and sorted by the given rules.
  */
 public class Search {
+
+    private static final Logger LOGGER = Logger.getLogger(Search.class.getName());
 
     private final List<SearchRule> rules = new ArrayList<>();
     private final boolean showGrouped;
@@ -78,7 +80,13 @@ public class Search {
     }
 
     protected void parseRules(String search) {
-        for (String arg : search.split("\\s+")) {
+        // this would be a test str"ing that doesn't tokenize the "quotes
+        // This would be a test "string that DOES tokenize the quotes"
+        // "This   " too
+        List<String> tokens = tokenize(search);
+
+        // OLD
+        for (String arg : tokens) {
             if (arg == null || arg.isEmpty()) continue;
 
             boolean inverted = false;
@@ -100,7 +108,7 @@ public class Search {
                 try {
                     rules.add(new IDRule(type, Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to integer: " + temp);
+                    LOGGER.warning("Failed to convert parameter to integer: " + temp);
                 }
             } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
                 String temp = arg.substring(arg.indexOf(':') + 1);
@@ -115,7 +123,7 @@ public class Search {
                 try {
                     rules.add(new DateAddedRule(type, Long.parseLong(temp), inverted));
                 } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to long: " + temp);
+                    LOGGER.warning("Failed to convert parameter to long: " + temp);
                 }
             } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
                 rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1), inverted));
@@ -133,7 +141,7 @@ public class Search {
                         rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
                         break;
                     default:
-                        Main.log.warning("Unknown type for missing type: " + type);
+                        LOGGER.warning("Unknown type for missing type: " + type);
                         break;
                 }
             } else if (arg.startsWith("type:") || arg.startsWith("is:")) {
@@ -160,12 +168,44 @@ public class Search {
                 try {
                     rules.add(new TagCountRule(type, Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
-                    Main.log.warning("Failed to convert parameter to integer: " + temp);
+                    LOGGER.warning("Failed to convert parameter to integer: " + temp);
                 }
+            } else if (arg.startsWith("title:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                if (temp.charAt(0) == '"') temp = temp.substring(1); // Strip first quote
+                if (temp.charAt(temp.length() - 1) == '"') temp = temp.substring(0, temp.length() - 1); // Strip second quote
+                rules.add(new TitleRule(temp, inverted));
             } else {
                 rules.add(new TagRule(arg, inverted));
             }
         }
+    }
+
+    private List<String> tokenize(String search) {
+        List<String> tokens = new ArrayList<>();
+        int i = 0;
+        while (i < search.length()) {
+            // Read a word
+            int k = i + 1;
+            while (k < search.length() && !Character.isWhitespace(search.charAt(k))) {
+                if (search.charAt(k - 1) == ':' && search.charAt(k) == '"') {
+                    k++;
+                    while (k < search.length() && search.charAt(k) != '"') {
+                        k++;
+                    }
+                }
+
+                k++;
+            }
+
+            tokens.add(search.substring(i, k));
+            i = k;
+            while (i < search.length() && search.charAt(i) == ' ') {
+                i++;
+            }
+        }
+
+        return tokens;
     }
 
     /**
