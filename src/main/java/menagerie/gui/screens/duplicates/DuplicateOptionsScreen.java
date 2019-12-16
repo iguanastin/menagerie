@@ -261,6 +261,7 @@ public class DuplicateOptionsScreen extends Screen {
             compare = searched;
         }
         compare = getComparableItems(compare, includeGroupElementsCheckBox.isSelected());
+        compare.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
         List<Item> to = all;
         if (toChoiceBox.getValue() == Scope.SELECTED) {
             to = selected;
@@ -268,6 +269,7 @@ public class DuplicateOptionsScreen extends Screen {
             to = searched;
         }
         to = getComparableItems(to, includeGroupElementsCheckBox.isSelected());
+        to.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
 
         Platform.runLater(() -> ps.setProgress(0));
 
