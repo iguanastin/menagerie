@@ -38,7 +38,8 @@ import java.nio.ByteBuffer;
  */
 public final class ImageHistogram {
 
-    private static final int BIN_SIZE = 32;
+    public static final int BIN_SIZE = 32;
+    public static final int NUM_CHANNELS = 4;
     private static final double BLACK_AND_WHITE_CONFIDENCE = 0.25;
 
     private final double[] alpha;
@@ -107,6 +108,22 @@ public final class ImageHistogram {
             green[i] /= pixelCount;
             blue[i] /= pixelCount;
         }
+    }
+
+    public double[] getAlpha() {
+        return alpha;
+    }
+
+    public double[] getRed() {
+        return red;
+    }
+
+    public double[] getGreen() {
+        return green;
+    }
+
+    public double[] getBlue() {
+        return blue;
     }
 
     /**
