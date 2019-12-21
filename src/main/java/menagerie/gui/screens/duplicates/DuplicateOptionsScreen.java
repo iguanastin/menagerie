@@ -38,11 +38,13 @@ import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.gui.screens.dialogs.ProgressScreen;
+import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.settings.MenagerieSettings;
+import menagerie.util.CancellableThread;
 
 import java.io.File;
 import java.io.IOException;
@@ -161,6 +163,11 @@ public class DuplicateOptionsScreen extends Screen {
 
         VBox center = new VBox(5, header, new Separator(), contents);
 
+        Button gpu = new Button("GPU (beta)");
+        gpu.setTooltip(new Tooltip("EXPERIMENTAL. Only searches within first set!"));
+        gpu.setOnAction(event -> {
+            gpuButtonOnAction();
+        });
         Button compare = new Button("Compare");
         compare.setOnAction(event -> compareButtonOnAction());
         Button cancel = new Button("Cancel");
@@ -171,7 +178,7 @@ public class DuplicateOptionsScreen extends Screen {
                 close();
             }
         });
-        h = new HBox(5, compareCountLabel, compare, cancel);
+        h = new HBox(5, compareCountLabel, gpu, compare, cancel);
         h.setAlignment(Pos.CENTER_RIGHT);
         BorderPane bottom = new BorderPane(null, null, h, null, previousButton);
         bottom.setPadding(new Insets(5));
@@ -183,6 +190,50 @@ public class DuplicateOptionsScreen extends Screen {
         setCenter(root);
 
         setDefaultFocusNode(compare);
+    }
+
+    private void gpuButtonOnAction() {
+        saveSettings();
+
+        List<Item> compare = all;
+        if (compareChoiceBox.getValue() == Scope.SELECTED) {
+            compare = selected;
+        } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
+            compare = searched;
+        }
+        compare = getComparableItems(compare, includeGroupElementsCheckBox.isSelected());
+        compare.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
+
+        ProgressScreen ps = new ProgressScreen();
+        Platform.runLater(() -> ps.setProgress(-1));
+
+        List<Item> finalCompare = compare;
+        CancellableThread ct = new CancellableThread() {
+            @Override
+            public void run() {
+                List<SimilarPair<MediaItem>> results = CUDADuplicateFinder.findDuplicates(finalCompare, (float) settings.duplicatesConfidence.getValue(), 100000);
+                results.removeIf(pair -> menagerie.hasNonDuplicate(pair));
+
+                Platform.runLater(() -> {
+                    if (isRunning()) {
+                        if (results.isEmpty()) {
+                            new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
+                        } else {
+                            duplicateScreen.open(getManager(), menagerie, results);
+                        }
+                    }
+                    ps.close();
+                    close();
+                });
+            }
+        };
+
+        ps.open(getManager(), "Finding similar items", "Comparing items...", () -> {
+            ct.cancel();
+            close();
+        });
+
+        ct.start();
     }
 
     /**
@@ -252,8 +303,6 @@ public class DuplicateOptionsScreen extends Screen {
     private void compareButtonOnAction() {
         saveSettings();
 
-        ProgressScreen ps = new ProgressScreen();
-
         List<Item> compare = all;
         if (compareChoiceBox.getValue() == Scope.SELECTED) {
             compare = selected;
@@ -271,12 +320,7 @@ public class DuplicateOptionsScreen extends Screen {
         to = getComparableItems(to, includeGroupElementsCheckBox.isSelected());
         to.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
 
-//        if (true) {
-//            List<SimilarPair<MediaItem>> results = CUDADuplicateFinder.findDuplicates(compare, (float) settings.duplicatesConfidence.getValue(), 100000);
-//            duplicateScreen.open(getManager(), menagerie, results);
-//            return;
-//        }
-
+        ProgressScreen ps = new ProgressScreen();
         Platform.runLater(() -> ps.setProgress(0));
 
         DuplicateManagerThread finder = new DuplicateManagerThread(menagerie, compare, to, settings.duplicatesConfidence.getValue(), progress -> Platform.runLater(() -> {
