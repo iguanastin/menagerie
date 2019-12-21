@@ -52,7 +52,7 @@ public class CUDADuplicateFinder {
      * @param maxResults Maximum number of results to return
      * @return Set of similar pairs found with the given confidence
      */
-    public static List<SimilarPair<Item>> findDuplicates(final List<Item> set, final float confidence, final int maxResults) {
+    public static List<SimilarPair<MediaItem>> findDuplicates(final List<Item> set, final float confidence, final int maxResults) {
 
         // Construct a clean dataset
         List<MediaItem> trueSet = getCleanedSet(set);
@@ -81,7 +81,7 @@ public class CUDADuplicateFinder {
         launchKernel(maxResults, trueSet, function, N, d_data, d_confs, d_resultsID1, d_resultsID2, d_resultsSimilarity, d_resultCount);
 
         // Get results from device
-        List<SimilarPair<Item>> results = getResultsFromDevice(trueSet, d_resultsID1, d_resultsID2, d_resultsSimilarity, d_resultCount);
+        List<SimilarPair<MediaItem>> results = getResultsFromDevice(trueSet, d_resultsID1, d_resultsID2, d_resultsSimilarity, d_resultCount);
 
         // Free device memory
         freeDeviceMemory(d_data, d_confs, d_resultsID1, d_resultsID2, d_resultsSimilarity, d_resultCount);
@@ -124,11 +124,11 @@ public class CUDADuplicateFinder {
 
         // Get function reference
         CUfunction function = new CUfunction();
-        JCudaDriver.cuModuleGetFunction(function, module, "histDupeKernel");
+        JCudaDriver.cuModuleGetFunction(function, module, "_Z14histDupeKernelPKfS0_PiS1_PfS1_ii");
         return function;
     }
 
-    private static List<SimilarPair<Item>> getResultsFromDevice(List<MediaItem> set, CUdeviceptr d_resultsID1, CUdeviceptr d_resultsID2, CUdeviceptr d_resultsSimilarity, CUdeviceptr d_resultCount) {
+    private static List<SimilarPair<MediaItem>> getResultsFromDevice(List<MediaItem> set, CUdeviceptr d_resultsID1, CUdeviceptr d_resultsID2, CUdeviceptr d_resultsSimilarity, CUdeviceptr d_resultCount) {
         // Get result count from device
         int[] resultCountArr = new int[1];
         JCudaDriver.cuMemcpyDtoH(Pointer.to(resultCountArr), d_resultCount, Sizeof.INT);
@@ -136,14 +136,14 @@ public class CUDADuplicateFinder {
         // Get results from device
         int[] resultsID1 = new int[resultCount];
         int[] resultsID2 = new int[resultCount];
-        int[] resultsSimilarity = new int[resultCount];
+        float[] resultsSimilarity = new float[resultCount];
         JCudaDriver.cuMemcpyDtoH(Pointer.to(resultsID1), d_resultsID1, resultCount * Sizeof.INT);
         JCudaDriver.cuMemcpyDtoH(Pointer.to(resultsID2), d_resultsID2, resultCount * Sizeof.INT);
         JCudaDriver.cuMemcpyDtoH(Pointer.to(resultsSimilarity), d_resultsSimilarity, resultCount * Sizeof.FLOAT);
 
-        List<SimilarPair<Item>> results = new ArrayList<>();
+        List<SimilarPair<MediaItem>> results = new ArrayList<>();
         for (int i = 0; i < resultCount; i++) {
-            SimilarPair<Item> pair = new SimilarPair<>(set.get(resultsID1[i]), set.get(resultsID2[i]), resultsSimilarity[i]);
+            SimilarPair<MediaItem> pair = new SimilarPair<>(set.get(resultsID1[i]), set.get(resultsID2[i]), resultsSimilarity[i]);
 
             if (!results.contains(pair)) results.add(pair);
         }

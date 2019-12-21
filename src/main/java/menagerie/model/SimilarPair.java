@@ -47,7 +47,7 @@ public class SimilarPair<T> {
     public SimilarPair(T obj1, T obj2, double similarity) {
         if (obj1 == null || obj2 == null) throw new NullPointerException("Objects must not be null");
         if (obj1.equals(obj2)) throw new IllegalArgumentException("Objects must not be equal");
-        if (similarity < 0 || similarity > 1) throw new IllegalArgumentException("Similarity must be between 0 and 1, inclusive");
+        if (similarity < 0 || similarity > 1) throw new IllegalArgumentException("Similarity must be between 0 and 1, inclusive: " + similarity);
 
         this.obj1 = obj1;
         this.obj2 = obj2;

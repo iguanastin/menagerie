@@ -271,6 +271,12 @@ public class DuplicateOptionsScreen extends Screen {
         to = getComparableItems(to, includeGroupElementsCheckBox.isSelected());
         to.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
 
+//        if (true) {
+//            List<SimilarPair<MediaItem>> results = CUDADuplicateFinder.findDuplicates(compare, (float) settings.duplicatesConfidence.getValue(), 100000);
+//            duplicateScreen.open(getManager(), menagerie, results);
+//            return;
+//        }
+
         Platform.runLater(() -> ps.setProgress(0));
 
         DuplicateManagerThread finder = new DuplicateManagerThread(menagerie, compare, to, settings.duplicatesConfidence.getValue(), progress -> Platform.runLater(() -> {
