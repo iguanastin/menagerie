@@ -33,6 +33,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import jcuda.CudaException;
 import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
@@ -285,20 +286,29 @@ public class DuplicateOptionsScreen extends Screen {
         CancellableThread ct = new CancellableThread() {
             @Override
             public void run() {
-                List<SimilarPair<MediaItem>> results = CUDADuplicateFinder.findDuplicates(compare, to, (float) settings.duplicatesConfidence.getValue(), 100000);
-                results.removeIf(pair -> menagerie.hasNonDuplicate(pair));
+                try {
+                    List<SimilarPair<MediaItem>> results = CUDADuplicateFinder.findDuplicates(compare, to, (float) settings.duplicatesConfidence.getValue(), 100000);
+                    results.removeIf(pair -> menagerie.hasNonDuplicate(pair));
 
-                Platform.runLater(() -> {
-                    if (isRunning()) {
-                        if (results.isEmpty()) {
-                            new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
-                        } else {
-                            duplicateScreen.open(getManager(), menagerie, results);
+                    Platform.runLater(() -> {
+                        if (isRunning()) {
+                            if (results.isEmpty()) {
+                                new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
+                            } else {
+                                duplicateScreen.open(getManager(), menagerie, results);
+                            }
                         }
-                    }
-                    ps.close();
-                    close();
-                });
+                        ps.close();
+                        close();
+                    });
+                } catch (CudaException e) {
+                    LOGGER.log(Level.SEVERE, "Failed to run CUDA accelerated duplicate finding", e);
+                    Platform.runLater(() -> {
+                        new AlertDialogScreen().open(getManager(), "GPU Acceleration Error", "GPU acceleration encountered an error.\n\nConsider disabling GPU acceleration for duplicate finding.", null);
+                        ps.close();
+                        close();
+                    });
+                }
             }
         };
 
