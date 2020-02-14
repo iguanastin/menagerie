@@ -28,6 +28,7 @@ import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.histogram.HistogramReadException;
 import menagerie.model.menagerie.histogram.ImageHistogram;
+import menagerie.util.listeners.ObjectListener;
 
 import java.io.File;
 import java.io.InputStream;
@@ -93,6 +94,7 @@ public class DatabaseManager extends Thread {
     private volatile boolean running = false;
 
     private MenagerieDatabaseLoadListener loadListener = null;
+    private ObjectListener<Integer> queueSizeListener = null;
 
     private final Timer loggingTimer = new Timer("Logging Timer", true);
     private final Lock loggingLock = new ReentrantLock();
@@ -154,6 +156,7 @@ public class DatabaseManager extends Thread {
         while (running) {
             try {
                 Runnable job = queue.take();
+                if (queueSizeListener != null) queueSizeListener.pass(queue.size());
                 try {
                     loggingLock.lock();
                     databaseUpdates++;
@@ -197,6 +200,10 @@ public class DatabaseManager extends Thread {
         this.loadListener = loadListener;
     }
 
+    public void setQueueSizeListener(ObjectListener<Integer> queueSizeListener) {
+        this.queueSizeListener = queueSizeListener;
+    }
+
     /**
      * Enqueues a job to this thread. FIFO.
      *
@@ -204,6 +211,7 @@ public class DatabaseManager extends Thread {
      */
     public void enqueue(Runnable job) {
         queue.add(job);
+        if (queueSizeListener != null) queueSizeListener.pass(queue.size());
     }
 
     /**

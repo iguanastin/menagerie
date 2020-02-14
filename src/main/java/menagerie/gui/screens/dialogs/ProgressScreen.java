@@ -123,7 +123,7 @@ public class ProgressScreen extends Screen {
     }
 
     public void setProgress(double progress) {
-        count.setText(df.format(progress * 100) + "%");
+        count.setText(progress > 0 ? df.format(progress * 100) + "%" : "Working...");
         this.progress.setProgress(progress);
     }
 

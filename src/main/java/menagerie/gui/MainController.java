@@ -130,6 +130,7 @@ public class MainController {
     public Label scopeLabel;
     public HBox scopeHBox;
     public Button importsButton;
+    public Label dbUpdatesLabel;
     public Button logButton;
     public Button backButton;
 
@@ -315,6 +316,9 @@ public class MainController {
     private boolean playVideoAfterExplorerEnabled = false;
 
 
+    private long lastDBLabelUpdates = 0;
+
+
     // --------------------------------- Constructor ---------------------------------
 
     /**
@@ -342,6 +346,8 @@ public class MainController {
         initScreens();
 
         initPlugins();
+
+        initDatabaseUpdateCounter();
 
         // Things to run on first "tick"
         Platform.runLater(() -> {
@@ -377,6 +383,15 @@ public class MainController {
                     Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
                 }
             });
+        });
+    }
+
+    private void initDatabaseUpdateCounter() {
+        menagerie.getDatabaseManager().setQueueSizeListener(count -> {
+            if (count == 0 || System.currentTimeMillis() - lastDBLabelUpdates > 17) {
+                lastDBLabelUpdates = System.currentTimeMillis();
+                Platform.runLater(() -> dbUpdatesLabel.setText("Queued DB updates: " + count));
+            }
         });
     }
 

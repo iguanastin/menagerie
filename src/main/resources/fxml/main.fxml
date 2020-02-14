@@ -104,6 +104,9 @@
                             <Button fx:id="importsButton" mnemonicParsing="false" onAction="#importsButtonOnAction"
                                     text="Imports: 0" BorderPane.alignment="CENTER"/>
                         </left>
+                        <center>
+                            <Label fx:id="dbUpdatesLabel" text="Queued DB updates: 0"/>
+                        </center>
                         <right>
                             <Button fx:id="logButton" mnemonicParsing="false" onAction="#logButtonOnAction" text="Log"
                                     BorderPane.alignment="CENTER"/>

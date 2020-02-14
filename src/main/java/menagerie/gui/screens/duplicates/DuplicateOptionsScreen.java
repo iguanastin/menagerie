@@ -33,16 +33,19 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import jcuda.CudaException;
 import menagerie.gui.Main;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.gui.screens.dialogs.ProgressScreen;
+import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.settings.MenagerieSettings;
+import menagerie.util.CancellableThread;
 
 import java.io.File;
 import java.io.IOException;
@@ -252,8 +255,6 @@ public class DuplicateOptionsScreen extends Screen {
     private void compareButtonOnAction() {
         saveSettings();
 
-        ProgressScreen ps = new ProgressScreen();
-
         List<Item> compare = all;
         if (compareChoiceBox.getValue() == Scope.SELECTED) {
             compare = selected;
@@ -261,6 +262,7 @@ public class DuplicateOptionsScreen extends Screen {
             compare = searched;
         }
         compare = getComparableItems(compare, includeGroupElementsCheckBox.isSelected());
+        compare.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
         List<Item> to = all;
         if (toChoiceBox.getValue() == Scope.SELECTED) {
             to = selected;
@@ -268,9 +270,60 @@ public class DuplicateOptionsScreen extends Screen {
             to = searched;
         }
         to = getComparableItems(to, includeGroupElementsCheckBox.isSelected());
+        to.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
+
+        if (settings.cudaDuplicates.getValue()) {
+            launchGPUDuplicateFinder(compare, to);
+        } else {
+            launchCPUDuplicateFinder(compare, to);
+        }
+    }
+
+    private void launchGPUDuplicateFinder(List<Item> compare, List<Item> to) {
+        ProgressScreen ps = new ProgressScreen();
+        Platform.runLater(() -> ps.setProgress(-1));
+
+        CancellableThread ct = new CancellableThread() {
+            @Override
+            public void run() {
+                try {
+                    List<SimilarPair<MediaItem>> results = CUDADuplicateFinder.findDuplicates(compare, to, (float) settings.duplicatesConfidence.getValue(), 100000);
+                    results.removeIf(pair -> menagerie.hasNonDuplicate(pair));
+
+                    Platform.runLater(() -> {
+                        if (isRunning()) {
+                            if (results.isEmpty()) {
+                                new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
+                            } else {
+                                duplicateScreen.open(getManager(), menagerie, results);
+                            }
+                        }
+                        ps.close();
+                        close();
+                    });
+                } catch (CudaException e) {
+                    LOGGER.log(Level.SEVERE, "Failed to run CUDA accelerated duplicate finding", e);
+                    Platform.runLater(() -> {
+                        new AlertDialogScreen().open(getManager(), "GPU Acceleration Error", "GPU acceleration encountered an error.\n\nConsider disabling GPU acceleration for duplicate finding.", null);
+                        ps.close();
+                        close();
+                    });
+                }
+            }
+        };
+
+        ps.open(getManager(), "Finding similar items", "Comparing items...", () -> {
+            ct.cancel();
+            close();
+        });
+
+        ct.start();
+    }
+
+    private void launchCPUDuplicateFinder(List<Item> compare, List<Item> to) {
+        ProgressScreen ps = new ProgressScreen();
 
         Platform.runLater(() -> ps.setProgress(0));
-
         DuplicateManagerThread finder = new DuplicateManagerThread(menagerie, compare, to, settings.duplicatesConfidence.getValue(), progress -> Platform.runLater(() -> {
             long time = System.currentTimeMillis();
             if (time - getLastProgressUpdate() > PROGRESS_UPDATE_INTERVAL) {
