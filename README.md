@@ -1,5 +1,4 @@
 # Menagerie
-
 Menagerie is a tag style organization tool built to be a better, highly responsive alternative to organizing local media files in directory hierarchies.
 
 ![Menagerie window](https://user-images.githubusercontent.com/19540597/74567786-c5485600-4f33-11ea-9105-271a6eaae264.png)
