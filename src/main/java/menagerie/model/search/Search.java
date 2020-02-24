@@ -73,17 +73,18 @@ public class Search {
         rules.sort(null);
 
         comparator = (o1, o2) -> {
+            int result;
+
             if (shuffled) {
                 Random r = new Random(shuffleSeed + o1.getId());
                 int i1 = r.nextInt();
                 r.setSeed(shuffleSeed + o2.getId());
-                return i1 - r.nextInt();
-            }
-            if (descending) {
-                return o2.getId() - o1.getId();
+                result = i1 - r.nextInt();
             } else {
-                return o1.getId() - o2.getId();
+                 result = o1.getId() - o2.getId();
             }
+
+            return descending ? -result : result;
         };
     }
 
