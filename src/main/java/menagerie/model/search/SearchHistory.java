@@ -1,7 +1,7 @@
 /*
  MIT License
 
- Copyright (c) 2019. Austin Thompson
+ Copyright (c) 2020. Austin Thompson
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -37,15 +37,17 @@ public class SearchHistory {
     private final boolean descending;
     private final boolean showGrouped;
     private final boolean shuffled;
+    private final long shuffleSeed;
     private final GroupItem groupScope;
 
 
-    public SearchHistory(String search, GroupItem scope, List<Item> selected, boolean descending, boolean showGrouped, boolean shuffled) {
+    public SearchHistory(String search, GroupItem scope, List<Item> selected, boolean descending, boolean showGrouped, boolean shuffled, long shuffleSeed) {
         this.search = search;
         this.groupScope = scope;
         this.descending = descending;
         this.showGrouped = showGrouped;
         this.shuffled = shuffled;
+        this.shuffleSeed = shuffleSeed;
         this.selected.addAll(selected);
     }
 
@@ -71,6 +73,10 @@ public class SearchHistory {
 
     public boolean isShuffled() {
         return shuffled;
+    }
+
+    public long getShuffleSeed() {
+        return shuffleSeed;
     }
 
 }

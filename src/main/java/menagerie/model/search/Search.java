@@ -1,7 +1,7 @@
 /*
  MIT License
 
- Copyright (c) 2019. Austin Thompson
+ Copyright (c) 2020. Austin Thompson
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,7 @@ import menagerie.model.search.rules.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Logger;
 
 /**
@@ -46,6 +47,7 @@ public class Search {
     private final boolean showGrouped;
     private final boolean descending;
     private final boolean shuffled;
+    private final long shuffleSeed;
     private final String searchString;
 
     private final ObservableList<Item> results = FXCollections.observableArrayList();
@@ -60,17 +62,23 @@ public class Search {
      * @param descending  Sort the results descending.
      * @param showGrouped Show items that are part of a group.
      */
-    public Search(String search, boolean descending, boolean showGrouped, boolean shuffled) {
+    public Search(String search, boolean descending, boolean showGrouped, boolean shuffled, long shuffleSeed) {
         this.descending = descending;
         this.showGrouped = showGrouped;
         this.shuffled = shuffled;
+        this.shuffleSeed = shuffleSeed;
         this.searchString = search;
 
         if (search != null && !search.isEmpty()) parseRules(search);
         rules.sort(null);
 
         comparator = (o1, o2) -> {
-            if (shuffled) return 0;
+            if (shuffled) {
+                Random r = new Random(shuffleSeed + o1.getId());
+                int i1 = r.nextInt();
+                r.setSeed(shuffleSeed + o2.getId());
+                return i1 - r.nextInt();
+            }
             if (descending) {
                 return o2.getId() - o1.getId();
             } else {
@@ -256,14 +264,10 @@ public class Search {
             }
         }
 
-        sort();
-
         results.removeAll(toRemove);
-        if (isShuffled()) {
-            toAdd.forEach(item -> results.add((int) Math.floor(Math.random() * results.size()), item));
-        } else {
-            results.addAll(toAdd);
-        }
+        results.addAll(toAdd);
+
+        sort();
     }
 
     protected boolean isItemValid(Item item) {
@@ -284,6 +288,10 @@ public class Search {
 
     public void sort() {
         results.sort(getComparator());
+    }
+
+    public long getShuffleSeed() {
+        return shuffleSeed;
     }
 
 }

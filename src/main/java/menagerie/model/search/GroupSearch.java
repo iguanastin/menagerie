@@ -1,7 +1,7 @@
 /*
  MIT License
 
- Copyright (c) 2019. Austin Thompson
+ Copyright (c) 2020. Austin Thompson
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -40,8 +40,8 @@ public class GroupSearch extends Search {
      * @param group      Group scope of this search.
      * @param descending Sort the results descending.
      */
-    public GroupSearch(String search, GroupItem group, boolean descending, boolean shuffled) {
-        super(search, descending, true, shuffled);
+    public GroupSearch(String search, GroupItem group, boolean descending, boolean shuffled, long shuffleSeed) {
+        super(search, descending, true, shuffled, shuffleSeed);
         this.group = group;
 
         comparator = (o1, o2) -> {

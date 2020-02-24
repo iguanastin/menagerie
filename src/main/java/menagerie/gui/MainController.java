@@ -1,7 +1,7 @@
 /*
  MIT License
 
- Copyright (c) 2019. Austin Thompson
+ Copyright (c) 2020. Austin Thompson
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -1324,7 +1324,7 @@ public class MainController {
             showGroupedToggleButton.setSelected(history.isShowGrouped());
             shuffledSearchButton.setSelected(history.isShuffled());
             searchTextField.setText(history.getSearch());
-            applySearch(history.getSearch(), history.getGroupScope(), history.isDescending(), history.isShowGrouped(), history.isShuffled());
+            applySearch(history.getSearch(), history.getGroupScope(), history.isDescending(), history.isShowGrouped(), history.isShuffled(), history.getShuffleSeed());
             searchHistory.pop(); // Pop history item that was JUST created by the new search.
 
             if (searchHistory.isEmpty()) backButton.setDisable(true);
@@ -1351,6 +1351,10 @@ public class MainController {
         applySearch(searchTextField.getText(), group, listDescendingToggleButton.isSelected(), true, false);
     }
 
+    private void applySearch(String search, GroupItem groupScope, boolean descending, boolean showGrouped, boolean shuffled) {
+        applySearch(search, groupScope, descending, showGrouped, shuffled, System.currentTimeMillis());
+    }
+
     /**
      * Parses a search string, applies the search, updates grid, registers search listeners, and previews first item.
      *
@@ -1358,14 +1362,14 @@ public class MainController {
      * @param descending  Order results in descending order.
      * @param showGrouped Show MediaItems that are in a group.
      */
-    private void applySearch(String search, GroupItem groupScope, boolean descending, boolean showGrouped, boolean shuffled) {
+    private void applySearch(String search, GroupItem groupScope, boolean descending, boolean showGrouped, boolean shuffled, long shuffleSeed) {
         LOGGER.info("Searching: \"" + search + "\", group:" + groupScope + ", descending:" + descending + ", showGrouped:" + showGrouped + ", shuffled:" + shuffled);
 
         // Clean up previous search
         if (currentSearch != null) {
             GroupItem scope = null;
             if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();
-            searchHistory.push(new SearchHistory(currentSearch.getSearchString(), scope, itemGridView.getSelected(), currentSearch.isDescending(), currentSearch.isShowGrouped(), currentSearch.isShuffled()));
+            searchHistory.push(new SearchHistory(currentSearch.getSearchString(), scope, itemGridView.getSelected(), currentSearch.isDescending(), currentSearch.isShowGrouped(), currentSearch.isShuffled(), currentSearch.getShuffleSeed()));
             backButton.setDisable(false);
 
             menagerie.unregisterSearch(currentSearch);
@@ -1380,13 +1384,13 @@ public class MainController {
         showGroupedToggleButton.setDisable(inGroup);
         showGroupedToggleButton.setSelected(showGrouped || inGroup);
         if (inGroup) {
-            currentSearch = new GroupSearch(search, groupScope, descending, shuffled);
+            currentSearch = new GroupSearch(search, groupScope, descending, shuffled, shuffleSeed);
             scopeLabel.setText("Scope: " + groupScope.getTitle());
             Tooltip tt = new Tooltip(groupScope.getTitle());
             tt.setWrapText(true);
             scopeLabel.setTooltip(tt);
         } else {
-            currentSearch = new Search(search, descending, showGrouped, shuffled);
+            currentSearch = new Search(search, descending, showGrouped, shuffled, shuffleSeed);
             scopeLabel.setText("Scope: All");
             scopeLabel.setTooltip(null);
         }
