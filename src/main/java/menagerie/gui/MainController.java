@@ -79,6 +79,7 @@ import menagerie.model.menagerie.*;
 import menagerie.model.menagerie.db.DatabaseManager;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
+import menagerie.model.menagerie.server.APIServer;
 import menagerie.model.search.GroupSearch;
 import menagerie.model.search.Search;
 import menagerie.model.search.SearchHistory;
@@ -339,6 +340,14 @@ public class MainController {
      */
     @FXML
     public void initialize() {
+
+        APIServer apiServer = new APIServer(menagerie, 100);
+        try {
+            apiServer.start();
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error while starting API server", e);
+        }
+
         // Initialize the menagerie
         initImporterThread();
 
@@ -1563,6 +1572,12 @@ public class MainController {
     private void cleanExit(boolean revertDatabase) {
         LOGGER.info("Attempting clean exit");
 
+        try {
+            settings.save(new File(Main.SETTINGS_PATH));
+        } catch (IOException e1) {
+            LOGGER.log(Level.WARNING, "Failed to save settings to file", e1);
+        }
+
         Platform.runLater(() -> {
             rootPane.getChildren().clear();
             Platform.exit();
@@ -1575,12 +1590,6 @@ public class MainController {
             LOGGER.info("Attempting to close plugin: " + plugin.getPluginName());
             plugin.close();
         });
-
-        try {
-            settings.save(new File(Main.SETTINGS_PATH));
-        } catch (IOException e1) {
-            LOGGER.log(Level.WARNING, "Failed to save settings to file", e1);
-        }
 
         new Thread(() -> {
             try {
