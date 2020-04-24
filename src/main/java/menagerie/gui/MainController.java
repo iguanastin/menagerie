@@ -295,6 +295,10 @@ public class MainController {
      * Current folder watcher thread, may be null. Thread monitors a folder for new files and sends them to the importer.
      */
     private FolderWatcherThread folderWatcherThread = null;
+    /**
+     * The API server
+     */
+    private APIServer apiServer = null;
 
     // ---------------------------------- Settings var -------------------------------
     /**
@@ -341,19 +345,16 @@ public class MainController {
     @FXML
     public void initialize() {
 
-        APIServer apiServer = new APIServer(menagerie, 100);
-        try {
-            apiServer.start();
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error while starting API server", e);
-        }
+        // Initialize the api server
+        initAPIServer();
 
-        // Initialize the menagerie
+        // Initialize the importer
         initImporterThread();
 
         // Init screens
         initScreens();
 
+        // Init plugins
         initPlugins();
 
         initDatabaseUpdateCounter();
@@ -392,6 +393,25 @@ public class MainController {
                     Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
                 }
             });
+        });
+    }
+
+    private void initAPIServer() {
+        apiServer = new APIServer(menagerie, settings.apiPageSize.getValue());
+        try {
+            apiServer.start(settings.apiPort.getValue());
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "Error while starting API server", e);
+        }
+
+        settings.apiPageSize.valueProperty().addListener((observable, oldValue, newValue) -> apiServer.setPageSize(newValue.intValue()));
+        settings.apiPort.valueProperty().addListener((observable, oldValue, newValue) -> {
+            apiServer.stop();
+            try {
+                apiServer.start(newValue.intValue());
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, "Failed to restart API server with new port: " + newValue.intValue(), e);
+            }
         });
     }
 

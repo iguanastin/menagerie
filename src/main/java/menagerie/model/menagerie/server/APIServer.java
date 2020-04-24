@@ -42,30 +42,46 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 public class APIServer {
 
+    /**
+     * HTTP server
+     */
     private HttpServer server;
 
+    /**
+     * Menagerie to retrieve data from
+     */
     private final Menagerie menagerie;
 
-    private int pageSize = 100;
+    /**
+     * Number of items to return per page of search
+     */
+    private int pageSize;
 
 
+    /**
+     * Constructs a Menagerie API server
+     *
+     * @param menagerie The Menagerie to pull data from for requests
+     * @param pageSize  Number of items to return per page
+     */
     public APIServer(Menagerie menagerie, int pageSize) {
         this.menagerie = menagerie;
         this.pageSize = pageSize;
     }
 
-    public void start() throws IOException {
-        server = HttpServer.create(new InetSocketAddress(54321), 0);
+    /**
+     * Starts the API server on the specific port
+     *
+     * @param port Port of the server
+     * @throws IOException When server fails to start
+     */
+    public void start(int port) throws IOException {
+        server = HttpServer.create(new InetSocketAddress(port), 0);
         //        server = HttpsServer.create(new InetSocketAddress(54321), 0);
         //        SSLContext context = SSLContext.getInstance("TLS");
         //
@@ -106,11 +122,37 @@ public class APIServer {
         server.start();
     }
 
+    /**
+     * Stops the server if it is alive
+     */
     public void stop() {
         if (server != null) server.stop(0);
         server = null;
     }
 
+    /**
+     * Sets the size of pages this server should respond with
+     *
+     * @param pageSize New size of pages
+     */
+    public void setPageSize(int pageSize) {
+        this.pageSize = pageSize;
+    }
+
+    /**
+     *
+     * @return The size of page this server responds with
+     */
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    /**
+     * Attempts to route a server request. Sends an error response if the request cannot be routed to a handler.
+     *
+     * @param exchange Exchange data of the request
+     * @throws IOException When an IO exception occurs during the exchange
+     */
     private void handleRequest(HttpExchange exchange) throws IOException {
         try {
             String target = exchange.getRequestURI().getPath().substring(1).toLowerCase();
@@ -140,6 +182,12 @@ public class APIServer {
         }
     }
 
+    /**
+     * Handles requests for the tags endpoint.
+     *
+     * @param exchange The exchange
+     * @throws IOException When an IO exception occurs during the exchange
+     */
     private void handleTagsRequest(HttpExchange exchange) throws IOException {
         Map<String, String> query = mapQuerys(exchange);
 
@@ -179,6 +227,12 @@ public class APIServer {
         sendSimpleResponse(exchange, 200, json.toString());
     }
 
+    /**
+     * Handles requests for the search endpoint
+     *
+     * @param exchange The exchange
+     * @throws IOException When an IO exception occurs during the exchange
+     */
     private void handleSearchRequest(HttpExchange exchange) throws IOException {
         Map<String, String> query = mapQuerys(exchange);
         String terms = query.getOrDefault("terms", "");
@@ -206,6 +260,12 @@ public class APIServer {
         sendSimpleResponse(exchange, 200, json.toString());
     }
 
+    /**
+     * Handles requests for the thumbnail endpoint
+     *
+     * @param exchange The exchange
+     * @throws IOException When an IO exception occurs during the exchange
+     */
     private void handleThumbnailRequest(HttpExchange exchange) throws IOException {
         String idStr = exchange.getRequestURI().getPath().substring(8);
         idStr = idStr.substring(0, idStr.indexOf(".jpg"));
@@ -241,6 +301,13 @@ public class APIServer {
         }
     }
 
+    /**
+     * Sends an image as a response for an exchange
+     *
+     * @param exchange The exchange
+     * @param jfxImage Image to send to the client
+     * @throws IOException When an IO exception occurs during the exchange
+     */
     private void sendImageResponse(HttpExchange exchange, Image jfxImage) throws IOException {
         try {
             BufferedImage bImage = SwingFXUtils.fromFXImage(jfxImage, null);
@@ -258,6 +325,14 @@ public class APIServer {
         }
     }
 
+    /**
+     * Sends a simple text response to the client
+     *
+     * @param exchange Exchange
+     * @param httpCode HTTP response code
+     * @param response Text content of the response
+     * @throws IOException When an IO exception occurs during the exchange
+     */
     private static void sendSimpleResponse(HttpExchange exchange, int httpCode, String response) throws IOException {
         exchange.sendResponseHeaders(httpCode, response.getBytes().length);
         OutputStream os = exchange.getResponseBody();
@@ -265,6 +340,14 @@ public class APIServer {
         os.close();
     }
 
+    /**
+     * Encodes the metadata of a Menagerie item as JSON for a search response
+     *
+     * @param item         Menagerie item to encode
+     * @param expandTags   Expand tag information for this item
+     * @param expandGroups Expand group elements for this item
+     * @return A JSON representation of the item metadata
+     */
     private JSONObject encodeJSONItem(Item item, boolean expandTags, boolean expandGroups) {
         JSONObject json = new JSONObject();
 
@@ -313,6 +396,12 @@ public class APIServer {
         return json;
     }
 
+    /**
+     * Cleanly maps a query from a client into a map. A valueless parameter will be given a value of "1"
+     *
+     * @param exchange Exchange
+     * @return A map of parameters and values
+     */
     private Map<String, String> mapQuerys(HttpExchange exchange) {
         Map<String, String> query = new HashMap<>();
 
@@ -337,14 +426,24 @@ public class APIServer {
         return query;
     }
 
+    /**
+     * Constructs a pretty HTML error page with the given information
+     *
+     * @param exchange Exchange
+     * @param code     HTTP Response code
+     * @param title    Title of the page
+     * @param message  Message
+     * @return Text form of a pretty HTML error page
+     */
     private static String makeErrorHTML(HttpExchange exchange, int code, String title, String message) {
         return "<!DOCTYPE html><html><head><title>" + code + ": " + title + "</title></head><body style=\"text-align: center; margin: 5em; line-height: 1.5em;\"><h1>Response Code " + code + "</h1><h2>" + title + "</h2><p>" + message + "<br>Endpoint: " + exchange.getRequestURI().getPath() + "<br>Query: " + exchange.getRequestURI().getQuery() + "<br>" + new Date() + "</p></body></html>";
     }
 
-    public static void main(String[] args) throws IOException, UnrecoverableKeyException, CertificateException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+
+    public static void main(String[] args) throws IOException {
         APIServer server = new APIServer(null, 100);
 
-        server.start();
+        server.start(54321);
     }
 
 }

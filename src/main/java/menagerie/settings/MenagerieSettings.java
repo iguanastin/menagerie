@@ -1,7 +1,7 @@
 /*
  MIT License
 
- Copyright (c) 2019. Austin Thompson
+ Copyright (c) 2020. Austin Thompson
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -28,12 +28,12 @@ import java.util.Collections;
 
 public class MenagerieSettings extends Settings {
 
-    public GroupSetting importGroup, autoImportGroup, duplicatesGroup, videoGroup, dbGroup, explorerGroup, slideshowGroup, findOnlineGroup;
+    public GroupSetting importGroup, autoImportGroup, duplicatesGroup, videoGroup, dbGroup, explorerGroup, slideshowGroup, findOnlineGroup, apiGroup;
     public FolderSetting defaultFolder, autoImportFolder, vlcFolder, lastImportFolder;
     public StringSetting userFileTypes, dbUrl, dbUser, dbPass, tagWithOnImport, importItemsIntoGroupName, importOrder;
     public BooleanSetting urlFilename, tagImages, tagVideos, tagTagme, autoImportMove, repeatVideo, muteVideo, dbBackup, helpOnStart, windowMaximized, expandItemInfo, recursivelyImport, tagParentFolderOnImport, doTagWithOnImport, doImportItemsIntoGroup, renameToHashOnImport, duplicatesIncludeGroups, slideshowPreload, duplicatePreload, explorerGroupAscending, cudaDuplicates;
     public DoubleSetting duplicatesConfidence, slideshowInterval;
-    public IntSetting gridWidth, windowX, windowY, windowWidth, windowHeight, onlineLoadAhead;
+    public IntSetting gridWidth, windowX, windowY, windowWidth, windowHeight, onlineLoadAhead, apiPort, apiPageSize;
 
 
     public MenagerieSettings() {
@@ -65,10 +65,16 @@ public class MenagerieSettings extends Settings {
         Collections.addAll(duplicatesGroup.getChildren(), duplicatesConfidence, cudaDuplicates, duplicatesIncludeGroups, duplicatePreload);
         getSettings().add(duplicatesGroup);
 
-        findOnlineGroup = new GroupSetting("").label("Find Online");
+        findOnlineGroup = new GroupSetting("find-online-group").label("Find Online");
         onlineLoadAhead = new IntSetting("online-load-ahead", 1).label("Load Next").min(0);
         Collections.addAll(findOnlineGroup.getChildren(), onlineLoadAhead);
         getSettings().add(findOnlineGroup);
+
+        apiGroup = new GroupSetting("api-group").label("API Server");
+        apiPort = new IntSetting("api-port", 54321).label("Port").tip("Port to host the API server on. 54321 by default").range(49152, 65535);
+        apiPageSize = new IntSetting("api-port", 100).label("Max Page Size").tip("Maximum number of items to serve per page. 100 by default").min(1);
+        Collections.addAll(apiGroup.getChildren(), apiPageSize, apiPort);
+        getSettings().add(apiGroup);
 
         slideshowGroup = new GroupSetting("slideshow-group").label("Slideshow");
         slideshowInterval = new DoubleSetting("slideshow-interval", 10).label("Slideshow interval (seconds)").min(0.1);
