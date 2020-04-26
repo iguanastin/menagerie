@@ -338,17 +338,17 @@ public class APIServer {
 
                 if (item != null) {
                     Thumbnail thumb = item.getThumbnail();
-                    thumb.want();
 
                     if (!thumb.isLoaded()) {
                         // Await thumbnail
                         final CountDownLatch cdl = new CountDownLatch(1);
                         thumb.addImageReadyListener(thing -> cdl.countDown());
-                        cdl.await(10, TimeUnit.SECONDS);
+                        thumb.want();
+                        cdl.await(3, TimeUnit.SECONDS);
+                        thumb.doNotWant();
                     }
 
-                    sendImageResponse(exchange, 200, thumb.getImage(), "jpg"); // TODO get actual file format
-                    thumb.doNotWant();
+                    sendImageResponse(exchange, 200, thumb.getImage(), thumb.getFormat());
                 } else {
                     sendErrorResponse(exchange, 404, "404 not found", "No such item with id: " + id);
                 }

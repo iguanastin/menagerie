@@ -1,7 +1,7 @@
 /*
  MIT License
 
- Copyright (c) 2019. Austin Thompson
+ Copyright (c) 2020. Austin Thompson
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,8 @@ package menagerie.gui;
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
 import com.github.junrar.rarfile.FileHeader;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import menagerie.model.menagerie.Item;
@@ -45,16 +47,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
@@ -74,12 +74,15 @@ public class Thumbnail {
     public static final int THUMBNAIL_SIZE = 150;
 
     private static final String UNSUPPORTED_IMAGE_PATH = "/misc/default-thumb.png";
+    public static final String VIDEO_THUMBNAIL_FORMAT = "jpg";
+    public static final String UNSUPPORTED_IMAGE_FORMAT = "png";
     private static Image unsupportedImage = null;
 
     // -------------------------------- Variables -----------------------------------------
 
     private final File file;
     private final Item owner;
+    private final StringProperty format = new SimpleStringProperty(null);
     private Image image;
 
     private int want = 0;
@@ -120,13 +123,21 @@ public class Thumbnail {
 
     private void loadItemImage() {
         if (Filters.IMAGE_NAME_FILTER.accept(file)) {
-            image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+            String name = file.getName();
+            if (name.contains(".") && Arrays.asList(Filters.IMAGE_EXTS).contains(name.substring(name.lastIndexOf(".")))) {
+                format.set(name.substring(name.lastIndexOf(".") + 1));
+                image = new Image(file.toURI().toString(), THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+            }
         } else if (Filters.RAR_NAME_FILTER.accept(file)) {
             try (Archive a = new Archive(new FileInputStream(file))) {
                 List<FileHeader> fileHeaders = a.getFileHeaders();
                 if (!fileHeaders.isEmpty()) {
                     try (InputStream is = a.getInputStream(fileHeaders.get(0))) {
-                        image = new Image(is, THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+                        String name = fileHeaders.get(0).getFileNameString();
+                        if (name.contains(".") && Arrays.asList(Filters.IMAGE_EXTS).contains(name.substring(name.lastIndexOf(".")))) {
+                            format.set(name.substring(name.lastIndexOf(".") + 1));
+                            image = new Image(is, THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+                        }
                     }
                 } else {
                     return;
@@ -138,8 +149,13 @@ public class Thumbnail {
         } else if (Filters.ZIP_NAME_FILTER.accept(file)) {
             try (ZipFile zip = new ZipFile(file)) {
                 if (zip.entries().hasMoreElements()) {
-                    try (InputStream is = zip.getInputStream(zip.entries().nextElement())) {
-                        image = new Image(is, THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+                    ZipEntry entry = zip.entries().nextElement();
+                    try (InputStream is = zip.getInputStream(entry)) {
+                        String name = entry.getName();
+                        if (name.contains(".") && Arrays.asList(Filters.IMAGE_EXTS).contains(name.substring(name.lastIndexOf(".")))) {
+                            format.set(name.substring(name.lastIndexOf(".") + 1));
+                            image = new Image(is, THUMBNAIL_SIZE, THUMBNAIL_SIZE, true, true);
+                        }
                     }
                 } else {
                     return;
@@ -154,6 +170,7 @@ public class Thumbnail {
                 float scale = THUMBNAIL_SIZE / mb.getWidth();
                 if (THUMBNAIL_SIZE / mb.getHeight() < scale) scale = THUMBNAIL_SIZE / mb.getHeight();
                 BufferedImage img = new PDFRenderer(doc).renderImage(0, scale);
+                format.set("jpg");
                 image = SwingFXUtils.toFXImage(img, null);
             } catch (IOException e) {
                 LOGGER.log(Level.INFO, "Failed to thumbnail PDF: " + file, e);
@@ -165,6 +182,7 @@ public class Thumbnail {
                     unsupportedImage = new Image(getClass().getResourceAsStream(UNSUPPORTED_IMAGE_PATH));
                 }
 
+                format.set(UNSUPPORTED_IMAGE_FORMAT);
                 image = unsupportedImage;
             }
 
@@ -178,6 +196,8 @@ public class Thumbnail {
     }
 
     private void loadVideoImage() {
+        format.set(VIDEO_THUMBNAIL_FORMAT);
+
         final CountDownLatch inPositionLatch = new CountDownLatch(2);
         final CountDownLatch snapshotLatch = new CountDownLatch(1);
 
@@ -213,7 +233,7 @@ public class Thumbnail {
                     int height = (int) (scale * vidHeight);
 
                     try {
-                        File tempFile = File.createTempFile("menagerie-video-thumb", ".jpg");
+                        File tempFile = File.createTempFile("menagerie-video-thumb", VIDEO_THUMBNAIL_FORMAT);
                         mediaPlayer.snapshots().save(tempFile, width, height);
                         snapshotLatch.await(2, TimeUnit.SECONDS);
                         mediaPlayer.events().removeMediaPlayerEventListener(eventListener);
@@ -311,6 +331,10 @@ public class Thumbnail {
             mediaPlayerFactory.release();
             mediaPlayer = null;
         }
+    }
+
+    public String getFormat() {
+        return format.get();
     }
 
     /**
