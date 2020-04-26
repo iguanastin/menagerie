@@ -330,7 +330,6 @@ public class APIServer {
         }
 
         String idStr = exchange.getRequestURI().getPath().substring(8);
-        idStr = idStr.substring(0, idStr.indexOf(".jpg"));
         try {
             int id = Integer.parseInt(idStr);
 
@@ -448,7 +447,7 @@ public class APIServer {
         else if (item instanceof GroupItem) type = "group";
 
         json.put("id", item.getId());
-        json.put("thumbnail", "/thumbs/" + item.getId() + ".jpg");
+        json.put("thumbnail", "/thumbs/" + item.getId());
         json.put("type", type);
         json.put("added", item.getDateAdded());
         item.getTags().forEach(tag -> {
