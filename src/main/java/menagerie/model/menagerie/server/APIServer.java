@@ -31,19 +31,19 @@ import javafx.scene.image.Image;
 import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.*;
 import menagerie.model.search.Search;
+import org.apache.pdfbox.io.IOUtils;
 import org.json.JSONObject;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class APIServer {
 
@@ -61,6 +61,19 @@ public class APIServer {
      * Number of items to return per page of search
      */
     private int pageSize;
+
+    /**
+     * This server's port
+     */
+    private int port = 54321;
+
+    private static final Map<String, String> imageExtensionMIMEMap = new HashMap<>();
+    static {
+        imageExtensionMIMEMap.put("image/jpeg", "jpg");
+        imageExtensionMIMEMap.put("image/png", "png");
+        imageExtensionMIMEMap.put("image/bmp", "bmp");
+        imageExtensionMIMEMap.put("image/gif", "gif");
+    }
 
 
     /**
@@ -81,7 +94,9 @@ public class APIServer {
      * @throws IOException When server fails to start
      */
     public void start(int port) throws IOException {
+        this.port = port;
         server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.setExecutor(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
         //        server = HttpsServer.create(new InetSocketAddress(54321), 0);
         //        SSLContext context = SSLContext.getInstance("TLS");
         //
@@ -140,7 +155,13 @@ public class APIServer {
     }
 
     /**
-     *
+     * @return The port this server is listening on
+     */
+    public int getPort() {
+        return port;
+    }
+
+    /**
      * @return The size of page this server responds with
      */
     public int getPageSize() {
@@ -160,26 +181,52 @@ public class APIServer {
 
             if (target.startsWith("thumbs/")) {
                 handleThumbnailRequest(exchange);
-            }
-
-            switch (target) {
-                case "hello":
-                    sendSimpleResponse(exchange, 200, "Hi there!");
-                    break;
-                case "search":
-                    handleSearchRequest(exchange);
-                    break;
-                case "tags":
-                    handleTagsRequest(exchange);
-                    break;
-                default:
-                    sendSimpleResponse(exchange, 404, makeErrorHTML(exchange, 404, "No such endpoint", "No endpoint found at specified path"));
-                    break;
+            } else if (target.equals("hello")) {
+                sendSimpleResponse(exchange, 200, "Hi there!");
+            } else if (target.equals("search")) {
+                handleSearchRequest(exchange);
+            } else if (target.equals("tags")) {
+                handleTagsRequest(exchange);
+            } else if (target.equals("upload")) {
+                handleUploadRequest(exchange);
+            } else {
+                sendErrorResponse(exchange, 404, "No such endpoint", "No endpoint found at specified path");
             }
         } catch (Exception e) {
-            sendSimpleResponse(exchange, 500, makeErrorHTML(exchange, 500, "Unexpected error", "Unexpected internal server error"));
+            sendErrorResponse(exchange, 500, "Unexpected error", "Unexpected internal server error");
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Handles posts to the upload endpoint
+     *
+     * @param exchange Exchange
+     * @throws IOException When an IO exception occurs during the exchange
+     */
+    private void handleUploadRequest(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendErrorResponse(exchange, 400, "Invalid request method", "Method not allowed at this endpoint");
+            return;
+        }
+
+        Map<String, String> query = mapQuerys(exchange);
+        String filename = query.get("filename");
+        if (filename == null || filename.isEmpty()) {
+            sendErrorResponse(exchange, 400, "Missing filename", "Filename parameter required");
+        }
+
+        final String folder = "C:\\temp\\"; // TODO use actual download folder
+
+        try (InputStream body = exchange.getRequestBody()) {
+            try (FileOutputStream fos = new FileOutputStream(new File(folder + filename))) {
+                IOUtils.copy(body, fos);
+            }
+        }
+
+        // TODO import into menagerie
+
+        sendEmptyResponse(exchange, 201);
     }
 
     /**
@@ -189,6 +236,11 @@ public class APIServer {
      * @throws IOException When an IO exception occurs during the exchange
      */
     private void handleTagsRequest(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("GET")) {
+            sendErrorResponse(exchange, 400, "Invalid request method", "Method not allowed at this endpoint");
+            return;
+        }
+
         Map<String, String> query = mapQuerys(exchange);
 
         List<Tag> tags = new ArrayList<>(menagerie.getTags());
@@ -234,6 +286,11 @@ public class APIServer {
      * @throws IOException When an IO exception occurs during the exchange
      */
     private void handleSearchRequest(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("GET")) {
+            sendErrorResponse(exchange, 400, "Invalid request method", "Method not allowed at this endpoint");
+            return;
+        }
+
         Map<String, String> query = mapQuerys(exchange);
         String terms = query.getOrDefault("terms", "");
 
@@ -267,6 +324,11 @@ public class APIServer {
      * @throws IOException When an IO exception occurs during the exchange
      */
     private void handleThumbnailRequest(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("GET")) {
+            sendErrorResponse(exchange, 400, "Invalid request method", "Method not allowed at this endpoint");
+            return;
+        }
+
         String idStr = exchange.getRequestURI().getPath().substring(8);
         idStr = idStr.substring(0, idStr.indexOf(".jpg"));
         try {
@@ -283,46 +345,35 @@ public class APIServer {
                         // Await thumbnail
                         final CountDownLatch cdl = new CountDownLatch(1);
                         thumb.addImageReadyListener(thing -> cdl.countDown());
-                        cdl.await();
+                        cdl.await(10, TimeUnit.SECONDS);
                     }
 
-                    sendImageResponse(exchange, thumb.getImage());
+                    sendImageResponse(exchange, 200, thumb.getImage(), "jpg"); // TODO get actual file format
                     thumb.doNotWant();
                 } else {
-                    sendSimpleResponse(exchange, 404, makeErrorHTML(exchange, 404, "404 not found", "No such item with id: " + id));
+                    sendErrorResponse(exchange, 404, "404 not found", "No such item with id: " + id);
                 }
             } else {
-                sendSimpleResponse(exchange, 500, makeErrorHTML(exchange, 500, "Not configured", "Server not connected to Menagerie"));
+                sendErrorResponse(exchange, 500, "Not configured", "Server not connected to Menagerie");
             }
         } catch (NumberFormatException e) {
-            sendSimpleResponse(exchange, 400, makeErrorHTML(exchange, 400, "Invalid query", "Invalid id format: " + idStr));
+            sendErrorResponse(exchange, 400, "Invalid query", "Invalid id format: " + idStr);
         } catch (InterruptedException e) {
-            sendSimpleResponse(exchange, 500, makeErrorHTML(exchange, 500, "Thumbnail error", "Failed to create/load thumbnail"));
+            sendErrorResponse(exchange, 500, "Thumbnail error", "Failed to create/load thumbnail");
         }
     }
 
     /**
-     * Sends an image as a response for an exchange
+     * Sends a bodyless response to the client
      *
-     * @param exchange The exchange
-     * @param jfxImage Image to send to the client
+     * @param exchange Exchange
+     * @param httpCode HTTP response code
      * @throws IOException When an IO exception occurs during the exchange
      */
-    private void sendImageResponse(HttpExchange exchange, Image jfxImage) throws IOException {
-        try {
-            BufferedImage bImage = SwingFXUtils.fromFXImage(jfxImage, null);
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(bImage, "jpg", baos);
-            baos.close();
-
-            exchange.sendResponseHeaders(200, baos.size());
-            OutputStream os = exchange.getResponseBody();
-            exchange.setAttribute("Content-Type", "image/jpeg");
-            os.write(baos.toByteArray());
-            os.close();
-        } catch (Exception e) {
-            sendSimpleResponse(exchange, 500, makeErrorHTML(exchange, 500, "Transfer error", "Unexpected error sending image"));
-        }
+    private static void sendEmptyResponse(HttpExchange exchange, int httpCode) throws IOException {
+        exchange.getRequestBody().close();
+        exchange.sendResponseHeaders(httpCode, 0);
+        exchange.getResponseBody().close();
     }
 
     /**
@@ -334,10 +385,51 @@ public class APIServer {
      * @throws IOException When an IO exception occurs during the exchange
      */
     private static void sendSimpleResponse(HttpExchange exchange, int httpCode, String response) throws IOException {
+        exchange.getRequestBody().close();
         exchange.sendResponseHeaders(httpCode, response.getBytes().length);
         OutputStream os = exchange.getResponseBody();
         os.write(response.getBytes());
         os.close();
+    }
+
+    /**
+     * Sends a pretty, HTML error response
+     *
+     * @param exchange Exchange
+     * @param httpCode HTTP response code
+     * @param title    Title of the page
+     * @param message  Message
+     * @throws IOException When an IO exception occurs during the exchange
+     */
+    private static void sendErrorResponse(HttpExchange exchange, int httpCode, String title, String message) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", "text/html");
+        sendSimpleResponse(exchange, httpCode, "<!DOCTYPE html><html><head><title>" + httpCode + ": " + title + "</title></head><body style=\"text-align: center; margin: 5em; line-height: 1.5em;\"><h1>Response Code " + httpCode + "</h1><h2>" + title + "</h2><p>" + message + "<br>URI: " + exchange.getRequestURI() + "<br>" + new Date() + "</p></body></html>");
+    }
+
+    /**
+     * Sends an image as a response for an exchange
+     *
+     * @param exchange The exchange
+     * @param jfxImage Image to send to the client
+     * @throws IOException When an IO exception occurs during the exchange
+     */
+    private static void sendImageResponse(HttpExchange exchange, int httpCode, Image jfxImage, String extension) throws IOException {
+        exchange.getRequestBody().close();
+
+        try {
+            BufferedImage bImage = SwingFXUtils.fromFXImage(jfxImage, null);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(bImage, extension, baos);
+            baos.close();
+
+            exchange.sendResponseHeaders(httpCode, baos.size());
+            OutputStream os = exchange.getResponseBody();
+            exchange.setAttribute("Content-Type", imageExtensionMIMEMap.getOrDefault(extension, "image/jpeg"));
+            os.write(baos.toByteArray());
+            os.close();
+        } catch (Exception e) {
+            sendErrorResponse(exchange, 500, "Transfer error", "Unexpected error sending image");
+        }
     }
 
     /**
@@ -424,19 +516,6 @@ public class APIServer {
             }
         }
         return query;
-    }
-
-    /**
-     * Constructs a pretty HTML error page with the given information
-     *
-     * @param exchange Exchange
-     * @param code     HTTP Response code
-     * @param title    Title of the page
-     * @param message  Message
-     * @return Text form of a pretty HTML error page
-     */
-    private static String makeErrorHTML(HttpExchange exchange, int code, String title, String message) {
-        return "<!DOCTYPE html><html><head><title>" + code + ": " + title + "</title></head><body style=\"text-align: center; margin: 5em; line-height: 1.5em;\"><h1>Response Code " + code + "</h1><h2>" + title + "</h2><p>" + message + "<br>Endpoint: " + exchange.getRequestURI().getPath() + "<br>Query: " + exchange.getRequestURI().getQuery() + "<br>" + new Date() + "</p></body></html>";
     }
 
 
