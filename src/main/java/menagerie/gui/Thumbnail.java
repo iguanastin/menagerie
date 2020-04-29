@@ -337,6 +337,10 @@ public class Thumbnail {
         return format.get();
     }
 
+    public File getFile() {
+        return file;
+    }
+
     /**
      * @return This thumbnail's image.
      */

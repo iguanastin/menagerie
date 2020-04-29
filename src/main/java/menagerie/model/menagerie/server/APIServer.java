@@ -34,18 +34,26 @@ import menagerie.model.search.Search;
 import org.apache.pdfbox.io.IOUtils;
 import org.json.JSONObject;
 
+import javax.activation.MimetypesFileTypeMap;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class APIServer {
+
+    public static final DateTimeFormatter HTTP_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss z", Locale.ENGLISH);
 
     /**
      * HTTP server
@@ -66,14 +74,6 @@ public class APIServer {
      * This server's port
      */
     private int port = 54321;
-
-    private static final Map<String, String> imageExtensionMIMEMap = new HashMap<>();
-    static {
-        imageExtensionMIMEMap.put("image/jpeg", "jpg");
-        imageExtensionMIMEMap.put("image/png", "png");
-        imageExtensionMIMEMap.put("image/bmp", "bmp");
-        imageExtensionMIMEMap.put("image/gif", "gif");
-    }
 
 
     /**
@@ -189,6 +189,8 @@ public class APIServer {
                 handleTagsRequest(exchange);
             } else if (target.equals("upload")) {
                 handleUploadRequest(exchange);
+            } else if (target.startsWith("file/")) {
+                handleFileRequest(exchange);
             } else {
                 sendErrorResponse(exchange, 404, "No such endpoint", "No endpoint found at specified path");
             }
@@ -196,6 +198,49 @@ public class APIServer {
             sendErrorResponse(exchange, 500, "Unexpected error", "Unexpected internal server error");
             e.printStackTrace();
         }
+    }
+
+    private void handleFileRequest(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("GET")) {
+            sendErrorResponse(exchange, 400, "Invalid request method", "Method not allowed at this endpoint");
+            return;
+        }
+
+        // Get and verify ID
+        String idStr = exchange.getRequestURI().getPath().substring(5);
+        int id;
+        try {
+            id = Integer.parseInt(idStr);
+        } catch (NumberFormatException e) {
+            sendErrorResponse(exchange, 400, "Invalid ID", "ID must be an integer");
+            return;
+        }
+
+        // Ensure menagerie is connected
+        if (menagerie == null) {
+            sendErrorResponse(exchange, 500, "Not configured", "Server not connected to Menagerie");
+            return;
+        }
+
+        // Get item
+        Item item = menagerie.getItemByID(id);
+        if (item == null) {
+            sendErrorResponse(exchange, 404, "404 not found", "No such item");
+            return;
+        }
+
+        // Ensure item has file
+        if (!(item instanceof MediaItem)) {
+            sendErrorResponse(exchange, 400, "Invalid request", "Item does not have a file");
+            return;
+        }
+
+        // Respond with item
+        File file = ((MediaItem) item).getFile();
+        exchange.getResponseHeaders().set("Cache-Control", "max-age=86400");
+        exchange.getResponseHeaders().set("ETag", "" + item.getId());
+        exchange.getResponseHeaders().set("Last-Modified", HTTP_DATE_TIME_FORMATTER.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()).withZoneSameInstant(ZoneId.of("GMT"))));
+        sendFileResponse(exchange, 201, file);
     }
 
     /**
@@ -344,11 +389,18 @@ public class APIServer {
                         final CountDownLatch cdl = new CountDownLatch(1);
                         thumb.addImageReadyListener(thing -> cdl.countDown());
                         thumb.want();
-                        cdl.await(3, TimeUnit.SECONDS);
+                        cdl.await(5, TimeUnit.SECONDS);
                         thumb.doNotWant();
                     }
 
-                    sendImageResponse(exchange, 200, thumb.getImage(), thumb.getFormat());
+                    if (thumb.isLoaded()) {
+                        exchange.getResponseHeaders().set("Cache-Control", "max-age=86400");
+                        exchange.getResponseHeaders().set("ETag", "" + item.getId());
+                        exchange.getResponseHeaders().set("Last-Modified", HTTP_DATE_TIME_FORMATTER.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(thumb.getFile().lastModified()), ZoneId.systemDefault()).withZoneSameInstant(ZoneId.of("GMT"))));
+                        sendImageResponse(exchange, 200, thumb.getImage(), thumb.getFormat());
+                    } else {
+                        sendErrorResponse(exchange, 500, "Thumbnail load timeout", "Failed to load the thumbnail in the given time");
+                    }
                 } else {
                     sendErrorResponse(exchange, 404, "404 not found", "No such item with id: " + id);
                 }
@@ -423,11 +475,19 @@ public class APIServer {
 
             exchange.sendResponseHeaders(httpCode, baos.size());
             OutputStream os = exchange.getResponseBody();
-            exchange.setAttribute("Content-Type", imageExtensionMIMEMap.getOrDefault(extension, "image/jpeg"));
+            exchange.setAttribute("Content-Type", MimetypesFileTypeMap.getDefaultFileTypeMap().getContentType(extension));
             os.write(baos.toByteArray());
             os.close();
         } catch (Exception e) {
             sendErrorResponse(exchange, 500, "Transfer error", "Unexpected error sending image");
+        }
+    }
+
+    private void sendFileResponse(HttpExchange exchange, int httpCode, File file) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", Files.probeContentType(file.toPath()));
+        exchange.sendResponseHeaders(httpCode, file.length());
+        try (OutputStream os = exchange.getResponseBody()) {
+            Files.copy(file.toPath(), os);
         }
     }
 
