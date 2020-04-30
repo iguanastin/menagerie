@@ -503,7 +503,15 @@ public class APIServer {
         JSONObject json = new JSONObject();
 
         String type = "unknown";
-        if (item instanceof MediaItem) type = "media";
+        if (item instanceof MediaItem) {
+            if (((MediaItem) item).isImage()) {
+                type = "image";
+            } else if (((MediaItem) item).isVideo()) {
+                type = "video";
+            } else {
+                type = "media";
+            }
+        }
         else if (item instanceof GroupItem) type = "group";
 
         json.put("id", item.getId());
@@ -528,7 +536,8 @@ public class APIServer {
 
         if (item instanceof MediaItem) {
             json.put("md5", ((MediaItem) item).getMD5());
-            json.put("file", ((MediaItem) item).getFile().getAbsolutePath());
+            json.put("path", ((MediaItem) item).getFile().getAbsolutePath());
+            json.put("file", "/file/" + item.getId());
             if (((MediaItem) item).getGroup() != null) {
                 json.put("element_of", ((MediaItem) item).getGroup().getId());
                 json.put("element_index", ((MediaItem) item).getPageIndex());
