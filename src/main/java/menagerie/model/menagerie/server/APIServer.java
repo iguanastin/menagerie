@@ -207,7 +207,7 @@ public class APIServer {
         }
 
         // Get and verify ID
-        String idStr = exchange.getRequestURI().getPath().substring(5);
+        String idStr = exchange.getRequestURI().getPath().substring(6);
         int id;
         try {
             id = Integer.parseInt(idStr);
