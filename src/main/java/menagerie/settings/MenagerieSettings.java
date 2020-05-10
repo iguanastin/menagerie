@@ -70,7 +70,7 @@ public class MenagerieSettings extends Settings {
         Collections.addAll(findOnlineGroup.getChildren(), onlineLoadAhead);
         getSettings().add(findOnlineGroup);
 
-        apiGroup = new GroupSetting("api-group").label("API Server");
+        apiGroup = new GroupSetting("api-group").label("API Server").toggleable();
         apiPort = new IntSetting("api-port", 54321).label("Port").tip("Port to host the API server on. 54321 by default").range(49152, 65535);
         apiPageSize = new IntSetting("api-page-size", 100).label("Max Page Size").tip("Maximum number of items to serve per page. 100 by default").min(1);
         Collections.addAll(apiGroup.getChildren(), apiPageSize, apiPort);

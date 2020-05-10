@@ -352,7 +352,7 @@ public class APIServer {
         final int count = Integer.min(pageSize, total - page * pageSize);
 
         JSONObject json = new JSONObject();
-        json.put("page", page).put("count", count).put("total", total);
+        json.put("page", page).put("count", count).put("total", total).put("page_size", pageSize).put("page_count", (int) Math.ceil((double) total / pageSize));
 
         for (int i = page * pageSize; i < page * pageSize + count; i++) {
             json.append("items", encodeJSONItem(search.getResults().get(i), expandTags, expandGroups));

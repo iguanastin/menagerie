@@ -398,19 +398,35 @@ public class MainController {
 
     private void initAPIServer() {
         apiServer = new APIServer(menagerie, settings.apiPageSize.getValue());
-        try {
-            apiServer.start(settings.apiPort.getValue());
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error while starting API server", e);
+        if (settings.apiGroup.isEnabled()) {
+            try {
+                apiServer.start(settings.apiPort.getValue());
+            } catch (IOException e) {
+                LOGGER.log(Level.SEVERE, "Error while starting API server", e);
+            }
         }
 
+        settings.apiGroup.enabledProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                try {
+                    apiServer.start(settings.apiPort.getValue());
+                } catch (IOException e) {
+                    LOGGER.log(Level.SEVERE, "Failed to start API server", e);
+                }
+            } else {
+                apiServer.stop();
+            }
+        });
         settings.apiPageSize.valueProperty().addListener((observable, oldValue, newValue) -> apiServer.setPageSize(newValue.intValue()));
         settings.apiPort.valueProperty().addListener((observable, oldValue, newValue) -> {
-            apiServer.stop();
-            try {
-                apiServer.start(newValue.intValue());
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Failed to restart API server with new port: " + newValue.intValue(), e);
+            if (settings.apiGroup.isEnabled() && apiServer != null) {
+                apiServer.stop();
+
+                try {
+                    apiServer.start(newValue.intValue());
+                } catch (IOException e) {
+                    LOGGER.log(Level.SEVERE, "Failed to restart API server with new port: " + newValue.intValue(), e);
+                }
             }
         });
     }
