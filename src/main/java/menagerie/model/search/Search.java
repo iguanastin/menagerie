@@ -184,6 +184,13 @@ public class Search {
                 if (temp.charAt(0) == '"') temp = temp.substring(1); // Strip first quote
                 if (temp.charAt(temp.length() - 1) == '"') temp = temp.substring(0, temp.length() - 1); // Strip second quote
                 rules.add(new TitleRule(temp, inverted));
+            } else if (arg.startsWith("in:")) {
+                String temp = arg.substring(arg.indexOf(':') + 1);
+                try {
+                    rules.add(new InGroupRule(Integer.parseInt(temp), inverted));
+                } catch (NumberFormatException e) {
+                    LOGGER.warning("Failed to convert parameter to integer: " + temp);
+                }
             } else {
                 rules.add(new TagRule(arg, inverted));
             }
