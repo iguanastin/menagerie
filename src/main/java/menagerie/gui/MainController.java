@@ -199,9 +199,11 @@ public class MainController {
      */
     private final ListChangeListener<Tag> previewTagListener = c -> {
         while (c.next()) {
-            tagListView.getItems().addAll(c.getAddedSubList());
-            tagListView.getItems().removeAll(c.getRemoved());
-            tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+            Platform.runLater(() -> {
+                tagListView.getItems().addAll(c.getAddedSubList());
+                tagListView.getItems().removeAll(c.getRemoved());
+                tagListView.getItems().sort(Comparator.comparing(Tag::getName));
+            });
         }
     };
     /**
@@ -1484,18 +1486,29 @@ public class MainController {
      * @param input Tag edit string.
      */
     private void editTagsUtility(String input) {
-        List<Item> changed = new ArrayList<>();
         Map<Item, List<Tag>> added = new HashMap<>();
         Map<Item, List<Tag>> removed = new HashMap<>();
 
-        for (String text : input.split("\\s+")) {
+        editTagsOf(input, menagerie, itemGridView.getSelected(), added, removed);
+
+        if (!added.isEmpty() || !removed.isEmpty()) {
+            Set<Item> changed = new HashSet<>();
+            changed.addAll(removed.keySet());
+            changed.addAll(added.keySet());
+
+            menagerie.refreshInSearches(new ArrayList<>(changed));
+
+            tagEditHistory.push(new TagEditEvent(added, removed));
+        }
+    }
+
+    public static void editTagsOf(String editText, Menagerie menagerie, List<Item> items, Map<Item, List<Tag>> added, Map<Item, List<Tag>> removed) {
+        for (String text : editText.split("\\s+")) {
             if (text.startsWith("-")) {
                 Tag t = menagerie.getTagByName(text.substring(1));
                 if (t != null) {
-                    for (Item item : itemGridView.getSelected()) {
+                    for (Item item : items) {
                         if (item.removeTag(t)) {
-                            changed.add(item);
-
                             removed.computeIfAbsent(item, k -> new ArrayList<>()).add(t);
                         }
                     }
@@ -1503,20 +1516,12 @@ public class MainController {
             } else {
                 Tag t = menagerie.getTagByName(text);
                 if (t == null) t = menagerie.createTag(text);
-                for (Item item : itemGridView.getSelected()) {
+                for (Item item : items) {
                     if (item.addTag(t)) {
-                        changed.add(item);
-
                         added.computeIfAbsent(item, k -> new ArrayList<>()).add(t);
                     }
                 }
             }
-        }
-
-        if (!changed.isEmpty()) {
-            menagerie.refreshInSearches(changed);
-
-            tagEditHistory.push(new TagEditEvent(added, removed));
         }
     }
 

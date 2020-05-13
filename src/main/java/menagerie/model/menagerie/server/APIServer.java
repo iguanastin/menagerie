@@ -28,6 +28,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
+import menagerie.gui.MainController;
 import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.*;
 import menagerie.model.search.Search;
@@ -191,6 +192,8 @@ public class APIServer {
                 handleUploadRequest(exchange);
             } else if (target.startsWith("file/")) {
                 handleFileRequest(exchange);
+            } else if (target.startsWith("edit_item/")) {
+                handleEditItemRequest(exchange);
             } else {
                 sendErrorResponse(exchange, 404, "No such endpoint", "No endpoint found at specified path");
             }
@@ -198,6 +201,59 @@ public class APIServer {
             sendErrorResponse(exchange, 500, "Unexpected error", "Unexpected internal server error");
             e.printStackTrace();
         }
+    }
+
+    private void handleEditItemRequest(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendErrorResponse(exchange, 400, "Invalid request method", "Method not allowed at this endpoint");
+            return;
+        }
+
+        // TODO allow multiple items to be edited with one call. Dash-separated ids?
+        String idStr = exchange.getRequestURI().getPath().substring(11);
+        int id;
+        try {
+            id = Integer.parseInt(idStr);
+        } catch (NumberFormatException e) {
+            sendErrorResponse(exchange, 400, "Invalid ID", "ID must be an integer");
+            return;
+        }
+
+        // Ensure menagerie is connected
+        if (menagerie == null) {
+            sendErrorResponse(exchange, 500, "Not configured", "Server not connected to Menagerie");
+            return;
+        }
+
+        // Get item
+        Item item = menagerie.getItemByID(id);
+        if (item == null) {
+            sendErrorResponse(exchange, 404, "404 not found", "No such item");
+            return;
+        }
+
+        Map<String, String> query = mapQuerys(exchange);
+        final boolean expandTags = "1".equalsIgnoreCase(query.get("expand_tags"));
+        final boolean expandGroups = "1".equalsIgnoreCase(query.get("expand_groups"));
+
+        final String tagEdit = query.get("tags");
+
+        if (tagEdit != null && !tagEdit.isEmpty()) {
+            final Map<Item, List<Tag>> added = new HashMap<>();
+            final Map<Item, List<Tag>> removed = new HashMap<>();
+
+            MainController.editTagsOf(tagEdit, menagerie, Collections.singletonList(menagerie.getItemByID(id)), added, removed);
+
+            if (!added.isEmpty() || !removed.isEmpty()) {
+                Set<Item> changed = new HashSet<>();
+                changed.addAll(removed.keySet());
+                changed.addAll(added.keySet());
+
+                menagerie.refreshInSearches(new ArrayList<>(changed));
+            }
+        }
+
+        sendSimpleResponse(exchange, 200, encodeJSONItem(item, expandTags, expandGroups).toString());
     }
 
     private void handleFileRequest(HttpExchange exchange) throws IOException {
