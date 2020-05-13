@@ -199,9 +199,12 @@ public class MainController {
      */
     private final ListChangeListener<Tag> previewTagListener = c -> {
         while (c.next()) {
+            List<? extends Tag> addedSubList = c.getAddedSubList();
+            List<? extends Tag> removed = c.getRemoved();
+
             Platform.runLater(() -> {
-                tagListView.getItems().addAll(c.getAddedSubList());
-                tagListView.getItems().removeAll(c.getRemoved());
+                tagListView.getItems().addAll(addedSubList);
+                tagListView.getItems().removeAll(removed);
                 tagListView.getItems().sort(Comparator.comparing(Tag::getName));
             });
         }
