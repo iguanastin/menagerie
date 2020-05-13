@@ -199,8 +199,8 @@ public class MainController {
      */
     private final ListChangeListener<Tag> previewTagListener = c -> {
         while (c.next()) {
-            List<? extends Tag> addedSubList = c.getAddedSubList();
-            List<? extends Tag> removed = c.getRemoved();
+            List<? extends Tag> addedSubList = new ArrayList<>(c.getAddedSubList());
+            List<? extends Tag> removed = new ArrayList<>(c.getRemoved());
 
             Platform.runLater(() -> {
                 tagListView.getItems().addAll(addedSubList);

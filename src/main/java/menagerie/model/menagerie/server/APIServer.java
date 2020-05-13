@@ -204,7 +204,7 @@ public class APIServer {
     }
 
     private void handleEditItemRequest(HttpExchange exchange) throws IOException {
-        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("GET")) {
             sendErrorResponse(exchange, 400, "Invalid request method", "Method not allowed at this endpoint");
             return;
         }
