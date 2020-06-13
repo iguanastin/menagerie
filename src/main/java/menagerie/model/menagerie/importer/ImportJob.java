@@ -1,7 +1,7 @@
 /*
  MIT License
 
- Copyright (c) 2019. Austin Thompson
+ Copyright (c) 2020. Austin Thompson
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -158,7 +158,7 @@ public class ImportJob {
                         LOGGER.warning(String.format("Default folder '%s' doesn't exist or isn't a folder", folder));
                         return true;
                     }
-                    String filename = url.getPath().replaceAll("^.*/", "");
+                    String filename = url.getPath().replaceAll("(^.*/)|(\\?.*$)", "");
 
                     downloadTo = MainController.resolveDuplicateFilename(new File(folder, filename));
                 }

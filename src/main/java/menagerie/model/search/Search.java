@@ -189,7 +189,11 @@ public class Search {
                 try {
                     rules.add(new InGroupRule(Integer.parseInt(temp), inverted));
                 } catch (NumberFormatException e) {
-                    LOGGER.warning("Failed to convert parameter to integer: " + temp);
+                    if (temp.equalsIgnoreCase("any")) {
+                        rules.add(new InGroupRule(InGroupRule.ANY_GROUP, inverted));
+                    } else {
+                        LOGGER.warning("Failed to convert parameter to integer: " + temp);
+                    }
                 }
             } else {
                 rules.add(new TagRule(arg, inverted));

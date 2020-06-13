@@ -31,7 +31,10 @@ import javafx.scene.image.Image;
 import menagerie.gui.MainController;
 import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.*;
+import menagerie.model.menagerie.importer.ImportJob;
+import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.Search;
+import menagerie.settings.MenagerieSettings;
 import org.apache.pdfbox.io.IOUtils;
 import org.json.JSONObject;
 
@@ -40,6 +43,7 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -66,6 +70,10 @@ public class APIServer {
      */
     private final Menagerie menagerie;
 
+    private final MenagerieSettings settings;
+
+    private final ImporterThread importer;
+
     /**
      * Number of items to return per page of search
      */
@@ -83,8 +91,10 @@ public class APIServer {
      * @param menagerie The Menagerie to pull data from for requests
      * @param pageSize  Number of items to return per page
      */
-    public APIServer(Menagerie menagerie, int pageSize) {
+    public APIServer(Menagerie menagerie, ImporterThread importer, MenagerieSettings settings, int pageSize) {
         this.menagerie = menagerie;
+        this.importer = importer;
+        this.settings = settings;
         this.pageSize = pageSize;
     }
 
@@ -98,41 +108,51 @@ public class APIServer {
         this.port = port;
         server = HttpServer.create(new InetSocketAddress(port), 0);
         server.setExecutor(Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()));
-        //        server = HttpsServer.create(new InetSocketAddress(54321), 0);
-        //        SSLContext context = SSLContext.getInstance("TLS");
+
+        //        try {
+        //            // Set up the socket address
+        //            InetSocketAddress address = new InetSocketAddress(port);
         //
-        //        // Initialise the keystore
-        //        char[] password = "simulator".toCharArray();
-        //        KeyStore ks = KeyStore.getInstance("JKS");
-        //        ks.load(getClass().getResourceAsStream("/lig.keystore"), password);
+        //            // Initialise the HTTPS server
+        //            server = HttpsServer.create(address, 0);
+        //            SSLContext sslContext = SSLContext.getInstance("TLS");
         //
-        //        // Set up the key manager factory
-        //        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-        //        kmf.init(ks, password);
+        //            // Initialise the keystore
+        //            char[] password = "simulator".toCharArray();
+        //            KeyStore ks = KeyStore.getInstance("JKS");
+        //            ks.load(getClass().getResourceAsStream("/lig.keystore"), password);
         //
-        //        // Set up the trust manager factory
-        //        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-        //        tmf.init(ks);
+        //            // Set up the key manager factory
+        //            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        //            kmf.init(ks, password);
         //
-        //        context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), new SecureRandom());
-        //        server.setHttpsConfigurator(new HttpsConfigurator(context) {
-        //            public void configure(HttpsParameters params) {
-        //                try {
-        //                    // Initialise the SSL context
-        //                    SSLContext c = SSLContext.getDefault();
-        //                    SSLEngine engine = c.createSSLEngine();
-        //                    params.setNeedClientAuth(false);
-        //                    params.setCipherSuites(engine.getEnabledCipherSuites());
-        //                    params.setProtocols(engine.getEnabledProtocols());
+        //            // Set up the trust manager factory
+        //            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+        //            tmf.init(ks);
         //
-        //                    // Get the default parameters
-        //                    SSLParameters defaultSSLParameters = c.getDefaultSSLParameters();
-        //                    params.setSSLParameters(defaultSSLParameters);
-        //                } catch (Exception ex) {
-        //                    ex.printStackTrace();
+        //            // Set up the HTTPS context and parameters
+        //            sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+        //            server.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
+        //                public void configure(HttpsParameters params) {
+        //                    try {
+        //                        // Initialise the SSL context
+        //                        SSLContext c = SSLContext.getDefault();
+        //                        SSLEngine engine = c.createSSLEngine();
+        //                        params.setNeedClientAuth(false);
+        //                        params.setCipherSuites(engine.getEnabledCipherSuites());
+        //                        params.setProtocols(engine.getEnabledProtocols());
+        //
+        //                        // Get the default parameters
+        //                        SSLParameters defaultSSLParameters = c.getDefaultSSLParameters();
+        //                        params.setSSLParameters(defaultSSLParameters);
+        //                    } catch (Exception ex) {
+        //                        ex.printStackTrace();
+        //                    }
         //                }
-        //            }
-        //        });
+        //            });
+        //        } catch (Exception exception) {
+        //            exception.printStackTrace();
+        //        }
 
         server.createContext("/").setHandler(this::handleRequest);
         server.start();
@@ -182,8 +202,6 @@ public class APIServer {
 
             if (target.startsWith("thumbs/")) {
                 handleThumbnailRequest(exchange);
-            } else if (target.equals("hello")) {
-                sendSimpleResponse(exchange, 200, "Hi there!");
             } else if (target.equals("search")) {
                 handleSearchRequest(exchange);
             } else if (target.equals("tags")) {
@@ -315,14 +333,19 @@ public class APIServer {
         String filename = query.get("filename");
         if (filename == null || filename.isEmpty()) {
             sendErrorResponse(exchange, 400, "Missing filename", "Filename parameter required");
+            return;
         }
 
-        final String folder = "C:\\temp\\"; // TODO use actual download folder
-
-        try (InputStream body = exchange.getRequestBody()) {
-            try (FileOutputStream fos = new FileOutputStream(new File(folder + filename))) {
-                IOUtils.copy(body, fos);
+        if (query.containsKey("url")) {
+            importer.addJob(new ImportJob(new URL(query.get("url")), new File(settings.defaultFolder.getValue(), filename), null));
+        } else {
+            File file = new File(settings.defaultFolder.getValue(), filename);
+            try (InputStream body = exchange.getRequestBody()) {
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    IOUtils.copy(body, fos);
+                }
             }
+            importer.addJob(new ImportJob(file, null));
         }
 
         // TODO import into menagerie
@@ -567,8 +590,7 @@ public class APIServer {
             } else {
                 type = "media";
             }
-        }
-        else if (item instanceof GroupItem) type = "group";
+        } else if (item instanceof GroupItem) type = "group";
 
         json.put("id", item.getId());
         json.put("thumbnail", "/thumbs/" + item.getId());
@@ -640,13 +662,6 @@ public class APIServer {
             }
         }
         return query;
-    }
-
-
-    public static void main(String[] args) throws IOException {
-        APIServer server = new APIServer(null, 100);
-
-        server.start(54321);
     }
 
 }

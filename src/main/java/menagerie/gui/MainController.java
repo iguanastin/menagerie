@@ -86,6 +86,7 @@ import menagerie.model.search.SearchHistory;
 import menagerie.settings.MenagerieSettings;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
+import menagerie.util.ObjectHolder;
 import menagerie.util.folderwatcher.FolderWatcherThread;
 
 import java.awt.*;
@@ -350,9 +351,6 @@ public class MainController {
     @FXML
     public void initialize() {
 
-        // Initialize the api server
-        initAPIServer();
-
         // Initialize the importer
         initImporterThread();
 
@@ -363,6 +361,9 @@ public class MainController {
         initPlugins();
 
         initDatabaseUpdateCounter();
+
+        // Initialize the api server
+        initAPIServer();
 
         // Things to run on first "tick"
         Platform.runLater(() -> {
@@ -402,7 +403,7 @@ public class MainController {
     }
 
     private void initAPIServer() {
-        apiServer = new APIServer(menagerie, settings.apiPageSize.getValue());
+        apiServer = new APIServer(menagerie, importer, settings, settings.apiPageSize.getValue());
         if (settings.apiGroup.isEnabled()) {
             try {
                 apiServer.start(settings.apiPort.getValue());
@@ -817,28 +818,28 @@ public class MainController {
      */
     private void initExplorerTagListCellFactory() {
         tagListView.setCellFactory(param -> {
-            TagListCell c = new TagListCell(thing -> {
+            TagListCell c = new TagListCell(tag -> {
                 String text = searchTextField.getText();
                 if (text == null) text = "";
                 text = text.trim();
-                if (Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
-                    text = text.replaceAll("(^|\\s)-" + thing.getName(), " ");
-                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains("-" + tag.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)-" + tag.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains(tag.getName().toLowerCase())) {
                     if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
-                    text += thing.getName() + " ";
+                    text += tag.getName() + " ";
                 }
                 searchTextField.setText(text.trim());
                 searchTextField.requestFocus();
                 searchTextField.positionCaret(text.length());
-            }, thing -> {
+            }, tag -> {
                 String text = searchTextField.getText();
                 if (text == null) text = "";
                 text = text.trim();
-                if (Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
-                    text = text.replaceAll("(^|\\s)" + thing.getName(), " ");
-                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains("-" + thing.getName().toLowerCase())) {
+                if (Arrays.asList(text.toLowerCase().split(" ")).contains(tag.getName().toLowerCase())) {
+                    text = text.replaceAll("(^|\\s)" + tag.getName(), " ");
+                } else if (!Arrays.asList(text.toLowerCase().split(" ")).contains("-" + tag.getName().toLowerCase())) {
                     if (!text.isEmpty() && !text.endsWith(" ")) text += " ";
-                    text += "-" + thing.getName() + " ";
+                    text += "-" + tag.getName() + " ";
                 }
                 searchTextField.setText(text.trim());
                 searchTextField.requestFocus();
@@ -847,6 +848,8 @@ public class MainController {
             // TODO: Make a custom popup that encompasses all the tag controls?
             c.setOnContextMenuRequested(event -> {
                 if (c.getItem() != null) {
+                    ObjectHolder<ContextMenu> menu = new ObjectHolder<>();
+
                     // TODO Transfer all of this to TagListCell class and use listeners/callbacks
                     MenuItem addNote = new MenuItem("Add note");
                     addNote.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
@@ -872,11 +875,15 @@ public class MainController {
 
                         tagEditHistory.push(new TagEditEvent(null, removed));
                     });
-                    SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker(color -> c.getItem().setColor(color));
+                    SimpleCSSColorPicker colorPicker = new SimpleCSSColorPicker(color -> {
+                        c.getItem().setColor(color);
+                        Platform.runLater(() -> menu.obj.hide());
+                    });
                     colorPicker.getTextfield().setText(c.getItem().getColor());
                     CustomMenuItem tagColorPicker = new CustomMenuItem(colorPicker, false);
 
                     ContextMenu m = new ContextMenu(addNote, new SeparatorMenuItem(), tagSelected, untagSelected, new SeparatorMenuItem(), tagColorPicker, new SeparatorMenuItem());
+                    menu.obj = m;
 
                     // TODO: Do this better, jfc
                     for (String note : c.getItem().getNotes()) {

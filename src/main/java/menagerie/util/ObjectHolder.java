@@ -22,44 +22,10 @@
  SOFTWARE.
  */
 
-package menagerie.model.search.rules;
+package menagerie.util;
 
-import menagerie.model.menagerie.Item;
-import menagerie.model.menagerie.MediaItem;
+public class ObjectHolder<T> {
 
-/**
- * Rule that requires item be in a specific group.
- */
-public class InGroupRule extends SearchRule {
-
-    public static final int ANY_GROUP = -1;
-
-    private final int id;
-
-
-    /**
-     * @param value    Value to compare with.
-     * @param inverted Negate this rule.
-     */
-    public InGroupRule(int value, boolean inverted) {
-        super(inverted);
-        priority = 10;
-
-        this.id = value;
-    }
-
-    @Override
-    public boolean accept(Item item) {
-        boolean result = item instanceof MediaItem && ((MediaItem) item).isInGroup() && (((MediaItem) item).getGroup().getId() == id || id == ANY_GROUP);
-
-        return isInverted() != result;
-    }
-
-    @Override
-    public String toString() {
-        String result = "In Group Rule: " + id;
-        if (isInverted()) result += " [inverted]";
-        return result;
-    }
+    public T obj = null;
 
 }
