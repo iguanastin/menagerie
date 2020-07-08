@@ -81,7 +81,7 @@ public class Search {
                 r.setSeed(shuffleSeed + o2.getId());
                 result = i1 - r.nextInt();
             } else {
-                 result = o1.getId() - o2.getId();
+                result = o1.getId() - o2.getId();
             }
 
             return descending ? -result : result;

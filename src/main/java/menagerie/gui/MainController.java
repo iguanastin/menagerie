@@ -1136,6 +1136,14 @@ public class MainController {
             cm.getItems().add(rename);
             cm.getItems().add(new SeparatorMenuItem());
         }
+        if (mediaCount == 1) {
+            MediaItem item = ((MediaItem) selected.get(0));
+            if (item.isInGroup() && (!(currentSearch instanceof GroupSearch) || !((GroupSearch) currentSearch).getGroup().equals(item.getGroup()))) {
+                MenuItem searchGroup = new MenuItem("Go to Group");
+                searchGroup.setOnAction(event -> applySearch(null, item.getGroup(), false, true, false));
+                cm.getItems().add(searchGroup);
+            }
+        }
         if (groupCount > 1 || mediaCount > 0) {
             MenuItem combineGroups = new MenuItem("Combine into Group");
             combineGroups.setOnAction(event -> groupDialog(selected));
