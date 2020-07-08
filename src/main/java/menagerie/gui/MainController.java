@@ -1138,10 +1138,19 @@ public class MainController {
         }
         if (mediaCount == 1) {
             MediaItem item = ((MediaItem) selected.get(0));
-            if (item.isInGroup() && (!(currentSearch instanceof GroupSearch) || !((GroupSearch) currentSearch).getGroup().equals(item.getGroup()))) {
-                MenuItem searchGroup = new MenuItem("Go to Group");
-                searchGroup.setOnAction(event -> applySearch(null, item.getGroup(), false, true, false));
-                cm.getItems().add(searchGroup);
+            if (item.isInGroup()) {
+                MenuItem selectGroup = new MenuItem("Select Group");
+                selectGroup.setOnAction(event -> {
+                    applySearch(null, null, true, false, false);
+                    selectItemInGridView(item.getGroup());
+                });
+                cm.getItems().add(selectGroup);
+
+                if (!(currentSearch instanceof GroupSearch) || !((GroupSearch) currentSearch).getGroup().equals(item.getGroup())) {
+                    MenuItem searchGroup = new MenuItem("Go to Group");
+                    searchGroup.setOnAction(event -> applySearch(null, item.getGroup(), false, true, false));
+                    cm.getItems().add(searchGroup);
+                }
             }
         }
         if (groupCount > 1 || mediaCount > 0) {
