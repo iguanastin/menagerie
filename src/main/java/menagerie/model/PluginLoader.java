@@ -38,6 +38,9 @@ import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+// REENG: Plugins are implemented in the JAR dependency (see pom).
+//  --> Missing source code for classes like "MenageriePlugin"
+//  --> might need to reimplement or scrap plugins to resolve this dependency
 public abstract class PluginLoader {
 
     private static final Logger LOGGER = Logger.getLogger(PluginLoader.class.getName());

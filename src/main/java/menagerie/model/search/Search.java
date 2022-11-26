@@ -79,6 +79,7 @@ public class Search {
         };
     }
 
+    // REENG: Extract this to a separate SearchRuleParser
     protected void parseRules(String search) {
         // this would be a test str"ing that doesn't tokenize the "quotes
         // This would be a test "string that DOES tokenize the quotes"
@@ -247,6 +248,7 @@ public class Search {
         List<Item> toRemove = new ArrayList<>();
         List<Item> toAdd = new ArrayList<>();
         for (Item item : check) {
+            // REENG: only consider item if it is "valid". This is used as a filter for GroupSearch
             if (isItemValid(item)) {
                 if (!results.contains(item)) {
                     toAdd.add(item);

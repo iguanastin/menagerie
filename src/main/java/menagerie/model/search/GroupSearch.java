@@ -57,6 +57,7 @@ public class GroupSearch extends Search {
         };
     }
 
+    // REENG: Adds additional validity condition: Item must be in group
     @Override
     protected boolean isItemValid(Item item) {
         if (item instanceof MediaItem) {

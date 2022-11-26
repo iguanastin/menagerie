@@ -34,6 +34,8 @@ public abstract class SearchRule implements Comparable<SearchRule> {
     /**
      * Sort order priority of the rule.
      */
+    // REENG: Make property abstract?
+    //   also: priorities seem to not be defined for all implementations - why?
     int priority = Integer.MAX_VALUE;
 
     private final boolean inverted;
