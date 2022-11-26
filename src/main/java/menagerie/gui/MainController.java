@@ -587,6 +587,7 @@ public class MainController {
 
         settings.autoImportGroup.enabledProperty().addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
             // Defer to later to ensure other settings get updated before any action is taken, since this operation relies on other settings
+            // REENG: stop previous folder watcher
             if (folderWatcherThread != null) {
                 folderWatcherThread.stopWatching();
             }
@@ -1515,6 +1516,7 @@ public class MainController {
         return file;
     }
 
+    // REENG: Killing active folder watcher happens in initImporterThread(), not here
     /**
      * Starts a folder watcher thread. Kills an active folder watcher thread first, if present.
      *

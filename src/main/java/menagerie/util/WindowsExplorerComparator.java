@@ -38,6 +38,7 @@ public class WindowsExplorerComparator implements Comparator<File> {
 
     private static final Pattern splitPattern = Pattern.compile("\\d+|\\.|\\s");
 
+    // REENG: compare windows file names
     @Override
     public int compare(File f1, File f2) {
         Iterator<String> i1 = splitStringPreserveDelimiter(f1.getPath()).iterator();

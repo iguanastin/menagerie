@@ -42,6 +42,7 @@ import java.util.logging.Logger;
  * <p>
  * Property events are handled on the FX thread.
  */
+// REENG: Old format for settings. Still in use for compatibility reasons. New implementation is more configurable and extensible.
 public class OldSettings {
 
     private static final Logger LOGGER = Logger.getLogger(OldSettings.class.getName());
