@@ -60,11 +60,14 @@ public class DatabaseVersionUpdater {
      * @param db Database
      * @throws SQLException If the upgrade fails.
      */
+    // REENG: Would this work if with version jumps >1, e.g. from v2 to v8 ?
     public static void updateDatabase(Connection db) throws SQLException {
         int version = getVersion(db);
 
         LOGGER.info("Found database version: " + version);
 
+        // REENG: Probably best to move upgrading procedure to separate classes.
+        //  And then just add a new implementation with each new version instead of editing this class
         if (version == -1) {
             cleanDatabase(db);
             version = initializeTables(db);
@@ -474,7 +477,7 @@ public class DatabaseVersionUpdater {
         }
     }
 
-
+    // REENG: This needs to be moved to test code
     public static void main(String[] args) throws SQLException {
         // Copies all data into new database
 

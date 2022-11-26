@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+// REENG: Seems to be unused
 public class ArchiveItem extends GroupItem {
 
     private static final Logger LOGGER = Logger.getLogger(ArchiveItem.class.getName());

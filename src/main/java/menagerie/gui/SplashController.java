@@ -80,6 +80,7 @@ public class SplashController {
         this.splashBackground = splashBackground;
     }
 
+    // REENG: Split into methods
     @FXML
     public void initialize() {
         backgroundImageView.setImage(splashBackground);
@@ -114,6 +115,7 @@ public class SplashController {
             Main.loadVLCJ(vlcj);
 
             // ----------------------------------------- Back up database ----------------------------------------------
+            // REENG: Database is by default stored at "C:\Users\<username>\menagerie.mv.db"
             if (settings.dbBackup.getValue()) {
                 Platform.runLater(() -> statusLabel.setText("Backing up database..."));
                 try {
@@ -135,6 +137,7 @@ public class SplashController {
             Platform.runLater(() -> statusLabel.setText("Connecting to database: " + settings.dbUrl.getValue() + "..."));
             Connection database;
             try {
+                String connStr = "jdbc:h2:" + settings.dbUrl.getValue();
                 database = DriverManager.getConnection("jdbc:h2:" + settings.dbUrl.getValue(), settings.dbUser.getValue(), settings.dbPass.getValue());
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error connecting to database: " + settings.dbUrl.getValue(), e);
@@ -239,6 +242,7 @@ public class SplashController {
             // ------------------------------------ Construct Menagerie ------------------------------------------------
             Menagerie menagerie;
             try {
+                // REENG: actual loading happens here
                 menagerie = new Menagerie(databaseManager);
             } catch (SQLException e) {
                 LOGGER.log(Level.SEVERE, "Error initializing Menagerie", e);
@@ -286,6 +290,7 @@ public class SplashController {
      *
      * @throws IOException When copy fails.
      */
+    // REENG: Move to appropriate class
     private static void backupDatabase(String databaseURL) throws IOException {
         File dbFile = DatabaseManager.resolveDatabaseFile(databaseURL);
 

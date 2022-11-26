@@ -38,6 +38,7 @@ import java.util.logging.Logger;
 /**
  * Menagerie system. Contains items, manages database.
  */
+// REENG: Exceptional Entity --> Backend manager
 public class Menagerie {
 
     private static final Logger LOGGER = Logger.getLogger(Menagerie.class.getName());
@@ -171,6 +172,7 @@ public class Menagerie {
             items.add(group);
         }
 
+        // REENG: WTF is this? And why does it break (ఠ_ఠ)
         for (Item item : elements) {
             if (item instanceof MediaItem) {
                 group.addItem((MediaItem) item);

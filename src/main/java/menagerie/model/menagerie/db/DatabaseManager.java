@@ -85,12 +85,15 @@ public class DatabaseManager extends Thread {
     private final PreparedStatement PS_GET_TAGS;
     private final PreparedStatement PS_GET_TAG_COUNT;
     // Counters
+    // REENG: Could possibly use SEQUENCE / AUTO_INCRMENT instead
     private final PreparedStatement PS_GET_HIGHEST_ITEM_ID;
     private final PreparedStatement PS_GET_HIGHEST_TAG_ID;
     // Teardown
     private final PreparedStatement PS_SHUTDOWN_DEFRAG;
 
     private final BlockingQueue<Runnable> queue = new LinkedBlockingQueue<>();
+
+    // REENG: Why not reuse util.CancellableThread?
     private volatile boolean running = false;
 
     private MenagerieDatabaseLoadListener loadListener = null;
@@ -204,6 +207,8 @@ public class DatabaseManager extends Thread {
         this.queueSizeListener = queueSizeListener;
     }
 
+    // REENG: This method is only used once, by MainController at shutdown
+    //   why not use it internally as well instead of adding directly to queue?
     /**
      * Enqueues a job to this thread. FIFO.
      *
@@ -944,6 +949,7 @@ public class DatabaseManager extends Thread {
         }
     }
 
+    // REENG: Needs refactoring. Split into separate methods, maybe use Template
     /**
      * Loads all items from the database.
      * <p>
