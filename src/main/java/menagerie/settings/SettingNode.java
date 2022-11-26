@@ -26,6 +26,7 @@ package menagerie.settings;
 
 import javafx.scene.Node;
 
+// REENG: DIP violated! Settings module has direct dependency on JavaFX
 public interface SettingNode {
 
     void applyToSetting();

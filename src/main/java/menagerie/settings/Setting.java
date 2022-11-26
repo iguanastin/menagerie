@@ -27,6 +27,7 @@ package menagerie.settings;
 import menagerie.util.Util;
 import org.json.JSONObject;
 
+// REENG: extract serializer via interface
 public abstract class Setting {
 
     static final String ID_KEY = "id";

@@ -46,6 +46,7 @@ import java.util.logging.Logger;
 /**
  * A Menagerie item representing a media file of some form. Image and video.
  */
+// REENG: probably good idea to split into separate responsibilities (image and video)
 public class MediaItem extends Item {
 
     private static final Logger LOGGER = Logger.getLogger(MediaItem.class.getName());
@@ -184,6 +185,7 @@ public class MediaItem extends Item {
     /**
      * @return The MD5 hash string of the file.
      */
+    // REENG: extract hashing functionality via interface (allows to easily switch hashing algo)
     public String getMD5() {
         return md5.get();
     }

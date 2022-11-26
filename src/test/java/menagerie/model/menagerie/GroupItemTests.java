@@ -32,8 +32,10 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+// REENG: one item is associated with 0..1 groups
 class GroupItemTests {
 
+    // REENG: useless test
     @Test
     void title() {
         final String title = "title";
@@ -80,6 +82,7 @@ class GroupItemTests {
         g.addItem(m1);
         g.addItem(m2);
         g.addItem(m3);
+        // REENG: how is page index updated?
         for (int i = 0; i < g.getElements().size(); i++) {
             assertEquals(i, g.getElements().get(i).getPageIndex());
         }

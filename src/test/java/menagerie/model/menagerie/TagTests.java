@@ -66,6 +66,7 @@ class TagTests {
 
         assertEquals(0, t.getFrequency());
 
+        // REENG: Why this call workaround? Was Tag.incrementFrequency() previously private?
         Method incrementFrequency = Tag.class.getDeclaredMethod("incrementFrequency");
         incrementFrequency.setAccessible(true);
         incrementFrequency.invoke(t);
