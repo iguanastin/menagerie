@@ -255,12 +255,14 @@ public class DuplicateOptionsScreen extends Screen {
     private void compareButtonOnAction() {
         saveSettings();
 
+        // REENG: DRY duplicated code
         List<Item> compare = all;
         if (compareChoiceBox.getValue() == Scope.SELECTED) {
             compare = selected;
         } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
             compare = searched;
         }
+        // REENG: Compare only to MediaItems with similarity
         compare = getComparableItems(compare, includeGroupElementsCheckBox.isSelected());
         compare.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
         List<Item> to = all;

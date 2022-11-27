@@ -36,6 +36,7 @@ import java.util.List;
 /**
  * A simple Tag class.
  */
+// REENG: Add wrapper in GUI for FX functionality
 public class Tag implements Comparable<Tag> {
 
     /**

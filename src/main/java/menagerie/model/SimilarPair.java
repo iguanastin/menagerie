@@ -79,9 +79,11 @@ public class SimilarPair<T> {
     public boolean equals(Object obj) {
         if (!(obj instanceof SimilarPair)) return false;
 
+        // REENG: true if objects equal
         if (getObject1().equals(((SimilarPair) obj).getObject1()) && getObject2().equals(((SimilarPair) obj).getObject2())) {
             return true;
         } else {
+            // REENG: otherwise compare IDs of other objects (strange implementation...)
             return getObject1().equals(((SimilarPair) obj).getObject2()) && getObject2().equals(((SimilarPair) obj).getObject1());
         }
     }

@@ -72,6 +72,7 @@ public class DuplicateManagerThread extends CancellableThread {
         final int chunk = (int) Math.ceil((double) compareFrom.size() / threads);
         final Lock finishLock = new ReentrantLock();
         final CountDownLatch finishLatch = new CountDownLatch(threads);
+        // REENG: Split compareFrom into chunks and let each thread compare its chunk against all items in compareTo
         for (int i = 0; i < threads; i++) {
             DuplicateFinderThread finder = new DuplicateFinderThread(menagerie, compareFrom.subList(i * chunk, Math.min((i + 1) * chunk, compareFrom.size())), compareTo, confidence, () -> {
                 finished++;

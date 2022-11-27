@@ -106,6 +106,7 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
+// REENG: Exceptional Entity --> Main GUI Controller
 public class MainController {
 
     /**
@@ -452,6 +453,7 @@ public class MainController {
 
         // TagListScreen
         tagListScreen = new TagListScreen();
+        // REENG: extract this dump to a separate class...
         tagListScreen.setCellFactory(param -> {
             TagListCell c = new TagListCell(thing -> {
                 String text = searchTextField.getText();
@@ -480,12 +482,13 @@ public class MainController {
                 searchTextField.requestFocus();
                 searchTextField.positionCaret(text.length());
             });
-            c.setOnContextMenuRequested(event -> {
+            // REENG: dead code, context menu is defined down at line ~800
+            /*.setOnContextMenuRequested(event -> {
                 MenuItem i0 = new MenuItem("Add note");
                 i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note", String.format("Add a note to tag '%s'", c.getItem().getName()), null, note -> c.getItem().addNote(note), null));
                 ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem());
                 m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-            });
+            });*/
             c.setOnMouseClicked(event -> {
                 if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
                     searchTextField.setText(c.getItem().getName() + " ");
@@ -829,6 +832,7 @@ public class MainController {
 
                     ContextMenu m = new ContextMenu(addNote, new SeparatorMenuItem(), tagSelected, untagSelected, new SeparatorMenuItem(), tagColorPicker, new SeparatorMenuItem());
 
+                    // REENG: like the author says; Also no option to delete notes
                     // TODO: Do this better, jfc
                     for (String note : c.getItem().getNotes()) {
                         MenuItem item = new MenuItem(note);
@@ -1183,6 +1187,7 @@ public class MainController {
         previewMediaView.preview(item);
         itemInfoBox.setItem(item);
 
+        // REENG: add listener to tags (update when tag is added or removed in Item)
         tagListView.getItems().clear();
         if (item != null) {
             tagListView.getItems().addAll(item.getTags());
@@ -1440,6 +1445,7 @@ public class MainController {
         Map<Item, List<Tag>> added = new HashMap<>();
         Map<Item, List<Tag>> removed = new HashMap<>();
 
+        // REENG: a leading '-' removes the tag
         for (String text : input.split("\\s+")) {
             if (text.startsWith("-")) {
                 Tag t = menagerie.getTagByName(text.substring(1));
@@ -1608,6 +1614,7 @@ public class MainController {
 
     // ---------------------------------- Action Event Handlers --------------------------
 
+    // REENG: DRY duplicated code
     public void searchButtonOnAction(ActionEvent event) {
         GroupItem scope = null;
         if (currentSearch instanceof GroupSearch) scope = ((GroupSearch) currentSearch).getGroup();

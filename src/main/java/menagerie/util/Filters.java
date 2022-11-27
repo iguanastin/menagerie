@@ -37,6 +37,8 @@ import java.util.List;
  */
 public abstract class Filters {
 
+    // REENG: rar, zip and pdf are NOT implemented at all.
+    //  FILE_NAME_FILTER ignores them
     public static final String[] IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".gif", ".bmp"};
     public static final String[] VIDEO_EXTS = {".mp4", ".avi", ".webm", ".flv", ".wmv", ".3gp", ".mov", ".mpg", ".m4v", ".mkv"};
     public static final String[] RAR_EXTS = {".rar", ".cbr"};

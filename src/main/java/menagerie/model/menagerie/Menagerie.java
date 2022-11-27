@@ -330,6 +330,7 @@ public class Menagerie {
      *
      * @param items Items to check.
      */
+    // REENG: Reference to GUI --> bad
     public void refreshInSearches(List<Item> items) {
         activeSearches.forEach(search -> Platform.runLater(() -> search.refreshSearch(items)));
     }
