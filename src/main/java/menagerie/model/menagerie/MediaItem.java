@@ -199,7 +199,8 @@ public class MediaItem extends Item {
      */
     public void initializeMD5() {
         try {
-            md5.set(Hex.encodeHexString(MD5Hasher.hash(getFile())));
+            byte[] md5bytes = MD5Hasher.hash(getFile());
+            md5.set(md5bytes != null ? Hex.encodeHexString(md5bytes) : null);
             if (hasDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5.get());
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);
