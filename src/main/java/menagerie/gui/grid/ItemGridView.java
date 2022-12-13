@@ -232,16 +232,16 @@ public class ItemGridView extends GridView<Item> {
         }
         lastSelected.set(item);
 
-        // REENG: JDK17: re-enable later (if required)
         // Ensure last selected cell is visible
-        /*if (getLastSelected() != null) {
+        if (getLastSelected() != null) {
             for (Node n : getChildren()) {
                 if (n instanceof VirtualFlow) {
-                    ((VirtualFlow) n).show(getItems().indexOf(getLastSelected()) / getRowLength()); // Garbage API, doesn't account for multi-element rows
+                    // Garbage API, doesn't account for multi-element rows
+                    ((VirtualFlow<?>) n).scrollTo(getItems().indexOf(getLastSelected()) / getRowLength());
                     break;
                 }
             }
-        }*/
+        }
 
         // Notify selection listener
         selectionListeners.forEach(listener -> listener.pass(item));
