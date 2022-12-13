@@ -33,7 +33,7 @@ import java.util.List;
 
 public class FileMoveTree {
 
-    private List<FileMoveNode> roots = new ArrayList<>();
+    private final List<FileMoveNode> roots = new ArrayList<>();
 
 
     public FileMoveTree() {

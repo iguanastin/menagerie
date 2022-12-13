@@ -73,17 +73,17 @@ public class DuplicatesScreen extends Screen {
     private List<SimilarPair<MediaItem>> pairs = null;
     private SimilarPair<MediaItem> currentPair = null;
 
-    private BooleanProperty deleteFile = new SimpleBooleanProperty(true);
-    private BooleanProperty preload = new SimpleBooleanProperty(true);
+    private final BooleanProperty deleteFile = new SimpleBooleanProperty(true);
+    private final BooleanProperty preload = new SimpleBooleanProperty(true);
     private Image preloadPrevLeft = null, preloadPrevRight = null, preloadNextLeft = null, preloadNextRight = null;
 
     private ObjectListener<Item> selectListener = null;
-    private ListChangeListener<Tag> leftTagListener = c -> {
+    private final ListChangeListener<Tag> leftTagListener = c -> {
         while (c.next()) {
             repopulateTagLists();
         }
     };
-    private ListChangeListener<Tag> rightTagListener = c -> {
+    private final ListChangeListener<Tag> rightTagListener = c -> {
         while (c.next()) {
             repopulateTagLists();
         }

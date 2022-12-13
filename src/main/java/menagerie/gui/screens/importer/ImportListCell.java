@@ -135,21 +135,11 @@ public class ImportListCell extends ListCell<ImportJob> {
 
     private void updateView(ImportJob.Status status) {
         switch (status) {
-            case WAITING:
-                showWaitingView();
-                break;
-            case IMPORTING:
-                showImportingView();
-                break;
-            case FAILED_DUPLICATE:
-                showDuplicateView();
-                break;
-            case FAILED_IMPORT:
-                showFailedView();
-                break;
-            default:
-                setGraphic(null);
-                break;
+            case WAITING -> showWaitingView();
+            case IMPORTING -> showImportingView();
+            case FAILED_DUPLICATE -> showDuplicateView();
+            case FAILED_IMPORT -> showFailedView();
+            default -> setGraphic(null);
         }
     }
 

@@ -131,19 +131,10 @@ public class Search {
             } else if (arg.startsWith("missing:")) {
                 String type = arg.substring(arg.indexOf(':') + 1);
                 switch (type.toLowerCase()) {
-                    case "md5":
-                        rules.add(new MissingRule(MissingRule.Type.MD5, inverted));
-                        break;
-                    case "file":
-                        rules.add(new MissingRule(MissingRule.Type.FILE, inverted));
-                        break;
-                    case "histogram":
-                    case "hist":
-                        rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
-                        break;
-                    default:
-                        LOGGER.warning("Unknown type for missing type: " + type);
-                        break;
+                    case "md5" -> rules.add(new MissingRule(MissingRule.Type.MD5, inverted));
+                    case "file" -> rules.add(new MissingRule(MissingRule.Type.FILE, inverted));
+                    case "histogram", "hist" -> rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
+                    default -> LOGGER.warning("Unknown type for missing type: " + type);
                 }
             } else if (arg.startsWith("type:") || arg.startsWith("is:")) {
                 String type = arg.substring(arg.indexOf(':') + 1);

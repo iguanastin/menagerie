@@ -41,7 +41,7 @@ public class LogListCell extends ListCell<LogItem> {
     private final PseudoClass warningPseudoClass = PseudoClass.getPseudoClass("warning");
     private final PseudoClass errorPseudoClass = PseudoClass.getPseudoClass("error");
 
-    private Label label = new Label();
+    private final Label label = new Label();
 
     private final BooleanProperty warning = new BooleanPropertyBase() {
         @Override

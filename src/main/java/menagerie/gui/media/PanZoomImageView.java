@@ -53,7 +53,7 @@ public class PanZoomImageView extends DynamicImageView {
     /**
      * Property containing the true, unscaled image being displayed.
      */
-    private ObjectProperty<Image> trueImage = new SimpleObjectProperty<>();
+    private final ObjectProperty<Image> trueImage = new SimpleObjectProperty<>();
     /**
      * Delta offset (pan) from the center of the image
      */
@@ -61,7 +61,7 @@ public class PanZoomImageView extends DynamicImageView {
     /**
      * Zoom scale property
      */
-    private DoubleProperty scale = new SimpleDoubleProperty(1);
+    private final DoubleProperty scale = new SimpleDoubleProperty(1);
 
     /**
      * Location of the mouse click

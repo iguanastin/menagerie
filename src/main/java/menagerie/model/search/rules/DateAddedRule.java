@@ -56,18 +56,11 @@ public class DateAddedRule extends SearchRule {
 
     @Override
     public boolean accept(Item item) {
-        boolean result = false;
-        switch (type) {
-            case LESS_THAN:
-                result = item.getDateAdded() < time;
-                break;
-            case GREATER_THAN:
-                result = item.getDateAdded() > time;
-                break;
-            case EQUAL_TO:
-                result = item.getDateAdded() == time;
-                break;
-        }
+        boolean result = switch (type) {
+            case LESS_THAN -> item.getDateAdded() < time;
+            case GREATER_THAN -> item.getDateAdded() > time;
+            case EQUAL_TO -> item.getDateAdded() == time;
+        };
 
         if (isInverted()) result = !result;
 

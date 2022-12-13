@@ -155,9 +155,9 @@ public class CUDADuplicateFinder {
         int[] resultsID1 = new int[resultCount];
         int[] resultsID2 = new int[resultCount];
         float[] resultsSimilarity = new float[resultCount];
-        JCudaDriver.cuMemcpyDtoH(Pointer.to(resultsID1), d_resultsID1, resultCount * Sizeof.INT);
-        JCudaDriver.cuMemcpyDtoH(Pointer.to(resultsID2), d_resultsID2, resultCount * Sizeof.INT);
-        JCudaDriver.cuMemcpyDtoH(Pointer.to(resultsSimilarity), d_resultsSimilarity, resultCount * Sizeof.FLOAT);
+        JCudaDriver.cuMemcpyDtoH(Pointer.to(resultsID1), d_resultsID1, (long) resultCount * Sizeof.INT);
+        JCudaDriver.cuMemcpyDtoH(Pointer.to(resultsID2), d_resultsID2, (long) resultCount * Sizeof.INT);
+        JCudaDriver.cuMemcpyDtoH(Pointer.to(resultsSimilarity), d_resultsSimilarity, (long) resultCount * Sizeof.FLOAT);
 
         List<SimilarPair<MediaItem>> results = new ArrayList<>();
         for (int i = 0; i < resultCount; i++) {
@@ -204,34 +204,34 @@ public class CUDADuplicateFinder {
     }
 
     private static void allocateAndCopyToDevice(int maxResults, int N1, int N2, float[] data1, float[] data2, float[] confs1, float[] confs2, int[] ids1, int[] ids2, CUdeviceptr d_data1, CUdeviceptr d_data2, CUdeviceptr d_confs1, CUdeviceptr d_confs2, CUdeviceptr d_ids1, CUdeviceptr d_ids2, CUdeviceptr d_resultsID1, CUdeviceptr d_resultsID2, CUdeviceptr d_resultsSimilarity, CUdeviceptr d_resultCount) {
-        long bytes = N1 * ImageHistogram.BIN_SIZE * ImageHistogram.NUM_CHANNELS * Sizeof.FLOAT;
+        long bytes = (long) N1 * ImageHistogram.BIN_SIZE * ImageHistogram.NUM_CHANNELS * Sizeof.FLOAT;
         JCudaDriver.cuMemAlloc(d_data1, bytes);
         JCudaDriver.cuMemcpyHtoD(d_data1, Pointer.to(data1), bytes);
-        bytes = N2 * ImageHistogram.BIN_SIZE * ImageHistogram.NUM_CHANNELS * Sizeof.FLOAT;
+        bytes = (long) N2 * ImageHistogram.BIN_SIZE * ImageHistogram.NUM_CHANNELS * Sizeof.FLOAT;
         JCudaDriver.cuMemAlloc(d_data2, bytes);
         JCudaDriver.cuMemcpyHtoD(d_data2, Pointer.to(data2), bytes);
 
         // Allocate and copy confs to device
-        bytes = N1 * Sizeof.FLOAT;
+        bytes = (long) N1 * Sizeof.FLOAT;
         JCudaDriver.cuMemAlloc(d_confs1, bytes);
         JCudaDriver.cuMemcpyHtoD(d_confs1, Pointer.to(confs1), bytes);
-        bytes = N2 * Sizeof.FLOAT;
+        bytes = (long) N2 * Sizeof.FLOAT;
         JCudaDriver.cuMemAlloc(d_confs2, bytes);
         JCudaDriver.cuMemcpyHtoD(d_confs2, Pointer.to(confs2), bytes);
 
         // Allocate and copy ids to device
-        bytes = N1 * Sizeof.INT;
+        bytes = (long) N1 * Sizeof.INT;
         JCudaDriver.cuMemAlloc(d_ids1, bytes);
         JCudaDriver.cuMemcpyHtoD(d_ids1, Pointer.to(ids1), bytes);
-        bytes = N2 * Sizeof.INT;
+        bytes = (long) N2 * Sizeof.INT;
         JCudaDriver.cuMemAlloc(d_ids2, bytes);
         JCudaDriver.cuMemcpyHtoD(d_ids2, Pointer.to(ids2), bytes);
 
         // Allocate results arrays on device
-        bytes = maxResults * Sizeof.INT;
+        bytes = (long) maxResults * Sizeof.INT;
         JCudaDriver.cuMemAlloc(d_resultsID1, bytes);
         JCudaDriver.cuMemAlloc(d_resultsID2, bytes);
-        bytes = maxResults * Sizeof.FLOAT;
+        bytes = (long) maxResults * Sizeof.FLOAT;
         JCudaDriver.cuMemAlloc(d_resultsSimilarity, bytes);
 
         // Allocate result count on device

@@ -118,15 +118,16 @@ public class ItemGridView extends GridView<Item> {
 
             int index = getItems().indexOf(getLastSelected());
             switch (event.getCode()) {
-                case LEFT:
+                case LEFT -> {
                     if (index > 0) select(getItems().get(index - 1), event.isControlDown(), event.isShiftDown());
                     event.consume();
-                    break;
-                case RIGHT:
-                    if (index < getItems().size() - 1) select(getItems().get(index + 1), event.isControlDown(), event.isShiftDown());
+                }
+                case RIGHT -> {
+                    if (index < getItems().size() - 1)
+                        select(getItems().get(index + 1), event.isControlDown(), event.isShiftDown());
                     event.consume();
-                    break;
-                case DOWN:
+                }
+                case DOWN -> {
                     if (selected.isEmpty() && index == -1) {
                         select(getItems().get(0), event.isControlDown(), event.isShiftDown());
                     } else {
@@ -137,16 +138,16 @@ public class ItemGridView extends GridView<Item> {
                         }
                     }
                     event.consume();
-                    break;
-                case UP:
+                }
+                case UP -> {
                     if (index - getRowLength() >= 0) {
                         select(getItems().get(index - getRowLength()), event.isControlDown(), event.isShiftDown());
                     } else {
                         select(getItems().get(0), event.isControlDown(), event.isShiftDown());
                     }
                     event.consume();
-                    break;
-                case A:
+                }
+                case A -> {
                     if (event.isControlDown()) {
                         if (selected.size() == getItems().size()) {
                             clearSelection();
@@ -156,31 +157,31 @@ public class ItemGridView extends GridView<Item> {
                         }
                     }
                     event.consume();
-                    break;
-                case HOME:
+                }
+                case HOME -> {
                     select(getItems().get(0), event.isControlDown(), event.isShiftDown());
                     event.consume();
-                    break;
-                case END:
+                }
+                case END -> {
                     select(getItems().get(getItems().size() - 1), event.isControlDown(), event.isShiftDown());
                     event.consume();
-                    break;
-                case PAGE_DOWN:
+                }
+                case PAGE_DOWN -> {
                     if (index + (getPageLength() - 1) * getRowLength() < getItems().size()) {
                         select(getItems().get(index + (getPageLength() - 1) * getRowLength()), event.isControlDown(), event.isShiftDown());
                     } else {
                         select(getItems().get(getItems().size() - 1), event.isControlDown(), event.isShiftDown());
                     }
                     event.consume();
-                    break;
-                case PAGE_UP:
+                }
+                case PAGE_UP -> {
                     if (index - (getPageLength() - 1) * getRowLength() >= 0) {
                         select(getItems().get(index - (getPageLength() - 1) * getRowLength()), event.isControlDown(), event.isShiftDown());
                     } else {
                         select(getItems().get(0), event.isControlDown(), event.isShiftDown());
                     }
                     event.consume();
-                    break;
+                }
             }
         });
     }

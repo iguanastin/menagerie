@@ -39,7 +39,7 @@ public class FileMoveNode {
     private final List<FileMoveNode> nodes;
     private final int depth;
     private FileMoveNode parent = null;
-    private BooleanProperty preserve = new SimpleBooleanProperty(false);
+    private final BooleanProperty preserve = new SimpleBooleanProperty(false);
 
 
     public FileMoveNode(File folder, List<MediaItem> items, List<FileMoveNode> nodes) {

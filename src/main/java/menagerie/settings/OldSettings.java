@@ -52,7 +52,7 @@ public class OldSettings {
      */
     public enum Key {VLCJ_PATH, LICENSES_AGREED, USER_FILETYPES, USE_FILENAME_FROM_URL, BACKUP_DATABASE, WINDOW_MAXIMIZED, DO_AUTO_IMPORT, AUTO_IMPORT_MOVE_TO_DEFAULT, MUTE_VIDEO, REPEAT_VIDEO, GRID_WIDTH, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_X, WINDOW_Y, DEFAULT_FOLDER, DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD, AUTO_IMPORT_FOLDER, CONFIDENCE, SHOW_HELP_ON_START, TAG_TAGME, TAG_VIDEO, TAG_IMAGE, EXPAND_ITEM_INFO}
 
-    private final Map<Key, Property> vars = new HashMap<>();
+    private final Map<Key, Property<?>> vars = new HashMap<>();
     private File file;
 
 
@@ -164,7 +164,7 @@ public class OldSettings {
         writer.println("# ------------- Menagerie Settings --------------");
         writer.println("# " + DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM).withLocale(Locale.getDefault()).withZone(ZoneId.systemDefault()).format(new Date().toInstant()));
 
-        for (Map.Entry<Key, Property> entry : vars.entrySet()) {
+        for (Map.Entry<Key, Property<?>> entry : vars.entrySet()) {
             // Prefix + Delimiter
             writer.print(entry.getKey() + ":");
 

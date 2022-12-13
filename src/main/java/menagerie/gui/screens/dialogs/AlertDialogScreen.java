@@ -46,13 +46,10 @@ public class AlertDialogScreen extends Screen {
     public AlertDialogScreen() {
         addEventHandler(KeyEvent.KEY_PRESSED, event -> {
             switch (event.getCode()) {
-                case ENTER:
-                case ESCAPE:
-                case SPACE:
-                case BACK_SPACE:
+                case ENTER, ESCAPE, SPACE, BACK_SPACE -> {
                     close();
                     event.consume();
-                    break;
+                }
             }
         });
 

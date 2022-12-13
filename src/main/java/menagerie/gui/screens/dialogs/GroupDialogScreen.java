@@ -59,7 +59,7 @@ public class GroupDialogScreen extends Screen {
     private List<Item> toGroup = null;
 
     private ObjectListener<GroupItem> groupListener = null;
-    private BooleanProperty tagTagme = new SimpleBooleanProperty(true);
+    private final BooleanProperty tagTagme = new SimpleBooleanProperty(true);
 
 
     public GroupDialogScreen() {
