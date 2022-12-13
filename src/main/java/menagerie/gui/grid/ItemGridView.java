@@ -24,7 +24,7 @@
 
 package menagerie.gui.grid;
 
-import com.sun.javafx.scene.control.skin.VirtualFlow;
+import javafx.scene.control.skin.VirtualFlow;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -232,15 +232,16 @@ public class ItemGridView extends GridView<Item> {
         }
         lastSelected.set(item);
 
+        // REENG: JDK17: re-enable later (if required)
         // Ensure last selected cell is visible
-        if (getLastSelected() != null) {
+        /*if (getLastSelected() != null) {
             for (Node n : getChildren()) {
                 if (n instanceof VirtualFlow) {
                     ((VirtualFlow) n).show(getItems().indexOf(getLastSelected()) / getRowLength()); // Garbage API, doesn't account for multi-element rows
                     break;
                 }
             }
-        }
+        }*/
 
         // Notify selection listener
         selectionListeners.forEach(listener -> listener.pass(item));
