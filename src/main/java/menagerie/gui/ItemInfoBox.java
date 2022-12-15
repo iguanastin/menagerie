@@ -60,7 +60,7 @@ public class ItemInfoBox extends VBox {
     /**
      * Extended state of this info box.
      */
-    private BooleanProperty extended = new SimpleBooleanProperty(false);
+    private final BooleanProperty extended = new SimpleBooleanProperty(false);
 
 
     public ItemInfoBox() {

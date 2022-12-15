@@ -60,6 +60,7 @@ import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32Buffe
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -85,11 +86,13 @@ public class DynamicVideoView extends StackPane {
     /**
      * Shared mute button image
      */
-    private final Image muteImage = new Image(getClass().getResource("/misc/mute.png").toString());
+    private final Image muteImage = new Image(Objects.requireNonNull(
+            getClass().getResource("/misc/mute.png")).toString());
     /**
      * Shared unmute button image
      */
-    private final Image unmuteImage = new Image(getClass().getResource("/misc/unmute.png").toString());
+    private final Image unmuteImage = new Image(Objects.requireNonNull(
+            getClass().getResource("/misc/unmute.png")).toString());
 
     /**
      * Playback slider

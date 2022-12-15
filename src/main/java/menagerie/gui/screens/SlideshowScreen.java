@@ -258,9 +258,17 @@ public class SlideshowScreen extends Screen {
 
         mediaView.stop();
         if (deleteFile) {
-            new ConfirmationScreen().open(getManager(), "Delete files", "Permanently delete selected files? (1 file)\n\n" + "This action CANNOT be undone (files will be deleted)", onFinish, null);
+            new ConfirmationScreen().open(getManager(), "Delete files",
+                    """
+                            Permanently delete selected files? (1 file)
+
+                            This action CANNOT be undone (files will be deleted)""", onFinish, null);
         } else {
-            new ConfirmationScreen().open(getManager(), "Forget files", "Remove selected files from database? (1 file)\n\n" + "This action CANNOT be undone", onFinish, null);
+            new ConfirmationScreen().open(getManager(), "Forget files",
+                    """
+                            Remove selected files from database? (1 file)
+
+                            This action CANNOT be undone""", onFinish, null);
         }
     }
 

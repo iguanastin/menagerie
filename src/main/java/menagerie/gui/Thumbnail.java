@@ -162,7 +162,8 @@ public class Thumbnail {
         } else {
             synchronized (this) {
                 if (unsupportedImage == null) {
-                    unsupportedImage = new Image(getClass().getResourceAsStream(UNSUPPORTED_IMAGE_PATH));
+                    unsupportedImage = new Image(Objects.requireNonNull(
+                            getClass().getResourceAsStream(UNSUPPORTED_IMAGE_PATH)));
                 }
 
                 image = unsupportedImage;

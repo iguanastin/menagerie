@@ -25,7 +25,7 @@
 package menagerie.model.menagerie;
 
 import com.sun.jna.platform.FileUtils;
-import com.sun.org.apache.xerces.internal.impl.dv.util.HexBin;
+import org.apache.commons.codec.binary.Hex;
 import javafx.beans.property.*;
 import javafx.scene.image.Image;
 import menagerie.gui.Thumbnail;
@@ -199,7 +199,8 @@ public class MediaItem extends Item {
      */
     public void initializeMD5() {
         try {
-            md5.set(HexBin.encode(MD5Hasher.hash(getFile())));
+            byte[] md5bytes = MD5Hasher.hash(getFile());
+            md5.set(md5bytes != null ? Hex.encodeHexString(md5bytes) : null);
             if (hasDatabase()) menagerie.getDatabaseManager().setMD5Async(getId(), md5.get());
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Failed to hash file: " + getFile(), e);

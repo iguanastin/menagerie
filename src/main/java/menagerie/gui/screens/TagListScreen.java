@@ -44,6 +44,7 @@ import menagerie.model.menagerie.Tag;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.PatternSyntaxException;
 
 public class TagListScreen extends Screen {
@@ -81,7 +82,8 @@ public class TagListScreen extends Screen {
         orderBox.getItems().addAll("Frequency", "Name", "ID", "Color");
         orderBox.getSelectionModel().clearAndSelect(0);
         orderBox.setOnAction(event -> updateListOrder());
-        descendingButton.setGraphic(new ImageView(new Image(getClass().getResource("/misc/descending.png").toString())));
+        descendingButton.setGraphic(new ImageView(new Image(Objects.requireNonNull(
+                getClass().getResource("/misc/descending.png")).toString())));
         descendingButton.setTooltip(new Tooltip("Descending order"));
         descendingButton.selectedProperty().addListener((observable, oldValue, newValue) -> updateListOrder());
         HBox orderHBox = new HBox(5, new Label("Order by:"), orderBox, descendingButton);
@@ -161,33 +163,27 @@ public class TagListScreen extends Screen {
     }
 
     private void updateListOrder() {
-        Comparator<Tag> comparator = Comparator.comparing(Tag::getName);
-
-        switch (orderBox.getValue()) {
-            case "ID":
-                comparator = Comparator.comparingInt(Tag::getId);
-                break;
-            case "Frequency":
-                comparator = Comparator.comparingInt(Tag::getFrequency);
-                break;
-            case "Color":
-                comparator = (o1, o2) -> {
-                    if (o1.getColor() == null) {
-                        if (o2.getColor() == null) {
-                            return 0;
-                        } else {
-                            return 1;
-                        }
+        Comparator.comparing(Tag::getName);
+        Comparator<Tag> comparator = switch (orderBox.getValue()) {
+            case "ID" -> Comparator.comparingInt(Tag::getId);
+            case "Frequency" -> Comparator.comparingInt(Tag::getFrequency);
+            case "Color" -> (o1, o2) -> {
+                if (o1.getColor() == null) {
+                    if (o2.getColor() == null) {
+                        return 0;
                     } else {
-                        if (o2.getColor() == null) {
-                            return -1;
-                        } else {
-                            return o1.getColor().compareTo(o2.getColor());
-                        }
+                        return 1;
                     }
-                };
-                break;
-        }
+                } else {
+                    if (o2.getColor() == null) {
+                        return -1;
+                    } else {
+                        return o1.getColor().compareTo(o2.getColor());
+                    }
+                }
+            };
+            default -> Comparator.comparing(Tag::getName);
+        };
 
         if (descendingButton.isSelected()) comparator = comparator.reversed();
         listView.getItems().sort(comparator);

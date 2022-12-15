@@ -46,7 +46,7 @@ public class Settings {
     private static final String SETTINGS_KEY = "settings";
 
     private final List<Setting> settings = new ArrayList<>();
-    private int version = 1;
+    private final int version = 1;
 
 
     public void load(File file) throws IOException, SettingsException, JSONException {

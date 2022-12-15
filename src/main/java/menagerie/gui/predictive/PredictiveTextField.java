@@ -116,19 +116,11 @@ public class PredictiveTextField extends TextField {
     private void keyPressedEventFilter(KeyEvent event) {
         if (popup.isShowing()) {
             switch (event.getCode()) {
-                case UP:
-                    eventFilterKeyUpPressed(event);
-                    break;
-                case DOWN:
-                    eventFilterKeyDownPressed(event);
-                    break;
-                case SPACE:
-                case ENTER:
-                case TAB:
-                    eventFilterKeyTabPressed(event);
-                    break;
-                default:
-                    break;
+                case UP -> eventFilterKeyUpPressed(event);
+                case DOWN -> eventFilterKeyDownPressed(event);
+                case SPACE, ENTER, TAB -> eventFilterKeyTabPressed(event);
+                default -> {
+                }
             }
         }
     }

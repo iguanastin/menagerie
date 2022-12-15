@@ -52,18 +52,11 @@ public class TagCountRule extends SearchRule {
 
     @Override
     public boolean accept(Item item) {
-        boolean result = false;
-        switch (type) {
-            case EQUAL_TO:
-                result = item.getTags().size() == value;
-                break;
-            case LESS_THAN:
-                result = item.getTags().size() < value;
-                break;
-            case GREATER_THAN:
-                result = item.getTags().size() > value;
-                break;
-        }
+        boolean result = switch (type) {
+            case EQUAL_TO -> item.getTags().size() == value;
+            case LESS_THAN -> item.getTags().size() < value;
+            case GREATER_THAN -> item.getTags().size() > value;
+        };
 
         if (isInverted()) result = !result;
 

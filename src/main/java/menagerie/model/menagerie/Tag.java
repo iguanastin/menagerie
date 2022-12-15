@@ -50,7 +50,7 @@ public class Tag implements Comparable<Tag> {
 
     private final int id;
     private final String name;
-    private List<String> notes = new ArrayList<>();
+    private final List<String> notes = new ArrayList<>();
     private final StringProperty color = new SimpleStringProperty(null);
 
     private final IntegerProperty frequency = new SimpleIntegerProperty(0);

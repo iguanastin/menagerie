@@ -34,7 +34,7 @@ public class OnlineTagListCell extends ListCell<String> {
     private static final String DEFAULT_STYLE_CLASS = "online-tag-cell";
     private static final PseudoClass SHARES_TAG = PseudoClass.getPseudoClass("shares_tag");
 
-    private BooleanProperty sharesTag = new BooleanPropertyBase() {
+    private final BooleanProperty sharesTag = new BooleanPropertyBase() {
         @Override
         protected void invalidated() {
             pseudoClassStateChanged(SHARES_TAG, get());

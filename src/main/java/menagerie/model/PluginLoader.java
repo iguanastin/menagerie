@@ -76,8 +76,8 @@ public abstract class PluginLoader {
         URLClassLoader classLoader = new URLClassLoader(urls.toArray(new URL[0]));
         classes.forEach(className -> {
             try {
-                Class c = classLoader.loadClass(className);
-                for (Class anInterface : c.getInterfaces()) {
+                Class<?> c = classLoader.loadClass(className);
+                for (Class<?> anInterface : c.getInterfaces()) {
                     if (anInterface == MenageriePlugin.class) {
                         MenageriePlugin plugin = (MenageriePlugin) c.newInstance();
                         plugins.add(plugin);

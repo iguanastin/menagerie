@@ -45,6 +45,7 @@ import java.io.PrintStream;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.*;
 
 public class Main extends Application {
@@ -81,10 +82,11 @@ public class Main extends Application {
     public static void main(String[] args) {
         initMenagerieLogger();
 
-        MENAGERIE_LOGGER.info("\n" +
-                "===============================================================================================================\n" +
-                "========================================== Starting Menagerie =================================================\n" +
-                "===============================================================================================================");
+        MENAGERIE_LOGGER.info("""
+
+                ===============================================================================================================
+                ========================================== Starting Menagerie =================================================
+                ===============================================================================================================""");
 
         // Log some simple system info
         if (Runtime.getRuntime().maxMemory() == Long.MAX_VALUE) {
@@ -230,19 +232,19 @@ public class Main extends Application {
     private List<Image> getIcons() {
         List<Image> results = new ArrayList<>();
         try {
-            results.add(new Image(getClass().getResourceAsStream("/icons/128.png")));
+            results.add(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/icons/128.png"))));
         } catch (NullPointerException ignored) {
         }
         try {
-            results.add(new Image(getClass().getResourceAsStream("/icons/64.png")));
+            results.add(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/icons/64.png"))));
         } catch (NullPointerException ignored) {
         }
         try {
-            results.add(new Image(getClass().getResourceAsStream("/icons/32.png")));
+            results.add(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/icons/32.png"))));
         } catch (NullPointerException ignored) {
         }
         try {
-            results.add(new Image(getClass().getResourceAsStream("/icons/16.png")));
+            results.add(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/icons/16.png"))));
         } catch (NullPointerException ignored) {
         }
 

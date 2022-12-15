@@ -1841,44 +1841,44 @@ public class MainController {
     public void explorerRootPaneOnKeyPressed(KeyEvent event) {
         if (event.isControlDown()) {
             switch (event.getCode()) {
-                case F:
+                case F -> {
                     searchTextField.requestFocus();
                     event.consume();
-                    break;
-                case E:
+                }
+                case E -> {
                     editTagsTextField.setText(lastEditTagString);
                     editTagsTextField.requestFocus();
                     event.consume();
-                    break;
-                case Q:
+                }
+                case Q -> {
                     menagerie.getDatabaseManager().enqueue(() -> cleanExit(false));
                     event.consume();
-                    break;
-                case S:
+                }
+                case S -> {
                     settingsScreen.open(screenPane, settings);
                     event.consume();
-                    break;
-                case T:
+                }
+                case T -> {
                     tagListScreen.open(screenPane, menagerie.getTags());
                     event.consume();
-                    break;
-                case I:
+                }
+                case I -> {
                     screenPane.open(importDialogScreen);
                     event.consume();
-                    break;
-                case H:
+                }
+                case H -> {
                     screenPane.open(helpScreen);
                     event.consume();
-                    break;
-                case D:
+                }
+                case D -> {
                     if (event.isShiftDown() && duplicateOptionsScreen.getDuplicatesScreen().getPairs() != null && !duplicateOptionsScreen.getDuplicatesScreen().getPairs().isEmpty()) {
                         duplicateOptionsScreen.getDuplicatesScreen().openWithOldPairs(screenPane, menagerie);
                     } else {
                         duplicateOptionsScreen.open(screenPane, menagerie, itemGridView.getSelected(), currentSearch.getResults(), menagerie.getItems());
                     }
                     event.consume();
-                    break;
-                case Z:
+                }
+                case Z -> {
                     if (tagEditHistory.empty()) {
                         Toolkit.getDefaultToolkit().beep();
                     } else {
@@ -1898,27 +1898,27 @@ public class MainController {
                         }, null);
                     }
                     event.consume();
-                    break;
-                case N:
+                }
+                case N -> {
                     screenPane.open(importerScreen);
                     event.consume();
-                    break;
-                case L:
+                }
+                case L -> {
                     openLog();
                     event.consume();
-                    break;
-                case M:
+                }
+                case M -> {
                     moveFilesScreen.open(screenPane, itemGridView.getSelected());
                     event.consume();
-                    break;
-                case R:
+                }
+                case R -> {
                     if (itemGridView.getSelected().size() == 1 && itemGridView.getSelected().get(0) instanceof GroupItem) {
                         openGroupRenameDialog((GroupItem) itemGridView.getSelected().get(0));
                     }
                     event.consume();
-                    break;
-                default:
-                    break;
+                }
+                default -> {
+                }
             }
         } else {
             switch (event.getCode()) {
@@ -1984,19 +1984,18 @@ public class MainController {
     public void searchVBoxOnKeyPressed(KeyEvent event) {
         if (event.isControlDown()) {
             switch (event.getCode()) {
-                case D:
+                case D -> {
                     listDescendingToggleButton.setSelected(!listDescendingToggleButton.isSelected());
                     event.consume();
-                    break;
-                case G:
+                }
+                case G -> {
                     showGroupedToggleButton.setSelected(!showGroupedToggleButton.isSelected());
                     event.consume();
-                    break;
-                case S:
-                case R:
+                }
+                case S, R -> {
                     shuffledSearchButton.setSelected(!shuffledSearchButton.isSelected());
                     event.consume();
-                    break;
+                }
             }
         }
     }

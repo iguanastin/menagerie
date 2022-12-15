@@ -271,15 +271,8 @@ public class ImportDialogScreen extends Screen {
 
                 if (running) {
                     switch (orderChoiceBox.getValue()) {
-                        case Date_Modified:
-                            files.sort(Comparator.comparingLong(File::lastModified));
-                            break;
-                        case Alphabetical:
-                            files.sort(new WindowsExplorerComparator());
-                            break;
-                        case As_Selected:
-                        default:
-                            break;
+                        case Date_Modified -> files.sort(Comparator.comparingLong(File::lastModified));
+                        case Alphabetical -> files.sort(new WindowsExplorerComparator());
                     }
 
                     GroupItem group = null;
