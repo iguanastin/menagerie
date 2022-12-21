@@ -83,4 +83,11 @@ public class IDRule extends SearchRule {
     return result;
   }
 
+    public int getId() {
+        return id;
+    }
+
+    public Type getType() {
+        return type;
+    }
 }
