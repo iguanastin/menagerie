@@ -74,4 +74,11 @@ public class DateAddedRule extends SearchRule {
         return result;
     }
 
+    public long getTime() {
+        return time;
+    }
+
+    public Type getType() {
+        return type;
+    }
 }

@@ -40,9 +40,7 @@ import java.util.logging.Logger;
  */
 public class Search {
 
-    private static final Logger LOGGER = Logger.getLogger(Search.class.getName());
-
-    private final List<SearchRule> rules = new ArrayList<>();
+    List<SearchRule> rules = new ArrayList<>();
     private final boolean showGrouped;
     private final boolean descending;
     private final boolean shuffled;
@@ -66,7 +64,9 @@ public class Search {
         this.shuffled = shuffled;
         this.searchString = search;
 
-        if (search != null && !search.isEmpty()) parseRules(search);
+        if (search != null && !search.isEmpty()) {
+            rules = SearchRuleParser.parseRules(search);
+        }
         rules.sort(null);
 
         comparator = (o1, o2) -> {
@@ -77,127 +77,6 @@ public class Search {
                 return o1.getId() - o2.getId();
             }
         };
-    }
-
-    // REENG: Extract this to a separate SearchRuleParser
-    protected void parseRules(String search) {
-        // this would be a test str"ing that doesn't tokenize the "quotes
-        // This would be a test "string that DOES tokenize the quotes"
-        // "This   " too
-        List<String> tokens = tokenize(search);
-
-        // OLD
-        for (String arg : tokens) {
-            if (arg == null || arg.isEmpty()) continue;
-
-            boolean inverted = false;
-            if (arg.charAt(0) == '-') {
-                inverted = true;
-                arg = arg.substring(1);
-            }
-
-            if (arg.startsWith("id:")) {
-                String temp = arg.substring(arg.indexOf(':') + 1);
-                IDRule.Type type = IDRule.Type.EQUAL_TO;
-                if (temp.startsWith("<")) {
-                    type = IDRule.Type.LESS_THAN;
-                    temp = temp.substring(1);
-                } else if (temp.startsWith(">")) {
-                    type = IDRule.Type.GREATER_THAN;
-                    temp = temp.substring(1);
-                }
-                try {
-                    rules.add(new IDRule(type, Integer.parseInt(temp), inverted));
-                } catch (NumberFormatException e) {
-                    LOGGER.warning("Failed to convert parameter to integer: " + temp);
-                }
-            } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
-                String temp = arg.substring(arg.indexOf(':') + 1);
-                DateAddedRule.Type type = DateAddedRule.Type.EQUAL_TO;
-                if (temp.startsWith("<")) {
-                    type = DateAddedRule.Type.LESS_THAN;
-                    temp = temp.substring(1);
-                } else if (temp.startsWith(">")) {
-                    type = DateAddedRule.Type.GREATER_THAN;
-                    temp = temp.substring(1);
-                }
-                try {
-                    rules.add(new DateAddedRule(type, Long.parseLong(temp), inverted));
-                } catch (NumberFormatException e) {
-                    LOGGER.warning("Failed to convert parameter to long: " + temp);
-                }
-            } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
-                rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1), inverted));
-            } else if (arg.startsWith("missing:")) {
-                String type = arg.substring(arg.indexOf(':') + 1);
-                switch (type.toLowerCase()) {
-                    case "md5" -> rules.add(new MissingRule(MissingRule.Type.MD5, inverted));
-                    case "file" -> rules.add(new MissingRule(MissingRule.Type.FILE, inverted));
-                    case "histogram", "hist" -> rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
-                    default -> LOGGER.warning("Unknown type for missing type: " + type);
-                }
-            } else if (arg.startsWith("type:") || arg.startsWith("is:")) {
-                String type = arg.substring(arg.indexOf(':') + 1);
-                if (type.equalsIgnoreCase("group")) {
-                    rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
-                } else if (type.equalsIgnoreCase("media")) {
-                    rules.add(new TypeRule(TypeRule.Type.MEDIA, inverted));
-                } else if (type.equalsIgnoreCase("image")) {
-                    rules.add(new TypeRule(TypeRule.Type.IMAGE, inverted));
-                } else if (type.equalsIgnoreCase("video")) {
-                    rules.add(new TypeRule(TypeRule.Type.VIDEO, inverted));
-                }
-            } else if (arg.startsWith("tags:")) {
-                String temp = arg.substring(arg.indexOf(':') + 1);
-                TagCountRule.Type type = TagCountRule.Type.EQUAL_TO;
-                if (temp.startsWith("<")) {
-                    type = TagCountRule.Type.LESS_THAN;
-                    temp = temp.substring(1);
-                } else if (temp.startsWith(">")) {
-                    type = TagCountRule.Type.GREATER_THAN;
-                    temp = temp.substring(1);
-                }
-                try {
-                    rules.add(new TagCountRule(type, Integer.parseInt(temp), inverted));
-                } catch (NumberFormatException e) {
-                    LOGGER.warning("Failed to convert parameter to integer: " + temp);
-                }
-            } else if (arg.startsWith("title:")) {
-                String temp = arg.substring(arg.indexOf(':') + 1);
-                if (temp.charAt(0) == '"') temp = temp.substring(1); // Strip first quote
-                if (temp.charAt(temp.length() - 1) == '"') temp = temp.substring(0, temp.length() - 1); // Strip second quote
-                rules.add(new TitleRule(temp, inverted));
-            } else {
-                rules.add(new TagRule(arg, inverted));
-            }
-        }
-    }
-
-    private List<String> tokenize(String search) {
-        List<String> tokens = new ArrayList<>();
-        int i = 0;
-        while (i < search.length()) {
-            // Read a word
-            int k = i + 1;
-            while (k < search.length() && !Character.isWhitespace(search.charAt(k))) {
-                if (search.charAt(k - 1) == ':' && search.charAt(k) == '"') {
-                    k++;
-                    while (k < search.length() && search.charAt(k) != '"') {
-                        k++;
-                    }
-                }
-
-                k++;
-            }
-
-            tokens.add(search.substring(i, k));
-            i = k;
-            while (i < search.length() && search.charAt(i) == ' ') {
-                i++;
-            }
-        }
-
-        return tokens;
     }
 
     /**
