@@ -36,7 +36,7 @@ import java.nio.ByteBuffer;
 /**
  * A 4 channel histogram of an image that can be used to find similarity between two images.
  */
-public final class ImageHistogram {
+public class ImageHistogram {
 
     public static final int BIN_SIZE = 32;
     public static final int NUM_CHANNELS = 4;

@@ -43,9 +43,9 @@ public abstract class Item implements Comparable<Item> {
     private boolean invalidated = false;
 
     protected final Menagerie menagerie;
-    protected final int id;
-    private final long dateAdded;
-    private final ObservableList<Tag> tags = FXCollections.observableArrayList();
+    protected int id;
+    protected long dateAdded;
+    protected final ObservableList<Tag> tags = FXCollections.observableArrayList();
     private final Map<String, Object> metadata = new HashMap<>();
 
 

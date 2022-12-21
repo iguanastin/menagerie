@@ -40,7 +40,7 @@ public class TitleRule extends SearchRule {
 
 
     /**
-     * @param text     String to find in item's file path. Case sensitive.
+     * @param text     String to find in item's file path. Case in-sensitive.
      * @param inverted Negate the rule.
      */
     public TitleRule(String text, boolean inverted) {
