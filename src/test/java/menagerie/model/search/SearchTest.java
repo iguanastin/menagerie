@@ -2,6 +2,7 @@ package menagerie.model.search;
 
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -13,25 +14,30 @@ import static org.mockito.Mockito.when;
 
 class SearchTest {
 
-    private MediaItem createMediaItemMock(int id, boolean isVideo) {
+    static List<Item> items;
+
+    private static MediaItem createMediaItemMock(int id, boolean isVideo, boolean isGrouped) {
         MediaItem mediaItemMock = mock(MediaItem.class);
         when(mediaItemMock.getId()).thenReturn(id);
         when(mediaItemMock.isImage()).thenReturn(!isVideo);
         when(mediaItemMock.isVideo()).thenReturn(isVideo);
+        when(mediaItemMock.isInGroup()).thenReturn(isGrouped);
 
         return mediaItemMock;
     }
 
+    @BeforeAll
+    static void setupItems() {
+        items = new ArrayList<>();
+        items.add(createMediaItemMock(1, false, false));
+        items.add(createMediaItemMock(2, true, false));
+        items.add(createMediaItemMock(3, false, false));
+        items.add(createMediaItemMock(4, true, true));
+        items.add(createMediaItemMock(5, false, true));
+    }
+
     @Test
     void testApplyRules() {
-        // Create a list of test items
-        List<Item> items = new ArrayList<>();
-        items.add(createMediaItemMock(1, false));
-        items.add(createMediaItemMock(2, true));
-        items.add(createMediaItemMock(3, false));
-        items.add(createMediaItemMock(4, true));
-        items.add(createMediaItemMock(5, false));
-
         // Test filtering by type
         Search search = new Search("type:video", false, true, false);
         search.refreshSearch(items);
@@ -52,6 +58,16 @@ class SearchTest {
         search.refreshSearch(items);
         assertEquals(1, search.getResults().size());
         assertEquals(items.get(3), search.getResults().get(0));
+
+    }
+
+    @Test
+    void testShowGrouped() {
+        // Test filtering by type
+        Search search = new Search("type:video", false, false, false);
+        search.refreshSearch(items);
+        assertEquals(1, search.getResults().size());
+        assertEquals(items.get(1), search.getResults().get(0));
 
     }
 }

@@ -141,7 +141,7 @@ public class Search {
     protected boolean isItemValid(Item item) {
         if (item.isInvalidated()) return false;
 
-        if (item instanceof MediaItem && ((MediaItem) item).getGroup() != null && !showGrouped) {
+        if (item instanceof MediaItem && ((MediaItem) item).isInGroup() && !showGrouped) {
             return false;
         } else {
             for (SearchRule rule : rules) {
