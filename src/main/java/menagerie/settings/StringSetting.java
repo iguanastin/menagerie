@@ -38,99 +38,100 @@ import org.json.JSONObject;
 
 public class StringSetting extends Setting {
 
-    private static final String VALUE_KEY = "value";
+  private static final String VALUE_KEY = "value";
 
-    private final StringProperty value = new SimpleStringProperty();
+  private final StringProperty value = new SimpleStringProperty();
 
+  public StringSetting(String identifier, String label, String tip, boolean hidden, String value) {
+    super(identifier, label, tip, hidden);
+    this.value.set(value);
+  }
 
-    public StringSetting(String identifier, String label, String tip, boolean hidden, String value) {
-        super(identifier, label, tip, hidden);
-        this.value.set(value);
+  public StringSetting(String identifier, String value) {
+    super(identifier);
+    this.value.set(value);
+  }
+
+  public StringSetting(String identifier) {
+    super(identifier);
+  }
+
+  public StringSetting hide() {
+    setHidden(true);
+    return this;
+  }
+
+  public StringSetting tip(String tip) {
+    setTip(tip);
+    return this;
+  }
+
+  public StringSetting label(String label) {
+    setLabel(label);
+    return this;
+  }
+
+  public String getValue() {
+    return value.get();
+  }
+
+  public void setValue(String value) {
+    this.value.set(value);
+  }
+
+  public StringProperty valueProperty() {
+    return value;
+  }
+
+  @Override
+  public SettingNode makeJFXNode() {
+    Label label = new Label(getLabel());
+    TextField textField = new TextField(getValue());
+    if (getTip() != null && !getTip().isEmpty()) {
+      textField.setPromptText(getTip());
+      textField.setTooltip(new Tooltip(getTip()));
     }
+    HBox h = new HBox(5, label, textField);
+    h.setAlignment(Pos.CENTER_LEFT);
+    HBox.setHgrow(textField, Priority.ALWAYS);
 
-    public StringSetting(String identifier, String value) {
-        super(identifier);
-        this.value.set(value);
+    return new SettingNode() {
+      @Override
+      public void applyToSetting() {
+        setValue(textField.getText());
+      }
+
+      @Override
+      public Node getNode() {
+        return h;
+      }
+    };
+  }
+
+  @Override
+  void initFromJSON(JSONObject json) {
+    if (json.has(VALUE_KEY)) {
+      setValue(json.getString(VALUE_KEY));
+    } else {
+      setValue(null);
     }
+  }
 
-    public StringSetting(String identifier) {
-        super(identifier);
-    }
+  @Override
+  JSONObject toJSON() {
+    return super.toJSON().put(VALUE_KEY, getValue());
+  }
 
-    public StringSetting hide() {
-        setHidden(true);
-        return this;
-    }
+  @Override
+  public String toString() {
+    return "String(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
+  }
 
-    public StringSetting tip(String tip) {
-        setTip(tip);
-        return this;
-    }
-
-    public StringSetting label(String label) {
-        setLabel(label);
-        return this;
-    }
-
-    public String getValue() {
-        return value.get();
-    }
-
-    public void setValue(String value) {
-        this.value.set(value);
-    }
-
-    public StringProperty valueProperty() {
-        return value;
-    }
-
-    @Override
-    public SettingNode makeJFXNode() {
-        Label label = new Label(getLabel());
-        TextField textField = new TextField(getValue());
-        if (getTip() != null && !getTip().isEmpty()) {
-            textField.setPromptText(getTip());
-            textField.setTooltip(new Tooltip(getTip()));
-        }
-        HBox h = new HBox(5, label, textField);
-        h.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(textField, Priority.ALWAYS);
-
-        return new SettingNode() {
-            @Override
-            public void applyToSetting() {
-                setValue(textField.getText());
-            }
-
-            @Override
-            public Node getNode() {
-                return h;
-            }
-        };
-    }
-
-    @Override
-    void initFromJSON(JSONObject json) {
-        if (json.has(VALUE_KEY)) {
-            setValue(json.getString(VALUE_KEY));
-        } else {
-            setValue(null);
-        }
-    }
-
-    @Override
-    JSONObject toJSON() {
-        return super.toJSON().put(VALUE_KEY, getValue());
-    }
-
-    @Override
-    public String toString() {
-        return "String(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return super.equals(obj) && obj instanceof StringSetting && Util.equalsNullable(((StringSetting) obj).getValue(), getValue());
-    }
+  @Override
+  public boolean equals(Object obj) {
+    return super.equals(obj) && obj instanceof StringSetting &&
+           Util.equalsNullable(((StringSetting) obj).getValue(), getValue());
+  }
+  // TODO. override hashCode as well
 
 }

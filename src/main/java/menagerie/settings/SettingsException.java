@@ -26,12 +26,12 @@ package menagerie.settings;
 
 public class SettingsException extends Exception {
 
-    public SettingsException() {
-        super();
-    }
+  public SettingsException() {
+    super();
+  }
 
-    public SettingsException(String message) {
-        super(message);
-    }
+  public SettingsException(String message) {
+    super(message);
+  }
 
 }

@@ -31,41 +31,42 @@ import menagerie.model.menagerie.Item;
  */
 public abstract class SearchRule implements Comparable<SearchRule> {
 
-    /**
-     * Sort order priority of the rule.
-     */
-    int priority = Integer.MAX_VALUE;
+  /**
+   * Sort order priority of the rule.
+   */
+  int priority = Integer.MAX_VALUE;
 
-    private final boolean inverted;
+  private final boolean inverted;
 
 
-    /**
-     * Constructs this rule and initializes the inverted state.
-     *
-     * @param inverted Logically negate this rule.
-     */
-    public SearchRule(boolean inverted) {
-        this.inverted = inverted;
-    }
+  /**
+   * Constructs this rule and initializes the inverted state.
+   *
+   * @param inverted Logically negate this rule.
+   */
+  protected SearchRule(boolean inverted) {
+    this.inverted = inverted;
+  }
 
-    /**
-     * @return True if this rule is logically inverted.
-     */
-    public boolean isInverted() {
-        return inverted;
-    }
+  /**
+   * @return True if this rule is logically inverted.
+   */
+  public boolean isInverted() {
+    return inverted;
+  }
 
-    /**
-     * Checks whether an item aligns with this rule.
-     *
-     * @param item Item to check.
-     * @return True if the item is accepted by this rule.
-     */
-    public abstract boolean accept(Item item);
+  /**
+   * Checks whether an item aligns with this rule.
+   *
+   * @param item Item to check.
+   * @return True if the item is accepted by this rule.
+   */
+  public abstract boolean accept(Item item);
 
-    @Override
-    public int compareTo(SearchRule o) {
-        return priority - o.priority;
-    }
+  @Override
+  public int compareTo(SearchRule o) {
+    return priority - o.priority;
+  }
+  // TODO. override equals as well
 
 }

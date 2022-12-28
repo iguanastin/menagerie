@@ -42,87 +42,92 @@ import menagerie.util.listeners.PokeListener;
 
 public class TextDialogScreen extends Screen {
 
-    private final Label titleLabel = new Label("N/A");
-    private final Label messageLabel = new Label("N/A");
-    private final TextField textField = new TextField();
+  private final Label titleLabel = new Label("N/A");
+  private final Label messageLabel = new Label("N/A");
+  private final TextField textField = new TextField();
 
-    private PokeListener cancelListener;
-    private ObjectListener<String> confirmListener;
+  private PokeListener cancelListener;
+  private ObjectListener<String> confirmListener;
 
 
-    public TextDialogScreen() {
-        addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ESCAPE) {
-                cancel();
-            } else if (event.getCode() == KeyCode.ENTER) {
-                confirm();
-            }
-        });
+  public TextDialogScreen() {
+    addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == KeyCode.ESCAPE) {
+        cancel();
+      } else if (event.getCode() == KeyCode.ENTER) {
+        confirm();
+      }
+    });
 
-        // --------------------------------- Header --------------------------------------
-        Button exit = new Button("X");
-        exit.setOnAction(event -> cancel());
-        BorderPane top = new BorderPane(null, null, exit, new Separator(), titleLabel);
+    // --------------------------------- Header --------------------------------------
+    Button exit = new Button("X");
+    exit.setOnAction(event -> cancel());
+    BorderPane top = new BorderPane(null, null, exit, new Separator(), titleLabel);
 
-        // --------------------------------- Center --------------------------------------
-        VBox center = new VBox(5, messageLabel, textField);
-        center.setPadding(new Insets(5));
+    // --------------------------------- Center --------------------------------------
+    VBox center = new VBox(5, messageLabel, textField);
+    center.setPadding(new Insets(5));
 
-        // --------------------------------- Bottom --------------------------------------
-        Button confirm = new Button("Confirm");
-        confirm.setOnAction(event -> confirm());
-        Button cancel = new Button("Cancel");
-        cancel.setOnAction(event -> cancel());
-        HBox bottom = new HBox(5, confirm, cancel);
-        bottom.setPadding(new Insets(5));
-        bottom.setAlignment(Pos.CENTER_RIGHT);
+    // --------------------------------- Bottom --------------------------------------
+    Button confirm = new Button("Confirm");
+    confirm.setOnAction(event -> confirm());
+    Button cancel = new Button("Cancel");
+    cancel.setOnAction(event -> cancel());
+    HBox bottom = new HBox(5, confirm, cancel);
+    bottom.setPadding(new Insets(5));
+    bottom.setAlignment(Pos.CENTER_RIGHT);
 
-        // -------------------------------- Root -----------------------------------------
-        BorderPane root = new BorderPane(center, top, null, bottom, null);
-        root.setPrefWidth(500);
-        root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
-        setCenter(root);
-        setPadding(new Insets(25));
+    // -------------------------------- Root -----------------------------------------
+    BorderPane root = new BorderPane(center, top, null, bottom, null);
+    root.setPrefWidth(500);
+    root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
+    root.getStyleClass().addAll(ROOT_STYLE_CLASS);
+    setCenter(root);
+    setPadding(new Insets(25));
 
-        setDefaultFocusNode(textField);
+    setDefaultFocusNode(textField);
+  }
+
+  /**
+   * Opens this screen in a manager.
+   *
+   * @param manager         Manager to open in.
+   * @param title           Title text.
+   * @param message         Message text.
+   * @param text            Default textfield text.
+   * @param confirmListener Listener waiting for confirm event.
+   * @param cancelListener  Listener waiting for cancel event.
+   */
+  public void open(ScreenPane manager, String title, String message, String text,
+                   ObjectListener<String> confirmListener, PokeListener cancelListener) {
+    manager.open(this);
+
+    titleLabel.setText(title);
+    messageLabel.setText(message);
+    textField.setText(text);
+    textField.selectAll();
+    this.confirmListener = confirmListener;
+    this.cancelListener = cancelListener;
+  }
+
+  /**
+   * Confirms this dialog.
+   */
+  private void confirm() {
+    close();
+    if (confirmListener != null) {
+      confirmListener.pass(textField.getText());
     }
+  }
 
-    /**
-     * Opens this screen in a manager.
-     *
-     * @param manager         Manager to open in.
-     * @param title           Title text.
-     * @param message         Message text.
-     * @param text            Default textfield text.
-     * @param confirmListener Listener waiting for confirm event.
-     * @param cancelListener  Listener waiting for cancel event.
-     */
-    public void open(ScreenPane manager, String title, String message, String text, ObjectListener<String> confirmListener, PokeListener cancelListener) {
-        manager.open(this);
-
-        titleLabel.setText(title);
-        messageLabel.setText(message);
-        textField.setText(text);
-        textField.selectAll();
-        this.confirmListener = confirmListener;
-        this.cancelListener = cancelListener;
+  /**
+   * Cancels this dialog.
+   */
+  private void cancel() {
+    close();
+    if (cancelListener != null) {
+      cancelListener.poke();
     }
-
-    /**
-     * Confirms this dialog.
-     */
-    private void confirm() {
-        close();
-        if (confirmListener != null) confirmListener.pass(textField.getText());
-    }
-
-    /**
-     * Cancels this dialog.
-     */
-    private void cancel() {
-        close();
-        if (cancelListener != null) cancelListener.poke();
-    }
+  }
 
 }

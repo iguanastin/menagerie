@@ -30,48 +30,47 @@ import menagerie.model.menagerie.MediaItem;
 
 public class GroupSearch extends Search {
 
-    private final GroupItem group;
+  private final GroupItem group;
 
+  /**
+   * Constructs a group search with given rules.
+   *
+   * @param search     User input string to parse.
+   * @param group      Group scope of this search.
+   * @param descending Sort the results descending.
+   */
+  public GroupSearch(String search, GroupItem group, boolean descending, boolean shuffled) {
+    super(search, descending, true, shuffled);
+    this.group = group;
 
-    /**
-     * Constructs a group search with given rules.
-     *
-     * @param search     User input string to parse.
-     * @param group      Group scope of this search.
-     * @param descending Sort the results descending.
-     */
-    public GroupSearch(String search, GroupItem group, boolean descending, boolean shuffled) {
-        super(search, descending, true, shuffled);
-        this.group = group;
-
-        comparator = (o1, o2) -> {
-            if (o1 instanceof MediaItem && o2 instanceof MediaItem) {
-                if (descending) {
-                    return ((MediaItem) o2).getPageIndex() - ((MediaItem) o1).getPageIndex();
-                } else {
-                    return ((MediaItem) o1).getPageIndex() - ((MediaItem) o2).getPageIndex();
-                }
-            } else {
-                return 0;
-            }
-        };
-    }
-
-    @Override
-    protected boolean isItemValid(Item item) {
-        if (item instanceof MediaItem) {
-            if (!((MediaItem) item).isInGroup() || !((MediaItem) item).getGroup().equals(group)) {
-                return false;
-            }
+    comparator = (o1, o2) -> {
+      if (o1 instanceof MediaItem && o2 instanceof MediaItem) {
+        if (descending) {
+          return ((MediaItem) o2).getPageIndex() - ((MediaItem) o1).getPageIndex();
         } else {
-            return false;
+          return ((MediaItem) o1).getPageIndex() - ((MediaItem) o2).getPageIndex();
         }
+      } else {
+        return 0;
+      }
+    };
+  }
 
-        return super.isItemValid(item);
+  @Override
+  protected boolean isItemValid(Item item) {
+    if (item instanceof MediaItem) {
+      if (!((MediaItem) item).isInGroup() || !((MediaItem) item).getGroup().equals(group)) {
+        return false;
+      }
+    } else {
+      return false;
     }
 
-    public GroupItem getGroup() {
-        return group;
-    }
+    return super.isItemValid(item);
+  }
+
+  public GroupItem getGroup() {
+    return group;
+  }
 
 }

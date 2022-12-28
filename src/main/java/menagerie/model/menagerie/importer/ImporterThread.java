@@ -24,145 +24,125 @@
 
 package menagerie.model.menagerie.importer;
 
-import menagerie.model.menagerie.Menagerie;
-import menagerie.settings.MenagerieSettings;
-import menagerie.util.listeners.ObjectListener;
-
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Logger;
+import menagerie.model.menagerie.Menagerie;
+import menagerie.settings.MenagerieSettings;
+import menagerie.util.listeners.ObjectListener;
 
 /**
  * A thread that cleanly serializes Menagerie imports as jobs with additional features.
  */
 public class ImporterThread extends Thread {
 
-    private static final Logger LOGGER = Logger.getLogger(ImporterThread.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(ImporterThread.class.getName());
 
-    private volatile boolean running = false;
-    private volatile boolean paused = false;
+  private volatile boolean running = false;
+  private volatile boolean paused = false;
 
-    private final Menagerie menagerie;
-    private final MenagerieSettings settings;
-    private final Queue<ImportJob> queue = new ConcurrentLinkedQueue<>();
+  private final Menagerie menagerie;
+  private final MenagerieSettings settings;
+  private final Queue<ImportJob> queue = new ConcurrentLinkedQueue<>();
 
-    private final Set<ObjectListener<ImportJob>> importerListeners = new HashSet<>();
+  private final Set<ObjectListener<ImportJob>> importerListeners = new HashSet<>();
 
 
-    public ImporterThread(Menagerie menagerie, MenagerieSettings settings) {
-        super("Menagerie Importer Thread");
+  public ImporterThread(Menagerie menagerie, MenagerieSettings settings) {
+    super("Menagerie Importer Thread");
 
-        this.menagerie = menagerie;
-        this.settings = settings;
-    }
+    this.menagerie = menagerie;
+    this.settings = settings;
+  }
 
-    @Override
-    public void run() {
-        running = true;
-        while (running) {
-            while (paused) {
-                if (!running) return;
-                synchronized (this) {
-                    try {
-                        wait();
-                    } catch (InterruptedException ignore) {
-                    }
-                }
-            }
-
-            if (queue.isEmpty()) {
-                synchronized (this) {
-                    try {
-                        wait();
-                    } catch (InterruptedException ignore) {
-                    }
-                }
-                continue;
-            }
-
-            LOGGER.info("Import queue size: " + queue.size());
-            ImportJob job = queue.remove();
-
-            if (job.getUrl() != null) LOGGER.info("Starting web import: " + job.getUrl());
-            else LOGGER.info("Starting local import: " + job.getFile());
-            job.runJob(menagerie, settings);
-            LOGGER.info("Finished import: " + job.getItem().getId());
+  @Override
+  public void run() {
+    running = true;
+    while (running) {
+      while (paused) {
+          if (!running) {
+              return;
+          }
+        synchronized (this) {
+          try {
+            wait();
+          } catch (InterruptedException ignore) {
+          }
         }
-    }
+      }
 
-    /**
-     * Adds a job to the back of the queue. FIFO.
-     *
-     * @param job Job to add.
-     */
-    public synchronized void addJob(ImportJob job) {
-        job.setImporter(this);
-        queue.add(job);
-        notify();
-        synchronized (importerListeners) {
-            importerListeners.forEach(listener -> listener.pass(job));
+      if (queue.isEmpty()) {
+        synchronized (this) {
+          try {
+            wait();
+          } catch (InterruptedException ignore) {
+          }
         }
-    }
+        continue;
+      }
 
-    /**
-     * Tells this thread to stop running. Does not forcibly stop the thread.
-     */
-    public synchronized void stopRunning() {
-        this.running = false;
-        notify();
-    }
+      LOGGER.info("Import queue size: " + queue.size());
+      ImportJob job = queue.remove();
 
-    /**
-     * Sets the paused state of this import thread. If a job is already running, the paused state is not queried by this thread until the job finishes.
-     *
-     * @param paused Value
-     */
-    public synchronized void setPaused(boolean paused) {
-        this.paused = paused;
-        notify();
-    }
-
-    /**
-     * @return True if this thread is paused.
-     */
-    public boolean isPaused() {
-        return paused;
-    }
-
-    /**
-     * @return True if this thread is running.
-     */
-    public boolean isRunning() {
-        return running;
-    }
-
-    /**
-     * @param listener Listener that listens for jobs being added.
-     */
-    public void addImporterListener(ObjectListener<ImportJob> listener) {
-        synchronized (importerListeners) {
-            importerListeners.add(listener);
+        if (job.getUrl() != null) {
+            LOGGER.info("Starting web import: " + job.getUrl());
+        } else {
+            LOGGER.info("Starting local import: " + job.getFile());
         }
+      job.runJob(menagerie, settings);
+      LOGGER.info("Finished import: " + job.getItem().getId());
     }
+  }
 
-    /**
-     * @param listener Listener to remove.
-     */
-    public void removeImporterListener(ObjectListener<ImportJob> listener) {
-        synchronized (importerListeners) {
-            importerListeners.remove(listener);
-        }
+  /**
+   * Adds a job to the back of the queue. FIFO.
+   *
+   * @param job Job to add.
+   */
+  public synchronized void addJob(ImportJob job) {
+    job.setImporter(this);
+    queue.add(job);
+    notify();
+    synchronized (importerListeners) {
+      importerListeners.forEach(listener -> listener.pass(job));
     }
+  }
 
-    /**
-     * Cancels a job, if it has not already been consumed/ran.
-     *
-     * @param job Job to remove.
-     */
-    public void cancel(ImportJob job) {
-        queue.remove(job);
+  /**
+   * Sets the paused state of this import thread. If a job is already running, the paused state is not queried by this thread until the job finishes.
+   *
+   * @param paused Value
+   */
+  public synchronized void setPaused(boolean paused) {
+    this.paused = paused;
+    notify();
+  }
+
+  /**
+   * @return True if this thread is paused.
+   */
+  public boolean isPaused() {
+    return paused;
+  }
+
+  /**
+   * @param listener Listener that listens for jobs being added.
+   */
+  public void addImporterListener(ObjectListener<ImportJob> listener) {
+    synchronized (importerListeners) {
+      importerListeners.add(listener);
     }
+  }
+
+  /**
+   * Cancels a job, if it has not already been consumed/ran.
+   *
+   * @param job Job to remove.
+   */
+  public void cancel(ImportJob job) {
+    queue.remove(job);
+  }
 
 }

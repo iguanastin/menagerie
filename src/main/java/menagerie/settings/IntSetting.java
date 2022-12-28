@@ -36,156 +36,162 @@ import org.json.JSONObject;
 
 public class IntSetting extends Setting {
 
-    private static final String VALUE_KEY = "value";
-    private static final String MIN_KEY = "min";
-    private static final String MAX_KEY = "max";
+  private static final String VALUE_KEY = "value";
+  private static final String MIN_KEY = "min";
+  private static final String MAX_KEY = "max";
 
-    private final IntegerProperty value = new SimpleIntegerProperty();
-    private int min = Integer.MIN_VALUE, max = Integer.MAX_VALUE;
+  private final IntegerProperty value = new SimpleIntegerProperty();
+  private int min = Integer.MIN_VALUE, max = Integer.MAX_VALUE;
 
 
-    public IntSetting(String identifier, String label, String tip, boolean hidden, int value) {
-        super(identifier, label, tip, hidden);
-        this.value.set(value);
+  public IntSetting(String identifier, String label, String tip, boolean hidden, int value) {
+    super(identifier, label, tip, hidden);
+    this.value.set(value);
+  }
+
+  public IntSetting(String identifier, int value) {
+    super(identifier);
+    this.value.set(value);
+  }
+
+  public IntSetting(String identifier) {
+    super(identifier);
+    this.value.set(0);
+  }
+
+  public IntSetting hide() {
+    setHidden(true);
+    return this;
+  }
+
+  public IntSetting tip(String tip) {
+    setTip(tip);
+    return this;
+  }
+
+  public IntSetting label(String label) {
+    setLabel(label);
+    return this;
+  }
+
+  public IntSetting min(int min) {
+    return range(min, getMax());
+  }
+
+  public IntSetting max(int max) {
+    return range(getMin(), max);
+  }
+
+  public IntSetting range(int min, int max) {
+    setRange(min, max);
+    return this;
+  }
+
+  public int getMin() {
+    return min;
+  }
+
+  public int getMax() {
+    return max;
+  }
+
+  public void setMin(int min) {
+    this.min = min;
+    if (getValue() < min) {
+      setValue(min);
+    }
+  }
+
+  public void setMax(int max) {
+    this.max = max;
+    if (getValue() > max) {
+      setValue(max);
+    }
+  }
+
+  public void setRange(int min, int max) {
+    if (min > max) {
+      int temp = min;
+      min = max;
+      max = temp;
     }
 
-    public IntSetting(String identifier, int value) {
-        super(identifier);
-        this.value.set(value);
-    }
+    setMin(min);
+    setMax(max);
+  }
 
-    public IntSetting(String identifier) {
-        super(identifier);
-        this.value.set(0);
-    }
+  public int getValue() {
+    return value.get();
+  }
 
-    public IntSetting hide() {
-        setHidden(true);
-        return this;
-    }
+  public void setValue(int value) {
+    this.value.set(value);
+  }
 
-    public IntSetting tip(String tip) {
-        setTip(tip);
-        return this;
-    }
+  public IntegerProperty valueProperty() {
+    return value;
+  }
 
-    public IntSetting label(String label) {
-        setLabel(label);
-        return this;
-    }
-
-    public IntSetting min(int min) {
-        return range(min, getMax());
-    }
-
-    public IntSetting max(int max) {
-        return range(getMin(), max);
-    }
-
-    public IntSetting range(int min, int max) {
-        setRange(min, max);
-        return this;
-    }
-
-    public int getMin() {
-        return min;
-    }
-
-    public int getMax() {
-        return max;
-    }
-
-    public void setMin(int min) {
-        this.min = min;
-        if (getValue() < min) setValue(min);
-    }
-
-    public void setMax(int max) {
-        this.max = max;
-        if (getValue() > max) setValue(max);
-    }
-
-    public void setRange(int min, int max) {
-        if (min > max) {
-            int temp = min;
-            min = max;
-            max = temp;
+  @Override
+  public SettingNode makeJFXNode() {
+    Label label = new Label(getLabel());
+    Spinner<Integer> spinner = new Spinner<>(getMin(), getMax(), getValue());
+    spinner.setEditable(true);
+    spinner.focusedProperty().addListener((observable, oldValue, newValue) -> {
+      if (!newValue) {
+        try {
+          int v = Integer.parseInt(spinner.getEditor().getText());
+          if (v < getMin() || v > getMax()) {
+            v = Math.min(Math.max(getMin(), v), getMax());
+          }
+          setValue(v);
+        } catch (NumberFormatException ignore) {
         }
 
-        setMin(min);
-        setMax(max);
+        spinner.getValueFactory().setValue(getValue());
+        spinner.getEditor().setText(spinner.getValue() + "");
+      }
+    });
+    if (getTip() != null && !getTip().isEmpty()) {
+      spinner.setTooltip(new Tooltip(getTip()));
     }
+    HBox h = new HBox(5, label, spinner);
+    h.setAlignment(Pos.CENTER_LEFT);
 
-    public int getValue() {
-        return value.get();
-    }
+    return new SettingNode() {
+      @Override
+      public void applyToSetting() {
+        setValue(spinner.getValue());
+      }
 
-    public void setValue(int value) {
-        this.value.set(value);
-    }
+      @Override
+      public Node getNode() {
+        return h;
+      }
+    };
+  }
 
-    public IntegerProperty valueProperty() {
-        return value;
-    }
+  @Override
+  void initFromJSON(JSONObject json) {
+    setRange(json.getInt(MIN_KEY), json.getInt(MAX_KEY));
+    setValue(json.getInt(VALUE_KEY));
+  }
 
-    @Override
-    public SettingNode makeJFXNode() {
-        Label label = new Label(getLabel());
-        Spinner<Integer> spinner = new Spinner<>(getMin(), getMax(), getValue());
-        spinner.setEditable(true);
-        spinner.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) {
-                try {
-                    int v = Integer.parseInt(spinner.getEditor().getText());
-                    if (v < getMin() || v > getMax()) {
-                        v = Math.min(Math.max(getMin(), v), getMax());
-                    }
-                    setValue(v);
-                } catch (NumberFormatException ignore) {
-                }
+  @Override
+  JSONObject toJSON() {
+    return super.toJSON().put(VALUE_KEY, getValue()).put(MIN_KEY, getMin()).put(MAX_KEY, getMax());
+  }
 
-                spinner.getValueFactory().setValue(getValue());
-                spinner.getEditor().setText(spinner.getValue() + "");
-            }
-        });
-        if (getTip() != null && !getTip().isEmpty()) {
-            spinner.setTooltip(new Tooltip(getTip()));
-        }
-        HBox h = new HBox(5, label, spinner);
-        h.setAlignment(Pos.CENTER_LEFT);
+  @Override
+  public String toString() {
+    return "Int(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
+  }
 
-        return new SettingNode() {
-            @Override
-            public void applyToSetting() {
-                setValue(spinner.getValue());
-            }
-
-            @Override
-            public Node getNode() {
-                return h;
-            }
-        };
-    }
-
-    @Override
-    void initFromJSON(JSONObject json) {
-        setRange(json.getInt(MIN_KEY), json.getInt(MAX_KEY));
-        setValue(json.getInt(VALUE_KEY));
-    }
-
-    @Override
-    JSONObject toJSON() {
-        return super.toJSON().put(VALUE_KEY, getValue()).put(MIN_KEY, getMin()).put(MAX_KEY, getMax());
-    }
-
-    @Override
-    public String toString() {
-        return "Int(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return super.equals(obj) && obj instanceof IntSetting && ((IntSetting) obj).getValue() == getValue();
-    }
+  @Override
+  public boolean equals(Object obj) {
+    return super.equals(obj) && obj instanceof IntSetting &&
+           ((IntSetting) obj).getValue() == getValue();
+  }
+  // TODO. override hashCode as well
 
 }

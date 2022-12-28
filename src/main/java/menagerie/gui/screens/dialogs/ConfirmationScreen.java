@@ -39,68 +39,74 @@ import menagerie.util.listeners.PokeListener;
 
 public class ConfirmationScreen extends Screen {
 
-    private final Label titleLabel;
-    private final Label messageLabel;
+  private final Label titleLabel;
+  private final Label messageLabel;
 
-    private PokeListener okListener = null;
-    private PokeListener cancelListener = null;
+  private PokeListener okListener = null;
+  private PokeListener cancelListener = null;
 
+  public ConfirmationScreen() {
+    addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == KeyCode.ESCAPE || event.getCode() == KeyCode.BACK_SPACE) {
+        close();
+        event.consume();
+      } else if (event.getCode() == KeyCode.ENTER) {
+          if (okListener != null) {
+              okListener.poke();
+          }
+        close();
+        event.consume();
+      }
+    });
 
-    public ConfirmationScreen() {
-        addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ESCAPE || event.getCode() == KeyCode.BACK_SPACE) {
-                close();
-                event.consume();
-            } else if (event.getCode() == KeyCode.ENTER) {
-                if (okListener != null) okListener.poke();
-                close();
-                event.consume();
-            }
-        });
+    titleLabel = new Label("TITLE");
+    messageLabel = new Label("MESSAGE");
+    messageLabel.setWrapText(true);
 
-        titleLabel = new Label("TITLE");
-        messageLabel = new Label("MESSAGE");
-        messageLabel.setWrapText(true);
+    Button ok = new Button("Ok");
+    ok.setOnAction(event -> {
+        if (okListener != null) {
+            okListener.poke();
+        }
+      close();
+    });
+    Button cancel = new Button("Cancel");
+    cancel.setOnAction(event -> {
+        if (cancelListener != null) {
+            cancelListener.poke();
+        }
+      close();
+    });
 
-        Button ok = new Button("Ok");
-        ok.setOnAction(event -> {
-            if (okListener != null) okListener.poke();
-            close();
-        });
-        Button cancel = new Button("Cancel");
-        cancel.setOnAction(event -> {
-            if (cancelListener != null) cancelListener.poke();
-            close();
-        });
+    HBox h = new HBox(5, ok, cancel);
+    h.setAlignment(Pos.CENTER_RIGHT);
+    VBox v = new VBox(5, titleLabel, new Separator(), messageLabel, h);
+    v.setPrefWidth(500);
+    v.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
+    v.setPadding(new Insets(5));
+    v.getStyleClass().addAll(ROOT_STYLE_CLASS);
+    setCenter(v);
 
-        HBox h = new HBox(5, ok, cancel);
-        h.setAlignment(Pos.CENTER_RIGHT);
-        VBox v = new VBox(5, titleLabel, new Separator(), messageLabel, h);
-        v.setPrefWidth(500);
-        v.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        v.setPadding(new Insets(5));
-        v.getStyleClass().addAll(ROOT_STYLE_CLASS);
-        setCenter(v);
+    setDefaultFocusNode(ok);
+  }
 
-        setDefaultFocusNode(ok);
-    }
+  /**
+   * Opens this screen in a manager.
+   *
+   * @param manager        Manager to open in.
+   * @param title          Title text.
+   * @param message        Message text.
+   * @param okListener     Listener waiting for confirm event.
+   * @param cancelListener Listener waiting for cancel event.
+   */
+  public void open(ScreenPane manager, String title, String message, PokeListener okListener,
+                   PokeListener cancelListener) {
+    manager.open(this);
 
-    /**
-     * Opens this screen in a manager.
-     *
-     * @param manager        Manager to open in.
-     * @param title          Title text.
-     * @param message        Message text.
-     * @param okListener     Listener waiting for confirm event.
-     * @param cancelListener Listener waiting for cancel event.
-     */
-    public void open(ScreenPane manager, String title, String message, PokeListener okListener, PokeListener cancelListener) {
-        manager.open(this);
-
-        titleLabel.setText(title);
-        messageLabel.setText(message);
-        this.okListener = okListener;
-        this.cancelListener = cancelListener;
-    }
+    titleLabel.setText(title);
+    messageLabel.setText(message);
+    this.okListener = okListener;
+    this.cancelListener = cancelListener;
+  }
 
 }

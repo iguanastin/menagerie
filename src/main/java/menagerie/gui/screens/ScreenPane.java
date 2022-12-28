@@ -24,87 +24,88 @@
 
 package menagerie.gui.screens;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Stack;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Stack;
 
 /**
  * A pane that manages stacked screens.
  */
 public class ScreenPane extends StackPane {
 
-    final private Map<Screen, Node> lastFocusMap = new HashMap<>();
-    final private Stack<Screen> openStack = new Stack<>();
-    final private ObjectProperty<Screen> current = new SimpleObjectProperty<>(null);
+  private final Map<Screen, Node> lastFocusMap = new HashMap<>();
+  private final Stack<Screen> openStack = new Stack<>();
+  private final ObjectProperty<Screen> current = new SimpleObjectProperty<>(null);
 
 
-    public ScreenPane() {
-        setPickOnBounds(false);
+  public ScreenPane() {
+    setPickOnBounds(false);
+  }
+
+  /**
+   * Opens a screen on top of all other currently open screens, disabling everything that's not on top.
+   *
+   * @param screen Screen to open.
+   */
+  public boolean open(Screen screen) {
+    if (!getChildren().contains(screen)) {
+      screen.setManager(this);
+      getChildren().add(screen);
     }
 
-    /**
-     * Opens a screen on top of all other currently open screens, disabling everything that's not on top.
-     *
-     * @param screen Screen to open.
-     */
-    public boolean open(Screen screen) {
-        if (!getChildren().contains(screen)) {
-            screen.setManager(this);
-            getChildren().add(screen);
-        }
-
-        if (current.get() != null) {
-            lastFocusMap.put(current.get(), getScene().getFocusOwner());
-            current.get().setDisable(true);
-            openStack.push(current.get());
-        }
-
-        current.set(screen);
-
-        screen.setDisable(false);
-        screen.focusDefaultNode();
-
-        screen.onOpen();
-        return true;
+    if (current.get() != null) {
+      lastFocusMap.put(current.get(), getScene().getFocusOwner());
+      current.get().setDisable(true);
+      openStack.push(current.get());
     }
 
-    /**
-     * Closes a screen and updates the state of the top most screen to be enabled.
-     *
-     * @param screen Screen to close.
-     * @return True if successful, false otherwise.
-     */
-    public boolean close(Screen screen) {
-        if (getChildren().contains(screen)) {
-            if (screen.equals(current.get())) {
-                if (openStack.empty()) {
-                    current.set(null);
-                } else {
-                    current.set(openStack.pop());
-                    current.get().setDisable(false);
-                    Node focusTarget = lastFocusMap.remove(current.get());
-                    if (focusTarget != null) focusTarget.requestFocus();
-                }
-            } else {
-                openStack.remove(screen);
-            }
+    current.set(screen);
 
-            screen.onClose();
-            getChildren().remove(screen);
-            screen.setManager(null);
-            return true;
+    screen.setDisable(false);
+    screen.focusDefaultNode();
+
+    screen.onOpen();
+    return true;
+  }
+
+  /**
+   * Closes a screen and updates the state of the top most screen to be enabled.
+   *
+   * @param screen Screen to close.
+   * @return True if successful, false otherwise.
+   */
+  public boolean close(Screen screen) {
+    if (getChildren().contains(screen)) {
+      if (screen.equals(current.get())) {
+        if (openStack.empty()) {
+          current.set(null);
         } else {
-            return false;
+          current.set(openStack.pop());
+          current.get().setDisable(false);
+          Node focusTarget = lastFocusMap.remove(current.get());
+          if (focusTarget != null) {
+            focusTarget.requestFocus();
+          }
         }
-    }
+      } else {
+        openStack.remove(screen);
+      }
 
-    public ObjectProperty<Screen> currentProperty() {
-        return current;
+      screen.onClose();
+      getChildren().remove(screen);
+      screen.setManager(null);
+      return true;
+    } else {
+      return false;
     }
+  }
+
+  public ObjectProperty<Screen> currentProperty() {
+    return current;
+  }
 
 }

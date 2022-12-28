@@ -24,6 +24,8 @@
 
 package menagerie.gui.screens.duplicates;
 
+import java.util.ArrayList;
+import java.util.List;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
@@ -32,65 +34,81 @@ import menagerie.util.CancellableThread;
 import menagerie.util.listeners.ObjectListener;
 import menagerie.util.listeners.PokeListener;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class DuplicateFinderThread extends CancellableThread {
 
-    private final List<Item> compareFrom;
-    private final List<Item> compareTo;
-    private final double confidence;
+  private final List<Item> compareFrom;
+  private final List<Item> compareTo;
+  private final double confidence;
 
-    private final Menagerie menagerie;
+  private final Menagerie menagerie;
 
-    private final List<SimilarPair<MediaItem>> pairs = new ArrayList<>();
+  private final List<SimilarPair<MediaItem>> pairs = new ArrayList<>();
 
-    private final PokeListener progressListener;
-    private final ObjectListener<List<SimilarPair<MediaItem>>> finishListener;
+  private final PokeListener progressListener;
+  private final ObjectListener<List<SimilarPair<MediaItem>>> finishListener;
 
 
-    public DuplicateFinderThread(Menagerie menagerie, List<Item> compareFrom, List<Item> compareTo, double confidence, PokeListener progressListener, ObjectListener<List<SimilarPair<MediaItem>>> finishListener) {
-        this.menagerie = menagerie;
-        this.compareFrom = compareFrom;
-        this.compareTo = compareTo;
-        this.confidence = confidence;
+  public DuplicateFinderThread(Menagerie menagerie, List<Item> compareFrom, List<Item> compareTo,
+                               double confidence, PokeListener progressListener,
+                               ObjectListener<List<SimilarPair<MediaItem>>> finishListener) {
+    this.menagerie = menagerie;
+    this.compareFrom = compareFrom;
+    this.compareTo = compareTo;
+    this.confidence = confidence;
 
-        this.progressListener = progressListener;
-        this.finishListener = finishListener;
+    this.progressListener = progressListener;
+    this.finishListener = finishListener;
 
-        setName("Duplicate Finder");
-        setDaemon(true);
-    }
+    setName("Duplicate Finder");
+    setDaemon(true);
+  }
 
-    @Override
-    public void run() {
-        final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
+  @Override
+  public void run() {
+    final double confidenceSquare = 1 - (1 - confidence) * (1 - confidence);
 
-        for (Item item1 : compareFrom) {
-            if (!running) break;
-            if (!(item1 instanceof MediaItem) || ((MediaItem) item1).hasNoSimilar()) continue;
+    for (Item item1 : compareFrom) {
+      if (!running) {
+        break;
+      }
+      if (!(item1 instanceof MediaItem) || ((MediaItem) item1).hasNoSimilar()) {
+        continue;
+      }
 
-            for (Item item2 : compareTo) {
-                if (!running) break;
-                if (!(item2 instanceof MediaItem) || ((MediaItem) item2).hasNoSimilar() || item1.equals(item2))
-                    continue;
-
-                final double similarity = ((MediaItem) item1).getSimilarityTo((MediaItem) item2);
-                if (similarity >= confidenceSquare || (similarity >= confidence && ((MediaItem) item1).getHistogram().isColorful() && ((MediaItem) item2).getHistogram().isColorful())) {
-                    SimilarPair<MediaItem> pair = new SimilarPair<>((MediaItem) item1, (MediaItem) item2, similarity);
-                    if (!menagerie.hasNonDuplicate(pair)) pairs.add(pair);
-                }
-            }
-
-            if (progressListener != null) progressListener.poke();
+      for (Item item2 : compareTo) {
+        if (!running) {
+          break;
+        }
+        if (!(item2 instanceof MediaItem) || ((MediaItem) item2).hasNoSimilar() ||
+            item1.equals(item2)) {
+          continue;
         }
 
-        if (running && finishListener != null) finishListener.pass(pairs);
-        running = false;
+        final double similarity = ((MediaItem) item1).getSimilarityTo((MediaItem) item2);
+        if (similarity >= confidenceSquare ||
+            (similarity >= confidence && ((MediaItem) item1).getHistogram().isColorful() &&
+             ((MediaItem) item2).getHistogram().isColorful())) {
+          SimilarPair<MediaItem> pair =
+              new SimilarPair<>((MediaItem) item1, (MediaItem) item2, similarity);
+          if (!menagerie.hasNonDuplicate(pair)) {
+            pairs.add(pair);
+          }
+        }
+      }
+
+      if (progressListener != null) {
+        progressListener.poke();
+      }
     }
 
-    public List<SimilarPair<MediaItem>> getPairs() {
-        return pairs;
+    if (running && finishListener != null) {
+      finishListener.pass(pairs);
     }
+    running = false;
+  }
+
+  public List<SimilarPair<MediaItem>> getPairs() {
+    return pairs;
+  }
 
 }

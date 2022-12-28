@@ -24,6 +24,15 @@
 
 package menagerie.gui.screens.duplicates;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
@@ -31,88 +40,87 @@ import menagerie.model.menagerie.Menagerie;
 import menagerie.util.CancellableThread;
 import menagerie.util.listeners.ObjectListener;
 
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
 public class DuplicateManagerThread extends CancellableThread {
 
-    private final List<DuplicateFinderThread> finders = new ArrayList<>();
-    private final List<SimilarPair<MediaItem>> pairs = new ArrayList<>();
+  private final List<DuplicateFinderThread> finders = new ArrayList<>();
+  private final List<SimilarPair<MediaItem>> pairs = new ArrayList<>();
 
-    private final Menagerie menagerie;
-    private final List<Item> compareFrom;
-    private final List<Item> compareTo;
-    private final double confidence;
-    private final ObjectListener<Double> progressListener;
-    private final ObjectListener<List<SimilarPair<MediaItem>>> finishListener;
+  private final Menagerie menagerie;
+  private final List<Item> compareFrom;
+  private final List<Item> compareTo;
+  private final double confidence;
+  private final ObjectListener<Double> progressListener;
+  private final ObjectListener<List<SimilarPair<MediaItem>>> finishListener;
 
-    private int finished = 0, total = 0;
+  private int finished = 0, total = 0;
 
+  public DuplicateManagerThread(Menagerie menagerie, List<Item> compareFrom, List<Item> compareTo,
+                                double confidence, ObjectListener<Double> progressListener,
+                                ObjectListener<List<SimilarPair<MediaItem>>> finishListener) {
+    this.menagerie = menagerie;
+    this.compareFrom = new ArrayList<>(compareFrom);
+    this.compareTo = new ArrayList<>(compareTo);
+    this.confidence = confidence;
+    this.progressListener = progressListener;
+    this.finishListener = finishListener;
 
-    public DuplicateManagerThread(Menagerie menagerie, List<Item> compareFrom, List<Item> compareTo, double confidence, ObjectListener<Double> progressListener, ObjectListener<List<SimilarPair<MediaItem>>> finishListener) {
-        this.menagerie = menagerie;
-        this.compareFrom = new ArrayList<>(compareFrom);
-        this.compareTo = new ArrayList<>(compareTo);
-        this.confidence = confidence;
-        this.progressListener = progressListener;
-        this.finishListener = finishListener;
+    setName("Duplicate Finder Master");
+  }
 
-        setName("Duplicate Finder Master");
-    }
+  @Override
+  public void run() {
+    total = compareFrom.size();
+    finished = 0;
 
-    @Override
-    public void run() {
-        total = compareFrom.size();
-        finished = 0;
-
-        final int threads = Math.min(Runtime.getRuntime().availableProcessors(), compareFrom.size());
-        final int chunk = (int) Math.ceil((double) compareFrom.size() / threads);
-        final Lock finishLock = new ReentrantLock();
-        final CountDownLatch finishLatch = new CountDownLatch(threads);
-        for (int i = 0; i < threads; i++) {
-            DuplicateFinderThread finder = new DuplicateFinderThread(menagerie, compareFrom.subList(i * chunk, Math.min((i + 1) * chunk, compareFrom.size())), compareTo, confidence, () -> {
-                finished++;
-                if (progressListener != null) progressListener.pass(getProgress());
-            }, results -> {
-                finishLock.lock();
-                pairs.addAll(results);
-                finishLatch.countDown();
-                finishLock.unlock();
-            });
-            finders.add(finder);
-            finder.start();
+    final int threads = Math.min(Runtime.getRuntime().availableProcessors(), compareFrom.size());
+    final int chunk = (int) Math.ceil((double) compareFrom.size() / threads);
+    final Lock finishLock = new ReentrantLock();
+    final CountDownLatch finishLatch = new CountDownLatch(threads);
+    for (int i = 0; i < threads; i++) {
+      DuplicateFinderThread finder = new DuplicateFinderThread(menagerie,
+          compareFrom.subList(i * chunk, Math.min((i + 1) * chunk, compareFrom.size())), compareTo,
+          confidence, () -> {
+        finished++;
+        if (progressListener != null) {
+          progressListener.pass(getProgress());
         }
+      }, results -> {
+        finishLock.lock();
+        pairs.addAll(results);
+        finishLatch.countDown();
+        finishLock.unlock();
+      });
+      finders.add(finder);
+      finder.start();
+    }
 
-        while (running) {
-            try {
-                if (finishLatch.await(5, TimeUnit.SECONDS)) {
-                    if (finishListener != null) {
-                        List<SimilarPair<MediaItem>> temp = new ArrayList<>(new HashSet<>(pairs));
-                        temp.sort(Collections.reverseOrder(Comparator.comparing(SimilarPair::getSimilarity)));
-                        finishListener.pass(temp); // Put into hashset to remove all duplicates
-                    }
-                    break;
-                }
-            } catch (InterruptedException e) {
-                // Do nothing
-            }
+    while (running) {
+      try {
+        if (finishLatch.await(5, TimeUnit.SECONDS)) {
+          if (finishListener != null) {
+            List<SimilarPair<MediaItem>> temp = new ArrayList<>(new HashSet<>(pairs));
+            temp.sort(Collections.reverseOrder(Comparator.comparing(SimilarPair::getSimilarity)));
+            finishListener.pass(temp); // Put into hashset to remove all duplicates
+          }
+          break;
         }
-
-        running = false;
+      } catch (InterruptedException e) {
+        // Do nothing
+      }
     }
 
-    private double getProgress() {
-        return (double) finished / total;
-    }
+    running = false;
+  }
 
-    @Override
-    public synchronized void cancel() {
-        super.cancel();
+  private double getProgress() {
+    return (double) finished / total;
+  }
 
-        finders.forEach(CancellableThread::cancel);
-    }
+  @Override
+  public synchronized void cancel() {
+    super.cancel();
+
+    finders.forEach(CancellableThread::cancel);
+  }
 
 }

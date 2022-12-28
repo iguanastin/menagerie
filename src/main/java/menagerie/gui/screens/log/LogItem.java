@@ -31,43 +31,41 @@ import java.util.logging.Level;
  */
 public class LogItem {
 
-    private Level level;
-    private String text;
+  private final Level level;
+  private final String text;
 
+  /**
+   * Creates a log item with default CSS.
+   *
+   * @param text Log message.
+   */
+  public LogItem(String text) {
+    this(text, Level.INFO);
+  }
 
-    /**
-     * Creates a log item with default CSS.
-     *
-     * @param text Log message.
-     */
-    public LogItem(String text) {
-        this.text = text;
-        level = Level.INFO;
-    }
+  /**
+   * Creates a log item with specified CSS
+   *
+   * @param text  Log message.
+   * @param level Log level.
+   */
+  public LogItem(String text, Level level) {
+    this.text = text;
+    this.level = level;
+  }
 
-    /**
-     * Creates a log item with specified CSS
-     *
-     * @param text  Log message.
-     * @param level Log level.
-     */
-    public LogItem(String text, Level level) {
-        this(text);
-        this.level = level;
-    }
+  /**
+   * @return Severity of log
+   */
+  public Level getLevel() {
+    return level;
+  }
 
-    /**
-     * @return Severity of log
-     */
-    public Level getLevel() {
-        return level;
-    }
-
-    /**
-     * @return The log message.
-     */
-    public String getText() {
-        return text;
-    }
+  /**
+   * @return The log message.
+   */
+  public String getText() {
+    return text;
+  }
 
 }

@@ -24,10 +24,6 @@
 
 package menagerie.settings;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -35,121 +31,108 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class Settings {
 
-    private static final Logger LOGGER = Logger.getLogger(Settings.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(Settings.class.getName());
+
+  private static final String VERSION_KEY = "version";
+  private static final String SETTINGS_KEY = "settings";
+
+  private final List<Setting> settings = new ArrayList<>();
+  private final int version = 1;
 
 
-    private static final String VERSION_KEY = "version";
-    private static final String SETTINGS_KEY = "settings";
+  public void load(File file) throws IOException, SettingsException, JSONException {
+    String fileText = String.join("\n", Files.readAllLines(file.toPath()));
+    JSONObject json = new JSONObject(fileText);
 
-    private final List<Setting> settings = new ArrayList<>();
-    private int version = 1;
+    if (!json.has(VERSION_KEY)) {
+      throw new SettingsException("No version tag");
+    }
+    if (json.getInt(VERSION_KEY) != version) {
+      throw new SettingsException("Unknown settings version");
+    }
 
+    if (json.has(SETTINGS_KEY)) {
+      JSONArray arr = json.getJSONArray(SETTINGS_KEY);
+      for (int i = 0; i < arr.length(); i++) {
+        JSONObject j = arr.getJSONObject(i);
 
-    public void load(File file) throws IOException, SettingsException, JSONException {
-        String fileText = String.join("\n", Files.readAllLines(file.toPath()));
-        JSONObject json = new JSONObject(fileText);
-
-        if (!json.has(VERSION_KEY)) throw new SettingsException("No version tag");
-        if (json.getInt(VERSION_KEY) != version) throw new SettingsException("Unknown settings version");
-
-        if (json.has(SETTINGS_KEY)) {
-            JSONArray arr = json.getJSONArray(SETTINGS_KEY);
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject j = arr.getJSONObject(i);
-
-                Setting setting = getSetting(j.getString(Setting.ID_KEY));
-                if (setting != null) {
-                    setting.initFromJSON(j);
-                } else {
-                    LOGGER.warning("Unexpected setting: " + j);
-                }
-            }
+        Setting setting = getSetting(j.getString(Setting.ID_KEY));
+        if (setting != null) {
+          setting.initFromJSON(j);
+        } else {
+          LOGGER.warning("Unexpected setting: " + j);
         }
+      }
     }
+  }
 
-    public Setting getSetting(String identifier) {
-        for (Setting setting : settings) {
-            if (setting.getID().equalsIgnoreCase(identifier)) {
-                return setting;
-            } else if (setting instanceof GroupSetting) {
-                Setting child = ((GroupSetting) setting).getChild(identifier);
-                if (child != null) {
-                    return child;
-                }
-            }
+  public Setting getSetting(String identifier) {
+    for (Setting setting : settings) {
+      if (setting.getID().equalsIgnoreCase(identifier)) {
+        return setting;
+      } else if (setting instanceof GroupSetting) {
+        Setting child = ((GroupSetting) setting).getChild(identifier);
+        if (child != null) {
+          return child;
         }
-
-        return null;
+      }
     }
 
-    public BooleanSetting getBool(String id) {
-        return (BooleanSetting) getSetting(id);
-    }
+    return null;
+  }
 
-    public DoubleSetting getDouble(String id) {
-        return (DoubleSetting) getSetting(id);
-    }
+  public FileSetting getFile(String id) {
+    return (FileSetting) getSetting(id);
+  }
 
-    public FileSetting getFile(String id) {
-        return (FileSetting) getSetting(id);
-    }
+  public List<Setting> getSettings() {
+    return settings;
+  }
 
-    public FolderSetting getFolder(String id) {
-        return (FolderSetting) getSetting(id);
-    }
+  public int getVersion() {
+    return version;
+  }
 
-    public GroupSetting getGroup(String id) {
-        return (GroupSetting) getSetting(id);
-    }
-
-    public IntSetting getInt(String id) {
-        return (IntSetting) getSetting(id);
-    }
-
-    public StringSetting getString(String id) {
-        return (StringSetting) getSetting(id);
-    }
-
-    public List<Setting> getSettings() {
-        return settings;
-    }
-
-    public int getVersion() {
-        return version;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof Settings) {
-            if (getVersion() != ((Settings) obj).getVersion()) return false;
-            if (getSettings().size() != ((Settings) obj).getSettings().size()) return false;
-
-            for (int i = 0; i < getSettings().size(); i++) {
-                if (!getSettings().get(i).equals(((Settings) obj).getSettings().get(i))) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof Settings) {
+      if (getVersion() != ((Settings) obj).getVersion()) {
         return false;
+      }
+      if (getSettings().size() != ((Settings) obj).getSettings().size()) {
+        return false;
+      }
+
+      for (int i = 0; i < getSettings().size(); i++) {
+        if (!getSettings().get(i).equals(((Settings) obj).getSettings().get(i))) {
+          return false;
+        }
+      }
+
+      return true;
     }
 
-    public void save(File file) throws IOException {
-        JSONObject json = new JSONObject();
-        json.put(VERSION_KEY, getVersion());
+    return false;
+  }
+  // TODO. override hashCode as well
 
-        for (Setting setting : settings) {
-            json.append("settings", setting.toJSON());
-        }
+  public void save(File file) throws IOException {
+    JSONObject json = new JSONObject();
+    json.put(VERSION_KEY, getVersion());
 
-        try (FileWriter fw = new FileWriter(file)) {
-            json.write(fw, 2, 0);
-        }
+    for (Setting setting : settings) {
+      json.append("settings", setting.toJSON());
     }
+
+    try (FileWriter fw = new FileWriter(file)) {
+      json.write(fw, 2, 0);
+    }
+  }
 
 }

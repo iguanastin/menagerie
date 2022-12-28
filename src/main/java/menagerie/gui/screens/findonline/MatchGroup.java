@@ -24,64 +24,63 @@
 
 package menagerie.gui.screens.findonline;
 
-import menagerie.duplicates.DuplicateFinder;
-import menagerie.duplicates.Match;
-import menagerie.model.menagerie.MediaItem;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import menagerie.duplicates.DuplicateFinder;
+import menagerie.duplicates.Match;
+import menagerie.model.menagerie.MediaItem;
 
 public class MatchGroup {
 
-    private static final Logger LOGGER = Logger.getLogger(MatchGroup.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(MatchGroup.class.getName());
+  private final MediaItem item;
+  private final List<Match> matches = new ArrayList<>();
+  private Status status = Status.WAITING;
 
-    enum Status {
-        WAITING, PROCESSING, FAILED, SUCCEEDED
+  enum Status {
+    WAITING, PROCESSING, FAILED, SUCCEEDED
+  }
+
+  public MatchGroup(MediaItem item) {
+    this.item = item;
+  }
+
+  public MediaItem getItem() {
+    return item;
+  }
+
+  public Status retrieveMatches(List<DuplicateFinder> finders) {
+    setStatus(Status.PROCESSING);
+    matches.clear();
+
+    for (DuplicateFinder finder : finders) {
+      try {
+        matches.addAll(finder.getMatchesFor(item.getFile()));
+      } catch (IOException | NullPointerException | ArrayIndexOutOfBoundsException e) {
+        LOGGER.log(Level.INFO, "Failed to get matches for: " + item.getFile(), e);
+        setStatus(Status.FAILED);
+      }
     }
 
-    private final MediaItem item;
-    private final List<Match> matches = new ArrayList<>();
-    private Status status = Status.WAITING;
-
-
-    public MatchGroup(MediaItem item) {
-        this.item = item;
+    if (getStatus() != Status.FAILED) {
+      setStatus(Status.SUCCEEDED);
     }
+    return getStatus();
+  }
 
-    public MediaItem getItem() {
-        return item;
-    }
+  public List<Match> getMatches() {
+    return matches;
+  }
 
-    public Status retrieveMatches(List<DuplicateFinder> finders) {
-        setStatus(Status.PROCESSING);
-        matches.clear();
+  public synchronized Status getStatus() {
+    return status;
+  }
 
-        for (DuplicateFinder finder : finders) {
-            try {
-                matches.addAll(finder.getMatchesFor(item.getFile()));
-            } catch (IOException | NullPointerException | ArrayIndexOutOfBoundsException e) {
-                LOGGER.log(Level.INFO, "Failed to get matches for: " + item.getFile(), e);
-                setStatus(Status.FAILED);
-            }
-        }
-
-        if (getStatus() != Status.FAILED) setStatus(Status.SUCCEEDED);
-        return getStatus();
-    }
-
-    public List<Match> getMatches() {
-        return matches;
-    }
-
-    public synchronized void setStatus(Status status) {
-        this.status = status;
-    }
-
-    public synchronized Status getStatus() {
-        return status;
-    }
+  public synchronized void setStatus(Status status) {
+    this.status = status;
+  }
 
 }

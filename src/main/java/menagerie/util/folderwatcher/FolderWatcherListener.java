@@ -28,6 +28,6 @@ import java.io.File;
 
 public interface FolderWatcherListener {
 
-    void foundNewFiles(File[] file);
+  void foundNewFiles(File[] file);
 
 }
