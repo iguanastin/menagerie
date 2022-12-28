@@ -33,6 +33,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+// REENG: let this class implement a hasher interface
 /**
  * Utility class that contains functions for hashing files with the MD5 algorithm.
  */

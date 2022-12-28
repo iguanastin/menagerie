@@ -27,6 +27,7 @@ package menagerie.util.folderwatcher;
 import java.io.File;
 import java.io.FileFilter;
 
+// REENG: Why not extend util.CancellableThread here?
 public class FolderWatcherThread extends Thread {
 
   private volatile boolean running = false;

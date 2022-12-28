@@ -27,6 +27,7 @@ package menagerie.util;
 /**
  * Simple thread template that can be cancelled mid-run.
  */
+// REENG: *might* be able to apply template pattern in run() to avoid duplicated "if (running)" check in all subclasses
 public abstract class CancellableThread extends Thread {
 
   protected volatile boolean running = false;

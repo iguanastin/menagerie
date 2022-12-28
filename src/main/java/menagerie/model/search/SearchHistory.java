@@ -29,6 +29,7 @@ import java.util.List;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 
+// REENG: Stores information about a search state (query, sorting, etc.)
 public class SearchHistory {
 
   private final List<Item> selected = new ArrayList<>();
