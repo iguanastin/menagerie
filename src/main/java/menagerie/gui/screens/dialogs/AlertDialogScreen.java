@@ -37,63 +37,65 @@ import menagerie.util.listeners.PokeListener;
 
 public class AlertDialogScreen extends Screen {
 
-    private final Label titleLabel = new Label();
-    private final Label messageLabel = new Label();
+  private final Label titleLabel = new Label();
+  private final Label messageLabel = new Label();
 
-    private PokeListener closeListener = null;
-
-
-    public AlertDialogScreen() {
-        addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            switch (event.getCode()) {
-                case ENTER:
-                case ESCAPE:
-                case SPACE:
-                case BACK_SPACE:
-                    close();
-                    event.consume();
-                    break;
-            }
-        });
+  private PokeListener closeListener = null;
 
 
-        // Top
-        Button exit = new Button("X");
-        exit.setOnAction(event -> close());
-        titleLabel.setPadding(new Insets(5));
-        BorderPane top = new BorderPane(null, null, exit, new Separator(), titleLabel);
+  public AlertDialogScreen() {
+    addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+      switch (event.getCode()) {
+        case ENTER:
+        case ESCAPE:
+        case SPACE:
+        case BACK_SPACE:
+          close();
+          event.consume();
+          break;
+      }
+    });
 
-        // Center
-        messageLabel.setPadding(new Insets(5));
-        BorderPane.setAlignment(messageLabel, Pos.CENTER_LEFT);
 
-        // Bottom
-        Button ok = new Button("Ok");
-        ok.setOnAction(event -> close());
-        BorderPane.setAlignment(ok, Pos.BOTTOM_RIGHT);
+    // Top
+    Button exit = new Button("X");
+    exit.setOnAction(event -> close());
+    titleLabel.setPadding(new Insets(5));
+    BorderPane top = new BorderPane(null, null, exit, new Separator(), titleLabel);
 
-        BorderPane root = new BorderPane(messageLabel, top, null, ok, null);
-        root.setPrefWidth(500);
-        root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
-        setCenter(root);
-        setPadding(new Insets(25));
+    // Center
+    messageLabel.setPadding(new Insets(5));
+    BorderPane.setAlignment(messageLabel, Pos.CENTER_LEFT);
 
-        setDefaultFocusNode(ok);
-    }
+    // Bottom
+    Button ok = new Button("Ok");
+    ok.setOnAction(event -> close());
+    BorderPane.setAlignment(ok, Pos.BOTTOM_RIGHT);
 
-    public void open(ScreenPane manager, String title, String message, PokeListener closeListener) {
-        this.closeListener = closeListener;
+    BorderPane root = new BorderPane(messageLabel, top, null, ok, null);
+    root.setPrefWidth(500);
+    root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
+    root.getStyleClass().addAll(ROOT_STYLE_CLASS);
+    setCenter(root);
+    setPadding(new Insets(25));
 
-        titleLabel.setText(title);
-        messageLabel.setText(message);
+    setDefaultFocusNode(ok);
+  }
 
-        manager.open(this);
-    }
+  public void open(ScreenPane manager, String title, String message, PokeListener closeListener) {
+    this.closeListener = closeListener;
 
-    @Override
-    protected void onClose() {
-        if (closeListener != null) closeListener.poke();
-    }
+    titleLabel.setText(title);
+    messageLabel.setText(message);
+
+    manager.open(this);
+  }
+
+  @Override
+  protected void onClose() {
+      if (closeListener != null) {
+          closeListener.poke();
+      }
+  }
 
 }

@@ -32,62 +32,64 @@ import javafx.scene.layout.BorderPane;
  */
 public abstract class Screen extends BorderPane {
 
-    public static final String ROOT_STYLE_CLASS = "screen-root";
+  public static final String ROOT_STYLE_CLASS = "screen-root";
 
-    private ScreenPane manager = null;
+  private ScreenPane manager = null;
 
-    private Node defaultFocusNode = this;
+  private Node defaultFocusNode = this;
 
 
-    /**
-     * Closes this screen if it is open in a manager.
-     */
-    public void close() {
-        if (manager == null) return;
-
-        manager.close(this);
+  /**
+   * Closes this screen if it is open in a manager.
+   */
+  public void close() {
+    if (manager == null) {
+      return;
     }
 
-    /**
-     * Sets the manager of this screen.
-     *
-     * @param manager Manager.
-     */
-    void setManager(ScreenPane manager) {
-        this.manager = manager;
-    }
+    manager.close(this);
+  }
 
-    /**
-     * @return The manager of this screen, or null if the screen is not open.
-     */
-    public ScreenPane getManager() {
-        return manager;
-    }
+  /**
+   * Sets the manager of this screen.
+   *
+   * @param manager Manager.
+   */
+  void setManager(ScreenPane manager) {
+    this.manager = manager;
+  }
 
-    /**
-     * @param defaultFocusNode Node to be focused on open.
-     */
-    public void setDefaultFocusNode(Node defaultFocusNode) {
-        this.defaultFocusNode = defaultFocusNode;
-    }
+  /**
+   * @return The manager of this screen, or null if the screen is not open.
+   */
+  public ScreenPane getManager() {
+    return manager;
+  }
 
-    /**
-     * Attempts to focus the default focus node.
-     */
-    void focusDefaultNode() {
-        defaultFocusNode.requestFocus();
-    }
+  /**
+   * @param defaultFocusNode Node to be focused on open.
+   */
+  public void setDefaultFocusNode(Node defaultFocusNode) {
+    this.defaultFocusNode = defaultFocusNode;
+  }
 
-    /**
-     * Method that is called after a screen has been opened.
-     */
-    protected void onOpen() {
-    }
+  /**
+   * Attempts to focus the default focus node.
+   */
+  void focusDefaultNode() {
+    defaultFocusNode.requestFocus();
+  }
 
-    /**
-     * Method that is called after a screen has been closed.
-     */
-    protected void onClose() {
-    }
+  /**
+   * Method that is called after a screen has been opened.
+   */
+  protected void onOpen() {
+  }
+
+  /**
+   * Method that is called after a screen has been closed.
+   */
+  protected void onClose() {
+  }
 
 }

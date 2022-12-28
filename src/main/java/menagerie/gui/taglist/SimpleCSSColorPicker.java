@@ -32,55 +32,57 @@ import menagerie.util.listeners.ObjectListener;
 
 public class SimpleCSSColorPicker extends HBox {
 
-    public static final String[] DEFAULT_COLORS = {"#609dff", "cyan", "#22e538", "yellow", "orange", "red", "#ff7ae6", "#bf51ff"};
+  protected static final String[] DEFAULT_COLORS =
+      {"#609dff", "cyan", "#22e538", "yellow", "orange", "red", "#ff7ae6", "#bf51ff"};
 
-    private ObjectListener<String> colorPickedListener = null;
-    private final TextField textfield = new TextField();
+  private ObjectListener<String> colorPickedListener = null;
+  private final TextField textfield = new TextField();
 
+  public SimpleCSSColorPicker() {
+    this(DEFAULT_COLORS);
+  }
 
-    public SimpleCSSColorPicker() {
-        this(DEFAULT_COLORS);
+  public SimpleCSSColorPicker(ObjectListener<String> colorPickedListener) {
+    this(DEFAULT_COLORS, colorPickedListener);
+  }
+
+  public SimpleCSSColorPicker(String[] colors) {
+    setSpacing(5);
+    setPadding(new Insets(5));
+
+    for (String css : colors) {
+      Button b = new Button();
+      b.prefWidthProperty().bind(b.prefHeightProperty());
+      b.setOnAction(event -> confirmedColor(css));
+      b.setStyle(String.format("-fx-base: %s;", css));
+      getChildren().add(b);
     }
+    Button b = new Button("Default");
+    b.setOnAction(event -> confirmedColor(null));
+    getChildren().add(b);
 
-    public SimpleCSSColorPicker(ObjectListener<String> colorPickedListener) {
-        this(DEFAULT_COLORS, colorPickedListener);
-    }
+    textfield.setPromptText("Custom");
+    textfield.setOnAction(event -> confirmedColor(textfield.getText()));
+    getChildren().add(textfield);
+  }
 
-    public SimpleCSSColorPicker(String[] colors) {
-        setSpacing(5);
-        setPadding(new Insets(5));
+  public SimpleCSSColorPicker(String[] colors, ObjectListener<String> colorPickedListener) {
+    this(colors);
+    setColorPickedListener(colorPickedListener);
+  }
 
-        for (String css : colors) {
-            Button b = new Button();
-            b.prefWidthProperty().bind(b.prefHeightProperty());
-            b.setOnAction(event -> confirmedColor(css));
-            b.setStyle(String.format("-fx-base: %s;", css));
-            getChildren().add(b);
-        }
-        Button b = new Button("Default");
-        b.setOnAction(event -> confirmedColor(null));
-        getChildren().add(b);
+  void setColorPickedListener(ObjectListener<String> colorPickedListener) {
+    this.colorPickedListener = colorPickedListener;
+  }
 
-        textfield.setPromptText("Custom");
-        textfield.setOnAction(event -> confirmedColor(textfield.getText()));
-        getChildren().add(textfield);
-    }
+  private void confirmedColor(String css) {
+      if (colorPickedListener != null) {
+          colorPickedListener.pass(css);
+      }
+  }
 
-    public SimpleCSSColorPicker(String[] colors, ObjectListener<String> colorPickedListener) {
-        this(colors);
-        setColorPickedListener(colorPickedListener);
-    }
-
-    void setColorPickedListener(ObjectListener<String> colorPickedListener) {
-        this.colorPickedListener = colorPickedListener;
-    }
-
-    private void confirmedColor(String css) {
-        if (colorPickedListener != null) colorPickedListener.pass(css);
-    }
-
-    public TextField getTextfield() {
-        return textfield;
-    }
+  public TextField getTextfield() {
+    return textfield;
+  }
 
 }

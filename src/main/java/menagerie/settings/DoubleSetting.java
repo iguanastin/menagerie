@@ -36,157 +36,162 @@ import org.json.JSONObject;
 
 public class DoubleSetting extends Setting {
 
-    private static final String VALUE_KEY = "value";
-    private static final String MIN_KEY = "min";
-    private static final String MAX_KEY = "max";
+  private static final String VALUE_KEY = "value";
+  private static final String MIN_KEY = "min";
+  private static final String MAX_KEY = "max";
 
-    private final DoubleProperty value = new SimpleDoubleProperty();
-    private double min = Double.MIN_VALUE, max = Double.MAX_VALUE;
+  private final DoubleProperty value = new SimpleDoubleProperty();
+  private double min = Double.MIN_VALUE, max = Double.MAX_VALUE;
 
+  public DoubleSetting(String identifier, String label, String tip, boolean hidden, double value) {
+    super(identifier, label, tip, hidden);
+    this.value.set(value);
+  }
 
-    public DoubleSetting(String identifier, String label, String tip, boolean hidden, double value) {
-        super(identifier, label, tip, hidden);
-        this.value.set(value);
+  public DoubleSetting(String identifier, double value) {
+    super(identifier);
+    this.value.set(value);
+  }
+
+  public DoubleSetting(String identifier) {
+    super(identifier);
+  }
+
+  public DoubleSetting hide() {
+    setHidden(true);
+    return this;
+  }
+
+  public DoubleSetting tip(String tip) {
+    setTip(tip);
+    return this;
+  }
+
+  public DoubleSetting label(String label) {
+    setLabel(label);
+    return this;
+  }
+
+  public DoubleSetting min(double min) {
+    return range(min, getMax());
+  }
+
+  public DoubleSetting max(double max) {
+    return range(getMin(), max);
+  }
+
+  public DoubleSetting range(double min, double max) {
+    setRange(min, max);
+    return this;
+  }
+
+  public double getMin() {
+    return min;
+  }
+
+  public double getMax() {
+    return max;
+  }
+
+  public void setMin(double min) {
+    this.min = min;
+    if (getValue() < min) {
+      setValue(min);
+    }
+  }
+
+  public void setMax(double max) {
+    this.max = max;
+    if (getValue() > max) {
+      setValue(max);
+    }
+  }
+
+  public void setRange(double min, double max) {
+    if (min > max) {
+      double temp = min;
+      min = max;
+      max = temp;
     }
 
-    public DoubleSetting(String identifier, double value) {
-        super(identifier);
-        this.value.set(value);
-    }
+    setMin(min);
+    setMax(max);
+  }
 
-    public DoubleSetting(String identifier) {
-        super(identifier);
-    }
+  public double getValue() {
+    return value.get();
+  }
 
-    public DoubleSetting hide() {
-        setHidden(true);
-        return this;
-    }
+  public void setValue(double value) {
+    this.value.set(value);
+  }
 
-    public DoubleSetting tip(String tip) {
-        setTip(tip);
-        return this;
-    }
+  public DoubleProperty valueProperty() {
+    return value;
+  }
 
-    public DoubleSetting label(String label) {
-        setLabel(label);
-        return this;
-    }
+  @Override
+  public SettingNode makeJFXNode() {
+    Label label = new Label(getLabel());
+    TextField textfield = new TextField(getValue() + "");
+    textfield.focusedProperty().addListener((observable, oldValue, newValue) -> {
+      if (!newValue) {
+        try {
+          double val = Double.parseDouble(textfield.getText());
 
-    public DoubleSetting min(double min) {
-        return range(min, getMax());
-    }
+          if (val < getMin()) {
+            val = getMin();
+          } else if (val > getMax()) {
+            val = getMax();
+          }
 
-    public DoubleSetting max(double max) {
-        return range(getMin(), max);
-    }
-
-    public DoubleSetting range(double min, double max) {
-        setRange(min, max);
-        return this;
-    }
-
-    public double getMin() {
-        return min;
-    }
-
-    public double getMax() {
-        return max;
-    }
-
-    public void setMin(double min) {
-        this.min = min;
-        if (getValue() < min) setValue(min);
-    }
-
-    public void setMax(double max) {
-        this.max = max;
-        if (getValue() > max) setValue(max);
-    }
-
-    public void setRange(double min, double max) {
-        if (min > max) {
-            double temp = min;
-            min = max;
-            max = temp;
+          setValue(val);
+          textfield.setText(val + "");
+        } catch (NumberFormatException e) {
+          textfield.setText(getValue() + "");
         }
-
-        setMin(min);
-        setMax(max);
+      }
+    });
+    if (getTip() != null && !getTip().isEmpty()) {
+      textfield.setTooltip(new Tooltip(getTip()));
     }
+    HBox h = new HBox(5, label, textfield);
+    h.setAlignment(Pos.CENTER_LEFT);
 
-    public double getValue() {
-        return value.get();
-    }
+    return new SettingNode() {
+      @Override
+      public void applyToSetting() {
+        setValue(Double.parseDouble(textfield.getText()));
+      }
 
-    public void setValue(double value) {
-        this.value.set(value);
-    }
+      @Override
+      public Node getNode() {
+        return h;
+      }
+    };
+  }
 
-    public DoubleProperty valueProperty() {
-        return value;
-    }
+  @Override
+  void initFromJSON(JSONObject json) {
+    setRange(json.getDouble(MIN_KEY), json.getDouble(MAX_KEY));
+    setValue(json.getDouble(VALUE_KEY));
+  }
 
-    @Override
-    public SettingNode makeJFXNode() {
-        Label label = new Label(getLabel());
-        TextField textfield = new TextField(getValue() + "");
-        textfield.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) {
-                try {
-                    double val = Double.parseDouble(textfield.getText());
+  @Override
+  JSONObject toJSON() {
+    return super.toJSON().put(VALUE_KEY, getValue()).put(MIN_KEY, getMin()).put(MAX_KEY, getMax());
+  }
 
-                    if (val < getMin()) {
-                        val = getMin();
-                    } else if (val > getMax()) {
-                        val = getMax();
-                    }
+  @Override
+  public String toString() {
+    return "Double(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
+  }
 
-                    setValue(val);
-                    textfield.setText(val + "");
-                } catch (NumberFormatException e) {
-                    textfield.setText(getValue() + "");
-                }
-            }
-        });
-        if (getTip() != null && !getTip().isEmpty()) {
-            textfield.setTooltip(new Tooltip(getTip()));
-        }
-        HBox h = new HBox(5, label, textfield);
-        h.setAlignment(Pos.CENTER_LEFT);
-
-        return new SettingNode() {
-            @Override
-            public void applyToSetting() {
-                setValue(Double.parseDouble(textfield.getText()));
-            }
-
-            @Override
-            public Node getNode() {
-                return h;
-            }
-        };
-    }
-
-    @Override
-    void initFromJSON(JSONObject json) {
-        setRange(json.getDouble(MIN_KEY), json.getDouble(MAX_KEY));
-        setValue(json.getDouble(VALUE_KEY));
-    }
-
-    @Override
-    JSONObject toJSON() {
-        return super.toJSON().put(VALUE_KEY, getValue()).put(MIN_KEY, getMin()).put(MAX_KEY, getMax());
-    }
-
-    @Override
-    public String toString() {
-        return "Double(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return super.equals(obj) && obj instanceof DoubleSetting && ((DoubleSetting) obj).getValue() == getValue();
-    }
+  @Override
+  public boolean equals(Object obj) {
+    return super.equals(obj) && obj instanceof DoubleSetting &&
+           ((DoubleSetting) obj).getValue() == getValue();
+  }
+  // TODO. override hashCode as well
 
 }

@@ -28,8 +28,8 @@ import javafx.scene.Node;
 
 public interface SettingNode {
 
-    void applyToSetting();
+  void applyToSetting();
 
-    Node getNode();
+  Node getNode();
 
 }

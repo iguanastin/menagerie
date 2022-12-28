@@ -29,23 +29,23 @@ package menagerie.util;
  */
 public abstract class CancellableThread extends Thread {
 
-    protected volatile boolean running = false;
+  protected volatile boolean running = false;
 
-    @Override
-    public synchronized void start() {
-        running = true;
-        super.start();
-    }
+  @Override
+  public synchronized void start() {
+    running = true;
+    super.start();
+  }
 
-    /**
-     * Tells the thread to stop running. Does not forcibly stop the thread.
-     */
-    public synchronized void cancel() {
-        running = false;
-    }
+  /**
+   * Tells the thread to stop running. Does not forcibly stop the thread.
+   */
+  public synchronized void cancel() {
+    running = false;
+  }
 
-    public synchronized boolean isRunning() {
-        return running;
-    }
+  public synchronized boolean isRunning() {
+    return running;
+  }
 
 }

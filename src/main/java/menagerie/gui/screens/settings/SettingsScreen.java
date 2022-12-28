@@ -24,6 +24,12 @@
 
 package menagerie.gui.screens.settings;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -42,97 +48,92 @@ import menagerie.settings.Setting;
 import menagerie.settings.SettingNode;
 import menagerie.settings.Settings;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 public class SettingsScreen extends Screen {
 
-    private static final Logger LOGGER = Logger.getLogger(SettingsScreen.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(SettingsScreen.class.getName());
 
-    private static final Insets ALL5 = new Insets(5);
+  private static final Insets ALL5 = new Insets(5);
 
-    private final ScrollPane scrollPane = new ScrollPane();
+  private final ScrollPane scrollPane = new ScrollPane();
 
-    private Settings settings = null;
-    private final List<SettingNode> settingNodes = new ArrayList<>();
-
-
-    public SettingsScreen() {
-
-        addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ESCAPE) {
-                close();
-            } else if (event.getCode() == KeyCode.ENTER) {
-                accept();
-            }
-        });
+  private Settings settings = null;
+  private final List<SettingNode> settingNodes = new ArrayList<>();
 
 
-        Button exit = new Button("X");
-        exit.setFocusTraversable(false);
-        exit.setOnAction(event -> close());
-        BorderPane top = new BorderPane(null, null, exit, new Separator(), new Label("Settings"));
-        top.setPadding(ALL5);
+  public SettingsScreen() {
 
-        Button accept = new Button("Accept");
-        accept.setOnAction(event -> accept());
-        Button cancel = new Button("Cancel");
-        cancel.setOnAction(event -> close());
-        HBox bottom = new HBox(5, accept, cancel);
-        bottom.setPadding(ALL5);
-        bottom.setAlignment(Pos.CENTER_RIGHT);
-
-        scrollPane.setPadding(ALL5);
-        BorderPane root = new BorderPane(scrollPane, top, null, bottom, null);
-        root.setPrefSize(800, 600);
-        root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
-        setCenter(root);
-        setPadding(new Insets(25));
-
-        setDefaultFocusNode(accept);
-    }
-
-    private void accept() {
-        settingNodes.forEach(SettingNode::applyToSetting);
-        try {
-            settings.save(new File("C:\\temp\\menagerie.json"));
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed to save settings file: " + Main.SETTINGS_PATH, e);
-        }
+    addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == KeyCode.ESCAPE) {
         close();
+      } else if (event.getCode() == KeyCode.ENTER) {
+        accept();
+      }
+    });
+
+
+    Button exit = new Button("X");
+    exit.setFocusTraversable(false);
+    exit.setOnAction(event -> close());
+    BorderPane top = new BorderPane(null, null, exit, new Separator(), new Label("Settings"));
+    top.setPadding(ALL5);
+
+    Button accept = new Button("Accept");
+    accept.setOnAction(event -> accept());
+    Button cancel = new Button("Cancel");
+    cancel.setOnAction(event -> close());
+    HBox bottom = new HBox(5, accept, cancel);
+    bottom.setPadding(ALL5);
+    bottom.setAlignment(Pos.CENTER_RIGHT);
+
+    scrollPane.setPadding(ALL5);
+    BorderPane root = new BorderPane(scrollPane, top, null, bottom, null);
+    root.setPrefSize(800, 600);
+    root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
+    root.getStyleClass().addAll(ROOT_STYLE_CLASS);
+    setCenter(root);
+    setPadding(new Insets(25));
+
+    setDefaultFocusNode(accept);
+  }
+
+  private void accept() {
+    settingNodes.forEach(SettingNode::applyToSetting);
+    try {
+      settings.save(new File("C:\\temp\\menagerie.json"));
+    } catch (IOException e) {
+      LOGGER.log(Level.WARNING, "Failed to save settings file: " + Main.SETTINGS_PATH, e);
     }
+    close();
+  }
 
-    public void open(ScreenPane manager, Settings settings) {
-        this.settings = settings;
+  public void open(ScreenPane manager, Settings settings) {
+    this.settings = settings;
 
-        manager.open(this);
-    }
+    manager.open(this);
+  }
 
-    @Override
-    protected void onOpen() {
-        settingNodes.clear();
+  @Override
+  protected void onOpen() {
+    settingNodes.clear();
 
-        VBox root = new VBox();
-        scrollPane.setContent(root);
-        scrollPane.setFitToWidth(true);
+    VBox root = new VBox();
+    scrollPane.setContent(root);
+    scrollPane.setFitToWidth(true);
 
-        if (settings != null) {
-            for (Setting setting : settings.getSettings()) {
-                if (setting.isHidden()) continue;
-
-                SettingNode node = setting.makeJFXNode();
-
-                if (node != null) {
-                    root.getChildren().add(node.getNode());
-                    settingNodes.add(node);
-                }
-            }
+    if (settings != null) {
+      for (Setting setting : settings.getSettings()) {
+        if (setting.isHidden()) {
+          continue;
         }
+
+        SettingNode node = setting.makeJFXNode();
+
+        if (node != null) {
+          root.getChildren().add(node.getNode());
+          settingNodes.add(node);
+        }
+      }
     }
+  }
 
 }
