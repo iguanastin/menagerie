@@ -38,6 +38,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import menagerie.model.SimilarPair;
@@ -244,6 +245,21 @@ public class DatabaseManager extends Thread {
     }
   }
 
+  @FunctionalInterface
+  private interface Action {
+    void execute() throws SQLException;
+  }
+
+  private void executeAsync(Action action, Supplier<String> errorMessage) {
+    queue.add(() -> {
+      try {
+        action.execute();
+      } catch (SQLException e) {
+        LOGGER.log(Level.SEVERE, e, errorMessage);
+      }
+    });
+  }
+
   /**
    * Stores an MD5 string in the database.
    *
@@ -266,13 +282,7 @@ public class DatabaseManager extends Thread {
    * @param md5 MD5 to store.
    */
   public void setMD5Async(int id, String md5) {
-    queue.add(() -> {
-      try {
-        setMD5(id, md5);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "Failed to set md5 async: " + id + " - md5: " + md5);
-      }
-    });
+    executeAsync(() -> setMD5(id, md5), () -> "Failed to set md5 async: " + id + " - md5: " + md5);
   }
 
   /**
@@ -300,13 +310,7 @@ public class DatabaseManager extends Thread {
    * @param hist Histogram to store.
    */
   public void setHistAsync(int id, ImageHistogram hist) {
-    queue.add(() -> {
-      try {
-        setHist(id, hist);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "Failed to set histogram async: " + id);
-      }
-    });
+    executeAsync(() -> setHist(id, hist), () -> "Failed to set histogram async: " + id);
   }
 
   /**
@@ -346,13 +350,8 @@ public class DatabaseManager extends Thread {
    * @param tag  ID of tag.
    */
   public void tagItemAsync(int item, int tag) {
-    queue.add(() -> {
-      try {
-        tagItem(item, tag);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "Failed to tag item: " + item + " with tag: " + tag);
-      }
-    });
+    executeAsync(() -> tagItem(item, tag),
+        () -> "Failed to tag item: " + item + " with tag: " + tag);
   }
 
   /**
@@ -377,13 +376,8 @@ public class DatabaseManager extends Thread {
    * @param tag  ID of tag.
    */
   public void untagItemAsync(int item, int tag) {
-    queue.add(() -> {
-      try {
-        untagItem(item, tag);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "Failed to untag item: " + item + " from tag: " + tag);
-      }
-    });
+    executeAsync(() -> untagItem(item, tag),
+        () -> "Failed to untag item: " + item + " from tag: " + tag);
   }
 
   /**
@@ -405,13 +399,7 @@ public class DatabaseManager extends Thread {
    * @param id ID of item.
    */
   public void removeItemAsync(int id) {
-    queue.add(() -> {
-      try {
-        removeItem(id);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "Failed to remove item: " + id);
-      }
-    });
+    executeAsync(() -> removeItem(id), () -> "Failed to remove item: " + id);
   }
 
   /**
@@ -436,13 +424,8 @@ public class DatabaseManager extends Thread {
    * @param name Name of tag.
    */
   public void createTagAsync(int id, String name) {
-    queue.add(() -> {
-      try {
-        createTag(id, name);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "Failed to create tag: " + id + " - \"" + name + "\"");
-      }
-    });
+    executeAsync(() -> createTag(id, name),
+        () -> "Failed to create tag: " + id + " - \"" + name + "\"");
   }
 
   /**
@@ -545,14 +528,8 @@ public class DatabaseManager extends Thread {
    * @param gid ID of group.
    */
   public void setMediaGIDAsync(int id, Integer gid) {
-    queue.add(() -> {
-      try {
-        setMediaGID(id, gid);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e,
-            () -> String.format("Failed to set media GID async. ID: %d, GID: %d", id, gid));
-      }
-    });
+    executeAsync(() -> setMediaGID(id, gid),
+        () -> String.format("Failed to set media GID async. ID: %d, GID: %d", id, gid));
   }
 
   /**
@@ -577,14 +554,8 @@ public class DatabaseManager extends Thread {
    * @param page Page index to set.
    */
   public void setMediaPageAsync(int id, int page) {
-    queue.add(() -> {
-      try {
-        setMediaPage(id, page);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e,
-            () -> String.format("Failed to set media page index. ID: %d, Page: %d", id, page));
-      }
-    });
+    executeAsync(() -> setMediaPage(id, page),
+        () -> String.format("Failed to set media page index. ID: %d, Page: %d", id, page));
   }
 
   /**
@@ -608,14 +579,8 @@ public class DatabaseManager extends Thread {
    * @param title Title to set.
    */
   public void setGroupTitleAsync(int id, String title) {
-    queue.add(() -> {
-      try {
-        setGroupTitle(id, title);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e,
-            () -> "Failed to set group title. ID: " + id + ", Title: " + title);
-      }
-    });
+    executeAsync(() -> setGroupTitle(id, title),
+        () -> "Failed to set group title. ID: " + id + ", Title: " + title);
   }
 
   /**
@@ -640,14 +605,8 @@ public class DatabaseManager extends Thread {
    * @param note The note.
    */
   public void addTagNoteAsync(int id, String note) {
-    queue.add(() -> {
-      try {
-        addTagNote(id, note);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e,
-            () -> String.format("Failed to insert tag note. Tag ID: %d, Note: \"%s\"", id, note));
-      }
-    });
+    executeAsync(() -> addTagNote(id, note),
+        () -> String.format("Failed to insert tag note. Tag ID: %d, Note: \"%s\"", id, note));
   }
 
   /**
@@ -672,14 +631,8 @@ public class DatabaseManager extends Thread {
    * @param note The note.
    */
   public void removeTagNoteAsync(int id, String note) {
-    queue.add(() -> {
-      try {
-        removeTagNote(id, note);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e,
-            () -> String.format("Failed to remove tag note. Tag ID: %d, Note: \"%s\"", id, note));
-      }
-    });
+    executeAsync(() -> removeTagNote(id, note),
+        () -> String.format("Failed to remove tag note. Tag ID: %d, Note: \"%s\"", id, note));
   }
 
   /**
@@ -704,14 +657,8 @@ public class DatabaseManager extends Thread {
    * @param color Color to set.
    */
   public void setTagColorAsync(int id, String color) {
-    queue.add(() -> {
-      try {
-        setTagColor(id, color);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e,
-            () -> String.format("Failed to set tag color: ID: %d, Color: %s", id, color));
-      }
-    });
+    executeAsync(() -> setTagColor(id, color),
+        () -> String.format("Failed to set tag color: ID: %d, Color: %s", id, color));
   }
 
   /**
@@ -736,14 +683,8 @@ public class DatabaseManager extends Thread {
    * @param b  Flag.
    */
   public void setMediaNoSimilarAsync(int id, boolean b) {
-    queue.add(() -> {
-      try {
-        setMediaNoSimilar(id, b);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e,
-            () -> "Failed to set media no_similar. ID: " + id + ", no_similar: " + b);
-      }
-    });
+    executeAsync(() -> setMediaNoSimilar(id, b),
+        () -> "Failed to set media no_similar. ID: " + id + ", no_similar: " + b);
   }
 
   public void addNonDuplicate(int id1, int id2) throws SQLException {
@@ -755,13 +696,8 @@ public class DatabaseManager extends Thread {
   }
 
   public void addNonDuplicateAsync(int id1, int id2) {
-    queue.add(() -> {
-      try {
-        addNonDuplicate(id1, id2);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "Failed to add to non_dupes: " + id1 + ", " + id2);
-      }
-    });
+    executeAsync(() -> addNonDuplicate(id1, id2),
+        () -> "Failed to add to non_dupes: " + id1 + ", " + id2);
   }
 
   public void removeNonDuplicate(int id1, int id2) throws SQLException {
@@ -775,13 +711,8 @@ public class DatabaseManager extends Thread {
   }
 
   public void removeNonDuplicateAsync(int id1, int id2) {
-    queue.add(() -> {
-      try {
-        removeNonDuplicate(id1, id2);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, e, () -> "Failed to remove from non_dupes: " + id1 + ", " + id2);
-      }
-    });
+    executeAsync(() -> removeNonDuplicate(id1, id2),
+        () -> "Failed to remove from non_dupes: " + id1 + ", " + id2);
   }
 
   /**
@@ -976,6 +907,7 @@ public class DatabaseManager extends Thread {
   }
 
   // REENG: this method is still too large
+
   /**
    * Loads all items from the database.
    * <p>
