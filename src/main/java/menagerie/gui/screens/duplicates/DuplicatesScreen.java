@@ -82,7 +82,7 @@ public class DuplicatesScreen extends Screen {
 
   private final BooleanProperty deleteFile = new SimpleBooleanProperty(true);
   private final BooleanProperty preload = new SimpleBooleanProperty(true);
-  // TODO. remove?
+  // REENG. remove?
   private Image preloadPrevLeft = null, preloadPrevRight = null, preloadNextLeft = null,
       preloadNextRight = null;
 
