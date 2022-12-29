@@ -123,7 +123,7 @@ import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.menagerie.TagEditEvent;
-import menagerie.model.menagerie.db.DatabaseManager;
+import menagerie.model.menagerie.db.DatabaseUtil;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.GroupSearch;
@@ -1776,7 +1776,7 @@ public class MainController {
         LOGGER.info("Done defragging database file");
 
         if (revertDatabase) {
-          File database = DatabaseManager.resolveDatabaseFile(settings.dbUrl.getValue());
+          File database = DatabaseUtil.resolveDatabaseFile(settings.dbUrl.getValue());
           File backup = new File(database + ".bak");
           LOGGER.warning(String.format("Reverting to last backup database: %s", backup.toString()));
           try {
@@ -1954,7 +1954,7 @@ public class MainController {
   }
 
   public void revertDatabaseMenuButtonOnAction(ActionEvent event) {
-    File database = DatabaseManager.resolveDatabaseFile(settings.dbUrl.getValue());
+    File database = DatabaseUtil.resolveDatabaseFile(settings.dbUrl.getValue());
     File backup = new File(database + ".bak");
     if (backup.exists()) {
       new ConfirmationScreen().open(screenPane, "Revert database",

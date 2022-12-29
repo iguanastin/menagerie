@@ -48,6 +48,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.db.DatabaseManager;
+import menagerie.model.menagerie.db.DatabaseUtil;
 import menagerie.model.menagerie.db.DatabaseVersionUpdater;
 import menagerie.model.menagerie.db.MenagerieDatabaseLoadListener;
 import menagerie.settings.MenagerieSettings;
@@ -299,7 +300,7 @@ public class SplashController {
    * @throws IOException When copy fails.
    */
   private static void backupDatabase(String databaseURL) throws IOException {
-    File dbFile = DatabaseManager.resolveDatabaseFile(databaseURL);
+    File dbFile = DatabaseUtil.resolveDatabaseFile(databaseURL);
 
     if (dbFile.exists()) {
       LOGGER.info("Backing up database at: " + dbFile);

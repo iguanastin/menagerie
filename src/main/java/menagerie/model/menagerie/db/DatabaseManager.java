@@ -56,6 +56,8 @@ import menagerie.util.listeners.ObjectListener;
 public class DatabaseManager extends Thread {
 
   private static final Logger LOGGER = Logger.getLogger(DatabaseManager.class.getName());
+  private static final String FINISHED_LOADING_LOG_TEMPLATE =
+      "Finished loading %s %s from database";
 
   // Media
   private final PreparedStatement PS_GET_MEDIA;
@@ -201,15 +203,15 @@ public class DatabaseManager extends Thread {
    * Initializes the logging timer that outputs update counts regularly.
    */
   private void startLoggingTimer() {
-    loggingTimer.schedule(new TimerTask() {
+    final var task = new TimerTask() {
       @Override
       public void run() {
         try {
           loggingLock.lock();
           if (databaseUpdates > 0) {
-            LOGGER.info(
-                String.format("DatabaseManager updated %d times in the last %.2fm", databaseUpdates,
-                    (System.currentTimeMillis() - lastLog) / 1000.0 / 60.0));
+            final var minutesSinceLastLog = (System.currentTimeMillis() - lastLog) / 1000.0 / 60.0;
+            LOGGER.info(() -> String.format("DatabaseManager updated %d times in the last %.2fm",
+                databaseUpdates, minutesSinceLastLog));
             lastLog = System.currentTimeMillis();
             databaseUpdates = 0;
           }
@@ -217,7 +219,9 @@ public class DatabaseManager extends Thread {
           loggingLock.unlock();
         }
       }
-    }, 60000, 60000);
+    };
+
+    loggingTimer.schedule(task, 60000, 60000);
   }
 
   public void setLoadListener(MenagerieDatabaseLoadListener loadListener) {
@@ -266,7 +270,7 @@ public class DatabaseManager extends Thread {
       try {
         setMD5(id, md5);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to set md5 async: " + id + " - md5: " + md5, e);
+        LOGGER.log(Level.SEVERE, e, () -> "Failed to set md5 async: " + id + " - md5: " + md5);
       }
     });
   }
@@ -300,7 +304,7 @@ public class DatabaseManager extends Thread {
       try {
         setHist(id, hist);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to set histogram async: " + id, e);
+        LOGGER.log(Level.SEVERE, e, () -> "Failed to set histogram async: " + id);
       }
     });
   }
@@ -318,22 +322,6 @@ public class DatabaseManager extends Thread {
       PS_SET_MEDIA_PATH.setInt(2, id);
       PS_SET_MEDIA_PATH.executeUpdate();
     }
-  }
-
-  /**
-   * Queues a path to be stored in the database.
-   *
-   * @param id   ID of item to update.
-   * @param path Path to store.
-   */
-  public void setPathAsync(int id, String path) {
-    queue.add(() -> {
-      try {
-        setPath(id, path);
-      } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to set new path: " + id + " - \"" + path + "\"", e);
-      }
-    });
   }
 
   /**
@@ -362,7 +350,7 @@ public class DatabaseManager extends Thread {
       try {
         tagItem(item, tag);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to tag item: " + item + " with tag: " + tag, e);
+        LOGGER.log(Level.SEVERE, e, () -> "Failed to tag item: " + item + " with tag: " + tag);
       }
     });
   }
@@ -393,7 +381,7 @@ public class DatabaseManager extends Thread {
       try {
         untagItem(item, tag);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to untag item: " + item + " from tag: " + tag, e);
+        LOGGER.log(Level.SEVERE, e, () -> "Failed to untag item: " + item + " from tag: " + tag);
       }
     });
   }
@@ -421,7 +409,7 @@ public class DatabaseManager extends Thread {
       try {
         removeItem(id);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to remove item: " + id, e);
+        LOGGER.log(Level.SEVERE, e, () -> "Failed to remove item: " + id);
       }
     });
   }
@@ -452,7 +440,7 @@ public class DatabaseManager extends Thread {
       try {
         createTag(id, name);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to create tag: " + id + " - \"" + name + "\"", e);
+        LOGGER.log(Level.SEVERE, e, () -> "Failed to create tag: " + id + " - \"" + name + "\"");
       }
     });
   }
@@ -477,11 +465,11 @@ public class DatabaseManager extends Thread {
    * @throws SQLException If database update fails.
    */
   public void createMedia(MediaItem media) throws SQLException {
-    synchronized (PS_CREATE_ITEM) {
-      PS_CREATE_ITEM.setInt(1, media.getId());
-      PS_CREATE_ITEM.setLong(2, media.getDateAdded());
-      PS_CREATE_ITEM.executeUpdate();
-    }
+    createItem(media.getId(), media.getDateAdded());
+    createMediaData(media);
+  }
+
+  private void createMediaData(MediaItem media) throws SQLException {
     synchronized (PS_CREATE_MEDIA) {
       PS_CREATE_MEDIA.setInt(1, media.getId());
       PS_CREATE_MEDIA.setNString(2, media.getFile().getAbsolutePath());
@@ -490,13 +478,17 @@ public class DatabaseManager extends Thread {
       PS_CREATE_MEDIA.setBinaryStream(5, null);
       PS_CREATE_MEDIA.setBinaryStream(6, null);
       PS_CREATE_MEDIA.setBinaryStream(7, null);
-      if (media.getHistogram() != null) {
-        PS_CREATE_MEDIA.setBinaryStream(4, media.getHistogram().getAlphaAsInputStream());
-        PS_CREATE_MEDIA.setBinaryStream(5, media.getHistogram().getRedAsInputStream());
-        PS_CREATE_MEDIA.setBinaryStream(6, media.getHistogram().getGreenAsInputStream());
-        PS_CREATE_MEDIA.setBinaryStream(7, media.getHistogram().getBlueAsInputStream());
-      }
+      setMediaHistogramData(media);
       PS_CREATE_MEDIA.executeUpdate();
+    }
+  }
+
+  private void setMediaHistogramData(MediaItem media) throws SQLException {
+    if (media.getHistogram() != null) {
+      PS_CREATE_MEDIA.setBinaryStream(4, media.getHistogram().getAlphaAsInputStream());
+      PS_CREATE_MEDIA.setBinaryStream(5, media.getHistogram().getRedAsInputStream());
+      PS_CREATE_MEDIA.setBinaryStream(6, media.getHistogram().getGreenAsInputStream());
+      PS_CREATE_MEDIA.setBinaryStream(7, media.getHistogram().getBlueAsInputStream());
     }
   }
 
@@ -507,15 +499,23 @@ public class DatabaseManager extends Thread {
    * @throws SQLException If database update fails.
    */
   public void createGroup(GroupItem group) throws SQLException {
-    synchronized (PS_CREATE_ITEM) {
-      PS_CREATE_ITEM.setInt(1, group.getId());
-      PS_CREATE_ITEM.setLong(2, group.getDateAdded());
-      PS_CREATE_ITEM.executeUpdate();
-    }
+    createItem(group.getId(), group.getDateAdded());
+    createGroupData(group);
+  }
+
+  private void createGroupData(GroupItem group) throws SQLException {
     synchronized (PS_CREATE_GROUP) {
       PS_CREATE_GROUP.setInt(1, group.getId());
       PS_CREATE_GROUP.setNString(2, group.getTitle());
       PS_CREATE_GROUP.executeUpdate();
+    }
+  }
+
+  private void createItem(int id, long dateAdded) throws SQLException {
+    synchronized (PS_CREATE_ITEM) {
+      PS_CREATE_ITEM.setInt(1, id);
+      PS_CREATE_ITEM.setLong(2, dateAdded);
+      PS_CREATE_ITEM.executeUpdate();
     }
   }
 
@@ -549,8 +549,8 @@ public class DatabaseManager extends Thread {
       try {
         setMediaGID(id, gid);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE,
-            String.format("Failed to set media GID async. ID: %d, GID: %d", id, gid), e);
+        LOGGER.log(Level.SEVERE, e,
+            () -> String.format("Failed to set media GID async. ID: %d, GID: %d", id, gid));
       }
     });
   }
@@ -581,8 +581,8 @@ public class DatabaseManager extends Thread {
       try {
         setMediaPage(id, page);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE,
-            String.format("Failed to set media page index. ID: %d, Page: %d", id, page), e);
+        LOGGER.log(Level.SEVERE, e,
+            () -> String.format("Failed to set media page index. ID: %d, Page: %d", id, page));
       }
     });
   }
@@ -612,7 +612,8 @@ public class DatabaseManager extends Thread {
       try {
         setGroupTitle(id, title);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to set group title. ID: " + id + ", Title: " + title, e);
+        LOGGER.log(Level.SEVERE, e,
+            () -> "Failed to set group title. ID: " + id + ", Title: " + title);
       }
     });
   }
@@ -643,8 +644,8 @@ public class DatabaseManager extends Thread {
       try {
         addTagNote(id, note);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE,
-            String.format("Failed to insert tag note. Tag ID: %d, Note: \"%s\"", id, note), e);
+        LOGGER.log(Level.SEVERE, e,
+            () -> String.format("Failed to insert tag note. Tag ID: %d, Note: \"%s\"", id, note));
       }
     });
   }
@@ -675,8 +676,8 @@ public class DatabaseManager extends Thread {
       try {
         removeTagNote(id, note);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE,
-            String.format("Failed to remove tag note. Tag ID: %d, Note: \"%s\"", id, note), e);
+        LOGGER.log(Level.SEVERE, e,
+            () -> String.format("Failed to remove tag note. Tag ID: %d, Note: \"%s\"", id, note));
       }
     });
   }
@@ -707,8 +708,8 @@ public class DatabaseManager extends Thread {
       try {
         setTagColor(id, color);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE,
-            String.format("Failed to set tag color: ID: %d, Color: %s", id, color), e);
+        LOGGER.log(Level.SEVERE, e,
+            () -> String.format("Failed to set tag color: ID: %d, Color: %s", id, color));
       }
     });
   }
@@ -739,8 +740,8 @@ public class DatabaseManager extends Thread {
       try {
         setMediaNoSimilar(id, b);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to set media no_similar. ID: " + id + ", no_similar: " + b,
-            e);
+        LOGGER.log(Level.SEVERE, e,
+            () -> "Failed to set media no_similar. ID: " + id + ", no_similar: " + b);
       }
     });
   }
@@ -758,7 +759,7 @@ public class DatabaseManager extends Thread {
       try {
         addNonDuplicate(id1, id2);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to add to non_dupes: " + id1 + ", " + id2, e);
+        LOGGER.log(Level.SEVERE, e, () -> "Failed to add to non_dupes: " + id1 + ", " + id2);
       }
     });
   }
@@ -778,7 +779,7 @@ public class DatabaseManager extends Thread {
       try {
         removeNonDuplicate(id1, id2);
       } catch (SQLException e) {
-        LOGGER.log(Level.SEVERE, "Failed to remove from non_dupes: " + id1 + ", " + id2, e);
+        LOGGER.log(Level.SEVERE, e, () -> "Failed to remove from non_dupes: " + id1 + ", " + id2);
       }
     });
   }
@@ -828,29 +829,36 @@ public class DatabaseManager extends Thread {
    */
   public void loadIntoMenagerie(Menagerie menagerie) throws SQLException {
     loadTags(menagerie);
-    LOGGER.info("Finished loading " + menagerie.getTags().size() + " tags from database");
+    LOGGER.info(() -> FINISHED_LOADING_LOG_TEMPLATE
+        .formatted(menagerie.getTags().size(), "tags"));
+
     loadTagNotes(menagerie);
-    LOGGER.info("Finished loading all tag notes into tags from database");
+    LOGGER.info(() -> FINISHED_LOADING_LOG_TEMPLATE
+        .formatted("all", "tag notes into tags"));
+
     loadItems(menagerie);
     sortGroupElements(menagerie);
-    LOGGER.info("Finished loading " + menagerie.getItems().size() + " items from database");
+    LOGGER.info(() -> FINISHED_LOADING_LOG_TEMPLATE
+        .formatted(menagerie.getItems().size(), "items"));
+
     loadTagsForItems(menagerie);
-    LOGGER.info(
-        "Finished loading tags for " + menagerie.getItems().size() + " items from database");
+    LOGGER.info(() -> FINISHED_LOADING_LOG_TEMPLATE
+        .formatted(menagerie.getItems().size(), "items"));
+
     loadNonDupes(menagerie);
-    LOGGER.info("Finished loading " + menagerie.getNonDuplicates().size() +
-                " non-duplicates from database");
+    LOGGER.info(() -> FINISHED_LOADING_LOG_TEMPLATE
+        .formatted(menagerie.getNonDuplicates().size(), "non-duplicates"));
   }
 
   /**
-   * Sort group elements so they're aligned with their page indices.
+   * Sort group elements, so they're aligned with their page indices.
    *
    * @param menagerie Menagerie to sort groups in.
    */
   private void sortGroupElements(Menagerie menagerie) {
     for (Item item : menagerie.getItems()) {
-      if (item instanceof GroupItem) {
-        ((GroupItem) item).getElements().sort(Comparator.comparingInt(MediaItem::getPageIndex));
+      if (item instanceof GroupItem groupItem) {
+        groupItem.getElements().sort(Comparator.comparingInt(MediaItem::getPageIndex));
       }
     }
   }
@@ -865,13 +873,14 @@ public class DatabaseManager extends Thread {
     synchronized (PS_GET_TAG_NOTES) {
       try (ResultSet rs = PS_GET_TAG_NOTES.executeQuery()) {
         while (rs.next()) {
-          Tag tag = menagerie.getTagByID(rs.getInt("tag_id"));
+          final var tagId = rs.getInt("tag_id");
+          Tag tag = menagerie.getTagByID(tagId);
 
           if (tag != null) {
             tag.getNotes().add(rs.getNString("note"));
           } else {
-            LOGGER.severe(String.format("Tag with id %d does not exist, but exists in tag_notes",
-                rs.getInt("tag_id")));
+            LOGGER.severe(() -> String.format(
+                "Tag with id %d does not exist, but exists in tag_notes", tagId));
           }
         }
       }
@@ -887,6 +896,14 @@ public class DatabaseManager extends Thread {
    * @throws SQLException When database query fails.
    */
   private void loadTags(Menagerie menagerie) throws SQLException {
+    int total = getTagCount();
+    if (loadListener != null) {
+      loadListener.startTagLoading(total);
+    }
+    getAllTags(menagerie, total);
+  }
+
+  private int getTagCount() throws SQLException {
     int total = 0;
     synchronized (PS_GET_TAG_COUNT) {
       try (ResultSet rs = PS_GET_TAG_NOTES.executeQuery()) {
@@ -895,19 +912,21 @@ public class DatabaseManager extends Thread {
         }
       }
     }
-    if (loadListener != null) {
-      loadListener.startTagLoading(total);
-    }
+    return total;
+  }
 
+  private void getAllTags(Menagerie menagerie, int totalTagCount) throws SQLException {
     synchronized (PS_GET_TAGS) {
       try (ResultSet rs = PS_GET_TAGS.executeQuery()) {
         int i = 0;
         while (rs.next()) {
           i++;
-          menagerie.getTags().add(
-              new Tag(menagerie, rs.getInt("id"), rs.getNString("name"), rs.getNString("color")));
+          final var id = rs.getInt("id");
+          final var name = rs.getNString("name");
+          final var color = rs.getNString("color");
+          menagerie.getTags().add(new Tag(menagerie, id, name, color));
           if (loadListener != null) {
-            loadListener.tagsLoading(i, total);
+            loadListener.tagsLoading(i, totalTagCount);
           }
         }
       }
@@ -919,6 +938,15 @@ public class DatabaseManager extends Thread {
       loadListener.gettingNonDupeList();
     }
 
+    int total = getDupesCount();
+    if (loadListener != null) {
+      loadListener.startNonDupeLoading(total);
+    }
+
+    getAllDupes(menagerie, total);
+  }
+
+  private int getDupesCount() throws SQLException {
     int total = 0;
     synchronized (PS_GET_NON_DUPES_COUNT) {
       try (ResultSet rs = PS_GET_NON_DUPES_COUNT.executeQuery()) {
@@ -927,10 +955,10 @@ public class DatabaseManager extends Thread {
         }
       }
     }
-    if (loadListener != null) {
-      loadListener.startNonDupeLoading(total);
-    }
+    return total;
+  }
 
+  private void getAllDupes(Menagerie menagerie, int totalDupesCount) throws SQLException {
     synchronized (PS_GET_NON_DUPES) {
       try (ResultSet rs = PS_GET_NON_DUPES.executeQuery()) {
         int i = 0;
@@ -940,13 +968,14 @@ public class DatabaseManager extends Thread {
               new SimilarPair<>((MediaItem) menagerie.getItemByID(rs.getInt(1)),
                   (MediaItem) menagerie.getItemByID(rs.getInt(2)), 0));
           if (loadListener != null) {
-            loadListener.nonDupeLoading(i, total);
+            loadListener.nonDupeLoading(i, totalDupesCount);
           }
         }
       }
     }
   }
 
+  // REENG: this method is still too large
   /**
    * Loads all items from the database.
    * <p>
@@ -960,44 +989,25 @@ public class DatabaseManager extends Thread {
       loadListener.gettingItemList();
     }
 
-    int total = 0;
-    synchronized (PS_GET_ITEM_COUNT) {
-      try (ResultSet rs = PS_GET_ITEM_COUNT.executeQuery()) {
-        if (rs.next()) {
-          total = rs.getInt(1);
-        }
-      }
-    }
-
-    int i = 0;
-    synchronized (PS_GET_GROUPS) {
-      try (ResultSet rs = PS_GET_GROUPS.executeQuery()) {
-        while (rs.next()) {
-          i++;
-          menagerie.getItems().add(
-              new GroupItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"),
-                  rs.getNString("groups.title")));
-          if (loadListener != null) {
-            loadListener.itemsLoading(i, total);
-          }
-        }
-      }
-    }
+    int totalItemCount = getItemCount();
+    int currentItemCount = getAllGroups(menagerie, totalItemCount);
 
     synchronized (PS_GET_MEDIA) {
       try (ResultSet rs = PS_GET_MEDIA.executeQuery()) {
         if (loadListener != null) {
-          loadListener.startedItemLoading(total);
+          loadListener.startedItemLoading(totalItemCount);
         }
         while (rs.next()) {
-          i++;
+          currentItemCount++;
 
           ImageHistogram histogram = null;
           InputStream histAlpha = rs.getBinaryStream("media.hist_a");
           if (histAlpha != null) {
             try {
-              histogram = new ImageHistogram(histAlpha, rs.getBinaryStream("media.hist_r"),
-                  rs.getBinaryStream("media.hist_g"), rs.getBinaryStream("media.hist_b"));
+              final var histRed = rs.getBinaryStream("media.hist_r");
+              final var histGreen = rs.getBinaryStream("media.hist_g");
+              final var histBlue = rs.getBinaryStream("media.hist_b");
+              histogram = new ImageHistogram(histAlpha, histRed, histGreen, histBlue);
             } catch (HistogramReadException e) {
               LOGGER.log(Level.SEVERE, "Histogram failed to load from database", e);
             }
@@ -1015,21 +1025,56 @@ public class DatabaseManager extends Thread {
             }
           }
 
-          MediaItem media =
-              new MediaItem(menagerie, rs.getInt("items.id"), rs.getLong("items.added"),
-                  rs.getInt("media.page"), rs.getBoolean("media.no_similar"), group,
-                  new File(rs.getNString("media.path")), rs.getNString("media.md5"), histogram);
+          final var id = rs.getInt("items.id");
+          final var added = rs.getLong("items.added");
+          final var pageIndex = rs.getInt("media.page");
+          final var noSimilar = rs.getBoolean("media.no_similar");
+          final var file = new File(rs.getNString("media.path"));
+          final var hash = rs.getNString("media.md5");
+          final var media = new MediaItem(
+              menagerie, id, added, pageIndex, noSimilar, group, file, hash, histogram);
           menagerie.getItems().add(media);
           if (group != null) {
             group.getElements().add(media);
           }
 
           if (loadListener != null) {
-            loadListener.itemsLoading(i, total);
+            loadListener.itemsLoading(currentItemCount, totalItemCount);
           }
         }
       }
     }
+  }
+
+  private int getItemCount() throws SQLException {
+    int total = 0;
+    synchronized (PS_GET_ITEM_COUNT) {
+      try (ResultSet rs = PS_GET_ITEM_COUNT.executeQuery()) {
+        if (rs.next()) {
+          total = rs.getInt(1);
+        }
+      }
+    }
+    return total;
+  }
+
+  private int getAllGroups(Menagerie menagerie, int totalItemCount) throws SQLException {
+    int i = 0;
+    synchronized (PS_GET_GROUPS) {
+      try (ResultSet rs = PS_GET_GROUPS.executeQuery()) {
+        while (rs.next()) {
+          i++;
+          final var id = rs.getInt("items.id");
+          final var added = rs.getLong("items.added");
+          final var title = rs.getNString("groups.title");
+          menagerie.getItems().add(new GroupItem(menagerie, id, added, title));
+          if (loadListener != null) {
+            loadListener.itemsLoading(i, totalItemCount);
+          }
+        }
+      }
+    }
+    return i;
   }
 
   /**
@@ -1044,43 +1089,20 @@ public class DatabaseManager extends Thread {
         PS_GET_TAGS_FOR_ITEM.setInt(1, item.getId());
         try (ResultSet rs = PS_GET_TAGS_FOR_ITEM.executeQuery()) {
           while (rs.next()) {
-            Tag tag = menagerie.getTagByID(rs.getInt("tag_id"));
+            final var id = rs.getInt("tag_id");
+            Tag tag = menagerie.getTagByID(id);
             if (tag != null) {
               tag.incrementFrequency();
               item.getTags().add(tag);
             } else {
-              LOGGER.warning(
+              LOGGER.warning(() ->
                   "Major issue, tag wasn't loaded in but somehow still exists in the database: " +
-                  rs.getInt("tag_id"));
+                  id);
             }
           }
         }
       }
     }
-  }
-
-  /**
-   * Attempts to resolve the actual path to the database file by java path standards, given a JDBC database path.
-   *
-   * @param databaseURL JDBC style path to database.
-   * @return Best attempt at resolving the path.
-   */
-  public static File resolveDatabaseFile(String databaseURL) {
-    String path = databaseURL + ".mv.db";
-    if (path.startsWith("~")) {
-      String temp = System.getProperty("user.home");
-      if (!temp.endsWith("/") && !temp.endsWith("\\")) {
-        temp += "/";
-      }
-      path = path.substring(1);
-      if (path.startsWith("/") || path.startsWith("\\")) {
-        path = path.substring(1);
-      }
-
-      path = temp + path;
-    }
-
-    return new File(path);
   }
 
   /**
