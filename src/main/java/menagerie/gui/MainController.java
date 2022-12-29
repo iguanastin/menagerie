@@ -131,6 +131,7 @@ import menagerie.model.search.Search;
 import menagerie.model.search.SearchHistory;
 import menagerie.settings.MenagerieSettings;
 import menagerie.util.CancellableThread;
+import menagerie.util.FileUtil;
 import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
 
@@ -1672,36 +1673,6 @@ public class MainController {
   // ---------------------------------- Compute Utilities -----------------------------
 
   /**
-   * Attempts to resolve a filename conflict caused by a pre-existing file at the same path.
-   * Appends an incremented number surrounded by parenthesis to the file if it already exists.
-   *
-   * @param file File to resolve name for.
-   * @return File pointing to a file that does not exist yet.
-   */
-  public static File resolveDuplicateFilename(File file) {
-    while (file.exists()) {
-      String name = file.getName();
-      if (name.matches(".*\\s\\([0-9]+\\)\\..*")) {
-        int count =
-            Integer.parseInt(name.substring(name.lastIndexOf('(') + 1, name.lastIndexOf(')')));
-        name = name.substring(0, name.lastIndexOf('(') + 1) + (count + 1) +
-               name.substring(name.lastIndexOf(')'));
-      } else {
-        name = name.substring(0, name.lastIndexOf('.')) + " (2)" +
-               name.substring(name.lastIndexOf('.'));
-      }
-
-      String parent = file.getParent();
-      if (!parent.endsWith("/") && !parent.endsWith("\\")) {
-        parent += "/";
-      }
-      file = new File(parent + name);
-    }
-
-    return file;
-  }
-
-  /**
    * Starts a folder watcher thread. Kills an active folder watcher thread first, if present.
    *
    * @param folder        Target folder to watch for new files.
@@ -1725,7 +1696,7 @@ public class MainController {
                   continue; //File is being "moved" to same folder
                 }
 
-                File dest = resolveDuplicateFilename(f);
+                File dest = FileUtil.resolveDuplicateFilename(f);
 
                 if (!file.renameTo(dest)) {
                   continue;
@@ -2021,7 +1992,7 @@ public class MainController {
             }
           } while (target.exists() || !target.getParentFile().exists());
         } else {
-          target = resolveDuplicateFilename(new File(folder, filename));
+          target = FileUtil.resolveDuplicateFilename(new File(folder, filename));
         }
         if (Filters.FILE_NAME_FILTER.accept(target)) {
           importer.addJob(new ImportJob(new URL(url), target, null));
