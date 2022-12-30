@@ -267,7 +267,7 @@ public class DatabaseManager extends Thread {
    * @param md5 MD5 to store.
    * @throws SQLException If the database update failed.
    */
-  public void setMD5(int id, String md5) throws SQLException {
+  private void setMD5(int id, String md5) throws SQLException {
     synchronized (PS_SET_MEDIA_MD5) {
       PS_SET_MEDIA_MD5.setNString(1, md5);
       PS_SET_MEDIA_MD5.setInt(2, id);
@@ -292,7 +292,7 @@ public class DatabaseManager extends Thread {
    * @param hist Histogram to store.
    * @throws SQLException If database update fails.
    */
-  public void setHist(int id, ImageHistogram hist) throws SQLException {
+  private void setHist(int id, ImageHistogram hist) throws SQLException {
     synchronized (PS_SET_MEDIA_HISTOGRAM) {
       PS_SET_MEDIA_HISTOGRAM.setBinaryStream(1, hist.getAlphaAsInputStream());
       PS_SET_MEDIA_HISTOGRAM.setBinaryStream(2, hist.getRedAsInputStream());
@@ -335,7 +335,7 @@ public class DatabaseManager extends Thread {
    * @param tag  ID of tag.
    * @throws SQLException If database update fails.
    */
-  public void tagItem(int item, int tag) throws SQLException {
+  private void tagItem(int item, int tag) throws SQLException {
     synchronized (PS_ADD_TAG_TO_ITEM) {
       PS_ADD_TAG_TO_ITEM.setInt(1, item);
       PS_ADD_TAG_TO_ITEM.setInt(2, tag);
@@ -361,7 +361,7 @@ public class DatabaseManager extends Thread {
    * @param tag  ID of tag.
    * @throws SQLException If database update fails.
    */
-  public void untagItem(int item, int tag) throws SQLException {
+  private void untagItem(int item, int tag) throws SQLException {
     synchronized (PS_REMOVE_TAG_FROM_ITEM) {
       PS_REMOVE_TAG_FROM_ITEM.setInt(1, item);
       PS_REMOVE_TAG_FROM_ITEM.setInt(2, tag);
@@ -386,7 +386,7 @@ public class DatabaseManager extends Thread {
    * @param id ID of item.
    * @throws SQLException If database update fails.
    */
-  public void removeItem(int id) throws SQLException {
+  private void removeItem(int id) throws SQLException {
     synchronized (PS_DELETE_ITEM) {
       PS_DELETE_ITEM.setInt(1, id);
       PS_DELETE_ITEM.executeUpdate();
@@ -409,7 +409,7 @@ public class DatabaseManager extends Thread {
    * @param name Name of tag.
    * @throws SQLException If database update fails.
    */
-  public void createTag(int id, String name) throws SQLException {
+  private void createTag(int id, String name) throws SQLException {
     synchronized (PS_CREATE_TAG) {
       PS_CREATE_TAG.setInt(1, id);
       PS_CREATE_TAG.setNString(2, name);
@@ -509,7 +509,7 @@ public class DatabaseManager extends Thread {
    * @param gid ID of group.
    * @throws SQLException When database update fails.
    */
-  public void setMediaGID(int id, Integer gid) throws SQLException {
+  private void setMediaGID(int id, Integer gid) throws SQLException {
     synchronized (PS_SET_MEDIA_GID) {
       if (gid == null) {
         PS_SET_MEDIA_GID.setNull(1, Types.INTEGER);
@@ -539,7 +539,7 @@ public class DatabaseManager extends Thread {
    * @param page Page index to set.
    * @throws SQLException If database update fails.
    */
-  public void setMediaPage(int id, int page) throws SQLException {
+  private void setMediaPage(int id, int page) throws SQLException {
     synchronized (PS_SET_MEDIA_PAGE) {
       PS_SET_MEDIA_PAGE.setInt(1, page);
       PS_SET_MEDIA_PAGE.setInt(2, id);
@@ -564,7 +564,7 @@ public class DatabaseManager extends Thread {
    * @param id    ID of group.
    * @param title Title to set to.
    */
-  public void setGroupTitle(int id, String title) throws SQLException {
+  private void setGroupTitle(int id, String title) throws SQLException {
     synchronized (PS_SET_GROUP_TITLE) {
       PS_SET_GROUP_TITLE.setNString(1, title);
       PS_SET_GROUP_TITLE.setInt(2, id);
@@ -590,7 +590,7 @@ public class DatabaseManager extends Thread {
    * @param note The note.
    * @throws SQLException When database update fails.
    */
-  public void addTagNote(int id, String note) throws SQLException {
+  private void addTagNote(int id, String note) throws SQLException {
     synchronized (PS_ADD_TAG_NOTE) {
       PS_ADD_TAG_NOTE.setInt(1, id);
       PS_ADD_TAG_NOTE.setNString(2, note);
@@ -616,7 +616,7 @@ public class DatabaseManager extends Thread {
    * @param note The note.
    * @throws SQLException If database update fails.
    */
-  public void removeTagNote(int id, String note) throws SQLException {
+  private void removeTagNote(int id, String note) throws SQLException {
     synchronized (PS_REMOVE_TAG_NOTE) {
       PS_REMOVE_TAG_NOTE.setInt(1, id);
       PS_REMOVE_TAG_NOTE.setNString(2, note);
@@ -642,7 +642,7 @@ public class DatabaseManager extends Thread {
    * @param color Color to set.
    * @throws SQLException If database update fails.
    */
-  public void setTagColor(int id, String color) throws SQLException {
+  private void setTagColor(int id, String color) throws SQLException {
     synchronized (PS_SET_TAG_COLOR) {
       PS_SET_TAG_COLOR.setNString(1, color);
       PS_SET_TAG_COLOR.setInt(2, id);
@@ -668,7 +668,7 @@ public class DatabaseManager extends Thread {
    * @param b  noSimilar value.
    * @throws SQLException When database update fails.
    */
-  public void setMediaNoSimilar(int id, boolean b) throws SQLException {
+  private void setMediaNoSimilar(int id, boolean b) throws SQLException {
     synchronized (PS_SET_MEDIA_NOSIMILAR) {
       PS_SET_MEDIA_NOSIMILAR.setBoolean(1, b);
       PS_SET_MEDIA_NOSIMILAR.setInt(2, id);
@@ -687,7 +687,7 @@ public class DatabaseManager extends Thread {
         () -> "Failed to set media no_similar. ID: " + id + ", no_similar: " + b);
   }
 
-  public void addNonDuplicate(int id1, int id2) throws SQLException {
+  private void addNonDuplicate(int id1, int id2) throws SQLException {
     synchronized (PS_ADD_NON_DUPE) {
       PS_ADD_NON_DUPE.setInt(1, id1);
       PS_ADD_NON_DUPE.setInt(2, id2);
@@ -700,7 +700,7 @@ public class DatabaseManager extends Thread {
         () -> "Failed to add to non_dupes: " + id1 + ", " + id2);
   }
 
-  public void removeNonDuplicate(int id1, int id2) throws SQLException {
+  private void removeNonDuplicate(int id1, int id2) throws SQLException {
     synchronized (PS_REMOVE_NON_DUPE) {
       PS_REMOVE_NON_DUPE.setInt(1, id1);
       PS_REMOVE_NON_DUPE.setInt(2, id2);

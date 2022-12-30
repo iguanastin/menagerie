@@ -428,7 +428,7 @@ public class ImportJob {
   /**
    * @param status The new status to set this job as.
    */
-  public void setStatus(Status status) {
+  private void setStatus(Status status) {
     this.status.set(status);
   }
 

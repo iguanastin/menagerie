@@ -143,32 +143,54 @@ public class MainController {
   private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
   // ------------------------------- JFX -------------------------------------------
-  public StackPane rootPane;
-  public BorderPane explorerRootPane;
-  public ScreenPane screenPane;
-  public MenuBar menuBar;
+  @FXML
+  private StackPane rootPane;
+  @FXML
+  private BorderPane explorerRootPane;
+  @FXML
+  private ScreenPane screenPane;
+  @FXML
+  private MenuBar menuBar;
 
   // Right side
-  public BorderPane gridPane;
-  public PredictiveTextField searchTextField;
-  public ToggleButton listDescendingToggleButton;
-  public ToggleButton showGroupedToggleButton;
-  public ToggleButton shuffledSearchButton;
-  public ItemGridView itemGridView;
-  public Label resultCountLabel;
-  public Label scopeLabel;
-  public HBox scopeHBox;
-  public Button importsButton;
-  public Label dbUpdatesLabel;
-  public Button logButton;
-  public Button backButton;
+  @FXML
+  private BorderPane gridPane;
+  @FXML
+  private PredictiveTextField searchTextField;
+  @FXML
+  private ToggleButton listDescendingToggleButton;
+  @FXML
+  private ToggleButton showGroupedToggleButton;
+  @FXML
+  private ToggleButton shuffledSearchButton;
+  @FXML
+  private ItemGridView itemGridView;
+  @FXML
+  private Label resultCountLabel;
+  @FXML
+  private Label scopeLabel;
+  @FXML
+  private HBox scopeHBox;
+  @FXML
+  private Button importsButton;
+  @FXML
+  private Label dbUpdatesLabel;
+  @FXML
+  private Button logButton;
+  @FXML
+  private Button backButton;
 
   // Left side
-  public PredictiveTextField editTagsTextField;
-  public DynamicMediaView previewMediaView;
-  public ItemInfoBox itemInfoBox;
-  public ListView<Tag> tagListView;
-  public Label explorerZoomLabel;
+  @FXML
+  private PredictiveTextField editTagsTextField;
+  @FXML
+  private DynamicMediaView previewMediaView;
+  @FXML
+  private ItemInfoBox itemInfoBox;
+  @FXML
+  private ListView<Tag> tagListView;
+  @FXML
+  private Label explorerZoomLabel;
 
   // ----------------------------------- Screens -----------------------------------
   private TagListScreen tagListScreen;
@@ -380,7 +402,7 @@ public class MainController {
    * Initializes this controller and elements
    */
   @FXML
-  public void initialize() {
+  private void initialize() {
     // Initialize the menagerie
     initImporterThread();
 
@@ -1894,37 +1916,44 @@ public class MainController {
     event.consume();
   }
 
-  public void settingsMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void settingsMenuButtonOnAction(ActionEvent event) {
     settingsScreen.open(screenPane, settings);
     event.consume();
   }
 
-  public void helpMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void helpMenuButtonOnAction(ActionEvent event) {
     screenPane.open(helpScreen);
     event.consume();
   }
 
-  public void viewSlideShowSearchedMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void viewSlideShowSearchedMenuButtonOnAction(ActionEvent event) {
     slideshowScreen.open(screenPane, menagerie, currentSearch.getResults());
     event.consume();
   }
 
-  public void viewSlideShowSelectedMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void viewSlideShowSelectedMenuButtonOnAction(ActionEvent event) {
     slideshowScreen.open(screenPane, menagerie, itemGridView.getSelected());
     event.consume();
   }
 
-  public void viewSlideShowAllMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void viewSlideShowAllMenuButtonOnAction(ActionEvent event) {
     slideshowScreen.open(screenPane, menagerie, menagerie.getItems());
     event.consume();
   }
 
-  public void viewTagsMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void viewTagsMenuButtonOnAction(ActionEvent event) {
     tagListScreen.open(screenPane, menagerie.getTags());
     event.consume();
   }
 
-  public void revertDatabaseMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void revertDatabaseMenuButtonOnAction(ActionEvent event) {
     File database = DatabaseUtil.resolveDatabaseFile(settings.dbUrl.getValue());
     File backup = new File(database + ".bak");
     if (backup.exists()) {
@@ -1936,17 +1965,20 @@ public class MainController {
     event.consume();
   }
 
-  public void importsButtonOnAction(ActionEvent event) {
+  @FXML
+  private void importsButtonOnAction(ActionEvent event) {
     screenPane.open(importerScreen);
     event.consume();
   }
 
-  public void logButtonOnAction(ActionEvent event) {
+  @FXML
+  private void logButtonOnAction(ActionEvent event) {
     openLog();
     event.consume();
   }
 
-  public void backButtonOnAction(ActionEvent event) {
+  @FXML
+  private void backButtonOnAction(ActionEvent event) {
     explorerGoBack();
     event.consume();
   }
@@ -2026,7 +2058,8 @@ public class MainController {
 
   // ---------------------------------- Key Event Handlers -------------------------------
 
-  public void explorerRootPaneOnKeyPressed(KeyEvent event) {
+  @FXML
+  private void explorerRootPaneOnKeyPressed(KeyEvent event) {
     if (event.isControlDown()) {
       switch (event.getCode()) {
         case F:
@@ -2166,7 +2199,8 @@ public class MainController {
     }
   }
 
-  public void editTagsTextFieldOnKeyPressed(KeyEvent event) {
+  @FXML
+  private void editTagsTextFieldOnKeyPressed(KeyEvent event) {
     switch (event.getCode()) {
       case ENTER:
         editTagsOfSelected(editTagsTextField.getText());
@@ -2184,7 +2218,8 @@ public class MainController {
     }
   }
 
-  public void searchVBoxOnKeyPressed(KeyEvent event) {
+  @FXML
+  private void searchVBoxOnKeyPressed(KeyEvent event) {
     if (event.isControlDown()) {
       switch (event.getCode()) {
         case D:

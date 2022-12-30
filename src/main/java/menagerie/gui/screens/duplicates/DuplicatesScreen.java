@@ -503,11 +503,11 @@ public class DuplicatesScreen extends Screen {
     return pairs;
   }
 
-  public boolean isDeleteFile() {
+  private boolean isDeleteFile() {
     return deleteFile.get();
   }
 
-  public boolean isPreload() {
+  private boolean isPreload() {
     return preload.get();
   }
 

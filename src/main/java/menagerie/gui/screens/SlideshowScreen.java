@@ -267,7 +267,7 @@ public class SlideshowScreen extends Screen {
   /**
    * @return Currently displayed item.
    */
-  public Item getShowing() {
+  private Item getShowing() {
     return showing;
   }
 
@@ -413,7 +413,7 @@ public class SlideshowScreen extends Screen {
     }
   }
 
-  public void startSlideShow() {
+  private void startSlideShow() {
     if (currentTimerTask != null) {
       currentTimerTask.cancel();
     }
@@ -456,15 +456,11 @@ public class SlideshowScreen extends Screen {
     return interval;
   }
 
-  public double getInterval() {
+  private double getInterval() {
     return interval.get();
   }
 
-  public void setInterval(double d) {
-    interval.set(d);
-  }
-
-  public boolean isPreload() {
+  private boolean isPreload() {
     return preload.get();
   }
 
