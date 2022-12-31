@@ -123,7 +123,7 @@ import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.menagerie.TagEditEvent;
-import menagerie.model.menagerie.db.DatabaseManager;
+import menagerie.model.menagerie.db.DatabaseUtil;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
 import menagerie.model.search.GroupSearch;
@@ -131,6 +131,7 @@ import menagerie.model.search.Search;
 import menagerie.model.search.SearchHistory;
 import menagerie.settings.MenagerieSettings;
 import menagerie.util.CancellableThread;
+import menagerie.util.FileUtil;
 import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
 
@@ -142,32 +143,54 @@ public class MainController {
   private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
   // ------------------------------- JFX -------------------------------------------
-  public StackPane rootPane;
-  public BorderPane explorerRootPane;
-  public ScreenPane screenPane;
-  public MenuBar menuBar;
+  @FXML
+  private StackPane rootPane;
+  @FXML
+  private BorderPane explorerRootPane;
+  @FXML
+  private ScreenPane screenPane;
+  @FXML
+  private MenuBar menuBar;
 
   // Right side
-  public BorderPane gridPane;
-  public PredictiveTextField searchTextField;
-  public ToggleButton listDescendingToggleButton;
-  public ToggleButton showGroupedToggleButton;
-  public ToggleButton shuffledSearchButton;
-  public ItemGridView itemGridView;
-  public Label resultCountLabel;
-  public Label scopeLabel;
-  public HBox scopeHBox;
-  public Button importsButton;
-  public Label dbUpdatesLabel;
-  public Button logButton;
-  public Button backButton;
+  @FXML
+  private BorderPane gridPane;
+  @FXML
+  private PredictiveTextField searchTextField;
+  @FXML
+  private ToggleButton listDescendingToggleButton;
+  @FXML
+  private ToggleButton showGroupedToggleButton;
+  @FXML
+  private ToggleButton shuffledSearchButton;
+  @FXML
+  private ItemGridView itemGridView;
+  @FXML
+  private Label resultCountLabel;
+  @FXML
+  private Label scopeLabel;
+  @FXML
+  private HBox scopeHBox;
+  @FXML
+  private Button importsButton;
+  @FXML
+  private Label dbUpdatesLabel;
+  @FXML
+  private Button logButton;
+  @FXML
+  private Button backButton;
 
   // Left side
-  public PredictiveTextField editTagsTextField;
-  public DynamicMediaView previewMediaView;
-  public ItemInfoBox itemInfoBox;
-  public ListView<Tag> tagListView;
-  public Label explorerZoomLabel;
+  @FXML
+  private PredictiveTextField editTagsTextField;
+  @FXML
+  private DynamicMediaView previewMediaView;
+  @FXML
+  private ItemInfoBox itemInfoBox;
+  @FXML
+  private ListView<Tag> tagListView;
+  @FXML
+  private Label explorerZoomLabel;
 
   // ----------------------------------- Screens -----------------------------------
   private TagListScreen tagListScreen;
@@ -379,7 +402,7 @@ public class MainController {
    * Initializes this controller and elements
    */
   @FXML
-  public void initialize() {
+  private void initialize() {
     // Initialize the menagerie
     initImporterThread();
 
@@ -1672,36 +1695,6 @@ public class MainController {
   // ---------------------------------- Compute Utilities -----------------------------
 
   /**
-   * Attempts to resolve a filename conflict caused by a pre-existing file at the same path.
-   * Appends an incremented number surrounded by parenthesis to the file if it already exists.
-   *
-   * @param file File to resolve name for.
-   * @return File pointing to a file that does not exist yet.
-   */
-  public static File resolveDuplicateFilename(File file) {
-    while (file.exists()) {
-      String name = file.getName();
-      if (name.matches(".*\\s\\([0-9]+\\)\\..*")) {
-        int count =
-            Integer.parseInt(name.substring(name.lastIndexOf('(') + 1, name.lastIndexOf(')')));
-        name = name.substring(0, name.lastIndexOf('(') + 1) + (count + 1) +
-               name.substring(name.lastIndexOf(')'));
-      } else {
-        name = name.substring(0, name.lastIndexOf('.')) + " (2)" +
-               name.substring(name.lastIndexOf('.'));
-      }
-
-      String parent = file.getParent();
-      if (!parent.endsWith("/") && !parent.endsWith("\\")) {
-        parent += "/";
-      }
-      file = new File(parent + name);
-    }
-
-    return file;
-  }
-
-  /**
    * Starts a folder watcher thread. Kills an active folder watcher thread first, if present.
    *
    * @param folder        Target folder to watch for new files.
@@ -1725,7 +1718,7 @@ public class MainController {
                   continue; //File is being "moved" to same folder
                 }
 
-                File dest = resolveDuplicateFilename(f);
+                File dest = FileUtil.resolveDuplicateFilename(f);
 
                 if (!file.renameTo(dest)) {
                   continue;
@@ -1776,7 +1769,7 @@ public class MainController {
         LOGGER.info("Done defragging database file");
 
         if (revertDatabase) {
-          File database = DatabaseManager.resolveDatabaseFile(settings.dbUrl.getValue());
+          File database = DatabaseUtil.resolveDatabaseFile(settings.dbUrl.getValue());
           File backup = new File(database + ".bak");
           LOGGER.warning(String.format("Reverting to last backup database: %s", backup.toString()));
           try {
@@ -1923,38 +1916,45 @@ public class MainController {
     event.consume();
   }
 
-  public void settingsMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void settingsMenuButtonOnAction(ActionEvent event) {
     settingsScreen.open(screenPane, settings);
     event.consume();
   }
 
-  public void helpMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void helpMenuButtonOnAction(ActionEvent event) {
     screenPane.open(helpScreen);
     event.consume();
   }
 
-  public void viewSlideShowSearchedMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void viewSlideShowSearchedMenuButtonOnAction(ActionEvent event) {
     slideshowScreen.open(screenPane, menagerie, currentSearch.getResults());
     event.consume();
   }
 
-  public void viewSlideShowSelectedMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void viewSlideShowSelectedMenuButtonOnAction(ActionEvent event) {
     slideshowScreen.open(screenPane, menagerie, itemGridView.getSelected());
     event.consume();
   }
 
-  public void viewSlideShowAllMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void viewSlideShowAllMenuButtonOnAction(ActionEvent event) {
     slideshowScreen.open(screenPane, menagerie, menagerie.getItems());
     event.consume();
   }
 
-  public void viewTagsMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void viewTagsMenuButtonOnAction(ActionEvent event) {
     tagListScreen.open(screenPane, menagerie.getTags());
     event.consume();
   }
 
-  public void revertDatabaseMenuButtonOnAction(ActionEvent event) {
-    File database = DatabaseManager.resolveDatabaseFile(settings.dbUrl.getValue());
+  @FXML
+  private void revertDatabaseMenuButtonOnAction(ActionEvent event) {
+    File database = DatabaseUtil.resolveDatabaseFile(settings.dbUrl.getValue());
     File backup = new File(database + ".bak");
     if (backup.exists()) {
       new ConfirmationScreen().open(screenPane, "Revert database",
@@ -1965,17 +1965,20 @@ public class MainController {
     event.consume();
   }
 
-  public void importsButtonOnAction(ActionEvent event) {
+  @FXML
+  private void importsButtonOnAction(ActionEvent event) {
     screenPane.open(importerScreen);
     event.consume();
   }
 
-  public void logButtonOnAction(ActionEvent event) {
+  @FXML
+  private void logButtonOnAction(ActionEvent event) {
     openLog();
     event.consume();
   }
 
-  public void backButtonOnAction(ActionEvent event) {
+  @FXML
+  private void backButtonOnAction(ActionEvent event) {
     explorerGoBack();
     event.consume();
   }
@@ -2021,7 +2024,7 @@ public class MainController {
             }
           } while (target.exists() || !target.getParentFile().exists());
         } else {
-          target = resolveDuplicateFilename(new File(folder, filename));
+          target = FileUtil.resolveDuplicateFilename(new File(folder, filename));
         }
         if (Filters.FILE_NAME_FILTER.accept(target)) {
           importer.addJob(new ImportJob(new URL(url), target, null));
@@ -2055,7 +2058,8 @@ public class MainController {
 
   // ---------------------------------- Key Event Handlers -------------------------------
 
-  public void explorerRootPaneOnKeyPressed(KeyEvent event) {
+  @FXML
+  private void explorerRootPaneOnKeyPressed(KeyEvent event) {
     if (event.isControlDown()) {
       switch (event.getCode()) {
         case F:
@@ -2195,7 +2199,8 @@ public class MainController {
     }
   }
 
-  public void editTagsTextFieldOnKeyPressed(KeyEvent event) {
+  @FXML
+  private void editTagsTextFieldOnKeyPressed(KeyEvent event) {
     switch (event.getCode()) {
       case ENTER:
         editTagsOfSelected(editTagsTextField.getText());
@@ -2213,7 +2218,8 @@ public class MainController {
     }
   }
 
-  public void searchVBoxOnKeyPressed(KeyEvent event) {
+  @FXML
+  private void searchVBoxOnKeyPressed(KeyEvent event) {
     if (event.isControlDown()) {
       switch (event.getCode()) {
         case D:

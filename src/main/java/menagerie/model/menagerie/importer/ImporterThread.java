@@ -61,10 +61,11 @@ public class ImporterThread extends Thread {
   public void run() {
     running = true;
     while (running) {
+
       while (paused) {
-          if (!running) {
-              return;
-          }
+        if (!running) {
+          return;
+        }
         synchronized (this) {
           try {
             wait();
@@ -83,17 +84,21 @@ public class ImporterThread extends Thread {
         continue;
       }
 
-      LOGGER.info("Import queue size: " + queue.size());
-      ImportJob job = queue.remove();
-
-        if (job.getUrl() != null) {
-            LOGGER.info("Starting web import: " + job.getUrl());
-        } else {
-            LOGGER.info("Starting local import: " + job.getFile());
-        }
-      job.runJob(menagerie, settings);
-      LOGGER.info("Finished import: " + job.getItem().getId());
+      startNextImportJob();
     }
+  }
+
+  private void startNextImportJob() {
+    LOGGER.info(() -> "Import queue size: " + queue.size());
+    ImportJob job = queue.remove();
+
+    if (job.getUrl() != null) {
+      LOGGER.info(() -> "Starting web import: " + job.getUrl());
+    } else {
+      LOGGER.info(() -> "Starting local import: " + job.getFile());
+    }
+    job.runJob(menagerie, settings);
+    LOGGER.info(() -> "Finished import: " + job.getItem().getId());
   }
 
   /**

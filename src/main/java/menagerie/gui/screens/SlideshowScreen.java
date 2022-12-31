@@ -70,9 +70,117 @@ public class SlideshowScreen extends Screen {
   private TimerTask currentTimerTask = null;
   private final DoubleProperty interval = new SimpleDoubleProperty(10);
   private final BooleanProperty preload = new SimpleBooleanProperty(true);
-  private Image preloadPrev = null, preloadNext = null; // TODO. remove?
+  private Image preloadPrev = null, preloadNext = null; // REENG. remove?
 
   public SlideshowScreen(ObjectListener<Item> selectListener) {
+    registerKeyEvents();
+    getStyleClass().addAll(ROOT_STYLE_CLASS);
+
+    configureUiElements(selectListener);
+  }
+
+  private void configureUiElements(ObjectListener<Item> selectListener) {
+    mediaView.setRepeat(true);
+    mediaView.setMute(false);
+    infoBox.setMaxWidth(USE_PREF_SIZE);
+    infoBox.setAlignment(Pos.BOTTOM_RIGHT);
+    infoBox.setOpacity(0.75);
+    BorderPane.setAlignment(infoBox, Pos.BOTTOM_RIGHT);
+    BorderPane.setMargin(infoBox, new Insets(5));
+    BorderPane bp = new BorderPane(null, null, null, infoBox, null);
+    bp.setPickOnBounds(false);
+    StackPane sp = new StackPane(mediaView, bp);
+    setCenter(sp);
+
+    Button left = getLeftButton();
+    Button select = getSelectButton(selectListener);
+    Button right = getRightButton();
+    configurePlayPauseButton();
+    Button close = getCloseButton();
+    Button shuffle = getShuffleButton();
+    Button reverse = getReverseButton();
+
+    configureIndexTextField();
+    indexTextField.setPrefWidth(50);
+    indexTextField.setAlignment(Pos.CENTER_RIGHT);
+    HBox countHBox = new HBox(indexTextField, totalLabel);
+    countHBox.setAlignment(Pos.CENTER);
+    HBox h = new HBox(5, left, select, playPauseButton, right, countHBox);
+    h.setAlignment(Pos.CENTER);
+    bp = new BorderPane(h, null, close, null, new HBox(5, shuffle, reverse));
+    bp.setPadding(new Insets(5));
+    setBottom(bp);
+  }
+
+  private Button getReverseButton() {
+    Button reverse = new Button("Reverse");
+    reverse.setOnAction(event -> reverse());
+    return reverse;
+  }
+
+  private Button getShuffleButton() {
+    Button shuffle = new Button("Shuffle");
+    shuffle.setOnAction(event -> shuffle());
+    return shuffle;
+  }
+
+  private Button getCloseButton() {
+    Button close = new Button("Close");
+    close.setOnAction(event -> close());
+    return close;
+  }
+
+  private void configurePlayPauseButton() {
+    playPauseButton.setOnAction(event -> {
+      if (currentTimerTask == null) {
+        startSlideShow();
+        playPauseButton.setText("Pause");
+      } else {
+        currentTimerTask.cancel();
+        currentTimerTask = null;
+        playPauseButton.setText("Play");
+      }
+    });
+  }
+
+  private Button getRightButton() {
+    Button right = new Button("->");
+    right.setOnAction(event -> previewNext());
+    return right;
+  }
+
+  private Button getSelectButton(ObjectListener<Item> selectListener) {
+    Button select = new Button("Select");
+    select.setOnAction(event -> {
+      if (showing != null && selectListener != null) {
+        selectListener.pass(showing);
+      }
+    });
+    return select;
+  }
+
+  private Button getLeftButton() {
+    Button left = new Button("<-");
+    left.setOnAction(event -> previewLast());
+    return left;
+  }
+
+  private void configureIndexTextField() {
+    indexTextField.setOnAction(event -> {
+      int i = items.indexOf(showing);
+      try {
+        int temp = Integer.parseInt(indexTextField.getText()) - 1;
+        i = Math.max(0, Math.min(temp, items.size() - 1)); // Clamp to valid indices
+      } catch (NumberFormatException e) {
+        // Nothing
+      }
+
+      preview(items.get(i));
+      requestFocus();
+    });
+  }
+
+  private void registerKeyEvents() {
     addEventHandler(KeyEvent.KEY_PRESSED, event -> {
       if (event.getCode() == KeyCode.LEFT) {
         previewLast();
@@ -100,75 +208,6 @@ public class SlideshowScreen extends Screen {
         event.consume();
       }
     });
-
-    getStyleClass().addAll(ROOT_STYLE_CLASS);
-
-    mediaView.setRepeat(true);
-    mediaView.setMute(false);
-    infoBox.setMaxWidth(USE_PREF_SIZE);
-    infoBox.setAlignment(Pos.BOTTOM_RIGHT);
-    infoBox.setOpacity(0.75);
-    BorderPane.setAlignment(infoBox, Pos.BOTTOM_RIGHT);
-    BorderPane.setMargin(infoBox, new Insets(5));
-    BorderPane bp = new BorderPane(null, null, null, infoBox, null);
-    bp.setPickOnBounds(false);
-    StackPane sp = new StackPane(mediaView, bp);
-    setCenter(sp);
-
-    Button left = new Button("<-");
-    left.setOnAction(event -> previewLast());
-
-    Button select = new Button("Select");
-    select.setOnAction(event -> {
-      if (showing != null && selectListener != null) {
-        selectListener.pass(showing);
-      }
-    });
-
-    Button right = new Button("->");
-    right.setOnAction(event -> previewNext());
-
-    playPauseButton.setOnAction(event -> {
-      if (currentTimerTask == null) {
-        startSlideShow();
-        playPauseButton.setText("Pause");
-      } else {
-        currentTimerTask.cancel();
-        currentTimerTask = null;
-        playPauseButton.setText("Play");
-      }
-    });
-
-    Button close = new Button("Close");
-    close.setOnAction(event -> close());
-
-    Button shuffle = new Button("Shuffle");
-    shuffle.setOnAction(event -> shuffle());
-
-    Button reverse = new Button("Reverse");
-    reverse.setOnAction(event -> reverse());
-
-    indexTextField.setOnAction(event -> {
-      int i = items.indexOf(showing);
-      try {
-        int temp = Integer.parseInt(indexTextField.getText()) - 1;
-        i = Math.max(0, Math.min(temp, items.size() - 1)); // Clamp to valid indices
-      } catch (NumberFormatException e) {
-        // Nothing
-      }
-
-      preview(items.get(i));
-      requestFocus();
-    });
-    indexTextField.setPrefWidth(50);
-    indexTextField.setAlignment(Pos.CENTER_RIGHT);
-    HBox countHBox = new HBox(indexTextField, totalLabel);
-    countHBox.setAlignment(Pos.CENTER);
-    HBox h = new HBox(5, left, select, playPauseButton, right, countHBox);
-    h.setAlignment(Pos.CENTER);
-    bp = new BorderPane(h, null, close, null, new HBox(5, shuffle, reverse));
-    bp.setPadding(new Insets(5));
-    setBottom(bp);
   }
 
   /**
@@ -228,7 +267,7 @@ public class SlideshowScreen extends Screen {
   /**
    * @return Currently displayed item.
    */
-  public Item getShowing() {
+  private Item getShowing() {
     return showing;
   }
 
@@ -265,14 +304,25 @@ public class SlideshowScreen extends Screen {
     };
 
     mediaView.stop();
+    confirmDeleteFile(deleteFile, onFinish);
+  }
+
+  private void confirmDeleteFile(boolean deleteFile, PokeListener onFinish) {
+    final var confirmationScreen = new ConfirmationScreen();
     if (deleteFile) {
-      new ConfirmationScreen().open(getManager(), "Delete files",
-          "Permanently delete selected files? (1 file)\n\n" +
-          "This action CANNOT be undone (files will be deleted)", onFinish, null);
+      final var screenTitle = "Delete files";
+      final var screenMessage = """
+          Permanently delete selected files? (1 file)
+                                    
+          This action CANNOT be undone (files will be deleted)""";
+      confirmationScreen.open(getManager(), screenTitle, screenMessage, onFinish, null);
     } else {
-      new ConfirmationScreen().open(getManager(), "Forget files",
-          "Remove selected files from database? (1 file)\n\n" + "This action CANNOT be undone",
-          onFinish, null);
+      final var screenTitle = "Forget files";
+      final var screenMessage = """
+          Remove selected files from database? (1 file)
+                
+          This action CANNOT be undone""";
+      confirmationScreen.open(getManager(), screenTitle, screenMessage, onFinish, null);
     }
   }
 
@@ -363,12 +413,19 @@ public class SlideshowScreen extends Screen {
     }
   }
 
-  public void startSlideShow() {
+  private void startSlideShow() {
     if (currentTimerTask != null) {
       currentTimerTask.cancel();
     }
 
-    currentTimerTask = new TimerTask() {
+    currentTimerTask = createSlideShowTimerTask();
+
+    final long intervalMillis = (long) (getInterval() * 1000);
+    timer.schedule(currentTimerTask, intervalMillis, intervalMillis);
+  }
+
+  private TimerTask createSlideShowTimerTask() {
+    return new TimerTask() {
       @Override
       public void run() {
         if (showing == null) {
@@ -393,24 +450,17 @@ public class SlideshowScreen extends Screen {
         return super.cancel();
       }
     };
-
-    final long interval = (long) (getInterval() * 1000);
-    timer.schedule(currentTimerTask, interval, interval);
   }
 
   public DoubleProperty intervalProperty() {
     return interval;
   }
 
-  public double getInterval() {
+  private double getInterval() {
     return interval.get();
   }
 
-  public void setInterval(double d) {
-    interval.set(d);
-  }
-
-  public boolean isPreload() {
+  private boolean isPreload() {
     return preload.get();
   }
 
