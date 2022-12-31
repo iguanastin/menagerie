@@ -103,12 +103,8 @@ public class DuplicatesScreen extends Screen {
     getStyleClass().addAll(ROOT_STYLE_CLASS);
 
     // ---------------------------------------------- Center Element -----------------------------------------------
-    registerContextMenuRequestedEvent(leftMediaView, "Add tags to other -->",
-        currentPair.getObject1(), currentPair.getObject2());
-    registerContextMenuRequestedEvent(rightMediaView, "<-- Add tags to other",
-        currentPair.getObject2(), currentPair.getObject1());
-    registerCellFactory(leftTagList, currentPair.getObject2(), currentPair.getObject1());
-    registerCellFactory(rightTagList, currentPair.getObject1(), currentPair.getObject2());
+    registerContextMenuRequestedEvents();
+    registerCellFactories();
     configureCenterElements();
     addSplitPane();
 
@@ -117,6 +113,124 @@ public class DuplicatesScreen extends Screen {
     bottom.setPadding(new Insets(5));
     constructFirstElement(bottom);
     constructSecondElement(bottom);
+  }
+
+  private void registerCellFactories() {
+    leftTagList.setCellFactory(param -> {
+      // TODO
+      TagListCell c = new TagListCell(null, null) {
+        private final PseudoClass otherHasPseudoClass = PseudoClass.getPseudoClass("other-missing");
+
+        private final BooleanProperty otherMissing = new BooleanPropertyBase() {
+          @Override
+          protected void invalidated() {
+            pseudoClassStateChanged(otherHasPseudoClass, get());
+          }
+
+          @Override
+          public Object getBean() {
+            return this;
+          }
+
+          @Override
+          public String getName() {
+            return "otherMissing";
+          }
+        };
+
+        @Override
+        protected void updateItem(Tag tag, boolean empty) {
+          super.updateItem(tag, empty);
+
+          otherMissing.set(tag != null && !currentPair.getObject2().hasTag(tag));
+        }
+      };
+
+      MenuItem addToOther = new MenuItem("Add to other");
+      addToOther.setOnAction(event -> currentPair.getObject2().addTag(c.getItem()));
+      MenuItem removeTag = new MenuItem("Remove tag");
+      removeTag.setOnAction(event -> currentPair.getObject1().removeTag(c.getItem()));
+      ContextMenu cm = new ContextMenu(addToOther, new SeparatorMenuItem(), removeTag);
+      c.setOnContextMenuRequested(
+          event -> cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY()));
+      return c;
+    });
+    rightTagList.setCellFactory(param -> {
+      // TODO
+      TagListCell c = new TagListCell(null, null) {
+        private final PseudoClass otherHasPseudoClass = PseudoClass.getPseudoClass("other-missing");
+
+        private final BooleanProperty otherMissing = new BooleanPropertyBase() {
+          @Override
+          protected void invalidated() {
+            pseudoClassStateChanged(otherHasPseudoClass, get());
+          }
+
+          @Override
+          public Object getBean() {
+            return this;
+          }
+
+          @Override
+          public String getName() {
+            return "otherMissing";
+          }
+        };
+
+        @Override
+        protected void updateItem(Tag tag, boolean empty) {
+          super.updateItem(tag, empty);
+
+          otherMissing.set(tag != null && !currentPair.getObject1().hasTag(tag));
+        }
+      };
+
+      MenuItem addToOther = new MenuItem("Add to other");
+      addToOther.setOnAction(event -> currentPair.getObject1().addTag(c.getItem()));
+      MenuItem removeTag = new MenuItem("Remove tag");
+      removeTag.setOnAction(event -> currentPair.getObject2().removeTag(c.getItem()));
+      ContextMenu cm = new ContextMenu(addToOther, new SeparatorMenuItem(), removeTag);
+      c.setOnContextMenuRequested(
+          event -> cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY()));
+      return c;
+    });
+  }
+
+  private void registerContextMenuRequestedEvents() {
+    leftMediaView.setOnContextMenuRequested(event -> {
+      MenuItem select = new MenuItem("Select in explorer");
+      MenuItem combineTags = new MenuItem("Add tags to other -->");
+      ContextMenu cm = new ContextMenu(select, combineTags);
+      select.setOnAction(event1 -> {
+        if (selectListener != null) {
+          selectListener.pass(currentPair.getObject1());
+        }
+        cm.hide();
+        close();
+      });
+      combineTags.setOnAction(event1 -> {
+        currentPair.getObject1().getTags().forEach(tag -> currentPair.getObject2().addTag(tag));
+        cm.hide();
+      });
+      cm.show(leftMediaView.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+    });
+    rightMediaView.setOnContextMenuRequested(event -> {
+      MenuItem select = new MenuItem("Select in explorer");
+      MenuItem combineTags = new MenuItem("<-- Add tags to other");
+      ContextMenu cm = new ContextMenu(select, combineTags);
+      select.setOnAction(event1 -> {
+        if (selectListener != null) {
+          selectListener.pass(currentPair.getObject2());
+        }
+        cm.hide();
+        close();
+      });
+      combineTags.setOnAction(event1 -> {
+        currentPair.getObject2().getTags().forEach(tag -> currentPair.getObject1().addTag(tag));
+        cm.hide();
+      });
+      cm.show(rightMediaView.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+    });
   }
 
   private void constructSecondElement(VBox bottom) {
@@ -205,69 +319,6 @@ public class DuplicatesScreen extends Screen {
     rightInfoBox.setMaxHeight(USE_PREF_SIZE);
     rightInfoBox.setOpacity(0.75);
     BorderPane.setAlignment(rightInfoBox, Pos.BOTTOM_RIGHT);
-  }
-
-  private void registerCellFactory(ListView<Tag> tagListView, MediaItem obj1, MediaItem obj2) {
-    tagListView.setCellFactory(param -> {
-      // TODO
-      TagListCell c = new TagListCell(null, null) {
-        private final PseudoClass otherHasPseudoClass = PseudoClass.getPseudoClass("other-missing");
-
-        private final BooleanProperty otherMissing = new BooleanPropertyBase() {
-          @Override
-          protected void invalidated() {
-            pseudoClassStateChanged(otherHasPseudoClass, get());
-          }
-
-          @Override
-          public Object getBean() {
-            return this;
-          }
-
-          @Override
-          public String getName() {
-            return "otherMissing";
-          }
-        };
-
-        @Override
-        protected void updateItem(Tag tag, boolean empty) {
-          super.updateItem(tag, empty);
-
-          otherMissing.set(tag != null && !obj1.hasTag(tag));
-        }
-      };
-
-      MenuItem addToOther = new MenuItem("Add to other");
-      addToOther.setOnAction(event -> obj1.addTag(c.getItem()));
-      MenuItem removeTag = new MenuItem("Remove tag");
-      removeTag.setOnAction(event -> obj2.removeTag(c.getItem()));
-      ContextMenu cm = new ContextMenu(addToOther, new SeparatorMenuItem(), removeTag);
-      c.setOnContextMenuRequested(
-          event -> cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY()));
-      return c;
-    });
-  }
-
-  private void registerContextMenuRequestedEvent(DynamicMediaView mediaView, String menuItemLabel,
-                                                 MediaItem obj1, MediaItem obj2) {
-    mediaView.setOnContextMenuRequested(event -> {
-      MenuItem select = new MenuItem("Select in explorer");
-      MenuItem combineTags = new MenuItem(menuItemLabel);
-      ContextMenu cm = new ContextMenu(select, combineTags);
-      select.setOnAction(event1 -> {
-        if (selectListener != null) {
-          selectListener.pass(obj1);
-        }
-        cm.hide();
-        close();
-      });
-      combineTags.setOnAction(event1 -> {
-        obj1.getTags().forEach(obj2::addTag);
-        cm.hide();
-      });
-      cm.show(mediaView.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-    });
   }
 
   private void registerKeyEvents() {
