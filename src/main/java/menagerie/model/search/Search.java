@@ -28,134 +28,135 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
-import menagerie.model.search.rules.*;
+import menagerie.model.search.rules.SearchRule;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Data class that contains results of a search filtered and sorted by the given rules.
  */
 public class Search {
 
-    List<SearchRule> rules = new ArrayList<>();
-    private final boolean showGrouped;
-    private final boolean descending;
-    private final boolean shuffled;
-    private final String searchString;
+  List<SearchRule> rules = new ArrayList<>();
+  private final boolean showGrouped;
+  private final boolean descending;
+  private final boolean shuffled;
+  private final String searchString;
 
-    private final ObservableList<Item> results = FXCollections.observableArrayList();
+  private final ObservableList<Item> results = FXCollections.observableArrayList();
 
-    protected Comparator<Item> comparator;
+  protected Comparator<Item> comparator;
 
+  /**
+   * Constructs a search with given rules.
+   *
+   * @param search      User input string to parse.
+   * @param descending  Sort the results descending.
+   * @param showGrouped Show items that are part of a group.
+   */
+  public Search(String search, boolean descending, boolean showGrouped, boolean shuffled) {
+    this.descending = descending;
+    this.showGrouped = showGrouped;
+    this.shuffled = shuffled;
+    this.searchString = search;
 
-    /**
-     * Constructs a search with given rules.
-     *
-     * @param search      User input string to parse.
-     * @param descending  Sort the results descending.
-     * @param showGrouped Show items that are part of a group.
-     */
-    public Search(String search, boolean descending, boolean showGrouped, boolean shuffled) {
-        this.descending = descending;
-        this.showGrouped = showGrouped;
-        this.shuffled = shuffled;
-        this.searchString = search;
+    if (search != null && !search.isEmpty()) {
+      rules = SearchRuleParser.parseRules(search);
+    }
+    rules.sort(null);
 
-        if (search != null && !search.isEmpty()) {
-            rules = SearchRuleParser.parseRules(search);
+    comparator = (o1, o2) -> {
+      if (shuffled) {
+        return 0;
+      }
+      if (descending) {
+        return o2.getId() - o1.getId();
+      } else {
+        return o1.getId() - o2.getId();
+      }
+    };
+  }
+
+  /**
+   * @return List of all results currently in the search. Is a direct reference to the backing list.
+   */
+  public ObservableList<Item> getResults() {
+    return results;
+  }
+
+  public String getSearchString() {
+    return searchString;
+  }
+
+  public boolean isDescending() {
+    return descending;
+  }
+
+  public boolean isShowGrouped() {
+    return showGrouped;
+  }
+
+  public boolean isShuffled() {
+    return shuffled;
+  }
+
+  /**
+   * @return The comparator being used to sort search results.
+   */
+  public Comparator<Item> getComparator() {
+    return comparator;
+  }
+
+  /**
+   * Checks items to see if they need to be removed from or added to this search.
+   *
+   * @param check Items to check.
+   */
+  public void refreshSearch(List<Item> check) {
+    List<Item> toRemove = new ArrayList<>();
+    List<Item> toAdd = new ArrayList<>();
+    for (Item item : check) {
+      if (isItemValid(item)) {
+        if (!results.contains(item)) {
+          toAdd.add(item);
         }
-        rules.sort(null);
-
-        comparator = (o1, o2) -> {
-            if (shuffled) return 0;
-            if (descending) {
-                return o2.getId() - o1.getId();
-            } else {
-                return o1.getId() - o2.getId();
-            }
-        };
+      } else {
+        toRemove.add(item);
+      }
     }
 
-    /**
-     * @return List of all results currently in the search. Is a direct reference to the backing list.
-     */
-    public ObservableList<Item> getResults() {
-        return results;
+    sort();
+
+    results.removeAll(toRemove);
+    if (isShuffled()) {
+      toAdd.forEach(item -> results.add((int) Math.floor(Math.random() * results.size()), item));
+    } else {
+      results.addAll(toAdd);
+    }
+  }
+
+  protected boolean isItemValid(Item item) {
+    if (item.isInvalidated()) {
+      return false;
     }
 
-    public String getSearchString() {
-        return searchString;
-    }
-
-    public boolean isDescending() {
-        return descending;
-    }
-
-    public boolean isShowGrouped() {
-        return showGrouped;
-    }
-
-    public boolean isShuffled() {
-        return shuffled;
-    }
-
-    /**
-     * @return The comparator being used to sort search results.
-     */
-    public Comparator<Item> getComparator() {
-        return comparator;
-    }
-
-    /**
-     * Checks items to see if they need to be removed from or added to this search.
-     *
-     * @param check Items to check.
-     */
-    public void refreshSearch(List<Item> check) {
-        List<Item> toRemove = new ArrayList<>();
-        List<Item> toAdd = new ArrayList<>();
-        for (Item item : check) {
-            // REENG: only consider item if it is "valid". This is used as a filter for GroupSearch
-            if (isItemValid(item)) {
-                if (!results.contains(item)) {
-                    toAdd.add(item);
-                }
-            } else {
-                toRemove.add(item);
-            }
+    if (item instanceof MediaItem && ((MediaItem) item).isInGroup() && !showGrouped) {
+      return false;
+    } else {
+      for (SearchRule rule : rules) {
+        if (!rule.accept(item)) {
+          return false;
         }
-
-        sort();
-
-        results.removeAll(toRemove);
-        if (isShuffled()) {
-            toAdd.forEach(item -> results.add((int) Math.floor(Math.random() * results.size()), item));
-        } else {
-            results.addAll(toAdd);
-        }
+      }
     }
 
-    protected boolean isItemValid(Item item) {
-        if (item.isInvalidated()) return false;
+    return true;
+  }
 
-        if (item instanceof MediaItem && ((MediaItem) item).isInGroup() && !showGrouped) {
-            return false;
-        } else {
-            for (SearchRule rule : rules) {
-                if (!rule.accept(item)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    public void sort() {
-        results.sort(getComparator());
-    }
+  public void sort() {
+    results.sort(getComparator());
+  }
 
 }
