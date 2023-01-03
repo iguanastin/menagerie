@@ -49,27 +49,16 @@ public class MissingRule extends SearchRule {
   }
 
   @Override
-  public boolean accept(Item item) {
-    boolean result = false;
+  protected boolean checkRule(Item item) {
     if (item instanceof MediaItem) {
-      switch (type) {
-        case MD5:
-          result = ((MediaItem) item).getMD5() == null;
-          break;
-        case FILE:
-          result = ((MediaItem) item).getFile() == null || !((MediaItem) item).getFile().exists();
-          break;
-        case HISTOGRAM:
-          result = ((MediaItem) item).getHistogram() == null;
-          break;
-      }
+      return switch (type) {
+        case MD5 -> ((MediaItem) item).getMD5() == null;
+        case FILE -> ((MediaItem) item).getFile() == null || !((MediaItem) item).getFile().exists();
+        case HISTOGRAM -> ((MediaItem) item).getHistogram() == null;
+      };
+    } else {
+      return false;
     }
-
-    if (isInverted()) {
-      result = !result;
-    }
-
-    return result;
   }
 
   @Override

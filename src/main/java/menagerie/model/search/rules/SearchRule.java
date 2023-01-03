@@ -61,7 +61,21 @@ public abstract class SearchRule implements Comparable<SearchRule> {
    * @param item Item to check.
    * @return True if the item is accepted by this rule.
    */
-  public abstract boolean accept(Item item);
+  public boolean accept(Item item) {
+    boolean result = checkRule(item);
+    if (isInverted()) {
+      result = !result;
+    }
+    return result;
+  }
+
+  /**
+   * Check if an item aligns with the non-inverted rule.
+   *
+   * @param item Item to check.
+   * @return True if the item is accepted by the non-inverted rule.
+   */
+  protected abstract boolean checkRule(Item item);
 
   @Override
   public int compareTo(SearchRule o) {
