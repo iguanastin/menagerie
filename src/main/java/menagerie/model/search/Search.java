@@ -24,34 +24,26 @@
 
 package menagerie.model.search;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
-import menagerie.model.search.rules.DateAddedRule;
-import menagerie.model.search.rules.FilePathRule;
-import menagerie.model.search.rules.IDRule;
-import menagerie.model.search.rules.MissingRule;
 import menagerie.model.search.rules.SearchRule;
-import menagerie.model.search.rules.TagCountRule;
-import menagerie.model.search.rules.TagRule;
-import menagerie.model.search.rules.TitleRule;
-import menagerie.model.search.rules.TypeRule;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Data class that contains results of a search filtered and sorted by the given rules.
  */
 public class Search {
 
-    List<SearchRule> rules = new ArrayList<>();
-    private final boolean showGrouped;
-    private final boolean descending;
-    private final boolean shuffled;
-    private final String searchString;
+  List<SearchRule> rules = new ArrayList<>();
+  private final boolean showGrouped;
+  private final boolean descending;
+  private final boolean shuffled;
+  private final String searchString;
 
   private final ObservableList<Item> results = FXCollections.observableArrayList();
 
@@ -70,10 +62,10 @@ public class Search {
     this.shuffled = shuffled;
     this.searchString = search;
 
-        if (search != null && !search.isEmpty()) {
-            rules = SearchRuleParser.parseRules(search);
-        }
-        rules.sort(null);
+    if (search != null && !search.isEmpty()) {
+      rules = SearchRuleParser.parseRules(search);
+    }
+    rules.sort(null);
 
     comparator = (o1, o2) -> {
       if (shuffled) {
@@ -87,12 +79,12 @@ public class Search {
     };
   }
 
-    /**
-     * @return List of all results currently in the search. Is a direct reference to the backing list.
-     */
-    public ObservableList<Item> getResults() {
-        return results;
-    }
+  /**
+   * @return List of all results currently in the search. Is a direct reference to the backing list.
+   */
+  public ObservableList<Item> getResults() {
+    return results;
+  }
 
   public String getSearchString() {
     return searchString;
@@ -150,15 +142,15 @@ public class Search {
       return false;
     }
 
-        if (item instanceof MediaItem && ((MediaItem) item).isInGroup() && !showGrouped) {
-            return false;
-        } else {
-            for (SearchRule rule : rules) {
-                if (!rule.accept(item)) {
-                    return false;
-                }
-            }
+    if (item instanceof MediaItem && ((MediaItem) item).isInGroup() && !showGrouped) {
+      return false;
+    } else {
+      for (SearchRule rule : rules) {
+        if (!rule.accept(item)) {
+          return false;
         }
+      }
+    }
 
     return true;
   }

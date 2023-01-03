@@ -12,29 +12,29 @@ import java.util.Collection;
  */
 public class TestItem extends Item {
 
-    public TestItem(Menagerie menagerie, int id, long dateAdded) {
-        super(menagerie, id, dateAdded);
-    }
+  public TestItem(Menagerie menagerie, int id, long dateAdded) {
+    super(menagerie, id, dateAdded);
+  }
 
-    @Override
-    public Thumbnail getThumbnail() {
-        return null;
-    }
+  @Override
+  public Thumbnail getThumbnail() {
+    return null;
+  }
 
-    @Override
-    public void purgeThumbnail() {
-        // nothing
-    }
+  @Override
+  public void purgeThumbnail() {
+    // nothing
+  }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+  public void setId(int id) {
+    this.id = id;
+  }
 
-    public void setDateAdded(long dateAdded) {
-        this.dateAdded = dateAdded;
-    }
+  public void setDateAdded(long dateAdded) {
+    this.dateAdded = dateAdded;
+  }
 
-    public void setTags(Collection<Tag> tags) {
-        this.tags.addAll(tags);
-    }
+  public void setTags(Collection<Tag> tags) {
+    this.tags.addAll(tags);
+  }
 }
