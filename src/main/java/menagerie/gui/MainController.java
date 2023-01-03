@@ -40,22 +40,20 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
-import java.util.logging.Handler;
 import java.util.logging.Level;
-import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
@@ -92,6 +90,7 @@ import menagerie.MenageriePlugin;
 import menagerie.duplicates.DuplicateFinder;
 import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.grid.ItemGridView;
+import menagerie.gui.handler.LoggerHandler;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.media.DynamicVideoView;
 import menagerie.gui.predictive.PredictiveTextField;
@@ -108,13 +107,13 @@ import menagerie.gui.screens.dialogs.TextDialogScreen;
 import menagerie.gui.screens.duplicates.DuplicateOptionsScreen;
 import menagerie.gui.screens.findonline.FindOnlineScreen;
 import menagerie.gui.screens.importer.ImporterScreen;
-import menagerie.gui.screens.log.LogItem;
 import menagerie.gui.screens.log.LogListCell;
 import menagerie.gui.screens.log.LogScreen;
 import menagerie.gui.screens.move.MoveFilesScreen;
 import menagerie.gui.screens.settings.SettingsScreen;
 import menagerie.gui.taglist.SimpleCSSColorPicker;
 import menagerie.gui.taglist.TagListCell;
+import menagerie.gui.util.UnreadLogFlag;
 import menagerie.model.PluginLoader;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.GroupItem;
@@ -134,6 +133,7 @@ import menagerie.util.CancellableThread;
 import menagerie.util.FileUtil;
 import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
+import menagerie.util.listeners.ObjectListener;
 
 public class MainController {
 
@@ -210,10 +210,12 @@ public class MainController {
    * The Menagerie environment this application is using.
    */
   private final Menagerie menagerie;
+
   /**
    * History of tag edit events.
    */
-  private final Stack<TagEditEvent> tagEditHistory = new Stack<>();
+  private final Deque<TagEditEvent> tagEditHistory = new ArrayDeque<>();
+
   /**
    * List of loaded plugins. Populated during initialization
    */
@@ -224,26 +226,32 @@ public class MainController {
    * Clipboard content object used by this application.
    */
   private final ClipboardContent clipboard = new ClipboardContent();
+
   /**
    * Current search that is active and being shown in the item grid.
    */
   private Search currentSearch = null;
+
   /**
    * Item that is currently being displayed in the preview viewport.
    */
   private Item currentlyPreviewing = null;
+
   /**
    * The last string that was used to edit tags.
    */
   private String lastEditTagString = null;
+
   /**
    * Variable used to track drag status of items from the item grid.
    */
   private boolean itemGridViewDragging = false;
+
   /**
    * Search history stack
    */
-  private final Stack<SearchHistory> searchHistory = new Stack<>();
+  private final Deque<SearchHistory> searchHistory = new ArrayDeque<>();
+
   /**
    * Tag listener used to update tag list for currently previewed item
    */
@@ -254,6 +262,7 @@ public class MainController {
       tagListView.getItems().sort(Comparator.comparing(Tag::getName));
     }
   };
+
   /**
    * Search listener listening for items being added or removed from the current search
    */
@@ -311,42 +320,14 @@ public class MainController {
   /**
    * Flag set when an unread error log is present
    */
-  private final BooleanProperty logError = new BooleanPropertyBase() {
-    @Override
-    protected void invalidated() {
-      logButton.pseudoClassStateChanged(logErrorPseudoClass, get());
-    }
-
-    @Override
-    public Object getBean() {
-      return logButton.getClass();
-    }
-
-    @Override
-    public String getName() {
-      return "error";
-    }
-  };
+  private final BooleanProperty logError =
+      new UnreadLogFlag(logButton, logErrorPseudoClass, "error");
 
   /**
    * Flag set when an unread warning log is present
    */
-  private final BooleanProperty logWarning = new BooleanPropertyBase() {
-    @Override
-    protected void invalidated() {
-      logButton.pseudoClassStateChanged(logWarningPseudoClass, get());
-    }
-
-    @Override
-    public Object getBean() {
-      return logButton.getClass();
-    }
-
-    @Override
-    public String getName() {
-      return "warning";
-    }
-  };
+  private final BooleanProperty logWarning =
+      new UnreadLogFlag(logButton, logWarningPseudoClass, "warning");
 
   // --------------------------------- Threads -------------------------------------
   /**
@@ -415,44 +396,60 @@ public class MainController {
 
     // Things to run on first "tick"
     Platform.runLater(() -> {
+
       //Apply window props and listeners
       initWindowPropertiesAndListeners();
 
       initAltTabbingFix();
 
       //Init closeRequest handling on window
-      rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
+      initCloseEventHandler();
 
-      // Apply a default search
-      applySearch(null, null, listDescendingToggleButton.isSelected(),
-          showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
-
-      // Init folder watcher
-      if (settings.autoImportGroup.isEnabled()) {
-        startWatchingFolderForImages(settings.autoImportFolder.getValue(),
-            settings.autoImportMove.getValue());
-      }
-
-      // Show help screen if setting is set
-      if (settings.helpOnStart.getValue()) {
-        screenPane.open(helpScreen);
-        settings.helpOnStart.setValue(false);
-      }
+      applyDefaultSearch();
+      initFolderWatcher();
+      showHelpScreen();
 
       // Init user-accepted filetypes in filters
-      if (settings.userFileTypes.getValue() != null &&
-          !settings.userFileTypes.getValue().trim().isEmpty()) {
-        Filters.USER_EXTS.addAll(
-            Arrays.asList(settings.userFileTypes.getValue().trim().split(" ")));
-      }
-      settings.userFileTypes.valueProperty().addListener((observable, oldValue, newValue) -> {
-        Filters.USER_EXTS.clear();
-
-        if (newValue != null && !newValue.isEmpty()) {
-          Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
-        }
-      });
+      initUserAcceptedFiletypes();
     });
+  }
+
+  private void initUserAcceptedFiletypes() {
+    if (settings.userFileTypes.getValue() != null &&
+        !settings.userFileTypes.getValue().trim().isEmpty()) {
+      Filters.USER_EXTS.addAll(
+          Arrays.asList(settings.userFileTypes.getValue().trim().split(" ")));
+    }
+    settings.userFileTypes.valueProperty().addListener((observable, oldValue, newValue) -> {
+      Filters.USER_EXTS.clear();
+
+      if (newValue != null && !newValue.isEmpty()) {
+        Filters.USER_EXTS.addAll(Arrays.asList(newValue.trim().split(" ")));
+      }
+    });
+  }
+
+  private void initCloseEventHandler() {
+    rootPane.getScene().getWindow().setOnCloseRequest(event -> cleanExit(false));
+  }
+
+  private void showHelpScreen() {
+    if (settings.helpOnStart.getValue()) {
+      screenPane.open(helpScreen);
+      settings.helpOnStart.setValue(false);
+    }
+  }
+
+  private void initFolderWatcher() {
+    if (settings.autoImportGroup.isEnabled()) {
+      startWatchingFolderForImages(settings.autoImportFolder.getValue(),
+          settings.autoImportMove.getValue());
+    }
+  }
+
+  private void applyDefaultSearch() {
+    applySearch(null, null, listDescendingToggleButton.isSelected(),
+        showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
   }
 
   private void initDatabaseUpdateCounter() {
@@ -504,7 +501,7 @@ public class MainController {
         LOGGER.log(Level.SEVERE, s, e);
       }
     }));
-    LOGGER.info("Loaded " + plugins.size() + " plugins");
+    LOGGER.info(() -> "Loaded " + plugins.size() + " plugins");
   }
 
   /**
@@ -522,58 +519,11 @@ public class MainController {
     // TagListScreen
     tagListScreen = new TagListScreen();
     tagListScreen.setCellFactory(param -> {
-      TagListCell c = new TagListCell(thing -> {
-        String text = searchTextField.getText();
-        if (text == null) {
-          text = "";
-        }
-        text = text.trim();
-        if (Arrays.asList(text.toLowerCase().split(" "))
-            .contains("-" + thing.getName().toLowerCase())) {
-          text = text.replaceAll("(^|\\s)-" + thing.getName(), " ");
-        } else if (!Arrays.asList(text.toLowerCase().split(" "))
-            .contains(thing.getName().toLowerCase())) {
-          if (!text.isEmpty() && !text.endsWith(" ")) {
-            text += " ";
-          }
-          text += thing.getName() + " ";
-        }
-        searchTextField.setText(text.trim());
-        searchTextField.requestFocus();
-        searchTextField.positionCaret(text.length());
-      }, thing -> {
-        String text = searchTextField.getText();
-        if (text == null) {
-          text = "";
-        }
-        text = text.trim();
-        if (Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
-          text = text.replaceAll("(^|\\s)" + thing.getName(), " ");
-        } else if (!Arrays.asList(text.toLowerCase().split(" "))
-            .contains("-" + thing.getName().toLowerCase())) {
-          if (!text.isEmpty() && !text.endsWith(" ")) {
-            text += " ";
-          }
-          text += "-" + thing.getName() + " ";
-        }
-        searchTextField.setText(text.trim());
-        searchTextField.requestFocus();
-        searchTextField.positionCaret(text.length());
-      });
-      c.setOnContextMenuRequested(event -> {
-        MenuItem i0 = new MenuItem("Add note");
-        i0.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note",
-            String.format("Add a note to tag '%s'", c.getItem().getName()), null,
-            note -> c.getItem().addNote(note), null));
-        ContextMenu m = new ContextMenu(i0, new SeparatorMenuItem());
-        m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-      });
-      c.setOnMouseClicked(event -> {
-        if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-          searchTextField.setText(c.getItem().getName() + " ");
-          searchTextField.positionCaret(searchTextField.getText().length());
-        }
-      });
+      final ObjectListener<Tag> addListener = this::getTagListCellAddListener;
+      final ObjectListener<Tag> removeListener = this::getTagListCellRemoveListener;
+      TagListCell c = new TagListCell(addListener, removeListener);
+      setTagListCellContextMenuEventListener(c);
+      setTagListCellMouseClickEventListener(c);
       return c;
     });
 
@@ -611,13 +561,74 @@ public class MainController {
         (observable, oldValue, newValue) -> explorerRootPane.setDisable(newValue != null));
   }
 
+  private void setTagListCellMouseClickEventListener(TagListCell c) {
+    c.setOnMouseClicked(event -> {
+      if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
+        searchTextField.setText(c.getItem().getName() + " ");
+        searchTextField.positionCaret(searchTextField.getText().length());
+      }
+    });
+  }
+
+  private void setTagListCellContextMenuEventListener(TagListCell c) {
+    c.setOnContextMenuRequested(event -> {
+      MenuItem menuItem = new MenuItem("Add note");
+      menuItem.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note",
+          String.format("Add a note to tag '%s'", c.getItem().getName()), null,
+          note -> c.getItem().addNote(note), null));
+      ContextMenu m = new ContextMenu(menuItem, new SeparatorMenuItem());
+      m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+    });
+  }
+
+  private void getTagListCellRemoveListener(Tag tag) {
+    String searchText = searchTextField.getText();
+    if (searchText == null) {
+      searchText = "";
+    }
+    searchText = searchText.trim();
+    final var searchTokens = searchText.toLowerCase().split(" ");
+    final var tagName = tag.getName();
+    if (Arrays.asList(searchTokens).contains(tagName.toLowerCase())) {
+      searchText = searchText.replaceAll("(^|\\s)" + tagName, " ");
+    } else if (!Arrays.asList(searchTokens).contains("-" + tagName.toLowerCase())) {
+      if (!searchText.isEmpty() && !searchText.endsWith(" ")) {
+        searchText += " ";
+      }
+      searchText += "-" + tagName + " ";
+    }
+    searchTextField.setText(searchText.trim());
+    searchTextField.requestFocus();
+    searchTextField.positionCaret(searchText.length());
+  }
+
+  private void getTagListCellAddListener(Tag tag) {
+    String searchText = searchTextField.getText();
+    if (searchText == null) {
+      searchText = "";
+    }
+    searchText = searchText.trim();
+    final var tagName = tag.getName();
+    final var searchTokens = searchText.toLowerCase().split(" ");
+    if (Arrays.asList(searchTokens).contains("-" + tagName.toLowerCase())) {
+      searchText = searchText.replaceAll("(^|\\s)-" + tagName, " ");
+    } else if (!Arrays.asList(searchTokens).contains(tagName.toLowerCase())) {
+      if (!searchText.isEmpty() && !searchText.endsWith(" ")) {
+        searchText += " ";
+      }
+      searchText += tagName + " ";
+    }
+    searchTextField.setText(searchText.trim());
+    searchTextField.requestFocus();
+    searchTextField.positionCaret(searchText.length());
+  }
+
   /**
    * Initializes the import screen, which displays queued/in-progress/failed imports
    */
   private void initImportScreen() {
     importerScreen = new ImporterScreen(importer,
-        pairs -> duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs),
-        this::selectItemInGridView);
+        this::resolveDuplicates, this::selectItemInGridView);
 
     final PseudoClass hasImportsPseudoClass = PseudoClass.getPseudoClass("has-imports");
     final BooleanProperty hasImports = new SimpleBooleanProperty();
@@ -629,16 +640,18 @@ public class MainController {
         .addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> {
           int count = c.getList().size() + importerScreen.getSimilar().size();
           importsButton.setText("Imports: " + count);
-
           hasImports.set(count > 0);
         }));
     importerScreen.getSimilar().addListener(
         (ListChangeListener<? super SimilarPair<MediaItem>>) c -> Platform.runLater(() -> {
           int count = c.getList().size() + importerScreen.getListView().getItems().size();
           importsButton.setText("Imports: " + count);
-
           hasImports.set(count > 0);
         }));
+  }
+
+  private void resolveDuplicates(List<SimilarPair<MediaItem>> pairs) {
+    duplicateOptionsScreen.getDuplicatesScreen().open(screenPane, menagerie, pairs);
   }
 
   /**
@@ -680,7 +693,8 @@ public class MainController {
 
     settings.autoImportGroup.enabledProperty()
         .addListener((observable, oldValue, newValue) -> Platform.runLater(() -> {
-          // Defer to later to ensure other settings get updated before any action is taken, since this operation relies on other settings
+          // Defer to later to ensure other settings get updated before any action is taken,
+          // since this operation relies on other settings
           if (folderWatcherThread != null) {
             folderWatcherThread.stopWatching();
           }
@@ -700,39 +714,7 @@ public class MainController {
     logScreen.getListView().setCellFactory(param -> new LogListCell());
     logButton.getStyleClass().addAll("log-button");
 
-    Main.MENAGERIE_LOGGER.addHandler(new Handler() {
-      @Override
-      public void publish(LogRecord logRecord) {
-        StringBuilder work = new StringBuilder(new Date(logRecord.getMillis()).toString());
-        work.append(" [").append(logRecord.getLevel()).append("]: ").append(logRecord.getMessage());
-        if (logRecord.getThrown() != null) {
-          work.append("\n").append(logRecord.getThrown().toString());
-          for (StackTraceElement e : logRecord.getThrown().getStackTrace()) {
-            work.append("\n    at ").append(e);
-          }
-        }
-        Platform.runLater(() -> {
-          LogItem item = new LogItem(work.toString(), logRecord.getLevel());
-          if (item.getLevel() == Level.SEVERE) {
-            logError.set(true);
-          } else if (item.getLevel() == Level.WARNING) {
-            logWarning.set(true);
-          }
-          logScreen.getListView().getItems().add(item);
-          if (logScreen.getListView().getItems().size() > 1000) {
-            logScreen.getListView().getItems().remove(0);
-          }
-        });
-      }
-
-      @Override
-      public void flush() {
-      }
-
-      @Override
-      public void close() throws SecurityException {
-      }
-    });
+    Main.MENAGERIE_LOGGER.addHandler(new LoggerHandler(logError, logWarning, logScreen));
   }
 
   /**
@@ -757,43 +739,13 @@ public class MainController {
     // Init predictive textfields
     initPredictiveTextFields();
 
-    // Init preview
-    previewMediaView.getImageView().getScale().addListener((observable, oldValue, newValue) -> {
-      if (newValue.doubleValue() == 1) {
-        explorerZoomLabel.setText(null);
-      } else {
-        explorerZoomLabel.setText(
-            String.format("%d%%", (int) (100 * (1 / newValue.doubleValue()))));
-      }
-    });
-    previewMediaView.setMute(settings.muteVideo.getValue());
-    previewMediaView.setRepeat(settings.repeatVideo.getValue());
+    initPreview();
 
-    // Init item info box
-    itemInfoBox.extendedProperty().addListener(
-        (observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
-    settings.expandItemInfo.valueProperty().addListener((observable, oldValue, newValue) -> {
-      itemInfoBox.setExtended(newValue);
-      slideshowScreen.getInfoBox().setExtended(newValue);
-      duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().setExtended(newValue);
-      duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().setExtended(newValue);
-    });
+    initItemInfoBox();
 
-    // Init scope label binding
-    scopeLabel.maxWidthProperty().bind(
-        scopeHBox.widthProperty().subtract(backButton.widthProperty())
-            .subtract(scopeHBox.getSpacing()));
+    initScopeLabelBinding();
 
-    // Init search button icons/tooltips
-    listDescendingToggleButton.setGraphic(
-        new ImageView(new Image(getClass().getResource("/misc/descending.png").toString())));
-    listDescendingToggleButton.setTooltip(new Tooltip("Descending order"));
-    showGroupedToggleButton.setGraphic(
-        new ImageView(new Image(getClass().getResource("/misc/opengroups.png").toString())));
-    showGroupedToggleButton.setTooltip(new Tooltip("Show group elements"));
-    shuffledSearchButton.setGraphic(
-        new ImageView(new Image(getClass().getResource("/misc/shuffle.png").toString())));
-    shuffledSearchButton.setTooltip(new Tooltip("Shuffle results"));
+    initSearchButtonIcons();
 
     // Init settings listeners
     settings.gridWidth.valueProperty()
@@ -804,10 +756,90 @@ public class MainController {
         .addListener((observable, oldValue, newValue) -> previewMediaView.setRepeat(newValue));
   }
 
+  private void initSearchButtonIcons() {
+    final var descendingIcon = new Image(getClass().getResource("/misc/descending.png").toString());
+    listDescendingToggleButton.setGraphic(new ImageView(descendingIcon));
+    listDescendingToggleButton.setTooltip(new Tooltip("Descending order"));
+    final var showGroupedIcon =
+        new Image(getClass().getResource("/misc/opengroups.png").toString());
+    showGroupedToggleButton.setGraphic(new ImageView(showGroupedIcon));
+    showGroupedToggleButton.setTooltip(new Tooltip("Show group elements"));
+    final var shuffleIcon = new Image(getClass().getResource("/misc/shuffle.png").toString());
+    shuffledSearchButton.setGraphic(new ImageView(shuffleIcon));
+    shuffledSearchButton.setTooltip(new Tooltip("Shuffle results"));
+  }
+
+  private void initScopeLabelBinding() {
+    scopeLabel.maxWidthProperty().bind(
+        scopeHBox.widthProperty().subtract(backButton.widthProperty())
+            .subtract(scopeHBox.getSpacing()));
+  }
+
+  private void initItemInfoBox() {
+    itemInfoBox.extendedProperty().addListener(
+        (observable, oldValue, newValue) -> settings.expandItemInfo.setValue(newValue));
+    settings.expandItemInfo.valueProperty().addListener((observable, oldValue, newValue) -> {
+      itemInfoBox.setExtended(newValue);
+      slideshowScreen.getInfoBox().setExtended(newValue);
+      duplicateOptionsScreen.getDuplicatesScreen().getLeftInfoBox().setExtended(newValue);
+      duplicateOptionsScreen.getDuplicatesScreen().getRightInfoBox().setExtended(newValue);
+    });
+  }
+
+  private void initPreview() {
+    previewMediaView.getImageView().getScale().addListener((observable, oldValue, newValue) -> {
+      if (newValue.doubleValue() == 1) {
+        explorerZoomLabel.setText(null);
+      } else {
+        explorerZoomLabel.setText(
+            String.format("%d%%", (int) (100 * (1 / newValue.doubleValue()))));
+      }
+    });
+    previewMediaView.setMute(settings.muteVideo.getValue());
+    previewMediaView.setRepeat(settings.repeatVideo.getValue());
+  }
+
   /**
    * Initializes the predictive text fields with option listeners
    */
   private void initPredictiveTextFields() {
+    initEditTagsTextField();
+    initSearchTextField();
+  }
+
+  private void initSearchTextField() {
+    searchTextField.setTop(false);
+    searchTextField.setOptionsListener(prefix -> {
+      prefix = prefix.toLowerCase();
+      boolean negative = prefix.startsWith("-");
+      if (negative) {
+        prefix = prefix.substring(1);
+      }
+
+      List<String> results = new ArrayList<>();
+
+      List<Tag> tags = new ArrayList<>(menagerie.getTags());
+
+      tags.sort((o1, o2) -> o2.getFrequency() - o1.getFrequency());
+      for (Tag tag : tags) {
+        if (tag.getName().toLowerCase().startsWith(prefix)) {
+          if (negative) {
+            results.add("-" + tag.getName());
+          } else {
+            results.add(tag.getName());
+          }
+        }
+
+        if (results.size() >= 8) {
+          break;
+        }
+      }
+
+      return results;
+    });
+  }
+
+  private void initEditTagsTextField() {
     editTagsTextField.setOptionsListener(prefix -> {
       prefix = prefix.toLowerCase();
       boolean negative = prefix.startsWith("-");
@@ -848,35 +880,6 @@ public class MainController {
 
       return results;
     });
-    searchTextField.setTop(false);
-    searchTextField.setOptionsListener(prefix -> {
-      prefix = prefix.toLowerCase();
-      boolean negative = prefix.startsWith("-");
-      if (negative) {
-        prefix = prefix.substring(1);
-      }
-
-      List<String> results = new ArrayList<>();
-
-      List<Tag> tags = new ArrayList<>(menagerie.getTags());
-
-      tags.sort((o1, o2) -> o2.getFrequency() - o1.getFrequency());
-      for (Tag tag : tags) {
-        if (tag.getName().toLowerCase().startsWith(prefix)) {
-          if (negative) {
-            results.add("-" + tag.getName());
-          } else {
-            results.add(tag.getName());
-          }
-        }
-
-        if (results.size() >= 8) {
-          break;
-        }
-      }
-
-      return results;
-    });
   }
 
   /**
@@ -884,114 +887,93 @@ public class MainController {
    */
   private void initExplorerTagListCellFactory() {
     tagListView.setCellFactory(param -> {
-      TagListCell c = new TagListCell(thing -> {
-        String text = searchTextField.getText();
-        if (text == null) {
-          text = "";
-        }
-        text = text.trim();
-        if (Arrays.asList(text.toLowerCase().split(" "))
-            .contains("-" + thing.getName().toLowerCase())) {
-          text = text.replaceAll("(^|\\s)-" + thing.getName(), " ");
-        } else if (!Arrays.asList(text.toLowerCase().split(" "))
-            .contains(thing.getName().toLowerCase())) {
-          if (!text.isEmpty() && !text.endsWith(" ")) {
-            text += " ";
-          }
-          text += thing.getName() + " ";
-        }
-        searchTextField.setText(text.trim());
-        searchTextField.requestFocus();
-        searchTextField.positionCaret(text.length());
-      }, thing -> {
-        String text = searchTextField.getText();
-        if (text == null) {
-          text = "";
-        }
-        text = text.trim();
-        if (Arrays.asList(text.toLowerCase().split(" ")).contains(thing.getName().toLowerCase())) {
-          text = text.replaceAll("(^|\\s)" + thing.getName(), " ");
-        } else if (!Arrays.asList(text.toLowerCase().split(" "))
-            .contains("-" + thing.getName().toLowerCase())) {
-          if (!text.isEmpty() && !text.endsWith(" ")) {
-            text += " ";
-          }
-          text += "-" + thing.getName() + " ";
-        }
-        searchTextField.setText(text.trim());
-        searchTextField.requestFocus();
-        searchTextField.positionCaret(text.length());
-      });
-      // TODO: Make a custom popup that encompasses all the tag controls?
-      c.setOnContextMenuRequested(event -> {
-        if (c.getItem() != null) {
-          // TODO Transfer all of this to TagListCell class and use listeners/callbacks
-          MenuItem addNote = new MenuItem("Add note");
-          addNote.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note",
-              String.format("Add a note to tag '%s'", c.getItem().getName()), null,
-              note -> c.getItem().addNote(note), null));
-          MenuItem tagSelected = new MenuItem("Tag selected");
-          tagSelected.setOnAction(event1 -> {
-            Map<Item, List<Tag>> added = new HashMap<>();
-            itemGridView.getSelected().forEach(item -> {
-              if (item.addTag(c.getItem())) {
-                added.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
-              }
-            });
-
-            tagEditHistory.push(new TagEditEvent(added, null));
-          });
-          MenuItem untagSelected = new MenuItem("Untag selected");
-          untagSelected.setOnAction(event1 -> {
-            Map<Item, List<Tag>> removed = new HashMap<>();
-            itemGridView.getSelected().forEach(item -> {
-              if (item.removeTag(c.getItem())) {
-                removed.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
-              }
-            });
-
-            tagEditHistory.push(new TagEditEvent(null, removed));
-          });
-          SimpleCSSColorPicker colorPicker =
-              new SimpleCSSColorPicker(color -> c.getItem().setColor(color));
-          colorPicker.getTextfield().setText(c.getItem().getColor());
-          CustomMenuItem tagColorPicker = new CustomMenuItem(colorPicker, false);
-
-          ContextMenu m =
-              new ContextMenu(addNote, new SeparatorMenuItem(), tagSelected, untagSelected,
-                  new SeparatorMenuItem(), tagColorPicker, new SeparatorMenuItem());
-
-          // TODO: Do this better, jfc
-          for (String note : c.getItem().getNotes()) {
-            MenuItem item = new MenuItem(note);
-            item.setMnemonicParsing(false);
-            item.setOnAction(event1 -> {
-              try {
-                Desktop.getDesktop().browse(new URI(note));
-              } catch (IOException | URISyntaxException e) {
-                try {
-                  Desktop.getDesktop().browse(new URI("https://" + c.getItem()));
-                } catch (IOException | URISyntaxException ignore) {
-                }
-              }
-            });
-            m.getItems().add(item);
-          }
-
-          m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-        }
-      });
-
-      c.setOnMouseClicked(event -> {
-        if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-          searchTextField.setText(c.getItem().getName() + " ");
-          searchTextField.requestFocus();
-          searchTextField.positionCaret(searchTextField.getText().length());
-          event.consume();
-        }
-      });
-
+      TagListCell c = new TagListCell(
+          this::getTagListCellAddListener,
+          this::getTagListCellRemoveListener);
+      registerCellOnContextMenuEvent(c);
+      registerCellOnMouseEvent(c);
       return c;
+    });
+  }
+
+  private void registerCellOnContextMenuEvent(TagListCell c) {
+    // TODO: Make a custom popup that encompasses all the tag controls?
+    c.setOnContextMenuRequested(event -> {
+      if (c.getItem() != null) {
+        // TODO Transfer all of this to TagListCell class and use listeners/callbacks
+        MenuItem addNote = new MenuItem("Add note");
+        addNote.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note",
+            String.format("Add a note to tag '%s'", c.getItem().getName()), null,
+            note -> c.getItem().addNote(note), null));
+        MenuItem tagSelected = new MenuItem("Tag selected");
+        addTagSelectedAction(c, tagSelected);
+        MenuItem untagSelected = new MenuItem("Untag selected");
+        addUntagSelectedAction(c, untagSelected);
+        SimpleCSSColorPicker colorPicker =
+            new SimpleCSSColorPicker(color -> c.getItem().setColor(color));
+        colorPicker.getTextfield().setText(c.getItem().getColor());
+        CustomMenuItem tagColorPicker = new CustomMenuItem(colorPicker, false);
+
+        ContextMenu m =
+            new ContextMenu(addNote, new SeparatorMenuItem(), tagSelected, untagSelected,
+                new SeparatorMenuItem(), tagColorPicker, new SeparatorMenuItem());
+
+        // TODO: Do this better, jfc
+        for (String note : c.getItem().getNotes()) {
+          MenuItem item = new MenuItem(note);
+          item.setMnemonicParsing(false);
+          item.setOnAction(event1 -> {
+            try {
+              Desktop.getDesktop().browse(new URI(note));
+            } catch (IOException | URISyntaxException e) {
+              try {
+                Desktop.getDesktop().browse(new URI("https://" + c.getItem()));
+              } catch (IOException | URISyntaxException ignore) {
+              }
+            }
+          });
+          m.getItems().add(item);
+        }
+
+        m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
+      }
+    });
+  }
+
+  private void registerCellOnMouseEvent(TagListCell c) {
+    c.setOnMouseClicked(event -> {
+      if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
+        searchTextField.setText(c.getItem().getName() + " ");
+        searchTextField.requestFocus();
+        searchTextField.positionCaret(searchTextField.getText().length());
+        event.consume();
+      }
+    });
+  }
+
+  private void addUntagSelectedAction(TagListCell c, MenuItem untagSelected) {
+    untagSelected.setOnAction(event1 -> {
+      Map<Item, List<Tag>> removed = new HashMap<>();
+      itemGridView.getSelected().forEach(item -> {
+        if (item.removeTag(c.getItem())) {
+          removed.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
+        }
+      });
+
+      tagEditHistory.push(new TagEditEvent(null, removed));
+    });
+  }
+
+  private void addTagSelectedAction(TagListCell c, MenuItem tagSelected) {
+    tagSelected.setOnAction(event1 -> {
+      Map<Item, List<Tag>> added = new HashMap<>();
+      itemGridView.getSelected().forEach(item -> {
+        if (item.addTag(c.getItem())) {
+          added.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
+        }
+      });
+
+      tagEditHistory.push(new TagEditEvent(added, null));
     });
   }
 
@@ -1002,106 +984,13 @@ public class MainController {
     itemGridView.addSelectionListener(image -> Platform.runLater(() -> previewItem(image)));
     itemGridView.setCellFactory(param -> {
       ItemGridCell c = new ItemGridCell();
-      c.setOnDragDetected(event -> {
-        if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
-          if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem())) {
-            itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
-          }
-
-          Dragboard db = c.startDragAndDrop(TransferMode.ANY);
-
-          for (Item item : itemGridView.getSelected()) {
-            if (item instanceof MediaItem) {
-              String filename = ((MediaItem) item).getFile().getName().toLowerCase();
-              if (filename.endsWith(".png") || filename.endsWith(".jpg") ||
-                  filename.endsWith(".jpeg") || filename.endsWith(".bmp")) {
-                if (item.getThumbnail().isLoaded()) {
-                  db.setDragView(item.getThumbnail().getImage());
-                  break;
-                }
-              }
-            }
-          }
-
-          List<File> files = new ArrayList<>();
-          itemGridView.getSelected().forEach(item -> {
-            if (item instanceof MediaItem) {
-              files.add(((MediaItem) item).getFile());
-            } else if (item instanceof GroupItem) {
-              ((GroupItem) item).getElements()
-                  .forEach(mediaItem -> files.add(mediaItem.getFile()));
-            }
-          });
-          clipboard.putFiles(files);
-          db.setContent(clipboard);
-
-          itemGridViewDragging = true;
-          event.consume();
-        }
-      });
-      c.setOnDragDone(event -> {
-        itemGridViewDragging = false;
-        event.consume();
-      });
-      c.setOnDragOver(event -> {
-        if (event.getGestureSource() instanceof ItemGridCell &&
-            currentSearch instanceof GroupSearch && !event.getGestureSource().equals(c)) {
-          event.acceptTransferModes(TransferMode.ANY);
-          event.consume();
-        }
-      });
-      c.setOnDragDropped(event -> {
-        if (event.getGestureSource() instanceof ItemGridCell &&
-            !itemGridView.getSelected().isEmpty()) {
-          List<MediaItem> list = new ArrayList<>();
-          itemGridView.getSelected().forEach(item -> list.add((MediaItem) item));
-          list.sort(Comparator.comparingInt(MediaItem::getPageIndex));
-
-          boolean before = false;
-          if (c.sceneToLocal(event.getSceneX(), event.getSceneY()).getX() <
-              (double) Thumbnail.THUMBNAIL_SIZE / 2) {
-            before = true;
-          }
-          if (currentSearch.isDescending()) {
-            before = !before;
-          }
-          if (((MediaItem) c.getItem()).getGroup()
-              .moveElements(list, (MediaItem) c.getItem(), before)) {
-            currentSearch.sort();
-            itemGridView.getItems().sort(currentSearch.getComparator());
-            event.consume();
-          }
-        }
-      });
-      c.setOnMouseReleased(event -> {
-        if (!itemGridViewDragging && event.getButton() == MouseButton.PRIMARY) {
-          itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
-          event.consume();
-        }
-      });
-      c.setOnContextMenuRequested(event -> {
-        if (!itemGridView.isSelected(c.getItem())) {
-          itemGridView.select(c.getItem(), false, false);
-        }
-        constructGridCellContextMenu(itemGridView.getSelected()).show(c.getScene().getWindow(),
-            event.getScreenX(), event.getScreenY());
-        event.consume();
-      });
-      c.setOnMouseClicked(event -> {
-        if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() > 1) {
-          if (c.getItem() instanceof GroupItem) {
-            explorerOpenGroup((GroupItem) c.getItem());
-          } else if (c.getItem() instanceof MediaItem) {
-            try {
-              Desktop.getDesktop().open(((MediaItem) c.getItem()).getFile());
-            } catch (IOException e) {
-              LOGGER.log(Level.SEVERE,
-                  "Failed to open file with system default: " + ((MediaItem) c.getItem()).getFile(),
-                  e);
-            }
-          }
-        }
-      });
+      registerCellDragDetectedEvent(c);
+      registerCellDragDoneEvent(c);
+      registerCellDragOverEvent(c);
+      registerCellDragDroppedEvent(c);
+      registerCellMouseReleasedEvent(c);
+      registerCellContextMenuEvent(c);
+      registerCellMouseClickEvent(c);
       return c;
     });
     itemGridView.setOnKeyPressed(event -> {
@@ -1129,6 +1018,130 @@ public class MainController {
         }
       }
     });
+  }
+
+  private void registerCellMouseClickEvent(ItemGridCell c) {
+    c.setOnMouseClicked(event -> {
+      if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() > 1) {
+        if (c.getItem() instanceof GroupItem) {
+          explorerOpenGroup((GroupItem) c.getItem());
+        } else if (c.getItem() instanceof MediaItem) {
+          try {
+            Desktop.getDesktop().open(((MediaItem) c.getItem()).getFile());
+          } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, e,
+                () -> "Failed to open file with system default: " +
+                      ((MediaItem) c.getItem()).getFile());
+          }
+        }
+      }
+    });
+  }
+
+  private void registerCellContextMenuEvent(ItemGridCell c) {
+    c.setOnContextMenuRequested(event -> {
+      if (!itemGridView.isSelected(c.getItem())) {
+        itemGridView.select(c.getItem(), false, false);
+      }
+      constructGridCellContextMenu(itemGridView.getSelected()).show(c.getScene().getWindow(),
+          event.getScreenX(), event.getScreenY());
+      event.consume();
+    });
+  }
+
+  private void registerCellMouseReleasedEvent(ItemGridCell c) {
+    c.setOnMouseReleased(event -> {
+      if (!itemGridViewDragging && event.getButton() == MouseButton.PRIMARY) {
+        itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+        event.consume();
+      }
+    });
+  }
+
+  private void registerCellDragDroppedEvent(ItemGridCell c) {
+    c.setOnDragDropped(event -> {
+      if (event.getGestureSource() instanceof ItemGridCell &&
+          !itemGridView.getSelected().isEmpty()) {
+        List<MediaItem> list = new ArrayList<>();
+        itemGridView.getSelected().forEach(item -> list.add((MediaItem) item));
+        list.sort(Comparator.comparingInt(MediaItem::getPageIndex));
+
+        boolean before = false;
+        if (c.sceneToLocal(event.getSceneX(), event.getSceneY()).getX() <
+            (double) Thumbnail.THUMBNAIL_SIZE / 2) {
+          before = true;
+        }
+        if (currentSearch.isDescending()) {
+          before = !before;
+        }
+        if (((MediaItem) c.getItem()).getGroup()
+            .moveElements(list, (MediaItem) c.getItem(), before)) {
+          currentSearch.sort();
+          itemGridView.getItems().sort(currentSearch.getComparator());
+          event.consume();
+        }
+      }
+    });
+  }
+
+  private void registerCellDragOverEvent(ItemGridCell c) {
+    c.setOnDragOver(event -> {
+      if (event.getGestureSource() instanceof ItemGridCell &&
+          currentSearch instanceof GroupSearch && !event.getGestureSource().equals(c)) {
+        event.acceptTransferModes(TransferMode.ANY);
+        event.consume();
+      }
+    });
+  }
+
+  private void registerCellDragDoneEvent(ItemGridCell c) {
+    c.setOnDragDone(event -> {
+      itemGridViewDragging = false;
+      event.consume();
+    });
+  }
+
+  private void registerCellDragDetectedEvent(ItemGridCell c) {
+    c.setOnDragDetected(event -> {
+      if (!itemGridView.getSelected().isEmpty() && event.isPrimaryButtonDown()) {
+        if (c.getItem() instanceof MediaItem && !itemGridView.isSelected(c.getItem())) {
+          itemGridView.select(c.getItem(), event.isControlDown(), event.isShiftDown());
+        }
+
+        Dragboard db = c.startDragAndDrop(TransferMode.ANY);
+        doDragAndDrop(db);
+
+        List<File> files = new ArrayList<>();
+        itemGridView.getSelected().forEach(item -> {
+          if (item instanceof MediaItem) {
+            files.add(((MediaItem) item).getFile());
+          } else if (item instanceof GroupItem) {
+            ((GroupItem) item).getElements()
+                .forEach(mediaItem -> files.add(mediaItem.getFile()));
+          }
+        });
+        clipboard.putFiles(files);
+        db.setContent(clipboard);
+
+        itemGridViewDragging = true;
+        event.consume();
+      }
+    });
+  }
+
+  private void doDragAndDrop(Dragboard db) {
+    for (Item item : itemGridView.getSelected()) {
+      if (item instanceof MediaItem) {
+        String filename = ((MediaItem) item).getFile().getName().toLowerCase();
+        if (filename.endsWith(".png") || filename.endsWith(".jpg") ||
+            filename.endsWith(".jpeg") || filename.endsWith(".bmp")) {
+          if (item.getThumbnail().isLoaded()) {
+            db.setDragView(item.getThumbnail().getImage());
+            break;
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -1209,39 +1222,17 @@ public class MainController {
       }
     }
 
-    // More than one group or at least one media item
     if (groupCount == 1 && selected.size() == 1) {
-      MenuItem elementTags = new MenuItem("Sync element tags to group");
-      elementTags.setOnAction(event -> {
-        GroupItem group = (GroupItem) selected.get(0);
-        group.getElements().forEach(item -> item.getTags().forEach(group::addTag));
-      });
-      cm.getItems().add(elementTags);
-      MenuItem reverse = new MenuItem("Reverse element order");
-      reverse.setOnAction(event -> ((GroupItem) selected.get(0)).reverseElements());
-      cm.getItems().add(reverse);
-      MenuItem rename = new MenuItem("Rename group");
-      rename.setOnAction(event -> openGroupRenameDialog((GroupItem) selected.get(0)));
-      cm.getItems().add(rename);
-      cm.getItems().add(new SeparatorMenuItem());
+      singleGroupCount(selected, cm);
     }
     if (groupCount > 1 || mediaCount > 0) {
-      MenuItem combineGroups = new MenuItem("Combine into Group");
-      combineGroups.setOnAction(event -> groupDialog(selected));
-      cm.getItems().add(combineGroups);
+      combineGroups(selected, cm);
     }
     if (itemsInGroupCount > 0) {
-      MenuItem removeFromGroup = new MenuItem("Remove from group");
-      removeFromGroup.setOnAction(event -> selected.forEach(item -> {
-        if (item instanceof MediaItem && ((MediaItem) item).isInGroup()) {
-          ((MediaItem) item).getGroup().removeItem((MediaItem) item);
-        }
-      }));
-      cm.getItems().add(removeFromGroup);
+      removeFromGroup(selected, cm);
     }
 
     if (groupCount > 0 || mediaCount > 0) {
-
       MenuItem grabbed = new MenuItem("Selected");
       grabbed.setOnAction(event -> openSlideShow(selected, false));
       MenuItem searched = new MenuItem("Searched");
@@ -1265,48 +1256,88 @@ public class MainController {
 
     if (mediaCount > 0) {
       MenuItem openDefault = new MenuItem("Open");
-      openDefault.setOnAction(event -> {
-        Item last = selected.get(selected.size() - 1);
-        if (last instanceof MediaItem) {
-          try {
-            Desktop.getDesktop().open(((MediaItem) last).getFile());
-          } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Error opening file with system default program", e);
-          }
-        }
-      });
+      openDefault.setOnAction(event -> openDefault(selected));
       MenuItem explorer = new MenuItem("Open in Explorer");
-      explorer.setOnAction(event -> {
-        Item last = selected.get(selected.size() - 1);
-        if (last instanceof MediaItem) {
-          try {
-            Runtime.getRuntime()
-                .exec("explorer.exe /select, " + ((MediaItem) last).getFile().getAbsolutePath());
-          } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Error opening file in explorer", e);
-          }
-        }
-      });
+      explorer.setOnAction(event -> openExplorer(selected));
       cm.getItems().addAll(openDefault, explorer);
     }
 
     if (groupCount > 0 || mediaCount > 0) {
-      cm.getItems().add(new SeparatorMenuItem());
-      if (groupCount > 0) {
-        MenuItem ungroup = new MenuItem("Ungroup");
-        ungroup.setOnAction(event -> ungroupDialog(selected));
-        cm.getItems().add(ungroup);
-      }
-      MenuItem forget = new MenuItem("Forget files");
-      forget.setOnAction(event -> forgetFilesDialog(selected));
-      forget.setStyle("-fx-text-fill: red;");
-      MenuItem delete = new MenuItem("Delete files");
-      delete.setOnAction(event -> deleteFilesDialog(selected));
-      delete.setStyle("-fx-text-fill: red;");
-      cm.getItems().addAll(forget, delete);
+      ungroup(selected, cm, groupCount);
     }
 
     return cm;
+  }
+
+  private void ungroup(List<Item> selected, ContextMenu cm, int groupCount) {
+    cm.getItems().add(new SeparatorMenuItem());
+    if (groupCount > 0) {
+      MenuItem ungroup = new MenuItem("Ungroup");
+      ungroup.setOnAction(event -> ungroupDialog(selected));
+      cm.getItems().add(ungroup);
+    }
+    MenuItem forget = new MenuItem("Forget files");
+    forget.setOnAction(event -> forgetFilesDialog(selected));
+    forget.setStyle("-fx-text-fill: red;");
+    MenuItem delete = new MenuItem("Delete files");
+    delete.setOnAction(event -> deleteFilesDialog(selected));
+    delete.setStyle("-fx-text-fill: red;");
+    cm.getItems().addAll(forget, delete);
+  }
+
+  private static void openExplorer(List<Item> selected) {
+    Item last = selected.get(selected.size() - 1);
+    if (last instanceof MediaItem) {
+      try {
+        Runtime.getRuntime()
+            .exec("explorer.exe /select, " + ((MediaItem) last).getFile().getAbsolutePath());
+      } catch (IOException e) {
+        LOGGER.log(Level.SEVERE, "Error opening file in explorer", e);
+      }
+    }
+  }
+
+  private static void openDefault(List<Item> selected) {
+    Item last = selected.get(selected.size() - 1);
+    if (last instanceof MediaItem) {
+      try {
+        Desktop.getDesktop().open(((MediaItem) last).getFile());
+      } catch (IOException e) {
+        LOGGER.log(Level.WARNING, "Error opening file with system default program", e);
+      }
+    }
+  }
+
+  private static void removeFromGroup(List<Item> selected, ContextMenu cm) {
+    MenuItem removeFromGroup = new MenuItem("Remove from group");
+    removeFromGroup.setOnAction(event -> selected.forEach(item -> {
+      if (item instanceof MediaItem && ((MediaItem) item).isInGroup()) {
+        ((MediaItem) item).getGroup().removeItem((MediaItem) item);
+      }
+    }));
+    cm.getItems().add(removeFromGroup);
+  }
+
+  private void combineGroups(List<Item> selected, ContextMenu cm) {
+    MenuItem combineGroups = new MenuItem("Combine into Group");
+    combineGroups.setOnAction(event -> groupDialog(selected));
+    cm.getItems().add(combineGroups);
+  }
+
+  private void singleGroupCount(List<Item> selected, ContextMenu cm) {
+    MenuItem elementTags = new MenuItem("Sync element tags to group");
+    elementTags.setOnAction(event -> {
+      GroupItem group = (GroupItem) selected.get(0);
+      group.getElements().forEach(item -> item.getTags().forEach(group::addTag));
+    });
+    cm.getItems().add(elementTags);
+    MenuItem reverse = new MenuItem("Reverse element order");
+    reverse.setOnAction(event -> ((GroupItem) selected.get(0)).reverseElements());
+    cm.getItems().add(reverse);
+    MenuItem rename = new MenuItem("Rename group");
+    rename.setOnAction(event -> openGroupRenameDialog((GroupItem) selected.get(0)));
+    cm.getItems().add(rename);
+    cm.getItems().add(new SeparatorMenuItem());
   }
 
   /**
@@ -1382,18 +1413,26 @@ public class MainController {
    */
   private void forgetFilesDialog(List<Item> toForget) {
     List<Item> items = new ArrayList<>(toForget);
+    addGroupElements(items);
+    stopPreview(items);
+    new ConfirmationScreen().open(screenPane, "Forget files", String.format(
+        "Remove selected files from database? (%d files)\n\n" + "This action CANNOT be undone",
+        items.size()), () -> menagerie.forgetItems(items), null);
+  }
+
+  private void addGroupElements(List<Item> items) {
     for (int i = 0; i < items.size(); i++) {
       if (items.get(i) instanceof GroupItem) {
         items.addAll(((GroupItem) items.get(i)).getElements());
       }
     }
+  }
+
+  private void stopPreview(List<Item> items) {
     if (currentlyPreviewing instanceof MediaItem && items.contains(currentlyPreviewing) &&
         ((MediaItem) currentlyPreviewing).isVideo()) {
       previewMediaView.stop();
     }
-    new ConfirmationScreen().open(screenPane, "Forget files", String.format(
-        "Remove selected files from database? (%d files)\n\n" + "This action CANNOT be undone",
-        items.size()), () -> menagerie.forgetItems(items), null);
   }
 
   /**
@@ -1404,18 +1443,11 @@ public class MainController {
    */
   private void deleteFilesDialog(List<Item> toDelete) {
     List<Item> items = new ArrayList<>(toDelete);
-    for (int i = 0; i < items.size(); i++) {
-      if (items.get(i) instanceof GroupItem) {
-        items.addAll(((GroupItem) items.get(i)).getElements());
-      }
-    }
-    if (currentlyPreviewing instanceof MediaItem && items.contains(currentlyPreviewing) &&
-        ((MediaItem) currentlyPreviewing).isVideo()) {
-      previewMediaView.stop();
-    }
-    new ConfirmationScreen().open(screenPane, "Delete files", String.format(
-            "Permanently delete selected files? (%d files)\n\n" +
-            "This action CANNOT be undone (files will be deleted)", items.size()),
+    addGroupElements(items);
+    stopPreview(items);
+    new ConfirmationScreen().open(screenPane, "Delete files", """
+            Permanently delete selected files? (%d files)
+            This action CANNOT be undone (files will be deleted)""".formatted(items.size()),
         () -> menagerie.deleteItems(items), null);
   }
 
@@ -1493,32 +1525,33 @@ public class MainController {
    * Attempts to revert to the previous search.
    */
   private void explorerGoBack() {
-    if (searchHistory.empty()) {
+    if (searchHistory.isEmpty()) {
       Toolkit.getDefaultToolkit().beep();
-    } else {
-      SearchHistory history = searchHistory.pop();
+      return;
+    }
 
-      listDescendingToggleButton.setSelected(history.isDescending());
-      showGroupedToggleButton.setSelected(history.isShowGrouped());
-      shuffledSearchButton.setSelected(history.isShuffled());
-      searchTextField.setText(history.getSearch());
-      applySearch(history.getSearch(), history.getGroupScope(), history.isDescending(),
-          history.isShowGrouped(), history.isShuffled());
-      searchHistory.pop(); // Pop history item that was JUST created by the new search.
+    SearchHistory history = searchHistory.pop();
 
-      if (searchHistory.isEmpty()) {
-        backButton.setDisable(true);
-      }
+    listDescendingToggleButton.setSelected(history.isDescending());
+    showGroupedToggleButton.setSelected(history.isShowGrouped());
+    shuffledSearchButton.setSelected(history.isShuffled());
+    searchTextField.setText(history.getSearch());
+    applySearch(history.getSearch(), history.getGroupScope(), history.isDescending(),
+        history.isShowGrouped(), history.isShuffled());
+    searchHistory.pop(); // Pop history item that was JUST created by the new search.
 
-      itemGridView.clearSelection();
-      itemGridView.getSelected().addAll(history.getSelected());
-      if (history.getSelected() != null && !history.getSelected().isEmpty()) {
-        // Unselect and reselect last item
-        itemGridView.select(history.getSelected().get(history.getSelected().size() - 1), true,
-            false);
-        itemGridView.select(history.getSelected().get(history.getSelected().size() - 1), true,
-            false);
-      }
+    if (searchHistory.isEmpty()) {
+      backButton.setDisable(true);
+    }
+
+    itemGridView.clearSelection();
+    itemGridView.getSelected().addAll(history.getSelected());
+    if (history.getSelected() != null && !history.getSelected().isEmpty()) {
+      // Unselect and reselect last item
+      itemGridView.select(history.getSelected().get(history.getSelected().size() - 1), true,
+          false);
+      itemGridView.select(history.getSelected().get(history.getSelected().size() - 1), true,
+          false);
     }
   }
 
@@ -1545,26 +1578,11 @@ public class MainController {
    */
   private void applySearch(String search, GroupItem groupScope, boolean descending,
                            boolean showGrouped, boolean shuffled) {
-    LOGGER.info(
+    LOGGER.info(() ->
         "Searching: \"" + search + "\", group:" + groupScope + ", descending:" + descending +
         ", showGrouped:" + showGrouped + ", shuffled:" + shuffled);
 
-    // Clean up previous search
-    if (currentSearch != null) {
-      GroupItem scope = null;
-      if (currentSearch instanceof GroupSearch) {
-        scope = ((GroupSearch) currentSearch).getGroup();
-      }
-      searchHistory.push(
-          new SearchHistory(currentSearch.getSearchString(), scope, itemGridView.getSelected(),
-              currentSearch.isDescending(), currentSearch.isShowGrouped(),
-              currentSearch.isShuffled()));
-      backButton.setDisable(false);
-
-      menagerie.unregisterSearch(currentSearch);
-      currentSearch.getResults().removeListener(searchChangeListener);
-    }
-    previewItem(null);
+    cleanupPreviousSearch();
 
     // Create new search
     boolean inGroup = groupScope != null;
@@ -1594,6 +1612,24 @@ public class MainController {
     if (!itemGridView.getItems().isEmpty()) {
       itemGridView.select(itemGridView.getItems().get(0), false, false);
     }
+  }
+
+  private void cleanupPreviousSearch() {
+    if (currentSearch != null) {
+      GroupItem scope = null;
+      if (currentSearch instanceof GroupSearch) {
+        scope = ((GroupSearch) currentSearch).getGroup();
+      }
+      searchHistory.push(
+          new SearchHistory(currentSearch.getSearchString(), scope, itemGridView.getSelected(),
+              currentSearch.isDescending(), currentSearch.isShowGrouped(),
+              currentSearch.isShuffled()));
+      backButton.setDisable(false);
+
+      menagerie.unregisterSearch(currentSearch);
+      currentSearch.getResults().removeListener(searchChangeListener);
+    }
+    previewItem(null);
   }
 
   /**
@@ -1630,6 +1666,8 @@ public class MainController {
     }
   }
 
+  // REENG: still too big
+
   /**
    * Actual workhorse tag editing method. Parses tag edit string, makes changes, and verifies changed items against the search.
    *
@@ -1640,27 +1678,26 @@ public class MainController {
     Map<Item, List<Tag>> added = new HashMap<>();
     Map<Item, List<Tag>> removed = new HashMap<>();
 
-    for (String text : input.split("\\s+")) {
-      if (text.startsWith("-")) {
-        Tag t = menagerie.getTagByName(text.substring(1));
+    final var inputTokens = input.split("\\s+");
+    for (String token : inputTokens) {
+      if (token.startsWith("-")) {
+        Tag t = menagerie.getTagByName(token.substring(1));
         if (t != null) {
           for (Item item : itemGridView.getSelected()) {
             if (item.removeTag(t)) {
               changed.add(item);
-
               removed.computeIfAbsent(item, k -> new ArrayList<>()).add(t);
             }
           }
         }
       } else {
-        Tag t = menagerie.getTagByName(text);
+        Tag t = menagerie.getTagByName(token);
         if (t == null) {
-          t = menagerie.createTag(text);
+          t = menagerie.createTag(token);
         }
         for (Item item : itemGridView.getSelected()) {
           if (item.addTag(t)) {
             changed.add(item);
-
             added.computeIfAbsent(item, k -> new ArrayList<>()).add(t);
           }
         }
@@ -1669,7 +1706,6 @@ public class MainController {
 
     if (!changed.isEmpty()) {
       menagerie.refreshInSearches(changed);
-
       tagEditHistory.push(new TagEditEvent(added, removed));
     }
   }
@@ -1705,33 +1741,36 @@ public class MainController {
     if (watchFolder.exists() && watchFolder.isDirectory()) {
       LOGGER.info("Starting folder watcher in folder: " + watchFolder);
       folderWatcherThread =
-          new FolderWatcherThread(watchFolder, Filters.FILE_NAME_FILTER, 30000, files -> {
-            for (File file : files) {
-              LOGGER.info("Folder watcher got file to import: " + file);
-              if (moveToDefault) {
-                String work = settings.defaultFolder.getValue();
-                if (!work.endsWith("/") && !work.endsWith("\\")) {
-                  work += "/";
-                }
-                File f = new File(work + file.getName());
-                if (file.equals(f)) {
-                  continue; //File is being "moved" to same folder
-                }
-
-                File dest = FileUtil.resolveDuplicateFilename(f);
-
-                if (!file.renameTo(dest)) {
-                  continue;
-                }
-
-                file = dest;
-              }
-
-              importer.addJob(new ImportJob(file, null));
-            }
-          });
+          new FolderWatcherThread(watchFolder, Filters.FILE_NAME_FILTER, 30000,
+              files -> folderWatchListener(moveToDefault, files));
       folderWatcherThread.setDaemon(true);
       folderWatcherThread.start();
+    }
+  }
+
+  private void folderWatchListener(boolean moveToDefault, File[] files) {
+    for (File file : files) {
+      LOGGER.info("Folder watcher got file to import: " + file);
+      if (moveToDefault) {
+        String work = settings.defaultFolder.getValue();
+        if (!work.endsWith("/") && !work.endsWith("\\")) {
+          work += "/";
+        }
+        File f = new File(work + file.getName());
+        if (file.equals(f)) {
+          continue; //File is being "moved" to same folder
+        }
+
+        File dest = FileUtil.resolveDuplicateFilename(f);
+
+        if (!file.renameTo(dest)) {
+          continue;
+        }
+
+        file = dest;
+      }
+
+      importer.addJob(new ImportJob(file, null));
     }
   }
 
@@ -1751,17 +1790,12 @@ public class MainController {
     DynamicVideoView.releaseAllVLCJ();
     Thumbnail.releaseVLCJResources();
 
-    plugins.forEach(plugin -> {
-      LOGGER.info("Attempting to close plugin: " + plugin.getPluginName());
-      plugin.close();
-    });
+    closePlugins();
+    saveSettings();
+    shutDownDatabase(revertDatabase);
+  }
 
-    try {
-      settings.save(new File(Main.SETTINGS_PATH));
-    } catch (IOException e1) {
-      LOGGER.log(Level.WARNING, "Failed to save settings to file", e1);
-    }
-
+  private void shutDownDatabase(boolean revertDatabase) {
     new Thread(() -> {
       try {
         LOGGER.info("Attempting to shut down Menagerie database and defragment the file");
@@ -1771,11 +1805,11 @@ public class MainController {
         if (revertDatabase) {
           File database = DatabaseUtil.resolveDatabaseFile(settings.dbUrl.getValue());
           File backup = new File(database + ".bak");
-          LOGGER.warning(String.format("Reverting to last backup database: %s", backup.toString()));
+          LOGGER.warning(String.format("Reverting to last backup database: %s", backup));
           try {
             Files.move(backup.toPath(), database.toPath(), StandardCopyOption.REPLACE_EXISTING);
           } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to revert the database: " + database, e);
+            LOGGER.log(Level.SEVERE, e, () -> "Failed to revert the database: " + database);
           }
         }
 
@@ -1788,9 +1822,34 @@ public class MainController {
     }, "Shutdown Menagerie").start();
   }
 
+  private void saveSettings() {
+    try {
+      settings.save(new File(Main.SETTINGS_PATH));
+    } catch (IOException e1) {
+      LOGGER.log(Level.WARNING, "Failed to save settings to file", e1);
+    }
+  }
+
+  private void closePlugins() {
+    plugins.forEach(plugin -> {
+      LOGGER.info("Attempting to close plugin: " + plugin.getPluginName());
+      plugin.close();
+    });
+  }
+
   // ---------------------------------- Action Event Handlers --------------------------
 
-  public void searchButtonOnAction(ActionEvent event) {
+  @FXML
+  private void searchButtonOnAction(ActionEvent event) {
+    searchOnAction(event);
+  }
+
+  @FXML
+  private void searchTextFieldOnAction(ActionEvent event) {
+    searchOnAction(event);
+  }
+
+  private void searchOnAction(ActionEvent event) {
     GroupItem scope = null;
     if (currentSearch instanceof GroupSearch) {
       scope = ((GroupSearch) currentSearch).getGroup();
@@ -1801,23 +1860,14 @@ public class MainController {
     event.consume();
   }
 
-  public void searchTextFieldOnAction(ActionEvent event) {
-    GroupItem scope = null;
-    if (currentSearch instanceof GroupSearch) {
-      scope = ((GroupSearch) currentSearch).getGroup();
-    }
-    applySearch(searchTextField.getText(), scope, listDescendingToggleButton.isSelected(),
-        showGroupedToggleButton.isSelected(), shuffledSearchButton.isSelected());
-    itemGridView.requestFocus();
-    event.consume();
-  }
-
-  public void importFilesMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void importFilesMenuButtonOnAction(ActionEvent event) {
     screenPane.open(importDialogScreen);
     event.consume();
   }
 
-  public void pruneFileLessMenuButtonOnAction(ActionEvent event) {
+  @FXML
+  private void pruneFileLessMenuButtonOnAction(ActionEvent event) {
     ProgressScreen ps = new ProgressScreen();
     CancellableThread ct = new CancellableThread() {
       @Override
@@ -1858,7 +1908,9 @@ public class MainController {
     event.consume();
   }
 
-  public void rebuildSimilarityCacheMenuButtonOnAction(ActionEvent event) {
+  // REENG: reduce complexity
+  @FXML
+  private void rebuildSimilarityCacheMenuButtonOnAction(ActionEvent event) {
     ProgressScreen ps = new ProgressScreen();
     CancellableThread ct = new CancellableThread() {
       @Override
@@ -1985,6 +2037,7 @@ public class MainController {
 
   // -------------------------------- Misc Event Handlers --------------------------------
 
+  // REENG: reduce complexity
   private void explorerRootPaneOnDragDropped(DragEvent event) {
     List<File> files = event.getDragboard().getFiles();
     String url = event.getDragboard().getUrl();
@@ -2061,142 +2114,168 @@ public class MainController {
   @FXML
   private void explorerRootPaneOnKeyPressed(KeyEvent event) {
     if (event.isControlDown()) {
-      switch (event.getCode()) {
-        case F:
-          searchTextField.requestFocus();
-          event.consume();
-          break;
-        case E:
-          editTagsTextField.setText(lastEditTagString);
-          editTagsTextField.requestFocus();
-          event.consume();
-          break;
-        case Q:
-          menagerie.getDatabaseManager().enqueue(() -> cleanExit(false));
-          event.consume();
-          break;
-        case S:
-          settingsScreen.open(screenPane, settings);
-          event.consume();
-          break;
-        case T:
-          tagListScreen.open(screenPane, menagerie.getTags());
-          event.consume();
-          break;
-        case I:
-          screenPane.open(importDialogScreen);
-          event.consume();
-          break;
-        case H:
-          screenPane.open(helpScreen);
-          event.consume();
-          break;
-        case D:
-          if (event.isShiftDown() &&
-              duplicateOptionsScreen.getDuplicatesScreen().getPairs() != null &&
-              !duplicateOptionsScreen.getDuplicatesScreen().getPairs().isEmpty()) {
-            duplicateOptionsScreen.getDuplicatesScreen().openWithOldPairs(screenPane, menagerie);
-          } else {
-            duplicateOptionsScreen.open(screenPane, menagerie, itemGridView.getSelected(),
-                currentSearch.getResults(), menagerie.getItems());
-          }
-          event.consume();
-          break;
-        case Z:
-          if (tagEditHistory.empty()) {
-            Toolkit.getDefaultToolkit().beep();
-          } else {
-            TagEditEvent peek = tagEditHistory.peek();
-            new ConfirmationScreen().open(screenPane, "Undo last tag edit?",
-                "Tags were added to " + peek.getAdded().keySet().size() +
-                " items.\nTags were removed from " + peek.getRemoved().keySet().size() + " others.",
-                () -> {
-                  TagEditEvent pop = tagEditHistory.pop();
-                  pop.revertAction();
+      onKeyDownPressed(event);
+      return;
+    }
 
-                  List<Item> list = new ArrayList<>();
-                  pop.getAdded().keySet().forEach(item -> {
-                    if (!list.contains(item)) {
-                      list.add(item);
-                    }
-                  });
-                  pop.getRemoved().keySet().forEach(item -> {
-                    if (!list.contains(item)) {
-                      list.add(item);
-                    }
-                  });
-                  menagerie.refreshInSearches(list);
-                }, null);
-          }
-          event.consume();
-          break;
-        case N:
-          screenPane.open(importerScreen);
-          event.consume();
-          break;
-        case L:
-          openLog();
-          event.consume();
-          break;
-        case M:
-          moveFilesScreen.open(screenPane, itemGridView.getSelected());
-          event.consume();
-          break;
-        case R:
-          if (itemGridView.getSelected().size() == 1 &&
-              itemGridView.getSelected().get(0) instanceof GroupItem) {
-            openGroupRenameDialog((GroupItem) itemGridView.getSelected().get(0));
-          }
-          event.consume();
-          break;
-        default:
-          break;
-      }
-    } else {
-      switch (event.getCode()) {
-        case S:
-          double scale = previewMediaView.getImageView().getScale().get();
+    switch (event.getCode()) {
+      case S:
+        handleKeyS();
+      case ESCAPE:
+        itemGridView.requestFocus();
+        event.consume();
+        break;
+      case ENTER:
+        handleKeyEnter(event);
+        break;
+      case BACK_SPACE:
+        explorerGoBack();
+        event.consume();
+        break;
+    }
 
-          if (scale > 2 && !previewMediaView.getImageView().isScaleApplied()) {
-            BufferedImage bimg =
-                SwingFXUtils.fromFXImage(previewMediaView.getImageView().getTrueImage(), null);
+  }
 
-            ResampleOp resizeOp =
-                new ResampleOp((int) (bimg.getWidth() / scale), (int) (bimg.getHeight() / scale));
-            resizeOp.setUnsharpenMask(AdvancedResizeOp.UnsharpenMask.Normal);
-            resizeOp.setFilter(ResampleFilters.getLanczos3Filter());
-            BufferedImage scaledImage = resizeOp.filter(bimg, bimg);
-
-            previewMediaView.getImageView()
-                .setAppliedScaleImage(SwingFXUtils.toFXImage(scaledImage, null));
-          }
-        case ESCAPE:
-          itemGridView.requestFocus();
-          event.consume();
-          break;
-        case ENTER:
-          if (itemGridView.getSelected().size() == 1) {
-            Item item = itemGridView.getSelected().get(0);
-            if (item instanceof GroupItem) {
-              explorerOpenGroup((GroupItem) item);
-              event.consume();
-            } else if (itemGridView.getSelected().get(0) instanceof MediaItem) {
-              try {
-                Desktop.getDesktop().open(((MediaItem) item).getFile());
-              } catch (IOException e) {
-                LOGGER.log(Level.SEVERE,
-                    "Failed to open file with system default: " + ((MediaItem) item).getFile(), e);
-              }
-              event.consume();
-            }
-          }
-          break;
-        case BACK_SPACE:
-          explorerGoBack();
-          event.consume();
-          break;
+  private void handleKeyEnter(KeyEvent event) {
+    if (itemGridView.getSelected().size() == 1) {
+      Item item = itemGridView.getSelected().get(0);
+      if (item instanceof GroupItem) {
+        explorerOpenGroup((GroupItem) item);
+        event.consume();
+      } else if (itemGridView.getSelected().get(0) instanceof MediaItem) {
+        try {
+          Desktop.getDesktop().open(((MediaItem) item).getFile());
+        } catch (IOException e) {
+          LOGGER.log(Level.SEVERE,
+              "Failed to open file with system default: " + ((MediaItem) item).getFile(), e);
+        }
+        event.consume();
       }
     }
+  }
+
+  private void handleKeyS() {
+    double scale = previewMediaView.getImageView().getScale().get();
+
+    if (scale > 2 && !previewMediaView.getImageView().isScaleApplied()) {
+      BufferedImage bimg =
+          SwingFXUtils.fromFXImage(previewMediaView.getImageView().getTrueImage(), null);
+
+      ResampleOp resizeOp =
+          new ResampleOp((int) (bimg.getWidth() / scale), (int) (bimg.getHeight() / scale));
+      resizeOp.setUnsharpenMask(AdvancedResizeOp.UnsharpenMask.Normal);
+      resizeOp.setFilter(ResampleFilters.getLanczos3Filter());
+      BufferedImage scaledImage = resizeOp.filter(bimg, bimg);
+
+      previewMediaView.getImageView()
+          .setAppliedScaleImage(SwingFXUtils.toFXImage(scaledImage, null));
+    }
+  }
+
+  private void onKeyDownPressed(KeyEvent event) {
+    switch (event.getCode()) {
+      case F:
+        searchTextField.requestFocus();
+        event.consume();
+        break;
+      case E:
+        editTagsTextField.setText(lastEditTagString);
+        editTagsTextField.requestFocus();
+        event.consume();
+        break;
+      case Q:
+        menagerie.getDatabaseManager().enqueue(() -> cleanExit(false));
+        event.consume();
+        break;
+      case S:
+        settingsScreen.open(screenPane, settings);
+        event.consume();
+        break;
+      case T:
+        tagListScreen.open(screenPane, menagerie.getTags());
+        event.consume();
+        break;
+      case I:
+        screenPane.open(importDialogScreen);
+        event.consume();
+        break;
+      case H:
+        screenPane.open(helpScreen);
+        event.consume();
+        break;
+      case D:
+        handleKeyD(event);
+        break;
+      case Z:
+        handleKeyZ(event);
+        break;
+      case N:
+        screenPane.open(importerScreen);
+        event.consume();
+        break;
+      case L:
+        openLog();
+        event.consume();
+        break;
+      case M:
+        moveFilesScreen.open(screenPane, itemGridView.getSelected());
+        event.consume();
+        break;
+      case R:
+        handleKeyR(event);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private void handleKeyR(KeyEvent event) {
+    if (itemGridView.getSelected().size() == 1 &&
+        itemGridView.getSelected().get(0) instanceof GroupItem) {
+      openGroupRenameDialog((GroupItem) itemGridView.getSelected().get(0));
+    }
+    event.consume();
+  }
+
+  private void handleKeyZ(KeyEvent event) {
+    if (tagEditHistory.isEmpty()) {
+      Toolkit.getDefaultToolkit().beep();
+    } else {
+      TagEditEvent peek = tagEditHistory.peek();
+      new ConfirmationScreen().open(screenPane, "Undo last tag edit?",
+          "Tags were added to " + peek.getAdded().keySet().size() +
+          " items.\nTags were removed from " + peek.getRemoved().keySet().size() + " others.",
+          () -> {
+            TagEditEvent pop = tagEditHistory.pop();
+            pop.revertAction();
+
+            List<Item> list = new ArrayList<>();
+            pop.getAdded().keySet().forEach(item -> {
+              if (!list.contains(item)) {
+                list.add(item);
+              }
+            });
+            pop.getRemoved().keySet().forEach(item -> {
+              if (!list.contains(item)) {
+                list.add(item);
+              }
+            });
+            menagerie.refreshInSearches(list);
+          }, null);
+    }
+    event.consume();
+  }
+
+  private void handleKeyD(KeyEvent event) {
+    if (event.isShiftDown() &&
+        duplicateOptionsScreen.getDuplicatesScreen().getPairs() != null &&
+        !duplicateOptionsScreen.getDuplicatesScreen().getPairs().isEmpty()) {
+      duplicateOptionsScreen.getDuplicatesScreen().openWithOldPairs(screenPane, menagerie);
+    } else {
+      duplicateOptionsScreen.open(screenPane, menagerie, itemGridView.getSelected(),
+          currentSearch.getResults(), menagerie.getItems());
+    }
+    event.consume();
   }
 
   @FXML
@@ -2238,5 +2317,4 @@ public class MainController {
       }
     }
   }
-
 }
