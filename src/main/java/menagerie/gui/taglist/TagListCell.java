@@ -24,6 +24,8 @@
 
 package menagerie.gui.taglist;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Insets;
@@ -39,111 +41,117 @@ import javafx.scene.paint.Paint;
 import menagerie.model.menagerie.Tag;
 import menagerie.util.listeners.ObjectListener;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 public class TagListCell extends ListCell<Tag> {
 
-    private static final Logger LOGGER = Logger.getLogger(TagListCell.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(TagListCell.class.getName());
 
-    private static final String DEFAULT_STYLE_CLASS = "tag-list-cell";
+  private static final String DEFAULT_STYLE_CLASS = "tag-list-cell";
 
-    private final Label countLabel = new Label();
-    private final Label nameLabel = new Label();
-    private final Label addButton = new Label("+");
-    private final Label removeButton = new Label("-");
-    private final HBox rightHBox = new HBox(2, countLabel);
+  private final Label countLabel = new Label();
+  private final Label nameLabel = new Label();
+  private final Label addButton = new Label("+");
+  private final Label removeButton = new Label("-");
+  private final HBox rightHBox = new HBox(2, countLabel);
 
-    private final ChangeListener<String> colorListener = (observable, oldValue, newValue) -> {
-        if (Platform.isFxApplicationThread()) {
-            setTextColor(newValue);
-        } else {
-            Platform.runLater(() -> setTextColor(newValue));
+  private final ChangeListener<String> colorListener = (observable, oldValue, newValue) -> {
+    if (Platform.isFxApplicationThread()) {
+      setTextColor(newValue);
+    } else {
+      Platform.runLater(() -> setTextColor(newValue));
+    }
+  };
+  private final ChangeListener<Number> frequencyListener = (observable, oldValue, newValue) -> {
+    if (Platform.isFxApplicationThread()) {
+      setFrequency(newValue.intValue());
+    } else {
+      Platform.runLater(() -> setFrequency(newValue.intValue()));
+    }
+  };
+
+
+  public TagListCell(ObjectListener<Tag> addListener, ObjectListener<Tag> removeListener) {
+    getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+
+    addButton.setPadding(new Insets(0, 2, 0, 2));
+    addButton.setOnMouseClicked(event -> {
+      if (event.getButton() == MouseButton.PRIMARY) {
+        if (addListener != null) {
+          addListener.pass(getItem());
         }
-    };
-    private final ChangeListener<Number> frequencyListener = (observable, oldValue, newValue) -> {
-        if (Platform.isFxApplicationThread()) {
-            setFrequency(newValue.intValue());
-        } else {
-            Platform.runLater(() -> setFrequency(newValue.intValue()));
+        event.consume();
+      }
+    });
+    addButton.getStyleClass().add("tag-list-cell-button");
+
+    removeButton.setPadding(new Insets(0, 3, 0, 3));
+    removeButton.setOnMouseClicked(event -> {
+      if (event.getButton() == MouseButton.PRIMARY) {
+        if (removeListener != null) {
+          removeListener.pass(getItem());
         }
-    };
+        event.consume();
+      }
+    });
+    removeButton.getStyleClass().add("tag-list-cell-button");
 
+    countLabel.setMinWidth(USE_PREF_SIZE);
+    BorderPane bp = new BorderPane(null, null, rightHBox, null, nameLabel);
+    setGraphic(bp);
+    nameLabel.maxWidthProperty()
+        .bind(bp.widthProperty().subtract(rightHBox.widthProperty()).subtract(15));
 
-    public TagListCell(ObjectListener<Tag> addListener, ObjectListener<Tag> removeListener) {
-        getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+    addEventHandler(MouseEvent.MOUSE_ENTERED, event -> {
+      if (addListener != null && removeListener != null && getItem() != null &&
+          !rightHBox.getChildren().contains(addButton)) {
+        rightHBox.getChildren().addAll(addButton, removeButton);
+      }
+    });
+    addEventHandler(MouseEvent.MOUSE_EXITED,
+        event -> rightHBox.getChildren().removeAll(addButton, removeButton));
+  }
 
-        addButton.setPadding(new Insets(0, 2, 0, 2));
-        addButton.setOnMouseClicked(event -> {
-            if (event.getButton() == MouseButton.PRIMARY) {
-                if (addListener != null) addListener.pass(getItem());
-                event.consume();
-            }
-        });
-        addButton.getStyleClass().add("tag-list-cell-button");
-
-        removeButton.setPadding(new Insets(0, 3, 0, 3));
-        removeButton.setOnMouseClicked(event -> {
-            if (event.getButton() == MouseButton.PRIMARY) {
-                if (removeListener != null) removeListener.pass(getItem());
-                event.consume();
-            }
-        });
-        removeButton.getStyleClass().add("tag-list-cell-button");
-
-        countLabel.setMinWidth(USE_PREF_SIZE);
-        BorderPane bp = new BorderPane(null, null, rightHBox, null, nameLabel);
-        setGraphic(bp);
-        nameLabel.maxWidthProperty().bind(bp.widthProperty().subtract(rightHBox.widthProperty()).subtract(15));
-
-        addEventHandler(MouseEvent.MOUSE_ENTERED, event -> {
-            if (addListener != null && removeListener != null && getItem() != null && !rightHBox.getChildren().contains(addButton)) rightHBox.getChildren().addAll(addButton, removeButton);
-        });
-        addEventHandler(MouseEvent.MOUSE_EXITED, event -> rightHBox.getChildren().removeAll(addButton, removeButton));
+  @Override
+  protected void updateItem(Tag tag, boolean empty) {
+    if (getItem() != null) {
+      getItem().colorProperty().removeListener(colorListener);
+      getItem().frequencyProperty().removeListener(frequencyListener);
     }
 
-    @Override
-    protected void updateItem(Tag tag, boolean empty) {
-        if (getItem() != null) {
-            getItem().colorProperty().removeListener(colorListener);
-            getItem().frequencyProperty().removeListener(frequencyListener);
-        }
+    super.updateItem(tag, empty);
 
-        super.updateItem(tag, empty);
+    if (empty || tag == null) {
+      nameLabel.setText(null);
+      countLabel.setText(null);
+      setTooltip(null);
+      setTextColor(null);
+    } else {
+      nameLabel.setText(tag.getName());
+      setFrequency(tag.getFrequency());
+      setTooltip(new Tooltip("(ID: " + tag.getId() + ") " + tag.getName()));
+      setTextColor(tag.getColor());
 
-        if (empty || tag == null) {
-            nameLabel.setText(null);
-            countLabel.setText(null);
-            setTooltip(null);
-            setTextColor(null);
-        } else {
-            nameLabel.setText(tag.getName());
-            setFrequency(tag.getFrequency());
-            setTooltip(new Tooltip("(ID: " + tag.getId() + ") " + tag.getName()));
-            setTextColor(tag.getColor());
-
-            tag.colorProperty().addListener(colorListener);
-            tag.frequencyProperty().addListener(frequencyListener);
-        }
+      tag.colorProperty().addListener(colorListener);
+      tag.frequencyProperty().addListener(frequencyListener);
     }
+  }
 
-    private void setFrequency(int freq) {
-        countLabel.setText("(" + freq + ")");
-    }
+  private void setFrequency(int freq) {
+    countLabel.setText("(" + freq + ")");
+  }
 
-    private void setTextColor(String color) {
-        if (color == null || color.isEmpty()) {
-            nameLabel.setTextFill(Color.WHITE);
-            countLabel.setTextFill(Color.WHITE);
-        } else {
-            try {
-                nameLabel.setTextFill(Paint.valueOf(color));
-                countLabel.setTextFill(Paint.valueOf(color));
-            } catch (IllegalArgumentException e) {
-                LOGGER.log(Level.WARNING, "Invalid color string: " + color, e);
-                setTextColor(null);
-            }
-        }
+  private void setTextColor(String color) {
+    if (color == null || color.isEmpty()) {
+      nameLabel.setTextFill(Color.WHITE);
+      countLabel.setTextFill(Color.WHITE);
+    } else {
+      try {
+        nameLabel.setTextFill(Paint.valueOf(color));
+        countLabel.setTextFill(Paint.valueOf(color));
+      } catch (IllegalArgumentException e) {
+        LOGGER.log(Level.WARNING, "Invalid color string: " + color, e);
+        setTextColor(null);
+      }
     }
+  }
 
 }

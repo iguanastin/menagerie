@@ -24,6 +24,7 @@
 
 package menagerie.gui.screens.log;
 
+import java.util.logging.Level;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.css.PseudoClass;
@@ -34,76 +35,74 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 
-import java.util.logging.Level;
-
 public class LogListCell extends ListCell<LogItem> {
 
-    private final PseudoClass warningPseudoClass = PseudoClass.getPseudoClass("warning");
-    private final PseudoClass errorPseudoClass = PseudoClass.getPseudoClass("error");
+  private final PseudoClass warningPseudoClass = PseudoClass.getPseudoClass("warning");
+  private final PseudoClass errorPseudoClass = PseudoClass.getPseudoClass("error");
 
-    private final Label label = new Label();
+  private final Label label = new Label();
 
-    private final BooleanProperty warning = new BooleanPropertyBase() {
-        @Override
-        protected void invalidated() {
-            pseudoClassStateChanged(warningPseudoClass, get());
-        }
-
-        @Override
-        public Object getBean() {
-            return LogListCell.class;
-        }
-
-        @Override
-        public String getName() {
-            return "warning";
-        }
-    };
-    private final BooleanProperty error = new BooleanPropertyBase() {
-        @Override
-        protected void invalidated() {
-            pseudoClassStateChanged(errorPseudoClass, get());
-        }
-
-        @Override
-        public Object getBean() {
-            return LogListCell.class;
-        }
-
-        @Override
-        public String getName() {
-            return "error";
-        }
-    };
-
-
-    public LogListCell() {
-        super();
-        getStyleClass().addAll("log-list-cell");
-
-        label.setWrapText(true);
-        label.maxWidthProperty().bind(widthProperty().subtract(15));
-        setGraphic(label);
-
-        setOnContextMenuRequested(event -> {
-            if (label.getText() != null) {
-                MenuItem copy = new MenuItem("Copy");
-                copy.setOnAction(event1 -> {
-                    ClipboardContent cc = new ClipboardContent();
-                    cc.putString(label.getText());
-                    Clipboard.getSystemClipboard().setContent(cc);
-                });
-                new ContextMenu(copy).show(getScene().getWindow(), event.getScreenX(), event.getScreenY());
-            }
-        });
+  private final BooleanProperty warning = new BooleanPropertyBase() {
+    @Override
+    protected void invalidated() {
+      pseudoClassStateChanged(warningPseudoClass, get());
     }
 
     @Override
-    protected void updateItem(LogItem item, boolean empty) {
-        super.updateItem(item, empty);
-
-        warning.set(item != null && item.getLevel() == Level.WARNING);
-        error.set(item != null && item.getLevel() == Level.SEVERE);
-        label.setText(item != null ? item.getText() : null);
+    public Object getBean() {
+      return LogListCell.class;
     }
+
+    @Override
+    public String getName() {
+      return "warning";
+    }
+  };
+  private final BooleanProperty error = new BooleanPropertyBase() {
+    @Override
+    protected void invalidated() {
+      pseudoClassStateChanged(errorPseudoClass, get());
+    }
+
+    @Override
+    public Object getBean() {
+      return LogListCell.class;
+    }
+
+    @Override
+    public String getName() {
+      return "error";
+    }
+  };
+
+
+  public LogListCell() {
+    super();
+    getStyleClass().addAll("log-list-cell");
+
+    label.setWrapText(true);
+    label.maxWidthProperty().bind(widthProperty().subtract(15));
+    setGraphic(label);
+
+    setOnContextMenuRequested(event -> {
+      if (label.getText() != null) {
+        MenuItem copy = new MenuItem("Copy");
+        copy.setOnAction(event1 -> {
+          ClipboardContent cc = new ClipboardContent();
+          cc.putString(label.getText());
+          Clipboard.getSystemClipboard().setContent(cc);
+        });
+        new ContextMenu(copy).show(getScene().getWindow(), event.getScreenX(), event.getScreenY());
+      }
+    });
+  }
+
+  @Override
+  protected void updateItem(LogItem item, boolean empty) {
+    super.updateItem(item, empty);
+
+    warning.set(item != null && item.getLevel() == Level.WARNING);
+    error.set(item != null && item.getLevel() == Level.SEVERE);
+    label.setText(item != null ? item.getText() : null);
+  }
 }

@@ -24,6 +24,7 @@
 
 package menagerie.gui.screens.dialogs;
 
+import java.text.DecimalFormat;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -37,99 +38,99 @@ import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.util.listeners.PokeListener;
 
-import java.text.DecimalFormat;
-
 public class ProgressScreen extends Screen {
 
-    private final Label title;
-    private final Label message;
-    private final Label count;
-    private final ProgressBar progress;
+  private final Label title;
+  private final Label message;
+  private final Label count;
+  private final ProgressBar progress;
 
-    private PokeListener cancelListener = null;
+  private PokeListener cancelListener = null;
 
-    private static final DecimalFormat df = new DecimalFormat("#.##");
+  private static final DecimalFormat df = new DecimalFormat("#.##");
 
+  public ProgressScreen() {
+    addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == KeyCode.ESCAPE) {
+        close();
+        event.consume();
+      }
+    });
 
-    public ProgressScreen() {
-        addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ESCAPE) {
-                close();
-                event.consume();
-            }
-        });
+    BorderPane root = new BorderPane();
+    root.getStyleClass().addAll(ROOT_STYLE_CLASS);
+    root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
+    root.setPrefWidth(400);
+    setCenter(root);
 
-        BorderPane root = new BorderPane();
-        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
-        root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        root.setPrefWidth(400);
-        setCenter(root);
+    title = new Label("No Title");
+    BorderPane.setAlignment(title, Pos.CENTER_LEFT);
+    root.setTop(title);
 
-        title = new Label("No Title");
-        BorderPane.setAlignment(title, Pos.CENTER_LEFT);
-        root.setTop(title);
+    progress = new ProgressBar();
+    progress.setPrefWidth(root.getPrefWidth());
+    message = new Label("No Message");
+    VBox center = new VBox(5, message, progress);
+    center.setPadding(new Insets(5));
+    root.setCenter(center);
 
-        progress = new ProgressBar();
-        progress.setPrefWidth(root.getPrefWidth());
-        message = new Label("No Message");
-        VBox center = new VBox(5, message, progress);
-        center.setPadding(new Insets(5));
-        root.setCenter(center);
+    BorderPane bottom = new BorderPane();
+    setMargin(bottom, new Insets(5));
+    Button cancel = new Button("Cancel");
+    cancel.setOnAction(event -> {
+      close();
+      event.consume();
+    });
+    bottom.setRight(cancel);
+    count = new Label("0/0");
+    count.setPadding(new Insets(5));
+    bottom.setLeft(count);
+    root.setBottom(bottom);
 
-        BorderPane bottom = new BorderPane();
-        setMargin(bottom, new Insets(5));
-        Button cancel = new Button("Cancel");
-        cancel.setOnAction(event -> {
-            close();
-            event.consume();
-        });
-        bottom.setRight(cancel);
-        count = new Label("0/0");
-        count.setPadding(new Insets(5));
-        bottom.setLeft(count);
-        root.setBottom(bottom);
+    setDefaultFocusNode(cancel);
+  }
 
-        setDefaultFocusNode(cancel);
+  /**
+   * Opens this screen in a manager.
+   *
+   * @param manager        Manager to open this screen.
+   * @param titleText      Title bar text.
+   * @param messageText    Message text.
+   * @param cancelListener Listener for the cancel event.
+   */
+  public void open(ScreenPane manager, String titleText, String messageText,
+                   PokeListener cancelListener) {
+    this.cancelListener = null;
+    manager.open(this);
+
+    this.cancelListener = cancelListener;
+
+    title.setText(titleText);
+    message.setText(messageText);
+    setProgress(0, 0);
+  }
+
+  /**
+   * Sets the progress.
+   *
+   * @param i     Number of complete operations.
+   * @param total Number of total operations.
+   */
+  public void setProgress(int i, int total) {
+    count.setText(df.format(100.0 * i / total) + "%");
+    progress.setProgress((double) i / total);
+  }
+
+  public void setProgress(double progress) {
+    count.setText(progress > 0 ? df.format(progress * 100) + "%" : "Working...");
+    this.progress.setProgress(progress);
+  }
+
+  @Override
+  protected void onClose() {
+    if (cancelListener != null) {
+      cancelListener.poke();
     }
-
-    /**
-     * Opens this screen in a manager.
-     *
-     * @param manager        Manager to open this screen.
-     * @param titleText      Title bar text.
-     * @param messageText    Message text.
-     * @param cancelListener Listener for the cancel event.
-     */
-    public void open(ScreenPane manager, String titleText, String messageText, PokeListener cancelListener) {
-        this.cancelListener = null;
-        manager.open(this);
-
-        this.cancelListener = cancelListener;
-
-        title.setText(titleText);
-        message.setText(messageText);
-        setProgress(0, 0);
-    }
-
-    /**
-     * Sets the progress.
-     *
-     * @param i     Number of complete operations.
-     * @param total Number of total operations.
-     */
-    public void setProgress(int i, int total) {
-        count.setText(df.format(100.0 * i / total) + "%");
-        progress.setProgress((double) i / total);
-    }
-
-    public void setProgress(double progress) {
-        count.setText(progress > 0 ? df.format(progress * 100) + "%" : "Working...");
-        this.progress.setProgress(progress);
-    }
-
-    @Override
-    protected void onClose() {
-        if (cancelListener != null) cancelListener.poke();
-    }
+  }
 
 }

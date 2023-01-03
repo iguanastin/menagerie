@@ -29,6 +29,6 @@ package menagerie.util.listeners;
  */
 public interface PokeListener {
 
-    void poke();
+  void poke();
 
 }

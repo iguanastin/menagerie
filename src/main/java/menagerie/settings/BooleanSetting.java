@@ -33,91 +33,94 @@ import org.json.JSONObject;
 
 public class BooleanSetting extends Setting {
 
-    private static final String VALUE_KEY = "value";
+  private static final String VALUE_KEY = "value";
 
-    private final BooleanProperty value = new SimpleBooleanProperty();
+  private final BooleanProperty value = new SimpleBooleanProperty();
 
+  public BooleanSetting(String identifier, String label, String tip, boolean hidden,
+                        boolean value) {
+    super(identifier, label, tip, hidden);
+    this.value.set(value);
+  }
 
-    public BooleanSetting(String identifier, String label, String tip, boolean hidden, boolean value) {
-        super(identifier, label, tip, hidden);
-        this.value.set(value);
+  public BooleanSetting(String identifier, boolean value) {
+    super(identifier);
+    this.value.set(value);
+  }
+
+  public BooleanSetting(String identifier) {
+    super(identifier);
+  }
+
+  public BooleanSetting hide() {
+    setHidden(true);
+    return this;
+  }
+
+  public BooleanSetting tip(String tip) {
+    setTip(tip);
+    return this;
+  }
+
+  public BooleanSetting label(String label) {
+    setLabel(label);
+    return this;
+  }
+
+  public boolean getValue() {
+    return value.get();
+  }
+
+  public void setValue(boolean value) {
+    this.value.set(value);
+  }
+
+  public BooleanProperty valueProperty() {
+    return value;
+  }
+
+  @Override
+  public SettingNode makeJFXNode() {
+    CheckBox checkBox = new CheckBox(getLabel());
+    checkBox.setSelected(getValue());
+    if (getTip() != null && !getTip().isEmpty()) {
+      checkBox.setTooltip(new Tooltip(getTip()));
     }
 
-    public BooleanSetting(String identifier, boolean value) {
-        super(identifier);
-        this.value.set(value);
-    }
+    return new SettingNode() {
+      @Override
+      public void applyToSetting() {
+        setValue(checkBox.isSelected());
+      }
 
-    public BooleanSetting(String identifier) {
-        super(identifier);
-    }
+      @Override
+      public Node getNode() {
+        return checkBox;
+      }
+    };
+  }
 
-    public BooleanSetting hide() {
-        setHidden(true);
-        return this;
-    }
+  @Override
+  JSONObject toJSON() {
+    return super.toJSON().put(VALUE_KEY, getValue());
+  }
 
-    public BooleanSetting tip(String tip) {
-        setTip(tip);
-        return this;
-    }
+  @Override
+  void initFromJSON(JSONObject json) {
+    setValue(json.getBoolean(VALUE_KEY));
+  }
 
-    public BooleanSetting label(String label) {
-        setLabel(label);
-        return this;
-    }
+  @Override
+  public String toString() {
+    return "Boolean(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() +
+           ")";
+  }
 
-    public boolean getValue() {
-        return value.get();
-    }
-
-    public void setValue(boolean value) {
-        this.value.set(value);
-    }
-
-    public BooleanProperty valueProperty() {
-        return value;
-    }
-
-    @Override
-    public SettingNode makeJFXNode() {
-        CheckBox checkBox = new CheckBox(getLabel());
-        checkBox.setSelected(getValue());
-        if (getTip() != null && !getTip().isEmpty()) {
-            checkBox.setTooltip(new Tooltip(getTip()));
-        }
-
-        return new SettingNode() {
-            @Override
-            public void applyToSetting() {
-                setValue(checkBox.isSelected());
-            }
-
-            @Override
-            public Node getNode() {
-                return checkBox;
-            }
-        };
-    }
-
-    @Override
-    JSONObject toJSON() {
-        return super.toJSON().put(VALUE_KEY, getValue());
-    }
-
-    @Override
-    void initFromJSON(JSONObject json) {
-        setValue(json.getBoolean(VALUE_KEY));
-    }
-
-    @Override
-    public String toString() {
-        return "Boolean(id:\"" + getID() + "\", label:\"" + getLabel() + "\", value:" + getValue() + ")";
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return super.equals(obj) && obj instanceof BooleanSetting && ((BooleanSetting) obj).getValue() == getValue();
-    }
+  @Override
+  public boolean equals(Object obj) {
+    return super.equals(obj) && obj instanceof BooleanSetting &&
+           ((BooleanSetting) obj).getValue() == getValue();
+  }
+  // TODO. override hashCode as well
 
 }

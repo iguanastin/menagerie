@@ -24,97 +24,98 @@
 
 package menagerie.gui.screens.move;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import menagerie.model.menagerie.MediaItem;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
-
 public class FileMoveNode {
 
-    private final File folder;
-    private final List<MediaItem> items;
-    private final List<FileMoveNode> nodes;
-    private final int depth;
-    private FileMoveNode parent = null;
-    private final BooleanProperty preserve = new SimpleBooleanProperty(false);
+  private final File folder;
+  private final List<MediaItem> items;
+  private final List<FileMoveNode> nodes;
+  private final int depth;
+  private FileMoveNode parent = null;
+  private final BooleanProperty preserve = new SimpleBooleanProperty(false);
 
 
-    public FileMoveNode(File folder, List<MediaItem> items, List<FileMoveNode> nodes) {
-        this.folder = folder;
-        this.items = items;
-        this.nodes = nodes;
+  public FileMoveNode(File folder, List<MediaItem> items, List<FileMoveNode> nodes) {
+    this.folder = folder;
+    this.items = items;
+    this.nodes = nodes;
 
-        int result = 0;
-        File f = getFolder();
-        while (f.getParentFile() != null) {
-            result++;
-            f = f.getParentFile();
-        }
-
-        depth = result;
+    int result = 0;
+    File f = getFolder();
+    while (f.getParentFile() != null) {
+      result++;
+      f = f.getParentFile();
     }
 
-    public FileMoveNode(File folder) {
-        this(folder, new ArrayList<>(), new ArrayList<>());
-    }
+    depth = result;
+  }
 
-    public File getFolder() {
-        return folder;
-    }
+  public FileMoveNode(File folder) {
+    this(folder, new ArrayList<>(), new ArrayList<>());
+  }
 
-    public List<MediaItem> getItems() {
-        return items;
-    }
+  public File getFolder() {
+    return folder;
+  }
 
-    public List<FileMoveNode> getNodes() {
-        return nodes;
-    }
+  public List<MediaItem> getItems() {
+    return items;
+  }
 
-    public int getDepth() {
-        return depth;
-    }
+  public List<FileMoveNode> getNodes() {
+    return nodes;
+  }
 
-    public FileMoveNode getParent() {
-        return parent;
-    }
+  public int getDepth() {
+    return depth;
+  }
 
-    public boolean isRoot() {
-        for (File root : File.listRoots()) {
-            if (root.equals(getFolder())) return true;
-        }
+  public FileMoveNode getParent() {
+    return parent;
+  }
 
-        return false;
-    }
-
-    public boolean isPreserved() {
-        return preserve.getValue();
-    }
-
-    public BooleanProperty preserveProperty() {
-        return preserve;
-    }
-
-    public void setPreserve(boolean preserve) {
-        if (!isRoot()) {
-            this.preserve.set(preserve);
-
-            if (preserve) {
-                for (FileMoveNode node : getNodes()) {
-                    node.setPreserve(true);
-                }
-            } else {
-                if (getParent() != null) {
-                    getParent().setPreserve(false);
-                }
-            }
+  public boolean isRoot() {
+    for (File root : File.listRoots()) {
+        if (root.equals(getFolder())) {
+            return true;
         }
     }
 
-    public void setParent(FileMoveNode parent) {
-        this.parent = parent;
+    return false;
+  }
+
+  public boolean isPreserved() {
+    return preserve.getValue();
+  }
+
+  public BooleanProperty preserveProperty() {
+    return preserve;
+  }
+
+  public void setPreserve(boolean preserve) {
+    if (!isRoot()) {
+      this.preserve.set(preserve);
+
+      if (preserve) {
+        for (FileMoveNode node : getNodes()) {
+          node.setPreserve(true);
+        }
+      } else {
+        if (getParent() != null) {
+          getParent().setPreserve(false);
+        }
+      }
     }
+  }
+
+  public void setParent(FileMoveNode parent) {
+    this.parent = parent;
+  }
 
 }

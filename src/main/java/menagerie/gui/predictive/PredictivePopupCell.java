@@ -31,78 +31,66 @@ import javafx.scene.control.Label;
 
 public class PredictivePopupCell extends Label {
 
-    private static final String DEFAULT_STYLE_CLASS = "predictive-cell";
+  private static final String DEFAULT_STYLE_CLASS = "predictive-cell";
 
-    private static final PseudoClass SELECTED_PSEUDOCLASS = PseudoClass.getPseudoClass("selected");
-    private static final PseudoClass SELECTED_UNFOCUSED_PSEUDOCLASS = PseudoClass.getPseudoClass("selected-unfocused");
+  private static final PseudoClass SELECTED_PSEUDOCLASS = PseudoClass.getPseudoClass("selected");
+  private static final PseudoClass SELECTED_UNFOCUSED_PSEUDOCLASS = PseudoClass.getPseudoClass("selected-unfocused");
 
-    private final BooleanProperty selected = new BooleanPropertyBase() {
-        @Override
-        protected void invalidated() {
-            pseudoClassStateChanged(SELECTED_PSEUDOCLASS, get());
-        }
-
-        @Override
-        public Object getBean() {
-            return PredictivePopupCell.this;
-        }
-
-        @Override
-        public String getName() {
-            return "selected";
-        }
-    };
-
-    private final BooleanProperty selectedUnfocused = new BooleanPropertyBase() {
-        @Override
-        protected void invalidated() {
-            pseudoClassStateChanged(SELECTED_UNFOCUSED_PSEUDOCLASS, get());
-        }
-
-        @Override
-        public Object getBean() {
-            return PredictivePopupCell.this;
-        }
-
-        @Override
-        public String getName() {
-            return "selected-unfocused";
-        }
-    };
-
-
-    public PredictivePopupCell() {
-        super();
-        getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+  private final BooleanProperty selected = new BooleanPropertyBase() {
+    @Override
+    protected void invalidated() {
+      pseudoClassStateChanged(SELECTED_PSEUDOCLASS, get());
     }
 
-    public PredictivePopupCell(String text) {
-        super(text);
-        getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+    @Override
+    public Object getBean() {
+      return PredictivePopupCell.this;
     }
 
-    public BooleanProperty selectedUnfocusedProperty() {
-        return selectedUnfocused;
+    @Override
+    public String getName() {
+      return "selected";
+    }
+  };
+
+  private final BooleanProperty selectedUnfocused = new BooleanPropertyBase() {
+    @Override
+    protected void invalidated() {
+      pseudoClassStateChanged(SELECTED_UNFOCUSED_PSEUDOCLASS, get());
     }
 
-    public boolean getSelectedUnfocused() {
-        return selectedUnfocused.get();
+    @Override
+    public Object getBean() {
+      return PredictivePopupCell.this;
     }
 
-    public void setSelectedUnfocused(boolean b) {
-        selectedUnfocused.set(b);
+    @Override
+    public String getName() {
+      return "selected-unfocused";
     }
+  };
 
-    public BooleanProperty selectedProperty() {
-        return selected;
-    }
 
-    public boolean isSelected() {
-        return selected.get();
-    }
+  public PredictivePopupCell() {
+    super();
+    getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+  }
 
-    public void setSelected(boolean b) {
-        selected.set(b);
-    }
+  public PredictivePopupCell(String text) {
+    super(text);
+    getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+  }
+
+  public void setSelectedUnfocused(boolean b) {
+    selectedUnfocused.set(b);
+  }
+
+  public boolean isSelected() {
+    return selected.get();
+  }
+
+  public void setSelected(boolean b) {
+    selected.set(b);
+  }
 
 }

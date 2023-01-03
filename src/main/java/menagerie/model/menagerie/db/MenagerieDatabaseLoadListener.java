@@ -26,20 +26,20 @@ package menagerie.model.menagerie.db;
 
 public interface MenagerieDatabaseLoadListener {
 
-    void startedItemLoading(int total);
+  void startedItemLoading(int total);
 
-    void gettingItemList();
+  void gettingItemList();
 
-    void itemsLoading(int count, int total);
+  void itemsLoading(int count, int total);
 
-    void startTagLoading(int total);
+  void startTagLoading(int total);
 
-    void tagsLoading(int count, int total);
+  void tagsLoading(int count, int total);
 
-    void gettingNonDupeList();
+  void gettingNonDupeList();
 
-    void startNonDupeLoading(int total);
+  void startNonDupeLoading(int total);
 
-    void nonDupeLoading(int count, int total);
+  void nonDupeLoading(int count, int total);
 
 }

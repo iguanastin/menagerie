@@ -24,55 +24,65 @@
 
 package menagerie.model.search.rules;
 
-import menagerie.model.menagerie.Item;
-
 import java.util.Date;
+import menagerie.model.menagerie.Item;
 
 /**
  * Rule that compares against the date an item was added to the Menagerie.
  */
 public class DateAddedRule extends SearchRule {
 
-    public enum Type {
-        LESS_THAN, GREATER_THAN, EQUAL_TO
+  public enum Type {
+    LESS_THAN, GREATER_THAN, EQUAL_TO
+  }
+
+  private final long time;
+  private final Type type;
+
+
+  /**
+   * @param type     Type of this rule.
+   * @param time     Time to compare item to.
+   * @param inverted Negate the rule.
+   */
+  public DateAddedRule(Type type, long time, boolean inverted) {
+    super(inverted);
+    priority = 10;
+
+    this.time = time;
+    this.type = type;
+  }
+
+  @Override
+  public boolean accept(Item item) {
+    boolean result = false;
+    switch (type) {
+      case LESS_THAN:
+        result = item.getDateAdded() < time;
+        break;
+      case GREATER_THAN:
+        result = item.getDateAdded() > time;
+        break;
+      case EQUAL_TO:
+        result = item.getDateAdded() == time;
+        break;
     }
 
-    private final long time;
-    private final Type type;
-
-
-    /**
-     * @param type     Type of this rule.
-     * @param time     Time to compare item to.
-     * @param inverted Negate the rule.
-     */
-    public DateAddedRule(Type type, long time, boolean inverted) {
-        super(inverted);
-        priority = 10;
-
-        this.time = time;
-        this.type = type;
+    if (isInverted()) {
+      result = !result;
     }
 
-    @Override
-    public boolean accept(Item item) {
-        boolean result = switch (type) {
-            case LESS_THAN -> item.getDateAdded() < time;
-            case GREATER_THAN -> item.getDateAdded() > time;
-            case EQUAL_TO -> item.getDateAdded() == time;
-        };
+    return result;
+  }
 
-        if (isInverted()) result = !result;
-
-        return result;
+  @Override
+  public String toString() {
+    String result = "Added Date Rule: " + type + " " + time + " (" + new Date(time) + ")";
+    if (isInverted()) {
+      result += " [inverted]";
     }
-
-    @Override
-    public String toString() {
-        String result = "Added Date Rule: " + type + " " + time + " (" + new Date(time) + ")";
-        if (isInverted()) result += " [inverted]";
-        return result;
-    }
+    return result;
+  }
 
     public long getTime() {
         return time;

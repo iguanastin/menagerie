@@ -36,59 +36,58 @@ import java.util.regex.Pattern;
 
 public class WindowsExplorerComparator implements Comparator<File> {
 
-    private static final Pattern splitPattern = Pattern.compile("\\d+|\\.|\\s");
+  private static final Pattern splitPattern = Pattern.compile("\\d+|\\.|\\s");
 
-    // REENG: compare windows file names
-    @Override
-    public int compare(File f1, File f2) {
-        Iterator<String> i1 = splitStringPreserveDelimiter(f1.getPath()).iterator();
-        Iterator<String> i2 = splitStringPreserveDelimiter(f2.getPath()).iterator();
-        while (true) {
-            //Til here all is equal.
-            if (!i1.hasNext() && !i2.hasNext()) {
-                return 0;
-            }
-            //first has no more parts -> comes first
-            if (!i1.hasNext()) {
-                return -1;
-            }
-            //first has more parts than i2 -> comes after
-            if (!i2.hasNext()) {
-                return 1;
-            }
+  @Override
+  public int compare(File f1, File f2) {
+    Iterator<String> i1 = splitStringPreserveDelimiter(f1.getPath()).iterator();
+    Iterator<String> i2 = splitStringPreserveDelimiter(f2.getPath()).iterator();
+    while (true) {
+      //Til here all is equal.
+      if (!i1.hasNext() && !i2.hasNext()) {
+        return 0;
+      }
+      //first has no more parts -> comes first
+      if (!i1.hasNext()) {
+        return -1;
+      }
+      //first has more parts than i2 -> comes after
+      if (!i2.hasNext()) {
+        return 1;
+      }
 
-            String data1 = i1.next();
-            String data2 = i2.next();
-            int result;
-            try {
-                //If both datas are numbers, then compare numbers
-                result = Long.compare(Long.parseLong(data1), Long.parseLong(data2));
-                //If numbers are equal than longer comes first
-                if (result == 0) {
-                    result = -Integer.compare(data1.length(), data2.length());
-                }
-            } catch (NumberFormatException ex) {
-                //compare text case insensitive
-                result = data1.compareToIgnoreCase(data2);
-            }
-
-            if (result != 0) {
-                return result;
-            }
+      String data1 = i1.next();
+      String data2 = i2.next();
+      int result;
+      try {
+        //If both datas are numbers, then compare numbers
+        result = Long.compare(Long.valueOf(data1), Long.valueOf(data2));
+        //If numbers are equal than longer comes first
+        if (result == 0) {
+          result = -Integer.compare(data1.length(), data2.length());
         }
-    }
+      } catch (NumberFormatException ex) {
+        //compare text case insensitive
+        result = data1.compareToIgnoreCase(data2);
+      }
 
-    private List<String> splitStringPreserveDelimiter(String str) {
-        Matcher matcher = splitPattern.matcher(str);
-        List<String> list = new ArrayList<>();
-        int pos = 0;
-        while (matcher.find()) {
-            list.add(str.substring(pos, matcher.start()));
-            list.add(matcher.group());
-            pos = matcher.end();
-        }
-        list.add(str.substring(pos));
-        return list;
+      if (result != 0) {
+        return result;
+      }
     }
+  }
+
+  private List<String> splitStringPreserveDelimiter(String str) {
+    Matcher matcher = splitPattern.matcher(str);
+    List<String> list = new ArrayList<>();
+    int pos = 0;
+    while (matcher.find()) {
+      list.add(str.substring(pos, matcher.start()));
+      list.add(matcher.group());
+      pos = matcher.end();
+    }
+    list.add(str.substring(pos));
+    return list;
+  }
 
 }

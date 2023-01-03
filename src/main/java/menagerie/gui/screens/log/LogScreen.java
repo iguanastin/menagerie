@@ -36,59 +36,57 @@ import menagerie.gui.screens.Screen;
 
 public class LogScreen extends Screen {
 
-    private final ListView<LogItem> listView;
+  private final ListView<LogItem> listView;
 
+  public LogScreen() {
+    addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == KeyCode.ESCAPE) {
+        close();
+        event.consume();
+      } else if (event.getCode() == KeyCode.L && event.isControlDown()) {
+        close();
+        event.consume();
+      }
+    });
 
-    public LogScreen() {
-        addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ESCAPE) {
-                close();
-                event.consume();
-            } else if (event.getCode() == KeyCode.L && event.isControlDown()) {
-                close();
-                event.consume();
-            }
-        });
+    Button exit = new Button("X");
+    exit.setOnAction(event -> close());
+    Label title = new Label("Console log:");
+    setAlignment(title, Pos.CENTER_LEFT);
+    BorderPane top = new BorderPane(null, null, exit, null, title);
+    top.setPadding(new Insets(0, 0, 0, 5));
 
+    listView = new ListView<>();
+    listView.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == KeyCode.ESCAPE) {
+        close();
+        event.consume();
+      } else if (event.getCode() == KeyCode.L && event.isControlDown()) {
+        close();
+        event.consume();
+      }
+    });
 
-        Button exit = new Button("X");
-        exit.setOnAction(event -> close());
-        Label title = new Label("Console log:");
-        setAlignment(title, Pos.CENTER_LEFT);
-        BorderPane top = new BorderPane(null, null, exit, null, title);
-        top.setPadding(new Insets(0, 0, 0, 5));
+    BorderPane root = new BorderPane(listView, top, null, null, null);
+    root.setPrefWidth(800);
+    root.getStyleClass().addAll(ROOT_STYLE_CLASS);
+    root.setMaxWidth(USE_PREF_SIZE);
+    setRight(root);
+    setPadding(new Insets(25));
 
-        listView = new ListView<>();
-        listView.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ESCAPE) {
-                close();
-                event.consume();
-            } else if (event.getCode() == KeyCode.L && event.isControlDown()) {
-                close();
-                event.consume();
-            }
-        });
+    setDefaultFocusNode(exit);
+  }
 
-        BorderPane root = new BorderPane(listView, top, null, null, null);
-        root.setPrefWidth(800);
-        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
-        root.setMaxWidth(USE_PREF_SIZE);
-        setRight(root);
-        setPadding(new Insets(25));
+  /**
+   * @return The ListView in this screen.
+   */
+  public ListView<LogItem> getListView() {
+    return listView;
+  }
 
-        setDefaultFocusNode(exit);
-    }
-
-    /**
-     * @return The ListView in this screen.
-     */
-    public ListView<LogItem> getListView() {
-        return listView;
-    }
-
-    @Override
-    protected void onOpen() {
-        listView.scrollTo(listView.getItems().size() - 1);
-    }
+  @Override
+  protected void onOpen() {
+    listView.scrollTo(listView.getItems().size() - 1);
+  }
 
 }

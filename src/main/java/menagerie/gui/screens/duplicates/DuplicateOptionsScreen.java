@@ -24,10 +24,22 @@
 
 package menagerie.gui.screens.duplicates;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Separator;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -47,360 +59,370 @@ import menagerie.model.menagerie.Menagerie;
 import menagerie.settings.MenagerieSettings;
 import menagerie.util.CancellableThread;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 public class DuplicateOptionsScreen extends Screen {
 
-    private static final Logger LOGGER = Logger.getLogger(DuplicateOptionsScreen.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(DuplicateOptionsScreen.class.getName());
 
-    private static final double DEFAULT_CONFIDENCE = 0.95;
-    private static final long PROGRESS_UPDATE_INTERVAL = 16;
-    private long lastProgressUpdate = 0;
+  private static final double DEFAULT_CONFIDENCE = 0.95;
+  private static final long PROGRESS_UPDATE_INTERVAL = 16;
+  private long lastProgressUpdate = 0;
 
-    private enum Scope {
-        SELECTED, SEARCHED, ALL
-    }
+  private enum Scope {
+    SELECTED, SEARCHED, ALL
+  }
 
-    private final MenagerieSettings settings;
+  private final MenagerieSettings settings;
 
-    private final DuplicatesScreen duplicateScreen;
+  private final DuplicatesScreen duplicateScreen;
 
-    private final Label compareCountLabel = new Label("~N/A comparisons"), firstCountLabel = new Label("0"), secondCountLabel = new Label("0");
-    private final ChoiceBox<Scope> compareChoiceBox = new ChoiceBox<>(), toChoiceBox = new ChoiceBox<>();
-    private final TextField confidenceTextField = new TextField();
-    private final CheckBox includeGroupElementsCheckBox = new CheckBox("Include group elements");
-    private final Button previousButton = new Button("Open last");
+  private final Label compareCountLabel = new Label("~N/A comparisons");
+  private final Label firstCountLabel = new Label("0");
+  private final Label secondCountLabel = new Label("0");
+  private final ChoiceBox<Scope> compareChoiceBox = new ChoiceBox<>();
+  private final ChoiceBox<Scope> toChoiceBox = new ChoiceBox<>();
+  private final TextField confidenceTextField = new TextField();
+  private final CheckBox includeGroupElementsCheckBox = new CheckBox("Include group elements");
+  private final Button previousButton = new Button("Open last");
 
-    private List<Item> selected = null, searched = null, all = null;
-    private Menagerie menagerie = null;
+  private List<Item> selected = null, searched = null, all = null;
+  private Menagerie menagerie = null;
 
 
-    public DuplicateOptionsScreen(MenagerieSettings settings) {
-        duplicateScreen = new DuplicatesScreen();
+  public DuplicateOptionsScreen(MenagerieSettings settings) {
+    duplicateScreen = new DuplicatesScreen();
 
-        this.settings = settings;
+    this.settings = settings;
 
-        addEventHandler(KeyEvent.KEY_PRESSED, event -> {
-            if (event.getCode() == KeyCode.ESCAPE) {
-                close();
-            } else if (event.getCode() == KeyCode.ENTER) {
-                compareButtonOnAction();
-            }
+    addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+      if (event.getCode() == KeyCode.ESCAPE) {
+        close();
+      } else if (event.getCode() == KeyCode.ENTER) {
+        compareButtonOnAction();
+      }
+    });
+
+    Button exit = new Button("X");
+    exit.setOnAction(event -> close());
+    BorderPane header = new BorderPane(null, null, exit, null, new Label("Duplicate Settings"));
+    header.setPadding(new Insets(0, 0, 0, 5));
+
+    VBox contents = new VBox(5);
+    contents.setPadding(new Insets(5));
+
+    compareChoiceBox.getItems().addAll(Scope.SELECTED, Scope.SEARCHED, Scope.ALL);
+    compareChoiceBox.getSelectionModel().selectFirst();
+    Label l1 = new Label("Compare:");
+    HBox h = new HBox(5, l1, compareChoiceBox, firstCountLabel);
+    h.setAlignment(Pos.CENTER_LEFT);
+    contents.getChildren().add(h);
+
+    Label l2 = new Label("To:");
+    l2.minWidthProperty().bind(l1.widthProperty());
+    toChoiceBox.getItems().addAll(Scope.SELECTED, Scope.SEARCHED, Scope.ALL);
+    toChoiceBox.getSelectionModel().selectFirst();
+    toChoiceBox.getSelectionModel().selectedItemProperty()
+        .addListener((observable, oldValue, newValue) -> updateCounts());
+    compareChoiceBox.getSelectionModel().selectedItemProperty()
+        .addListener((observable, oldValue, newValue) -> {
+          Scope toSelected = toChoiceBox.getValue();
+          switch (newValue) {
+            case SELECTED:
+              toChoiceBox.getItems().clear();
+              toChoiceBox.getItems().addAll(Scope.SELECTED, Scope.SEARCHED, Scope.ALL);
+              break;
+            case SEARCHED:
+              toChoiceBox.getItems().clear();
+              toChoiceBox.getItems().addAll(Scope.SEARCHED, Scope.ALL);
+              break;
+            case ALL:
+              toChoiceBox.getItems().clear();
+              toChoiceBox.getItems().addAll(Scope.ALL);
+              break;
+          }
+          if (toChoiceBox.getItems().contains(toSelected)) {
+            toChoiceBox.getSelectionModel().select(toSelected);
+          } else {
+            toChoiceBox.getSelectionModel().selectFirst();
+          }
+
+          updateCounts();
         });
+    h = new HBox(5, l2, toChoiceBox, secondCountLabel);
+    h.setAlignment(Pos.CENTER_LEFT);
+    contents.getChildren().add(h);
 
+    contents.getChildren().add(includeGroupElementsCheckBox);
 
-        Button exit = new Button("X");
-        exit.setOnAction(event -> close());
-        BorderPane header = new BorderPane(null, null, exit, null, new Label("Duplicate Settings"));
-        header.setPadding(new Insets(0, 0, 0, 5));
-
-        VBox contents = new VBox(5);
-        contents.setPadding(new Insets(5));
-
-        compareChoiceBox.getItems().addAll(Scope.SELECTED, Scope.SEARCHED, Scope.ALL);
-        compareChoiceBox.getSelectionModel().selectFirst();
-        Label l1 = new Label("Compare:");
-        HBox h = new HBox(5, l1, compareChoiceBox, firstCountLabel);
-        h.setAlignment(Pos.CENTER_LEFT);
-        contents.getChildren().add(h);
-
-        Label l2 = new Label("To:");
-        l2.minWidthProperty().bind(l1.widthProperty());
-        toChoiceBox.getItems().addAll(Scope.SELECTED, Scope.SEARCHED, Scope.ALL);
-        toChoiceBox.getSelectionModel().selectFirst();
-        toChoiceBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> updateCounts());
-        compareChoiceBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
-            Scope toSelected = toChoiceBox.getValue();
-            switch (newValue) {
-                case SELECTED -> {
-                    toChoiceBox.getItems().clear();
-                    toChoiceBox.getItems().addAll(Scope.SELECTED, Scope.SEARCHED, Scope.ALL);
-                }
-                case SEARCHED -> {
-                    toChoiceBox.getItems().clear();
-                    toChoiceBox.getItems().addAll(Scope.SEARCHED, Scope.ALL);
-                }
-                case ALL -> {
-                    toChoiceBox.getItems().clear();
-                    toChoiceBox.getItems().addAll(Scope.ALL);
-                }
-            }
-            if (toChoiceBox.getItems().contains(toSelected)) {
-                toChoiceBox.getSelectionModel().select(toSelected);
-            } else {
-                toChoiceBox.getSelectionModel().selectFirst();
-            }
-
-            updateCounts();
-        });
-        h = new HBox(5, l2, toChoiceBox, secondCountLabel);
-        h.setAlignment(Pos.CENTER_LEFT);
-        contents.getChildren().add(h);
-
-        contents.getChildren().add(includeGroupElementsCheckBox);
-
-        confidenceTextField.setPromptText(MediaItem.MIN_CONFIDENCE + "-" + MediaItem.MAX_CONFIDENCE);
-        confidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) {
-                try {
-                    double value = Double.parseDouble(confidenceTextField.getText());
-                    if (value < MediaItem.MIN_CONFIDENCE) confidenceTextField.setText("" + MediaItem.MIN_CONFIDENCE);
-                    else if (value > MediaItem.MAX_CONFIDENCE)
-                        confidenceTextField.setText("" + MediaItem.MAX_CONFIDENCE);
-                } catch (NumberFormatException e) {
-                    confidenceTextField.setText("" + DEFAULT_CONFIDENCE);
-                }
-            }
-        });
-        confidenceTextField.setTooltip(new Tooltip("Similarity confidence: (" + MediaItem.MIN_CONFIDENCE + "-" + MediaItem.MAX_CONFIDENCE + ")"));
-        h = new HBox(5, new Label("Confidence:"), confidenceTextField);
-        h.setAlignment(Pos.CENTER_LEFT);
-        contents.getChildren().add(h);
-
-        VBox center = new VBox(5, header, new Separator(), contents);
-
-        Button compare = new Button("Compare");
-        compare.setOnAction(event -> compareButtonOnAction());
-        Button cancel = new Button("Cancel");
-        cancel.setOnAction(event -> close());
-        previousButton.setOnAction(event -> {
-            if (duplicateScreen.getPairs() != null && !duplicateScreen.getPairs().isEmpty()) {
-                duplicateScreen.openWithOldPairs(getManager(), menagerie);
-                close();
-            }
-        });
-        h = new HBox(5, compareCountLabel, compare, cancel);
-        h.setAlignment(Pos.CENTER_RIGHT);
-        BorderPane bottom = new BorderPane(null, null, h, null, previousButton);
-        bottom.setPadding(new Insets(5));
-
-        BorderPane root = new BorderPane(center, null, null, bottom, null);
-        root.setPrefWidth(500);
-        root.getStyleClass().addAll(ROOT_STYLE_CLASS);
-        root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
-        setCenter(root);
-
-        setDefaultFocusNode(compare);
-    }
-
-    /**
-     * Opens this screen in a manager.
-     *
-     * @param manager   Manager to open in.
-     * @param menagerie Menagerie.
-     * @param selected  Set of items that are selected.
-     * @param searched  Set of items that are searched.
-     * @param all       Set of all items.
-     */
-    public void open(ScreenPane manager, Menagerie menagerie, List<Item> selected, List<Item> searched, List<Item> all) {
-        if (manager == null || menagerie == null || selected == null || searched == null || all == null) return;
-        this.menagerie = menagerie;
-        this.selected = selected;
-        this.searched = searched;
-        this.all = all;
-
-        manager.open(this);
-    }
-
-    /**
-     * Updates the count labels.
-     */
-    private void updateCounts() {
-        int firstNum;
-        if (compareChoiceBox.getValue() == Scope.SELECTED) {
-            firstNum = selected.size();
-        } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
-            firstNum = searched.size();
-        } else {
-            firstNum = all.size();
-        }
-        firstCountLabel.setText(firstNum + "");
-
-        int secondNum;
-        if (toChoiceBox.getValue() == Scope.SELECTED) {
-            secondNum = selected.size();
-        } else if (toChoiceBox.getValue() == Scope.SEARCHED) {
-            secondNum = searched.size();
-        } else {
-            secondNum = all.size();
-        }
-        secondCountLabel.setText(secondNum + "");
-
-        compareCountLabel.setText("~" + firstNum * secondNum + " comparisons");
-    }
-
-    /**
-     * Saves the changed settings to the settings object and writes it to file.
-     */
-    private void saveSettings() {
+    confidenceTextField.setPromptText(MediaItem.MIN_CONFIDENCE + "-" + MediaItem.MAX_CONFIDENCE);
+    confidenceTextField.focusedProperty().addListener((observable, oldValue, newValue) -> {
+      if (!newValue) {
         try {
-            settings.duplicatesConfidence.setValue(Double.parseDouble(confidenceTextField.getText()));
-            settings.duplicatesIncludeGroups.setValue(includeGroupElementsCheckBox.isSelected());
+          double value = Double.parseDouble(confidenceTextField.getText());
+            if (value < MediaItem.MIN_CONFIDENCE) {
+                confidenceTextField.setText("" + MediaItem.MIN_CONFIDENCE);
+            } else if (value > MediaItem.MAX_CONFIDENCE) {
+                confidenceTextField.setText("" + MediaItem.MAX_CONFIDENCE);
+            }
         } catch (NumberFormatException e) {
-            LOGGER.log(Level.WARNING, "Failed to convert DuplicateOptionsScreen confidenceTextField to double for saving settings", e);
+          confidenceTextField.setText("" + DEFAULT_CONFIDENCE);
         }
+      }
+    });
+    confidenceTextField.setTooltip(new Tooltip(
+        "Similarity confidence: (" + MediaItem.MIN_CONFIDENCE + "-" + MediaItem.MAX_CONFIDENCE +
+        ")"));
+    h = new HBox(5, new Label("Confidence:"), confidenceTextField);
+    h.setAlignment(Pos.CENTER_LEFT);
+    contents.getChildren().add(h);
 
+    VBox center = new VBox(5, header, new Separator(), contents);
+
+    Button compare = new Button("Compare");
+    compare.setOnAction(event -> compareButtonOnAction());
+    Button cancel = new Button("Cancel");
+    cancel.setOnAction(event -> close());
+    previousButton.setOnAction(event -> {
+      if (duplicateScreen.getPairs() != null && !duplicateScreen.getPairs().isEmpty()) {
+        duplicateScreen.openWithOldPairs(getManager(), menagerie);
+        close();
+      }
+    });
+    h = new HBox(5, compareCountLabel, compare, cancel);
+    h.setAlignment(Pos.CENTER_RIGHT);
+    BorderPane bottom = new BorderPane(null, null, h, null, previousButton);
+    bottom.setPadding(new Insets(5));
+
+    BorderPane root = new BorderPane(center, null, null, bottom, null);
+    root.setPrefWidth(500);
+    root.getStyleClass().addAll(ROOT_STYLE_CLASS);
+    root.setMaxSize(USE_PREF_SIZE, USE_PREF_SIZE);
+    setCenter(root);
+
+    setDefaultFocusNode(compare);
+  }
+
+  /**
+   * Opens this screen in a manager.
+   *
+   * @param manager   Manager to open in.
+   * @param menagerie Menagerie.
+   * @param selected  Set of items that are selected.
+   * @param searched  Set of items that are searched.
+   * @param all       Set of all items.
+   */
+  public void open(ScreenPane manager, Menagerie menagerie, List<Item> selected,
+                   List<Item> searched, List<Item> all) {
+      if (manager == null || menagerie == null || selected == null || searched == null ||
+          all == null) {
+          return;
+      }
+    this.menagerie = menagerie;
+    this.selected = selected;
+    this.searched = searched;
+    this.all = all;
+
+    manager.open(this);
+  }
+
+  /**
+   * Updates the count labels.
+   */
+  private void updateCounts() {
+    int firstNum;
+    if (compareChoiceBox.getValue() == Scope.SELECTED) {
+      firstNum = selected.size();
+    } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
+      firstNum = searched.size();
+    } else {
+      firstNum = all.size();
+    }
+    firstCountLabel.setText(firstNum + "");
+
+    int secondNum;
+    if (toChoiceBox.getValue() == Scope.SELECTED) {
+      secondNum = selected.size();
+    } else if (toChoiceBox.getValue() == Scope.SEARCHED) {
+      secondNum = searched.size();
+    } else {
+      secondNum = all.size();
+    }
+    secondCountLabel.setText(secondNum + "");
+
+    compareCountLabel.setText("~" + firstNum * secondNum + " comparisons");
+  }
+
+  /**
+   * Saves the changed settings to the settings object and writes it to file.
+   */
+  private void saveSettings() {
+    try {
+      settings.duplicatesConfidence.setValue(Double.parseDouble(confidenceTextField.getText()));
+      settings.duplicatesIncludeGroups.setValue(includeGroupElementsCheckBox.isSelected());
+    } catch (NumberFormatException e) {
+      LOGGER.log(Level.WARNING,
+          "Failed to convert DuplicateOptionsScreen confidenceTextField to double for saving settings",
+          e);
+    }
+
+    try {
+      settings.save(new File(Main.SETTINGS_PATH));
+    } catch (IOException e) {
+      LOGGER.log(Level.SEVERE, "Failed to save settings file", e);
+    }
+  }
+
+  private void compareButtonOnAction() {
+    saveSettings();
+
+    List<Item> compare = all;
+    if (compareChoiceBox.getValue() == Scope.SELECTED) {
+      compare = selected;
+    } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
+      compare = searched;
+    }
+    compare = getComparableItems(compare, includeGroupElementsCheckBox.isSelected());
+    compare.removeIf(item -> (item instanceof GroupItem) ||
+                             (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
+    List<Item> to = all;
+    if (toChoiceBox.getValue() == Scope.SELECTED) {
+      to = selected;
+    } else if (toChoiceBox.getValue() == Scope.SEARCHED) {
+      to = searched;
+    }
+    to = getComparableItems(to, includeGroupElementsCheckBox.isSelected());
+    to.removeIf(item -> (item instanceof GroupItem) ||
+                        (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
+
+    if (settings.cudaDuplicates.getValue()) {
+      launchGPUDuplicateFinder(compare, to);
+    } else {
+      launchCPUDuplicateFinder(compare, to);
+    }
+  }
+
+  private void launchGPUDuplicateFinder(List<Item> compare, List<Item> to) {
+    ProgressScreen ps = new ProgressScreen();
+    Platform.runLater(() -> ps.setProgress(-1));
+
+    CancellableThread ct = new CancellableThread() {
+      @Override
+      public void run() {
         try {
-            settings.save(new File(Main.SETTINGS_PATH));
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to save settings file", e);
-        }
-    }
+          List<SimilarPair<MediaItem>> results = CUDADuplicateFinder.findDuplicates(compare, to,
+              (float) settings.duplicatesConfidence.getValue(), 100000);
+          results.removeIf(pair -> menagerie.hasNonDuplicate(pair));
 
-    private void compareButtonOnAction() {
-        saveSettings();
-
-        // REENG: DRY duplicated code
-        List<Item> compare = all;
-        if (compareChoiceBox.getValue() == Scope.SELECTED) {
-            compare = selected;
-        } else if (compareChoiceBox.getValue() == Scope.SEARCHED) {
-            compare = searched;
-        }
-        // REENG: Compare only to MediaItems with similarity
-        compare = getComparableItems(compare, includeGroupElementsCheckBox.isSelected());
-        compare.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
-        List<Item> to = all;
-        if (toChoiceBox.getValue() == Scope.SELECTED) {
-            to = selected;
-        } else if (toChoiceBox.getValue() == Scope.SEARCHED) {
-            to = searched;
-        }
-        to = getComparableItems(to, includeGroupElementsCheckBox.isSelected());
-        to.removeIf(item -> (item instanceof GroupItem) || (item instanceof MediaItem && ((MediaItem) item).hasNoSimilar()));
-
-        if (settings.cudaDuplicates.getValue()) {
-            launchGPUDuplicateFinder(compare, to);
-        } else {
-            launchCPUDuplicateFinder(compare, to);
-        }
-    }
-
-    private void launchGPUDuplicateFinder(List<Item> compare, List<Item> to) {
-        ProgressScreen ps = new ProgressScreen();
-        Platform.runLater(() -> ps.setProgress(-1));
-
-        CancellableThread ct = new CancellableThread() {
-            @Override
-            public void run() {
-                try {
-                    List<SimilarPair<MediaItem>> results = CUDADuplicateFinder.findDuplicates(compare, to, (float) settings.duplicatesConfidence.getValue(), 100000);
-                    results.removeIf(pair -> menagerie.hasNonDuplicate(pair));
-
-                    Platform.runLater(() -> {
-                        if (isRunning()) {
-                            if (results.isEmpty()) {
-                                new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
-                            } else {
-                                duplicateScreen.open(getManager(), menagerie, results);
-                            }
-                        }
-                        ps.close();
-                        close();
-                    });
-                } catch (CudaException e) {
-                    LOGGER.log(Level.SEVERE, "Failed to run CUDA accelerated duplicate finding", e);
-                    Platform.runLater(() -> {
-                        new AlertDialogScreen().open(getManager(), "GPU Acceleration Error", "GPU acceleration encountered an error.\n\nConsider disabling GPU acceleration for duplicate finding.", null);
-                        ps.close();
-                        close();
-                    });
-                }
-            }
-        };
-
-        ps.open(getManager(), "Finding similar items", "Comparing items...", () -> {
-            ct.cancel();
-            close();
-        });
-
-        ct.start();
-    }
-
-    private void launchCPUDuplicateFinder(List<Item> compare, List<Item> to) {
-        ProgressScreen ps = new ProgressScreen();
-
-        Platform.runLater(() -> ps.setProgress(0));
-        DuplicateManagerThread finder = new DuplicateManagerThread(menagerie, compare, to, settings.duplicatesConfidence.getValue(), progress -> Platform.runLater(() -> {
-            long time = System.currentTimeMillis();
-            if (time - getLastProgressUpdate() > PROGRESS_UPDATE_INTERVAL) {
-                setLastProgressUpdate(time);
-                Platform.runLater(() -> ps.setProgress(progress));
-            }
-        }), results -> Platform.runLater(() -> {
-            if (results.isEmpty()) {
-                new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found", null);
-            } else {
+          Platform.runLater(() -> {
+            if (isRunning()) {
+              if (results.isEmpty()) {
+                new AlertDialogScreen().open(getManager(), "No Duplicates",
+                    "No duplicates were found", null);
+              } else {
                 duplicateScreen.open(getManager(), menagerie, results);
+              }
             }
             ps.close();
             close();
+          });
+        } catch (CudaException e) {
+          LOGGER.log(Level.SEVERE, "Failed to run CUDA accelerated duplicate finding", e);
+          Platform.runLater(() -> {
+            new AlertDialogScreen().open(getManager(), "GPU Acceleration Error",
+                "GPU acceleration encountered an error.\n\nConsider disabling GPU acceleration for duplicate finding.",
+                null);
+            ps.close();
+            close();
+          });
+        }
+      }
+    };
+
+    ps.open(getManager(), "Finding similar items", "Comparing items...", () -> {
+      ct.cancel();
+      close();
+    });
+
+    ct.start();
+  }
+
+  private void launchCPUDuplicateFinder(List<Item> compare, List<Item> to) {
+    ProgressScreen ps = new ProgressScreen();
+
+    Platform.runLater(() -> ps.setProgress(0));
+    DuplicateManagerThread finder =
+        new DuplicateManagerThread(menagerie, compare, to, settings.duplicatesConfidence.getValue(),
+            progress -> Platform.runLater(() -> {
+              long time = System.currentTimeMillis();
+              if (time - getLastProgressUpdate() > PROGRESS_UPDATE_INTERVAL) {
+                setLastProgressUpdate(time);
+                Platform.runLater(() -> ps.setProgress(progress));
+              }
+            }), results -> Platform.runLater(() -> {
+          if (results.isEmpty()) {
+            new AlertDialogScreen().open(getManager(), "No Duplicates", "No duplicates were found",
+                null);
+          } else {
+            duplicateScreen.open(getManager(), menagerie, results);
+          }
+          ps.close();
+          close();
         }));
 
-        ps.open(getManager(), "Finding similar items", "Comparing items...", () -> {
-            finder.cancel();
-            close();
-        });
+    ps.open(getManager(), "Finding similar items", "Comparing items...", () -> {
+      finder.cancel();
+      close();
+    });
 
-        finder.start();
+    finder.start();
+  }
+
+  private static List<Item> getComparableItems(List<Item> compare, boolean expandGroups) {
+    compare = new ArrayList<>(compare);
+      if (expandGroups) {
+          expandGroupsInline(compare);
+      }
+
+    compare.removeIf(item -> !(item instanceof MediaItem) || ((MediaItem) item).hasNoSimilar());
+    return compare;
+  }
+
+  @Override
+  protected void onOpen() {
+    updateCounts();
+
+    confidenceTextField.setText(settings.duplicatesConfidence.getValue() + "");
+    includeGroupElementsCheckBox.setSelected(settings.duplicatesIncludeGroups.getValue());
+    previousButton.setDisable(
+        duplicateScreen.getPairs() == null || duplicateScreen.getPairs().isEmpty());
+  }
+
+  private long getLastProgressUpdate() {
+    return lastProgressUpdate;
+  }
+
+  private void setLastProgressUpdate(long lastProgressUpdate) {
+    this.lastProgressUpdate = lastProgressUpdate;
+  }
+
+  /**
+   * @return The duplicate resolver screen associated with this screen.
+   */
+  public DuplicatesScreen getDuplicatesScreen() {
+    return duplicateScreen;
+  }
+
+  /**
+   * Expands groups so that items are only of type MediaItem.
+   *
+   * @param items Items with potential group items to expand.
+   */
+  private static void expandGroupsInline(List<Item> items) {
+    for (int i = 0; i < items.size(); i++) {
+      if (items.get(i) instanceof GroupItem) {
+        GroupItem group = (GroupItem) items.remove(i);
+        items.addAll(i, group.getElements());
+      }
     }
-
-    private static List<Item> getComparableItems(List<Item> compare, boolean expandGroups) {
-        compare = new ArrayList<>(compare);
-        if (expandGroups) expandGroupsInline(compare);
-
-        compare.removeIf(item -> !(item instanceof MediaItem) || ((MediaItem) item).hasNoSimilar());
-        return compare;
-    }
-
-    @Override
-    protected void onOpen() {
-        updateCounts();
-
-        confidenceTextField.setText(settings.duplicatesConfidence.getValue() + "");
-        includeGroupElementsCheckBox.setSelected(settings.duplicatesIncludeGroups.getValue());
-        previousButton.setDisable(duplicateScreen.getPairs() == null || duplicateScreen.getPairs().isEmpty());
-    }
-
-    private long getLastProgressUpdate() {
-        return lastProgressUpdate;
-    }
-
-    private void setLastProgressUpdate(long lastProgressUpdate) {
-        this.lastProgressUpdate = lastProgressUpdate;
-    }
-
-    /**
-     * @return The duplicate resolver screen associated with this screen.
-     */
-    public DuplicatesScreen getDuplicatesScreen() {
-        return duplicateScreen;
-    }
-
-    /**
-     * Expands groups so that items are only of type MediaItem.
-     *
-     * @param items Items with potential group items to expand.
-     */
-    private static void expandGroupsInline(List<Item> items) {
-        for (int i = 0; i < items.size(); i++) {
-            if (items.get(i) instanceof GroupItem) {
-                GroupItem group = (GroupItem) items.remove(i);
-                items.addAll(i, group.getElements());
-            }
-        }
-    }
-
-    /**
-     * Releases all VLCJ resources.
-     */
-    public void releaseVLCJ() {
-        duplicateScreen.releaseVLCJ();
-    }
+  }
 
 }

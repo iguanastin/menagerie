@@ -26,6 +26,6 @@ package menagerie.gui.screens.findonline;
 
 public interface OnlineTagCellCallback {
 
-    boolean hasTag(String tagNeme);
+  boolean hasTag(String tagNeme);
 
 }

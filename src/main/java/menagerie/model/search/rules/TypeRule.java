@@ -33,47 +33,50 @@ import menagerie.model.menagerie.MediaItem;
  */
 public class TypeRule extends SearchRule {
 
-    /**
-     * @param type     Type of item to accept.
-     * @param inverted Negate this rule.
-     */
-    public TypeRule(Type type, boolean inverted) {
-        super(inverted);
-        this.type = type;
+  /**
+   * @param type     Type of item to accept.
+   * @param inverted Negate this rule.
+   */
+  public TypeRule(Type type, boolean inverted) {
+    super(inverted);
+    this.type = type;
+  }
+
+  private final Type type;
+
+  public enum Type {
+    GROUP, MEDIA, IMAGE, VIDEO
+  }
+
+  @Override
+  public boolean accept(Item item) {
+    boolean result = false;
+    if (item instanceof MediaItem) {
+      if (type == Type.MEDIA) {
+        result = true;
+      } else if (type == Type.VIDEO) {
+        result = ((MediaItem) item).isVideo();
+      } else if (type == Type.IMAGE) {
+        result = ((MediaItem) item).isImage();
+      }
+    } else if (item instanceof GroupItem) {
+      if (type == Type.GROUP) {
+        result = true;
+      }
     }
-
-    private final Type type;
-
-
-    public enum Type {
-        GROUP, MEDIA, IMAGE, VIDEO
+    if (isInverted()) {
+      result = !result;
     }
+    return result;
+  }
 
-    @Override
-    public boolean accept(Item item) {
-        boolean result = false;
-        if (item instanceof MediaItem) {
-            if (type == Type.MEDIA) {
-                result = true;
-            } else if (type == Type.VIDEO) {
-                result = ((MediaItem) item).isVideo();
-            } else if (type == Type.IMAGE) {
-                result = ((MediaItem) item).isImage();
-            }
-        } else if (item instanceof GroupItem) {
-            if (type == Type.GROUP) {
-                result = true;
-            }
-        }
-        if (isInverted()) result = !result;
-        return result;
+  @Override
+  public String toString() {
+    String result = "Type Rule: " + type;
+    if (isInverted()) {
+      result += " [inverted]";
     }
-
-    @Override
-    public String toString() {
-        String result = "Type Rule: " + type;
-        if (isInverted()) result += " [inverted]";
-        return result;
-    }
+    return result;
+  }
 
 }

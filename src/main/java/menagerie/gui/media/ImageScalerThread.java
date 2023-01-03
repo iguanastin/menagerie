@@ -27,101 +27,105 @@ package menagerie.gui.media;
 import com.mortennobel.imagescaling.AdvancedResizeOp;
 import com.mortennobel.imagescaling.ResampleFilters;
 import com.mortennobel.imagescaling.ResampleOp;
+import java.awt.image.BufferedImage;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import menagerie.util.CancellableThread;
 import menagerie.util.listeners.ObjectListener;
 
-import java.awt.image.BufferedImage;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 public class ImageScalerThread extends CancellableThread {
 
-    /**
-     * Logger for this class
-     */
-    private static final Logger LOGGER = Logger.getLogger(ImageScalerThread.class.getName());
+  /**
+   * Logger for this class
+   */
+  private static final Logger LOGGER = Logger.getLogger(ImageScalerThread.class.getName());
 
-    /**
-     * Queued source image to scale
-     */
-    private Image source = null;
-    /**
-     * Queued target scale
-     */
-    private double scale = 1;
-    /**
-     * Queued callback to call once scaling is complete for this image
-     */
-    private ObjectListener<Image> callback = null;
+  /**
+   * Queued source image to scale
+   */
+  private Image source = null;
 
+  /**
+   * Queued target scale
+   */
+  private double scale = 1;
 
-    @Override
-    public void run() {
-        while (running) {
-            Image source;
-            double scale;
-            ObjectListener<Image> callback;
+  /**
+   * Queued callback to call once scaling is complete for this image
+   */
+  private ObjectListener<Image> callback = null;
 
-            // Loop until job is received
-            while (true) {
-                synchronized (this) {
-                    // Pop queue
-                    source = this.source;
-                    scale = this.scale;
-                    callback = this.callback;
-                    clear();
+  @Override
+  public void run() {
+    while (running) {
+      Image currentSource;
+      double currentScale;
+      ObjectListener<Image> currentCallback;
 
-                    if (source == null || scale < 0 || callback == null) {
-                        // Nothing in queue
-                        try {
-                            wait();
-                        } catch (InterruptedException ignore) {
-                        }
-                    } else {
-                        // Something in queue
-                        break;
-                    }
-                }
-            }
+      // Loop until job is received
+      while (true) {
+        synchronized (this) {
+          // Pop queue
+          currentSource = this.source;
+          currentScale = this.scale;
+          currentCallback = this.callback;
+          clear();
 
+          if (currentSource == null || currentScale < 0 || currentCallback == null) {
+            // Nothing in queue
             try {
-                BufferedImage bimg = SwingFXUtils.fromFXImage(source, null);
-
-                ResampleOp resizeOp = new ResampleOp((int) (bimg.getWidth() / scale + 0.5), (int) (bimg.getHeight() / scale + 0.5));
-                resizeOp.setUnsharpenMask(AdvancedResizeOp.UnsharpenMask.Normal);
-                resizeOp.setFilter(ResampleFilters.getLanczos3Filter());
-                BufferedImage scaledImage = resizeOp.filter(bimg, bimg);
-
-                callback.pass(SwingFXUtils.toFXImage(scaledImage, null));
-            } catch (Throwable e) {
-                LOGGER.log(Level.SEVERE, "Unexpected exception while scaling image (scale:" + scale + ", width:" + source.getWidth() + ", height:" + source.getHeight() + ", callback:" + callback + ")", e);
+              wait();
+            } catch (InterruptedException ignore) {
             }
+          } else {
+            // Something in queue
+            break;
+          }
         }
-    }
+      }
 
-    /**
-     * Clears the queue
-     */
-    public synchronized void clear() {
-        source = null;
-        scale = 1;
-        callback = null;
-    }
+      try {
+        BufferedImage bimg = SwingFXUtils.fromFXImage(currentSource, null);
 
-    /**
-     * Puts image scale job in queue
-     *
-     * @param source   Source image to scale
-     * @param scale    Amount to scale by
-     * @param callback Callback once complete
-     */
-    public synchronized void enqueue(Image source, double scale, ObjectListener<Image> callback) {
-        this.source = source;
-        this.scale = scale;
-        this.callback = callback;
-        this.notifyAll();
+        ResampleOp resizeOp = new ResampleOp((int) (bimg.getWidth() / currentScale + 0.5),
+            (int) (bimg.getHeight() / currentScale + 0.5));
+        resizeOp.setUnsharpenMask(AdvancedResizeOp.UnsharpenMask.Normal);
+        resizeOp.setFilter(ResampleFilters.getLanczos3Filter());
+        BufferedImage scaledImage = resizeOp.filter(bimg, bimg);
+
+        currentCallback.pass(SwingFXUtils.toFXImage(scaledImage, null));
+      } catch (Throwable e) {
+        LOGGER.log(Level.SEVERE,
+            String.format(
+                "Unexpected exception while scaling image (scale:%s, width:%s, height:%s, callback:%s)",
+                currentScale, currentSource.getWidth(), currentSource.getHeight(), currentCallback), e);
+      }
     }
+  }
+
+  /**
+   * Clears the queue
+   */
+  public synchronized void clear() {
+    source = null;
+    scale = 1;
+    callback = null;
+  }
+
+  /**
+   * Puts image scale job in queue
+   *
+   * @param source   Source image to scale
+   * @param scale    Amount to scale by
+   * @param callback Callback once complete
+   */
+  public synchronized void enqueue(Image source, double scale, ObjectListener<Image> callback) {
+    this.source = source;
+    this.scale = scale;
+    this.callback = callback;
+    this.notifyAll();
+  }
 
 }

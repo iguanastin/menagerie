@@ -24,8 +24,6 @@
 
 package menagerie.model;
 
-import menagerie.MenageriePlugin;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -37,60 +35,60 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import menagerie.MenageriePlugin;
 
-// REENG: Plugins are implemented in the JAR dependency (see pom).
-//  --> Missing source code for classes like "MenageriePlugin"
-//  --> might need to reimplement or scrap plugins to resolve this dependency
 public abstract class PluginLoader {
 
-    private static final Logger LOGGER = Logger.getLogger(PluginLoader.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(PluginLoader.class.getName());
 
-
-    public static List<MenageriePlugin> loadPlugins(File folder) {
-        if (!folder.exists() || !folder.isDirectory()) {
-            if (!folder.mkdirs()) {
-                LOGGER.severe("Unable to find/create plugin directory: " + folder.getAbsolutePath());
-                return new ArrayList<>();
-            }
-        }
-
-        List<URL> urls = new ArrayList<>();
-        List<String> classes = new ArrayList<>();
-
-        for (File file : Objects.requireNonNull(folder.listFiles((dir, name) -> name.endsWith(".jar")))) {
-            try {
-                JarFile jar = new JarFile(file);
-                String mainClass = jar.getManifest().getMainAttributes().getValue(Attributes.Name.MAIN_CLASS);
-                if (mainClass != null) {
-                    LOGGER.info("Found plugin JAR: " + file);
-                    classes.add(mainClass);
-                    urls.add(new URL("jar:file:" + folder + "/" + file.getName() + "!/"));
-                }
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Error reading plugin jarfile", e);
-            }
-        }
-
-        List<MenageriePlugin> plugins = new ArrayList<>();
-
-        URLClassLoader classLoader = new URLClassLoader(urls.toArray(new URL[0]));
-        classes.forEach(className -> {
-            try {
-                Class<?> c = classLoader.loadClass(className);
-                for (Class<?> anInterface : c.getInterfaces()) {
-                    if (anInterface == MenageriePlugin.class) {
-                        MenageriePlugin plugin = (MenageriePlugin) c.newInstance();
-                        plugins.add(plugin);
-                        LOGGER.info("Loaded plugin: " + plugin.getPluginName());
-                        break;
-                    }
-                }
-            } catch (IllegalAccessException | InstantiationException | ClassNotFoundException | NoClassDefFoundError e) {
-                LOGGER.log(Level.SEVERE, "Failed to load plugin class: " + className, e);
-            }
-        });
-
-        return plugins;
+  public static List<MenageriePlugin> loadPlugins(File folder) {
+    if (!folder.exists() || !folder.isDirectory()) {
+      if (!folder.mkdirs()) {
+        LOGGER.severe("Unable to find/create plugin directory: " + folder.getAbsolutePath());
+        return new ArrayList<>();
+      }
     }
+
+    List<URL> urls = new ArrayList<>();
+    List<String> classes = new ArrayList<>();
+
+    for (File file : Objects.requireNonNull(
+        folder.listFiles((dir, name) -> name.endsWith(".jar")))) {
+      try {
+        JarFile jar = new JarFile(file);
+        String mainClass =
+            jar.getManifest().getMainAttributes().getValue(Attributes.Name.MAIN_CLASS);
+        if (mainClass != null) {
+          LOGGER.info("Found plugin JAR: " + file);
+          classes.add(mainClass);
+          urls.add(new URL("jar:file:" + folder + "/" + file.getName() + "!/"));
+        }
+      } catch (IOException e) {
+        LOGGER.log(Level.SEVERE, "Error reading plugin jarfile", e);
+      }
+    }
+
+    List<MenageriePlugin> plugins = new ArrayList<>();
+
+    URLClassLoader classLoader = new URLClassLoader(urls.toArray(new URL[0]));
+    classes.forEach(className -> {
+      try {
+        Class c = classLoader.loadClass(className);
+        for (Class anInterface : c.getInterfaces()) {
+          if (anInterface == MenageriePlugin.class) {
+            MenageriePlugin plugin = (MenageriePlugin) c.newInstance();
+            plugins.add(plugin);
+            LOGGER.info("Loaded plugin: " + plugin.getPluginName());
+            break;
+          }
+        }
+      } catch (IllegalAccessException | InstantiationException | ClassNotFoundException |
+               NoClassDefFoundError e) {
+        LOGGER.log(Level.SEVERE, "Failed to load plugin class: " + className, e);
+      }
+    });
+
+    return plugins;
+  }
 
 }

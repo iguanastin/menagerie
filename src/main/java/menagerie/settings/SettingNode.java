@@ -29,8 +29,8 @@ import javafx.scene.Node;
 // REENG: DIP violated! Settings module has direct dependency on JavaFX
 public interface SettingNode {
 
-    void applyToSetting();
+  void applyToSetting();
 
-    Node getNode();
+  Node getNode();
 
 }

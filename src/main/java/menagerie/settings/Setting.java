@@ -30,73 +30,74 @@ import org.json.JSONObject;
 // REENG: extract serializer via interface
 public abstract class Setting {
 
-    static final String ID_KEY = "id";
+  static final String ID_KEY = "id";
 
-    private final String id;
-    private String label;
-    private String tip;
-    private boolean hidden;
+  private final String id;
+  private String label;
+  private String tip;
+  private boolean hidden;
 
+  protected Setting(String id, String label, String tip, boolean hidden) {
+    this(id);
+    this.label = label;
+    this.tip = tip;
+    this.hidden = hidden;
+  }
 
-    public Setting(String id, String label, String tip, boolean hidden) {
-        this(id);
-        this.label = label;
-        this.tip = tip;
-        this.hidden = hidden;
+  protected Setting(String id) {
+    this.id = id;
+  }
+
+  public String getID() {
+    return id;
+  }
+
+  public String getLabel() {
+    return label;
+  }
+
+  public void setLabel(String label) {
+    this.label = label;
+  }
+
+  public String getTip() {
+    return tip;
+  }
+
+  public void setTip(String tip) {
+    this.tip = tip;
+  }
+
+  public boolean isHidden() {
+    return hidden;
+  }
+
+  public void setHidden(boolean hidden) {
+    this.hidden = hidden;
+  }
+
+  public abstract SettingNode makeJFXNode();
+
+  abstract void initFromJSON(JSONObject json);
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof Setting) {
+      Setting s = (Setting) obj;
+      String id1 = getID(), id2 = s.getID();
+      String l1 = getLabel(), l2 = s.getLabel();
+      String tip1 = getTip(), tip2 = s.getTip();
+      boolean h1 = isHidden(), h2 = s.isHidden();
+      return Util.equalsNullable(id1, id2) && Util.equalsNullable(l1, l2) &&
+             Util.equalsNullable(tip1, tip2) && h1 == h2;
     }
 
-    public Setting(String id) {
-        this.id = id;
-    }
+    return false;
+  }
+  // TODO. override hashCode as well
 
-    public String getID() {
-        return id;
-    }
-
-    public String getLabel() {
-        return label;
-    }
-
-    public void setLabel(String label) {
-        this.label = label;
-    }
-
-    public String getTip() {
-        return tip;
-    }
-
-    public void setTip(String tip) {
-        this.tip = tip;
-    }
-
-    public boolean isHidden() {
-        return hidden;
-    }
-
-    public void setHidden(boolean hidden) {
-        this.hidden = hidden;
-    }
-
-    public abstract SettingNode makeJFXNode();
-
-    abstract void initFromJSON(JSONObject json);
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof Setting) {
-            Setting s = (Setting) obj;
-            String id1 = getID(), id2 = s.getID();
-            String l1 = getLabel(), l2 = s.getLabel();
-            String tip1 = getTip(), tip2 = s.getTip();
-            boolean h1 = isHidden(), h2 = s.isHidden();
-            return Util.equalsNullable(id1, id2) && Util.equalsNullable(l1, l2) && Util.equalsNullable(tip1, tip2) && h1 == h2;
-        }
-
-        return false;
-    }
-
-    JSONObject toJSON() {
-        return new JSONObject().put(ID_KEY, getID());
-    }
+  JSONObject toJSON() {
+    return new JSONObject().put(ID_KEY, getID());
+  }
 
 }
