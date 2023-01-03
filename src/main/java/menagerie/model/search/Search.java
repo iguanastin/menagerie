@@ -67,7 +67,11 @@ public class Search {
     }
     rules.sort(null);
 
-    comparator = (o1, o2) -> {
+    comparator = getItemComparator(descending, shuffled);
+  }
+
+  protected Comparator<Item> getItemComparator(boolean descending, boolean shuffled) {
+    return (o1, o2) -> {
       if (shuffled) {
         return 0;
       }
