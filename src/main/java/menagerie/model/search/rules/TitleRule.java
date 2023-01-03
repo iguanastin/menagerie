@@ -47,24 +47,24 @@ public class TitleRule extends SearchRule {
     this.words = new ArrayList<>(Arrays.asList(text.toLowerCase().split("\\s+")));
   }
 
+  /**
+   * Accept item if its title contains all keywords.
+   * @param item Item to check.
+   * @return True, if title contains all keywords.
+   */
   @Override
-  public boolean accept(Item item) {
-    boolean result = false;
+  protected boolean checkRule(Item item) {
     if (item instanceof GroupItem) {
-      result = true;
       final String title = ((GroupItem) item).getTitle().toLowerCase();
 
       for (String word : words) {
         if (!title.contains(word)) {
-          result = false;
-          break;
+          return false;
         }
       }
+      return true;
     }
-    if (isInverted()) {
-      result = !result;
-    }
-    return result;
+    return false;
   }
 
   @Override
