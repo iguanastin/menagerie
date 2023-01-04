@@ -46,20 +46,13 @@ public class TagRule extends SearchRule {
   }
 
   @Override
-  public boolean accept(Item item) {
-    boolean result = false;
-
+  protected boolean checkRule(Item item) {
     for (Tag t : item.getTags()) {
       if (t.getName().equalsIgnoreCase(tag)) {
-        result = true;
-        break;
+        return true;
       }
     }
-
-    if (isInverted()) {
-      result = !result;
-    }
-    return result;
+    return false;
   }
 
   @Override

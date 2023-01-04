@@ -24,32 +24,22 @@
 
 package menagerie.model.search;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
-import menagerie.model.search.rules.DateAddedRule;
-import menagerie.model.search.rules.FilePathRule;
-import menagerie.model.search.rules.IDRule;
-import menagerie.model.search.rules.MissingRule;
 import menagerie.model.search.rules.SearchRule;
-import menagerie.model.search.rules.TagCountRule;
-import menagerie.model.search.rules.TagRule;
-import menagerie.model.search.rules.TitleRule;
-import menagerie.model.search.rules.TypeRule;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * Data class that contains results of a search filtered and sorted by the given rules.
  */
 public class Search {
 
-  private static final Logger LOGGER = Logger.getLogger(Search.class.getName());
-
-  private final List<SearchRule> rules = new ArrayList<>();
+  List<SearchRule> rules = new ArrayList<>();
   private final boolean showGrouped;
   private final boolean descending;
   private final boolean shuffled;
@@ -73,11 +63,15 @@ public class Search {
     this.searchString = search;
 
     if (search != null && !search.isEmpty()) {
-      parseRules(search);
+      rules = SearchRuleParser.parseRules(search);
     }
     rules.sort(null);
 
-    comparator = (o1, o2) -> {
+    comparator = getItemComparator(descending, shuffled);
+  }
+
+  protected Comparator<Item> getItemComparator(boolean descending, boolean shuffled) {
+    return (o1, o2) -> {
       if (shuffled) {
         return 0;
       }
@@ -87,141 +81,6 @@ public class Search {
         return o1.getId() - o2.getId();
       }
     };
-  }
-
-  protected void parseRules(String search) {
-    // this would be a test str"ing that doesn't tokenize the "quotes
-    // This would be a test "string that DOES tokenize the quotes"
-    // "This   " too
-    List<String> tokens = tokenize(search);
-
-    // OLD
-    for (String arg : tokens) {
-      if (arg == null || arg.isEmpty()) {
-        continue;
-      }
-
-      boolean inverted = false;
-      if (arg.charAt(0) == '-') {
-        inverted = true;
-        arg = arg.substring(1);
-      }
-
-      if (arg.startsWith("id:")) {
-        String temp = arg.substring(arg.indexOf(':') + 1);
-        IDRule.Type type = IDRule.Type.EQUAL_TO;
-        if (temp.startsWith("<")) {
-          type = IDRule.Type.LESS_THAN;
-          temp = temp.substring(1);
-        } else if (temp.startsWith(">")) {
-          type = IDRule.Type.GREATER_THAN;
-          temp = temp.substring(1);
-        }
-        try {
-          rules.add(new IDRule(type, Integer.parseInt(temp), inverted));
-        } catch (NumberFormatException e) {
-          LOGGER.warning("Failed to convert parameter to integer: " + temp);
-        }
-      } else if (arg.startsWith("date:") || arg.startsWith("time:")) {
-        String temp = arg.substring(arg.indexOf(':') + 1);
-        DateAddedRule.Type type = DateAddedRule.Type.EQUAL_TO;
-        if (temp.startsWith("<")) {
-          type = DateAddedRule.Type.LESS_THAN;
-          temp = temp.substring(1);
-        } else if (temp.startsWith(">")) {
-          type = DateAddedRule.Type.GREATER_THAN;
-          temp = temp.substring(1);
-        }
-        try {
-          rules.add(new DateAddedRule(type, Long.parseLong(temp), inverted));
-        } catch (NumberFormatException e) {
-          LOGGER.warning("Failed to convert parameter to long: " + temp);
-        }
-      } else if (arg.startsWith("path:") || arg.startsWith("file:")) {
-        rules.add(new FilePathRule(arg.substring(arg.indexOf(':') + 1), inverted));
-      } else if (arg.startsWith("missing:")) {
-        String type = arg.substring(arg.indexOf(':') + 1);
-        switch (type.toLowerCase()) {
-          case "md5":
-            rules.add(new MissingRule(MissingRule.Type.MD5, inverted));
-            break;
-          case "file":
-            rules.add(new MissingRule(MissingRule.Type.FILE, inverted));
-            break;
-          case "histogram":
-          case "hist":
-            rules.add(new MissingRule(MissingRule.Type.HISTOGRAM, inverted));
-            break;
-          default:
-            LOGGER.warning("Unknown type for missing type: " + type);
-            break;
-        }
-      } else if (arg.startsWith("type:") || arg.startsWith("is:")) {
-        String type = arg.substring(arg.indexOf(':') + 1);
-        if (type.equalsIgnoreCase("group")) {
-          rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
-        } else if (type.equalsIgnoreCase("media")) {
-          rules.add(new TypeRule(TypeRule.Type.MEDIA, inverted));
-        } else if (type.equalsIgnoreCase("image")) {
-          rules.add(new TypeRule(TypeRule.Type.IMAGE, inverted));
-        } else if (type.equalsIgnoreCase("video")) {
-          rules.add(new TypeRule(TypeRule.Type.VIDEO, inverted));
-        }
-      } else if (arg.startsWith("tags:")) {
-        String temp = arg.substring(arg.indexOf(':') + 1);
-        TagCountRule.Type type = TagCountRule.Type.EQUAL_TO;
-        if (temp.startsWith("<")) {
-          type = TagCountRule.Type.LESS_THAN;
-          temp = temp.substring(1);
-        } else if (temp.startsWith(">")) {
-          type = TagCountRule.Type.GREATER_THAN;
-          temp = temp.substring(1);
-        }
-        try {
-          rules.add(new TagCountRule(type, Integer.parseInt(temp), inverted));
-        } catch (NumberFormatException e) {
-          LOGGER.warning("Failed to convert parameter to integer: " + temp);
-        }
-      } else if (arg.startsWith("title:")) {
-        String temp = arg.substring(arg.indexOf(':') + 1);
-        if (temp.charAt(0) == '"') {
-          temp = temp.substring(1); // Strip first quote
-        }
-        if (temp.charAt(temp.length() - 1) == '"') {
-          temp = temp.substring(0, temp.length() - 1); // Strip second quote
-        }
-        rules.add(new TitleRule(temp, inverted));
-      } else {
-        rules.add(new TagRule(arg, inverted));
-      }
-    }
-  }
-
-  private List<String> tokenize(String search) {
-    List<String> tokens = new ArrayList<>();
-    int i = 0;
-    while (i < search.length()) {
-      // Read a word
-      int k = i + 1;
-      while (k < search.length() && !Character.isWhitespace(search.charAt(k))) {
-        if (search.charAt(k - 1) == ':' && search.charAt(k) == '"') {
-          k++;
-          while (k < search.length() && search.charAt(k) != '"') {
-            k++;
-          }
-        }
-
-        k++;
-      }
-
-      tokens.add(search.substring(i, k));
-      i = k;
-      while (i < search.length() && search.charAt(i) == ' ') {
-        i++;
-      }
-    }
-
-    return tokens;
   }
 
   /**
@@ -287,7 +146,7 @@ public class Search {
       return false;
     }
 
-    if (item instanceof MediaItem && ((MediaItem) item).getGroup() != null && !showGrouped) {
+    if (item instanceof MediaItem && ((MediaItem) item).isInGroup() && !showGrouped) {
       return false;
     } else {
       for (SearchRule rule : rules) {

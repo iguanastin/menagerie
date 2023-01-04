@@ -53,25 +53,12 @@ public class IDRule extends SearchRule {
   }
 
   @Override
-  public boolean accept(Item item) {
-    boolean result = false;
-    switch (type) {
-      case LESS_THAN:
-        result = item.getId() < id;
-        break;
-      case GREATER_THAN:
-        result = item.getId() > id;
-        break;
-      case EQUAL_TO:
-        result = item.getId() == id;
-        break;
-    }
-
-    if (isInverted()) {
-      result = !result;
-    }
-
-    return result;
+  public boolean checkRule(Item item) {
+    return switch (type) {
+      case LESS_THAN -> item.getId() < id;
+      case GREATER_THAN -> item.getId() > id;
+      case EQUAL_TO -> item.getId() == id;
+    };
   }
 
   @Override
@@ -83,4 +70,11 @@ public class IDRule extends SearchRule {
     return result;
   }
 
+  public int getId() {
+    return id;
+  }
+
+  public Type getType() {
+    return type;
+  }
 }

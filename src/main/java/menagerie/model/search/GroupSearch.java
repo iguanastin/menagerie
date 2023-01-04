@@ -28,6 +28,8 @@ import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 
+import java.util.Comparator;
+
 public class GroupSearch extends Search {
 
   private final GroupItem group;
@@ -42,8 +44,11 @@ public class GroupSearch extends Search {
   public GroupSearch(String search, GroupItem group, boolean descending, boolean shuffled) {
     super(search, descending, true, shuffled);
     this.group = group;
+  }
 
-    comparator = (o1, o2) -> {
+  @Override
+  protected Comparator<Item> getItemComparator(boolean descending, boolean shuffled) {
+    return (o1, o2) -> {
       if (o1 instanceof MediaItem && o2 instanceof MediaItem) {
         if (descending) {
           return ((MediaItem) o2).getPageIndex() - ((MediaItem) o1).getPageIndex();

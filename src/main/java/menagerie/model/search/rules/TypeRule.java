@@ -49,25 +49,19 @@ public class TypeRule extends SearchRule {
   }
 
   @Override
-  public boolean accept(Item item) {
-    boolean result = false;
+  public boolean checkRule(Item item) {
     if (item instanceof MediaItem) {
       if (type == Type.MEDIA) {
-        result = true;
+        return true;
       } else if (type == Type.VIDEO) {
-        result = ((MediaItem) item).isVideo();
+        return ((MediaItem) item).isVideo();
       } else if (type == Type.IMAGE) {
-        result = ((MediaItem) item).isImage();
+        return ((MediaItem) item).isImage();
       }
     } else if (item instanceof GroupItem) {
-      if (type == Type.GROUP) {
-        result = true;
-      }
+      return type == Type.GROUP;
     }
-    if (isInverted()) {
-      result = !result;
-    }
-    return result;
+    return false;
   }
 
   @Override

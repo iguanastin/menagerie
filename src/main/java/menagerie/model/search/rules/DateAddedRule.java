@@ -24,8 +24,9 @@
 
 package menagerie.model.search.rules;
 
-import java.util.Date;
 import menagerie.model.menagerie.Item;
+
+import java.util.Date;
 
 /**
  * Rule that compares against the date an item was added to the Menagerie.
@@ -54,25 +55,12 @@ public class DateAddedRule extends SearchRule {
   }
 
   @Override
-  public boolean accept(Item item) {
-    boolean result = false;
-    switch (type) {
-      case LESS_THAN:
-        result = item.getDateAdded() < time;
-        break;
-      case GREATER_THAN:
-        result = item.getDateAdded() > time;
-        break;
-      case EQUAL_TO:
-        result = item.getDateAdded() == time;
-        break;
-    }
-
-    if (isInverted()) {
-      result = !result;
-    }
-
-    return result;
+  protected boolean checkRule(Item item) {
+    return switch (type) {
+      case LESS_THAN -> item.getDateAdded() < time;
+      case GREATER_THAN -> item.getDateAdded() > time;
+      case EQUAL_TO -> item.getDateAdded() == time;
+    };
   }
 
   @Override
@@ -84,4 +72,11 @@ public class DateAddedRule extends SearchRule {
     return result;
   }
 
+  public long getTime() {
+    return time;
+  }
+
+  public Type getType() {
+    return type;
+  }
 }

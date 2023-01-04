@@ -24,13 +24,14 @@
 
 package menagerie.model.menagerie;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import menagerie.gui.Thumbnail;
 import menagerie.model.menagerie.db.DatabaseManager;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Menagerie Item
@@ -42,9 +43,9 @@ public abstract class Item implements Comparable<Item> {
   private boolean invalidated = false;
 
   protected final Menagerie menagerie;
-  protected final int id;
-  private final long dateAdded;
-  private final ObservableList<Tag> tags = FXCollections.observableArrayList();
+  protected int id;
+  protected long dateAdded;
+  protected ObservableList<Tag> tags = FXCollections.observableArrayList();
   private final Map<String, Object> metadata = new HashMap<>();
 
 

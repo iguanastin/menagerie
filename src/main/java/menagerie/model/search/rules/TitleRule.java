@@ -24,11 +24,12 @@
 
 package menagerie.model.search.rules;
 
+import menagerie.model.menagerie.GroupItem;
+import menagerie.model.menagerie.Item;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import menagerie.model.menagerie.GroupItem;
-import menagerie.model.menagerie.Item;
 
 /**
  * Rule that checks if the item's file path contains a string.
@@ -38,7 +39,7 @@ public class TitleRule extends SearchRule {
   private final List<String> words;
 
   /**
-   * @param text     String to find in item's file path. Case sensitive.
+   * @param text     String to find in item's file path. Case in-sensitive.
    * @param inverted Negate the rule.
    */
   public TitleRule(String text, boolean inverted) {
@@ -46,24 +47,24 @@ public class TitleRule extends SearchRule {
     this.words = new ArrayList<>(Arrays.asList(text.toLowerCase().split("\\s+")));
   }
 
+  /**
+   * Accept item if its title contains all keywords.
+   * @param item Item to check.
+   * @return True, if title contains all keywords.
+   */
   @Override
-  public boolean accept(Item item) {
-    boolean result = false;
+  protected boolean checkRule(Item item) {
     if (item instanceof GroupItem) {
-      result = true;
       final String title = ((GroupItem) item).getTitle().toLowerCase();
 
       for (String word : words) {
         if (!title.contains(word)) {
-          result = false;
-          break;
+          return false;
         }
       }
+      return true;
     }
-    if (isInverted()) {
-      result = !result;
-    }
-    return result;
+    return false;
   }
 
   @Override

@@ -44,12 +44,8 @@ public class FilePathRule extends SearchRule {
   }
 
   @Override
-  public boolean accept(Item item) {
-    boolean result = item instanceof MediaItem && ((MediaItem) item).getFile().getAbsolutePath().contains(text);
-    if (isInverted()) {
-      result = !result;
-    }
-    return result;
+  protected boolean checkRule(Item item) {
+    return item instanceof MediaItem && ((MediaItem) item).getFile().getAbsolutePath().contains(text);
   }
 
   @Override
