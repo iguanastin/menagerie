@@ -78,13 +78,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import menagerie.ErrorListener;
-import menagerie.MenageriePlugin;
 import menagerie.duplicates.DuplicateFinder;
 import menagerie.gui.grid.ItemGridCell;
 import menagerie.gui.grid.ItemGridView;
+import menagerie.gui.handler.CurrentSearchChangeListener;
 import menagerie.gui.handler.EditTagsTextFieldOptionsListener;
 import menagerie.gui.handler.LoggerHandler;
+import menagerie.gui.handler.PruneFileLessMenuButtonAction;
 import menagerie.gui.handler.RebuildSimilarityCacheMenuButtonAction;
 import menagerie.gui.handler.SearchTextFieldOptionsListener;
 import menagerie.gui.media.DynamicMediaView;
@@ -94,7 +94,6 @@ import menagerie.gui.screens.HelpScreen;
 import menagerie.gui.screens.ScreenPane;
 import menagerie.gui.screens.SlideshowScreen;
 import menagerie.gui.screens.TagListScreen;
-import menagerie.gui.screens.dialogs.AlertDialogScreen;
 import menagerie.gui.screens.dialogs.ConfirmationScreen;
 import menagerie.gui.screens.dialogs.GroupDialogScreen;
 import menagerie.gui.screens.dialogs.ImportDialogScreen;
@@ -109,16 +108,19 @@ import menagerie.gui.screens.move.MoveFilesScreen;
 import menagerie.gui.screens.settings.SettingsScreen;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.gui.taglist.TagListCellAddListener;
+import menagerie.gui.taglist.TagListCellContextMenuEventListener;
 import menagerie.gui.taglist.TagListCellContextMenuListener;
 import menagerie.gui.taglist.TagListCellMouseClickListener;
 import menagerie.gui.taglist.TagListCellRemoveListener;
 import menagerie.gui.util.FileExplorer;
+import menagerie.gui.util.GridPaneUtil;
+import menagerie.gui.util.GridViewUtil;
 import menagerie.gui.util.Icons;
 import menagerie.gui.util.ItemUtil;
-import menagerie.gui.util.PluginUtil;
 import menagerie.gui.util.RootPaneSettings;
+import menagerie.gui.util.TagUtil;
 import menagerie.gui.util.UnreadLogFlag;
-import menagerie.model.PluginLoader;
+import menagerie.model.Plugins;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
@@ -137,13 +139,11 @@ import menagerie.util.CancellableThread;
 import menagerie.util.FileUtil;
 import menagerie.util.Filters;
 import menagerie.util.folderwatcher.FolderWatcherThread;
+import menagerie.util.folderwatcher.FolderWatcherUtil;
 import menagerie.util.listeners.ObjectListener;
 
 public class MainController {
 
-  /**
-   * Logger for this class
-   */
   private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
   // ------------------------------- JFX -------------------------------------------
@@ -221,9 +221,9 @@ public class MainController {
   private final Deque<TagEditEvent> tagEditHistory = new ArrayDeque<>();
 
   /**
-   * List of loaded plugins. Populated during initialization
+   * Loaded menagerie plugins.
    */
-  private List<MenageriePlugin> plugins = null;
+  private final Plugins plugins = new Plugins();
 
   // ------------------------------- Explorer screen vars --------------------------
   /**
@@ -270,46 +270,13 @@ public class MainController {
   /**
    * Search listener listening for items being added or removed from the current search
    */
-  private final ListChangeListener<Item> searchChangeListener = c -> {
-    while (c.next()) {
-      // Added
-      if (c.wasAdded()) {
-        itemGridView.getItems().addAll(0,
-            c.getAddedSubList()); // TODO: Insert these in the right position or sort it or something.
-      }
+  private final ListChangeListener<Item> searchChangeListener =
+      new CurrentSearchChangeListener(itemGridView,
+          this::getCurrentlyPreviewing, () -> previewItem(null));
 
-      // Removed
-      if (c.wasRemoved()) {
-        if (c.getRemoved().contains(currentlyPreviewing)) {
-          previewItem(null);
-        }
-
-        final int oldLastIndex = itemGridView.getItems().indexOf(itemGridView.getLastSelected());
-        int newIndex = oldLastIndex;
-        for (Item item : c.getRemoved()) {
-          final int i = itemGridView.getItems().indexOf(item);
-          if (i < 0) {
-            continue;
-          }
-
-          if (i < oldLastIndex) {
-            newIndex--;
-          }
-        }
-
-        itemGridView.getItems().removeAll(c.getRemoved());
-
-        if (!itemGridView.getItems().isEmpty() && itemGridView.getSelected().isEmpty()) {
-          if (newIndex >= itemGridView.getItems().size()) {
-            newIndex = itemGridView.getItems().size() - 1;
-          }
-          if (newIndex >= 0) {
-            itemGridView.select(itemGridView.getItems().get(newIndex), false, false);
-          }
-        }
-      }
-    }
-  };
+  private Item getCurrentlyPreviewing() {
+    return currentlyPreviewing;
+  }
 
   /**
    * Log button pseudoclass for unread error state
@@ -350,11 +317,6 @@ public class MainController {
    */
   private final MenagerieSettings settings;
 
-  /**
-   * Folder containing plugins to be loaded on startup
-   */
-  private static final File pluginsFolder = new File("./plugins");
-
   // ------------------------------ Video preview status ---------------------------
   /**
    * Variable used to track if a video should be played after the player regains focus.
@@ -394,7 +356,7 @@ public class MainController {
     // Init screens
     initScreens();
 
-    initPlugins();
+    plugins.initPlugins();
 
     initDatabaseUpdateCounter();
 
@@ -489,26 +451,6 @@ public class MainController {
   }
 
   /**
-   * Attempts to load plugins in the plugins folder and initialize them
-   */
-  private void initPlugins() {
-    LOGGER.info("Loading plugins from: " + pluginsFolder.getAbsolutePath());
-    plugins = PluginLoader.loadPlugins(pluginsFolder);
-    plugins.forEach(plugin -> plugin.addErrorListener(new ErrorListener() {
-      @Override
-      public void postMessage(String s) {
-        LOGGER.info(s);
-      }
-
-      @Override
-      public void postException(String s, Exception e) {
-        LOGGER.log(Level.SEVERE, s, e);
-      }
-    }));
-    LOGGER.info(() -> "Loaded " + plugins.size() + " plugins");
-  }
-
-  /**
    * Initializes screen objects for the ScreenPane
    */
   private void initScreens() {
@@ -566,23 +508,11 @@ public class MainController {
   }
 
   private void setTagListCellMouseClickEventListener(TagListCell c) {
-    c.setOnMouseClicked(event -> {
-      if (event.getButton() == MouseButton.PRIMARY && c.getItem() != null) {
-        searchTextField.setText(c.getItem().getName() + " ");
-        searchTextField.positionCaret(searchTextField.getText().length());
-      }
-    });
+    c.setOnMouseClicked(new TagListCellMouseClickListener(c, searchTextField));
   }
 
   private void setTagListCellContextMenuEventListener(TagListCell c) {
-    c.setOnContextMenuRequested(event -> {
-      MenuItem menuItem = new MenuItem("Add note");
-      menuItem.setOnAction(event1 -> new TextDialogScreen().open(screenPane, "Add a note",
-          String.format("Add a note to tag '%s'", c.getItem().getName()), null,
-          note -> c.getItem().addNote(note), null));
-      ContextMenu m = new ContextMenu(menuItem, new SeparatorMenuItem());
-      m.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY());
-    });
+    c.setOnContextMenuRequested(new TagListCellContextMenuEventListener(c, screenPane));
   }
 
   /**
@@ -594,9 +524,8 @@ public class MainController {
 
     final PseudoClass hasImportsPseudoClass = PseudoClass.getPseudoClass("has-imports");
     final BooleanProperty hasImports = new SimpleBooleanProperty();
-    hasImports.addListener(
-        observable -> importsButton.pseudoClassStateChanged(hasImportsPseudoClass,
-            hasImports.get()));
+    hasImports.addListener(observable ->
+        importsButton.pseudoClassStateChanged(hasImportsPseudoClass, hasImports.get()));
     importsButton.getStyleClass().addAll("imports-button");
     importerScreen.getListView().getItems()
         .addListener((ListChangeListener<? super ImportJob>) c -> Platform.runLater(() -> {
@@ -684,7 +613,7 @@ public class MainController {
    */
   private void initExplorer() {
     // Set image grid width from settings
-    setGridWidth(settings.gridWidth.getValue());
+    GridPaneUtil.setGridWidth(settings.gridWidth.getValue(), itemGridView, gridPane);
 
     // Init image grid
     initExplorerItemGridView();
@@ -711,7 +640,8 @@ public class MainController {
 
     // Init settings listeners
     settings.gridWidth.valueProperty()
-        .addListener((observable, oldValue, newValue) -> setGridWidth(newValue.intValue()));
+        .addListener((observable, oldValue, newValue) -> GridPaneUtil
+            .setGridWidth(newValue.intValue(), itemGridView, gridPane));
     settings.muteVideo.valueProperty()
         .addListener((observable, oldValue, newValue) -> previewMediaView.setMute(newValue));
     settings.repeatVideo.valueProperty()
@@ -795,24 +725,12 @@ public class MainController {
   }
 
   private void untagSelectedAction(TagListCell c) {
-    Map<Item, List<Tag>> removed = new HashMap<>();
-    itemGridView.getSelected().forEach(item -> {
-      if (item.removeTag(c.getItem())) {
-        removed.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
-      }
-    });
-
+    Map<Item, List<Tag>> removed = TagUtil.removeTags(c, itemGridView);
     tagEditHistory.push(new TagEditEvent(null, removed));
   }
 
   private void tagSelectedAction(TagListCell c) {
-    Map<Item, List<Tag>> added = new HashMap<>();
-    itemGridView.getSelected().forEach(item -> {
-      if (item.addTag(c.getItem())) {
-        added.computeIfAbsent(item, k -> new ArrayList<>()).add(c.getItem());
-      }
-    });
-
+    Map<Item, List<Tag>> added = TagUtil.addTags(c, itemGridView);
     tagEditHistory.push(new TagEditEvent(added, null));
   }
 
@@ -952,17 +870,9 @@ public class MainController {
         }
 
         Dragboard db = c.startDragAndDrop(TransferMode.ANY);
-        doDragAndDrop(db);
+        GridViewUtil.doDragAndDrop(db, itemGridView);
 
-        List<File> files = new ArrayList<>();
-        itemGridView.getSelected().forEach(item -> {
-          if (item instanceof MediaItem) {
-            files.add(((MediaItem) item).getFile());
-          } else if (item instanceof GroupItem) {
-            ((GroupItem) item).getElements()
-                .forEach(mediaItem -> files.add(mediaItem.getFile()));
-          }
-        });
+        List<File> files = GridViewUtil.getSelectedFiles(itemGridView);
         clipboard.putFiles(files);
         db.setContent(clipboard);
 
@@ -970,20 +880,6 @@ public class MainController {
         event.consume();
       }
     });
-  }
-
-  private void doDragAndDrop(Dragboard db) {
-    for (Item item : itemGridView.getSelected()) {
-      if (item instanceof MediaItem) {
-        String filename = ((MediaItem) item).getFile().getName().toLowerCase();
-        if (FileExplorer.hasAllowedFileEnding(filename)) {
-          if (item.getThumbnail().isLoaded()) {
-            db.setDragView(item.getThumbnail().getImage());
-            break;
-          }
-        }
-      }
-    }
   }
 
   /**
@@ -1165,27 +1061,8 @@ public class MainController {
    * @param selected Items to search online for
    */
   private void findOnlineDialog(List<Item> selected) {
-    List<MediaItem> items = new ArrayList<>();
-    for (Item item : selected) {
-      if (item instanceof MediaItem) {
-        items.add((MediaItem) item);
-      } else if (item instanceof GroupItem) {
-        for (MediaItem element : ((GroupItem) item).getElements()) {
-          final String name = element.getFile().getName().toLowerCase();
-          if (FileExplorer.hasAllowedFileEnding(name)) {
-            items.add(element);
-          }
-        }
-      }
-    }
-
-    List<DuplicateFinder> finders = new ArrayList<>();
-    for (MenageriePlugin plugin : plugins) {
-      if (plugin instanceof DuplicateFinder) {
-        finders.add((DuplicateFinder) plugin);
-      }
-    }
-
+    List<MediaItem> items = ItemUtil.flattenGroups(selected);
+    List<DuplicateFinder> finders = plugins.getAllDuplicateFinders();
     findOnlineScreen.open(screenPane, items, finders, this::selectItemInGridView);
   }
 
@@ -1226,6 +1103,8 @@ public class MainController {
         () -> menagerie.deleteItems(items), null);
   }
 
+  // REENG: improve dialog handling (e.g. new ConfirmationScreen() ...)
+
   /**
    * Opens a dialog asking for user confirmation to ungroup given groups.
    * Items that are not a GroupItem will be ignored.
@@ -1233,12 +1112,7 @@ public class MainController {
    * @param items Set of items to ungroup if user confirms.
    */
   private void ungroupDialog(List<Item> items) {
-    List<GroupItem> groups = new ArrayList<>();
-    items.forEach(item -> {
-      if (item instanceof GroupItem) {
-        groups.add((GroupItem) item);
-      }
-    });
+    List<GroupItem> groups = ItemUtil.getGroupItems(items);
     new ConfirmationScreen().open(screenPane, "Ungroup group?",
         String.format("Are you sure you want to ungroup %d groups?", groups.size()),
         () -> groups.forEach(GroupItem::ungroup), null);
@@ -1251,13 +1125,7 @@ public class MainController {
    * @param toGroup Set of items to group if user confirms.
    */
   private void groupDialog(List<Item> toGroup) {
-    String title = null;
-    for (Item item : toGroup) {
-      if (item instanceof GroupItem) {
-        title = ((GroupItem) item).getTitle();
-        break;
-      }
-    }
+    String title = ItemUtil.getFirstGroupTitle(toGroup);
     groupDialogScreen.open(screenPane, menagerie, title, toGroup, group -> {
       LOGGER.info("Created group: " + group);
       Platform.runLater(() -> {
@@ -1399,19 +1267,6 @@ public class MainController {
   }
 
   /**
-   * Sets the item grid width.
-   *
-   * @param n Width of grid in number of cells.
-   */
-  private void setGridWidth(int n) {
-    final double width = 18 + (Thumbnail.THUMBNAIL_SIZE + ItemGridView.CELL_BORDER * 2 +
-                               itemGridView.getHorizontalCellSpacing() * 2) * n;
-    gridPane.setMinWidth(width);
-    gridPane.setMaxWidth(width);
-    gridPane.setPrefWidth(width);
-  }
-
-  /**
    * Parses a string and applies tag edits to currently selected items.
    * Opens a confirmation dialog if 100 or more items will be modified by this operation.
    *
@@ -1476,6 +1331,8 @@ public class MainController {
     }
   }
 
+  // REENG: extract as well?
+
   /**
    * Selects an item in the grid view. If the item is hidden in a group, selects the group instead.
    *
@@ -1508,35 +1365,10 @@ public class MainController {
       LOGGER.info(() -> "Starting folder watcher in folder: " + watchFolder);
       folderWatcherThread =
           new FolderWatcherThread(watchFolder, Filters.FILE_NAME_FILTER, 30000,
-              files -> folderWatchListener(moveToDefault, files));
+              files -> FolderWatcherUtil.folderWatchListener(moveToDefault, files,
+                  settings.defaultFolder.getValue(), importer));
       folderWatcherThread.setDaemon(true);
       folderWatcherThread.start();
-    }
-  }
-
-  private void folderWatchListener(boolean moveToDefault, File[] files) {
-    for (File file : files) {
-      LOGGER.info("Folder watcher got file to import: " + file);
-      if (moveToDefault) {
-        String work = settings.defaultFolder.getValue();
-        if (!work.endsWith("/") && !work.endsWith("\\")) {
-          work += "/";
-        }
-        File f = new File(work + file.getName());
-        if (file.equals(f)) {
-          continue; //File is being "moved" to same folder
-        }
-
-        File dest = FileUtil.resolveDuplicateFilename(f);
-
-        if (!file.renameTo(dest)) {
-          continue;
-        }
-
-        file = dest;
-      }
-
-      importer.addJob(new ImportJob(file, null));
     }
   }
 
@@ -1556,7 +1388,7 @@ public class MainController {
     DynamicVideoView.releaseAllVLCJ();
     Thumbnail.releaseVLCJResources();
 
-    PluginUtil.closeAll(plugins);
+    plugins.closeAll();
     settings.save();
     DatabaseUtil.shutDownDatabase(revertDatabase, menagerie, settings.dbUrl.getValue());
   }
@@ -1593,36 +1425,7 @@ public class MainController {
   @FXML
   private void pruneFileLessMenuButtonOnAction(ActionEvent event) {
     ProgressScreen ps = new ProgressScreen();
-    CancellableThread ct = new CancellableThread() {
-      @Override
-      public void run() {
-        final int total = menagerie.getItems().size();
-        int i = 0;
-
-        List<Item> toDelete = new ArrayList<>();
-
-        for (Item item : menagerie.getItems()) {
-          if (!running) {
-            break;
-          }
-          i++;
-
-          if (item instanceof MediaItem && !((MediaItem) item).getFile().exists()) {
-            toDelete.add(item);
-          }
-
-          final int finalI = i;
-          Platform.runLater(() -> ps.setProgress(finalI, total));
-        }
-
-        menagerie.forgetItems(toDelete);
-        Platform.runLater(() -> {
-          ps.close();
-          new AlertDialogScreen().open(screenPane, "Pruning complete",
-              toDelete.size() + " file-less items pruned.", null);
-        });
-      }
-    };
+    CancellableThread ct = new PruneFileLessMenuButtonAction(menagerie, ps, screenPane);
     ps.open(screenPane, "Pruning Items",
         "Finding and pruning items that have become detached from their file...", ct::cancel);
     ct.setName("Fileless Pruner");
@@ -1958,19 +1761,19 @@ public class MainController {
   @FXML
   private void editTagsTextFieldOnKeyPressed(KeyEvent event) {
     switch (event.getCode()) {
-      case ENTER:
+      case ENTER -> {
         editTagsOfSelected(editTagsTextField.getText());
         editTagsTextField.setText(null);
         itemGridView.requestFocus();
         event.consume();
-        break;
-      case ESCAPE:
+      }
+      case ESCAPE -> {
         editTagsTextField.setText(null);
         itemGridView.requestFocus();
         event.consume();
-        break;
-      default:
-        break;
+      }
+      default -> {
+      }
     }
   }
 
@@ -1978,19 +1781,18 @@ public class MainController {
   private void searchVBoxOnKeyPressed(KeyEvent event) {
     if (event.isControlDown()) {
       switch (event.getCode()) {
-        case D:
+        case D -> {
           listDescendingToggleButton.setSelected(!listDescendingToggleButton.isSelected());
           event.consume();
-          break;
-        case G:
+        }
+        case G -> {
           showGroupedToggleButton.setSelected(!showGroupedToggleButton.isSelected());
           event.consume();
-          break;
-        case S:
-        case R:
+        }
+        case S, R -> {
           shuffledSearchButton.setSelected(!shuffledSearchButton.isSelected());
           event.consume();
-          break;
+        }
       }
     }
   }

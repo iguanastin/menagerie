@@ -45,4 +45,42 @@ public class ItemUtil {
     }
     return items;
   }
+
+  public static List<MediaItem> flattenGroups(List<Item> selected) {
+    List<MediaItem> items = new ArrayList<>();
+    for (Item item : selected) {
+      if (item instanceof MediaItem) {
+        items.add((MediaItem) item);
+      } else if (item instanceof GroupItem) {
+        for (MediaItem element : ((GroupItem) item).getElements()) {
+          final String name = element.getFile().getName().toLowerCase();
+          if (FileExplorer.hasAllowedFileEnding(name)) {
+            items.add(element);
+          }
+        }
+      }
+    }
+    return items;
+  }
+
+  public static List<GroupItem> getGroupItems(List<Item> items) {
+    List<GroupItem> groups = new ArrayList<>();
+    items.forEach(item -> {
+      if (item instanceof GroupItem) {
+        groups.add((GroupItem) item);
+      }
+    });
+    return groups;
+  }
+
+  public static String getFirstGroupTitle(List<Item> toGroup) {
+    String title = null;
+    for (Item item : toGroup) {
+      if (item instanceof GroupItem) {
+        title = ((GroupItem) item).getTitle();
+        break;
+      }
+    }
+    return title;
+  }
 }
