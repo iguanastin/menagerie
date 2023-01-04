@@ -39,7 +39,6 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -70,7 +69,6 @@ public class SlideshowScreen extends Screen {
   private TimerTask currentTimerTask = null;
   private final DoubleProperty interval = new SimpleDoubleProperty(10);
   private final BooleanProperty preload = new SimpleBooleanProperty(true);
-  private Image preloadPrev = null, preloadNext = null; // REENG. remove?
 
   public SlideshowScreen(ObjectListener<Item> selectListener) {
     registerKeyEvents();
@@ -309,21 +307,22 @@ public class SlideshowScreen extends Screen {
 
   private void confirmDeleteFile(boolean deleteFile, PokeListener onFinish) {
     final var confirmationScreen = new ConfirmationScreen();
+    final String screenTitle;
+    final String screenMessage;
     if (deleteFile) {
-      final var screenTitle = "Delete files";
-      final var screenMessage = """
+      screenTitle = "Delete files";
+      screenMessage = """
           Permanently delete selected files? (1 file)
                                     
           This action CANNOT be undone (files will be deleted)""";
-      confirmationScreen.open(getManager(), screenTitle, screenMessage, onFinish, null);
     } else {
-      final var screenTitle = "Forget files";
-      final var screenMessage = """
+      screenTitle = "Forget files";
+      screenMessage = """
           Remove selected files from database? (1 file)
                 
           This action CANNOT be undone""";
-      confirmationScreen.open(getManager(), screenTitle, screenMessage, onFinish, null);
     }
+    confirmationScreen.open(getManager(), screenTitle, screenMessage, onFinish, null);
   }
 
   /**
@@ -333,24 +332,6 @@ public class SlideshowScreen extends Screen {
    */
   private void preview(Item item) {
     showing = item;
-
-    preloadPrev = null;
-    preloadNext = null;
-    int i = items.indexOf(showing);
-    if (isPreload() && i >= 0) {
-      if (i > 0) {
-        Item previous = items.get(i - 1);
-        if (previous instanceof MediaItem) {
-          preloadPrev = ((MediaItem) previous).getImage();
-        }
-      }
-      if (i + 1 < items.size()) {
-        Item next = items.get(i + 1);
-        if (next instanceof MediaItem) {
-          preloadNext = ((MediaItem) next).getImage();
-        }
-      }
-    }
 
     updateCountLabel();
 
@@ -458,10 +439,6 @@ public class SlideshowScreen extends Screen {
 
   private double getInterval() {
     return interval.get();
-  }
-
-  private boolean isPreload() {
-    return preload.get();
   }
 
   public BooleanProperty preloadProperty() {
