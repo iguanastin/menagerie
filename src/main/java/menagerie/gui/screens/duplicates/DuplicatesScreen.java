@@ -29,10 +29,8 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ListChangeListener;
-import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -44,7 +42,6 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
@@ -55,6 +52,7 @@ import menagerie.gui.ItemInfoBox;
 import menagerie.gui.media.DynamicMediaView;
 import menagerie.gui.screens.Screen;
 import menagerie.gui.screens.ScreenPane;
+import menagerie.gui.taglist.OtherMissingTagListCell;
 import menagerie.gui.taglist.TagListCell;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.Item;
@@ -82,9 +80,6 @@ public class DuplicatesScreen extends Screen {
 
   private final BooleanProperty deleteFile = new SimpleBooleanProperty(true);
   private final BooleanProperty preload = new SimpleBooleanProperty(true);
-  // REENG. remove?
-  private Image preloadPrevLeft = null, preloadPrevRight = null, preloadNextLeft = null,
-      preloadNextRight = null;
 
   private ObjectListener<Item> selectListener = null;
   private final ListChangeListener<Tag> leftTagListener = c -> {
@@ -117,35 +112,7 @@ public class DuplicatesScreen extends Screen {
 
   private void registerCellFactories() {
     leftTagList.setCellFactory(param -> {
-      // TODO
-      TagListCell c = new TagListCell(null, null) {
-        private final PseudoClass otherHasPseudoClass = PseudoClass.getPseudoClass("other-missing");
-
-        private final BooleanProperty otherMissing = new BooleanPropertyBase() {
-          @Override
-          protected void invalidated() {
-            pseudoClassStateChanged(otherHasPseudoClass, get());
-          }
-
-          @Override
-          public Object getBean() {
-            return this;
-          }
-
-          @Override
-          public String getName() {
-            return "otherMissing";
-          }
-        };
-
-        @Override
-        protected void updateItem(Tag tag, boolean empty) {
-          super.updateItem(tag, empty);
-
-          otherMissing.set(tag != null && !currentPair.getObject2().hasTag(tag));
-        }
-      };
-
+      TagListCell c = new OtherMissingTagListCell(() -> getCurrentPair().getObject2());
       MenuItem addToOther = new MenuItem("Add to other");
       addToOther.setOnAction(event -> currentPair.getObject2().addTag(c.getItem()));
       MenuItem removeTag = new MenuItem("Remove tag");
@@ -156,35 +123,7 @@ public class DuplicatesScreen extends Screen {
       return c;
     });
     rightTagList.setCellFactory(param -> {
-      // TODO
-      TagListCell c = new TagListCell(null, null) {
-        private final PseudoClass otherHasPseudoClass = PseudoClass.getPseudoClass("other-missing");
-
-        private final BooleanProperty otherMissing = new BooleanPropertyBase() {
-          @Override
-          protected void invalidated() {
-            pseudoClassStateChanged(otherHasPseudoClass, get());
-          }
-
-          @Override
-          public Object getBean() {
-            return this;
-          }
-
-          @Override
-          public String getName() {
-            return "otherMissing";
-          }
-        };
-
-        @Override
-        protected void updateItem(Tag tag, boolean empty) {
-          super.updateItem(tag, empty);
-
-          otherMissing.set(tag != null && !currentPair.getObject1().hasTag(tag));
-        }
-      };
-
+      TagListCell c = new OtherMissingTagListCell(() -> getCurrentPair().getObject1());
       MenuItem addToOther = new MenuItem("Add to other");
       addToOther.setOnAction(event -> currentPair.getObject1().addTag(c.getItem()));
       MenuItem removeTag = new MenuItem("Remove tag");
@@ -194,6 +133,10 @@ public class DuplicatesScreen extends Screen {
           event -> cm.show(c.getScene().getWindow(), event.getScreenX(), event.getScreenY()));
       return c;
     });
+  }
+
+  private SimilarPair<MediaItem> getCurrentPair() {
+    return currentPair;
   }
 
   private void registerContextMenuRequestedEvents() {
@@ -233,6 +176,21 @@ public class DuplicatesScreen extends Screen {
     });
   }
 
+  private void constructFirstElement(VBox bottom) {
+    configureIndexTextField();
+    HBox hbc = new HBox(indexTextField, similarityLabel);
+    hbc.setAlignment(Pos.CENTER);
+    Button leftDeleteButton = new Button("Delete");
+    leftDeleteButton.setOnAction(event -> deleteItem(currentPair.getObject1()));
+    Button rightDeleteButton = new Button("Delete");
+    rightDeleteButton.setOnAction(event -> deleteItem(currentPair.getObject2()));
+    HBox hbl = new HBox(leftDeleteButton);
+    hbl.setAlignment(Pos.CENTER_LEFT);
+    HBox hbr = new HBox(rightDeleteButton);
+    hbr.setAlignment(Pos.CENTER_RIGHT);
+    bottom.getChildren().add(new BorderPane(hbc, null, hbr, null, hbl));
+  }
+
   private void constructSecondElement(VBox bottom) {
     Button prevPairButton = new Button("<-");
     prevPairButton.setOnAction(event -> previewPrev());
@@ -256,21 +214,6 @@ public class DuplicatesScreen extends Screen {
         menagerie.removeNonDuplicate(currentPair);
       }
     });
-  }
-
-  private void constructFirstElement(VBox bottom) {
-    configureIndexTextField();
-    HBox hbc = new HBox(indexTextField, similarityLabel);
-    hbc.setAlignment(Pos.CENTER);
-    Button leftDeleteButton = new Button("Delete");
-    leftDeleteButton.setOnAction(event -> deleteItem(currentPair.getObject1()));
-    Button rightDeleteButton = new Button("Delete");
-    rightDeleteButton.setOnAction(event -> deleteItem(currentPair.getObject2()));
-    HBox hbl = new HBox(leftDeleteButton);
-    hbl.setAlignment(Pos.CENTER_LEFT);
-    HBox hbr = new HBox(rightDeleteButton);
-    hbr.setAlignment(Pos.CENTER_RIGHT);
-    bottom.getChildren().add(new BorderPane(hbc, null, hbr, null, hbl));
   }
 
   private void configureIndexTextField() {
@@ -427,7 +370,6 @@ public class DuplicatesScreen extends Screen {
 
     leftTagList.getItems().clear();
     rightTagList.getItems().clear();
-    updatePreload(pair);
 
     if (pair != null) {
       previewPair(pair);
@@ -468,25 +410,6 @@ public class DuplicatesScreen extends Screen {
         "/" + pairs.size() + ": " + df.format(pair.getSimilarity() * 100) + "%");
 
     nonDupeCheckBox.setSelected(menagerie.hasNonDuplicate(pair));
-  }
-
-  private void updatePreload(SimilarPair<MediaItem> pair) {
-    preloadPrevLeft = preloadPrevRight = preloadNextLeft = preloadNextRight = null;
-    if (isPreload()) {
-      int i = pairs.indexOf(pair);
-      if (i >= 0) {
-        if (i > 0) {
-          SimilarPair<MediaItem> p = pairs.get(i - 1);
-          preloadPrevLeft = p.getObject1().getImage();
-          preloadPrevRight = p.getObject2().getImage();
-        }
-        if (i < pairs.size() - 1) {
-          SimilarPair<MediaItem> p = pairs.get(i + 1);
-          preloadNextLeft = p.getObject1().getImage();
-          preloadNextRight = p.getObject2().getImage();
-        }
-      }
-    }
   }
 
   /**
@@ -556,10 +479,6 @@ public class DuplicatesScreen extends Screen {
 
   private boolean isDeleteFile() {
     return deleteFile.get();
-  }
-
-  private boolean isPreload() {
-    return preload.get();
   }
 
   public BooleanProperty preloadProperty() {
