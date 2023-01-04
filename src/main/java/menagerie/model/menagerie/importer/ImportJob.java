@@ -41,12 +41,12 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import menagerie.gui.util.ItemUtil;
 import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.Menagerie;
-import menagerie.model.menagerie.Tag;
 import menagerie.settings.MenagerieSettings;
 import menagerie.util.FileUtil;
 
@@ -56,11 +56,6 @@ import menagerie.util.FileUtil;
 public class ImportJob {
 
   private static final Logger LOGGER = Logger.getLogger(ImportJob.class.getName());
-
-  public enum Status {
-    WAITING, IMPORTING, SUCCEEDED, FAILED_DUPLICATE, FAILED_IMPORT,
-
-  }
 
   private ImporterThread importer = null;
 
@@ -80,7 +75,7 @@ public class ImportJob {
   private volatile boolean needsCheckSimilar = true;
 
   private final DoubleProperty progressProperty = new SimpleDoubleProperty(-1);
-  private final ObjectProperty<Status> status = new SimpleObjectProperty<>(Status.WAITING);
+  private final ObjectProperty<ImportJobStatus> status = new SimpleObjectProperty<>(ImportJobStatus.WAITING);
 
 
   /**
@@ -90,7 +85,7 @@ public class ImportJob {
    */
   public ImportJob(URL url, GroupItem addToGroup) {
     this.url = url;
-    needsDownload = true;
+    this.needsDownload = true;
     this.addToGroup = addToGroup;
   }
 
@@ -122,28 +117,28 @@ public class ImportJob {
    * @param settings  Application settings to import with.
    */
   void runJob(Menagerie menagerie, MenagerieSettings settings) {
-    setStatus(Status.IMPORTING);
+    setStatus(ImportJobStatus.IMPORTING);
 
     // REENG: unexpected return values of these try... methods!
     if (tryDownload(settings)) {
-      setStatus(Status.FAILED_IMPORT);
+      setStatus(ImportJobStatus.FAILED_IMPORT);
       return;
     }
     if (tryImport(menagerie, settings)) {
-      setStatus(Status.FAILED_IMPORT);
+      setStatus(ImportJobStatus.FAILED_IMPORT);
       return;
     }
     tryHashHist();
     if (tryDuplicate(menagerie)) {
-      setStatus(Status.FAILED_DUPLICATE);
+      setStatus(ImportJobStatus.FAILED_DUPLICATE);
       return;
     }
     if (addToGroup != null) {
-      tryAddToGroup(addToGroup);
+      addToGroup.addItem(item);
     }
 
     trySimilar(menagerie, settings);
-    setStatus(Status.SUCCEEDED);
+    setStatus(ImportJobStatus.SUCCEEDED);
   }
 
   /**
@@ -239,24 +234,16 @@ public class ImportJob {
     LOGGER.info("Applying auto-tags to imported item: " + item.getId());
     // Add tags
     if (settings.tagTagme.getValue()) {
-      addTag(menagerie, "tagme");
+      ItemUtil.addTag(menagerie, "tagme", item);
     }
     if (settings.tagImages.getValue() && item.isImage()) {
-      addTag(menagerie, "image");
+      ItemUtil.addTag(menagerie, "image", item);
     }
     if (settings.tagVideos.getValue() && item.isVideo()) {
-      addTag(menagerie, "video");
+      ItemUtil.addTag(menagerie, "video", item);
     }
 
     return false;
-  }
-
-  private void addTag(Menagerie menagerie, String name) {
-    Tag tag = menagerie.getTagByName(name);
-    if (tag == null) {
-      tag = menagerie.createTag(name);
-    }
-    item.addTag(tag);
   }
 
   /**
@@ -307,10 +294,6 @@ public class ImportJob {
 
     needsCheckDuplicate = false;
     return false;
-  }
-
-  private void tryAddToGroup(GroupItem group) {
-    group.addItem(item);
   }
 
   /**
@@ -421,26 +404,19 @@ public class ImportJob {
   /**
    * @return The status of this job.
    */
-  public Status getStatus() {
+  public ImportJobStatus getStatus() {
     return status.get();
   }
 
   /**
    * @param status The new status to set this job as.
    */
-  private void setStatus(Status status) {
+  private void setStatus(ImportJobStatus status) {
     this.status.set(status);
   }
 
-  public ObjectProperty<Status> statusProperty() {
+  public ObjectProperty<ImportJobStatus> statusProperty() {
     return status;
-  }
-
-  /**
-   * @return Importer that this job will use.
-   */
-  private synchronized ImporterThread getImporter() {
-    return importer;
   }
 
   /**
@@ -454,14 +430,14 @@ public class ImportJob {
    * Cancels this job if it has not already been started.
    */
   public void cancel() {
-    if (getStatus() == Status.WAITING) {
+    if (getStatus() == ImportJobStatus.WAITING) {
       if (url != null) {
         LOGGER.info(() -> "Cancelling web import: " + url);
       } else {
         LOGGER.info(() -> "Cancelling local import: " + file);
       }
 
-      getImporter().cancel(this);
+      importer.cancel(this);
     }
   }
 

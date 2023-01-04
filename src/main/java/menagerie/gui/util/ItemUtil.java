@@ -8,6 +8,8 @@ import javafx.scene.control.MenuItem;
 import menagerie.model.menagerie.GroupItem;
 import menagerie.model.menagerie.Item;
 import menagerie.model.menagerie.MediaItem;
+import menagerie.model.menagerie.Menagerie;
+import menagerie.model.menagerie.Tag;
 
 public class ItemUtil {
 
@@ -82,5 +84,13 @@ public class ItemUtil {
       }
     }
     return title;
+  }
+
+  public static void addTag(Menagerie menagerie, String name, Item item) {
+    Tag tag = menagerie.getTagByName(name);
+    if (tag == null) {
+      tag = menagerie.createTag(name);
+    }
+    item.addTag(tag);
   }
 }

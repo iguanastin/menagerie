@@ -39,6 +39,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.importer.ImportJob;
+import menagerie.model.menagerie.importer.ImportJobStatus;
 import menagerie.util.listeners.ObjectListener;
 
 
@@ -59,7 +60,7 @@ public class ImportListCell extends ListCell<ImportJob> {
   private final Label failedLabel;
   private final BorderPane failedView;
 
-  private final ChangeListener<ImportJob.Status> statusListener =
+  private final ChangeListener<ImportJobStatus> statusListener =
       (observable, oldValue, newValue) -> Platform.runLater(() -> {
         if (getItem() != null) {
           updateView(getItem().getStatus());
@@ -146,7 +147,7 @@ public class ImportListCell extends ListCell<ImportJob> {
     }
   }
 
-  private void updateView(ImportJob.Status status) {
+  private void updateView(ImportJobStatus status) {
     switch (status) {
       case WAITING:
         showWaitingView();

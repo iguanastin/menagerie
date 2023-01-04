@@ -57,6 +57,7 @@ import menagerie.model.menagerie.Menagerie;
 import menagerie.model.menagerie.Tag;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
+import menagerie.model.menagerie.importer.ImportJobStatus;
 import menagerie.settings.MenagerieSettings;
 import menagerie.util.CancellableThread;
 import menagerie.util.Filters;
@@ -330,7 +331,7 @@ public class ImportDialogScreen extends Screen {
 
             if (!tagsToAdd.isEmpty() || renameToHash) {
               job.statusProperty().addListener((observable, oldValue, newValue) -> {
-                if (newValue == ImportJob.Status.SUCCEEDED) {
+                if (newValue == ImportJobStatus.SUCCEEDED) {
                   // Add tags
                   for (String tagName : tagsToAdd) {
                     if (tagName.contains(" ")) {

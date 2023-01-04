@@ -44,6 +44,7 @@ import menagerie.model.SimilarPair;
 import menagerie.model.menagerie.MediaItem;
 import menagerie.model.menagerie.importer.ImportJob;
 import menagerie.model.menagerie.importer.ImporterThread;
+import menagerie.model.menagerie.importer.ImportJobStatus;
 import menagerie.util.listeners.ObjectListener;
 
 public class ImporterScreen extends Screen {
@@ -102,7 +103,7 @@ public class ImporterScreen extends Screen {
     });
     Button cancelAllButton = new Button("Cancel All");
     cancelAllButton.setOnAction(event -> jobs.forEach(job -> {
-      if (job.getStatus() == ImportJob.Status.WAITING) {
+      if (job.getStatus() == ImportJobStatus.WAITING) {
         job.cancel();
         listView.getItems().remove(job);
       }
@@ -139,7 +140,7 @@ public class ImporterScreen extends Screen {
       jobs.add(job);
       listView.getItems().add(job);
       job.statusProperty().addListener((observable, oldValue, newValue) -> {
-        if (newValue == ImportJob.Status.SUCCEEDED) {
+        if (newValue == ImportJobStatus.SUCCEEDED) {
           if (job.getSimilarTo() != null) {
             job.getSimilarTo().forEach(pair -> {
                 if (!similar.contains(pair)) {
