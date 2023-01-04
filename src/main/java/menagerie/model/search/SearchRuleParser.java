@@ -102,14 +102,13 @@ public abstract class SearchRuleParser {
 
   private static void parseTypeRule(String arg, List<SearchRule> rules, boolean inverted) {
     String type = arg.substring(arg.indexOf(':') + 1);
-    if (type.equalsIgnoreCase("group")) {
-      rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
-    } else if (type.equalsIgnoreCase("media")) {
-      rules.add(new TypeRule(TypeRule.Type.MEDIA, inverted));
-    } else if (type.equalsIgnoreCase("image")) {
-      rules.add(new TypeRule(TypeRule.Type.IMAGE, inverted));
-    } else if (type.equalsIgnoreCase("video")) {
-      rules.add(new TypeRule(TypeRule.Type.VIDEO, inverted));
+
+    switch(type.toLowerCase()) {
+      case "group" -> rules.add(new TypeRule(TypeRule.Type.GROUP, inverted));
+      case "media" -> rules.add(new TypeRule(TypeRule.Type.MEDIA, inverted));
+      case "image" -> rules.add(new TypeRule(TypeRule.Type.IMAGE, inverted));
+      case "video" -> rules.add(new TypeRule(TypeRule.Type.VIDEO, inverted));
+      default -> LOGGER.warning("Unknown type for type: " + type);
     }
   }
 
